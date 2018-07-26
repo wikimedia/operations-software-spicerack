@@ -1,0 +1,6 @@
+key: value
+list:
+  - first
+  - second
+object:
+  key: value
