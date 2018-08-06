@@ -70,26 +70,29 @@ class FilterOutCumin(logging.Filter):
         return 1
 
 
-def setup_logging(base_path, name, dry_run=False, host=None, port=0):
+def setup_logging(base_path, name, dry_run=True, host=None, port=0):
     """Setup the root logger instance.
 
     Arguments:
-        base_path (str): the base path where to save the logs.
+        base_path (str, path-like object): the base path where to save the logs.
         name (str): the name of log file to use without extension.
         dry_run (bool, optional): whether this is a dry-run.
         host (str, optional): the tcpircbot hostname for the IRC logging.
         port (int, optional): the tcpircbot port for the IRC logging.
     """
+    base_path = str(base_path)  # Since Python 3.6 it could be a path-like object
+    os.makedirs(base_path, mode=0o755, exist_ok=True)
+
     # Default INFO logging
     formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] %(message)s')
-    handler = logging.FileHandler(os.path.join(str(base_path), '{name}.log'.format(name=name)))
+    handler = logging.FileHandler(os.path.join(base_path, '{name}.log'.format(name=name)))
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
 
     # Extended logging for detailed debugging
     formatter_extended = logging.Formatter(
         fmt='%(asctime)s [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] %(message)s')
-    handler_extended = logging.FileHandler(os.path.join(str(base_path), '{name}-extended.log'.format(name=name)))
+    handler_extended = logging.FileHandler(os.path.join(base_path, '{name}-extended.log'.format(name=name)))
     handler_extended.setFormatter(formatter_extended)
     handler_extended.setLevel(logging.DEBUG)
 

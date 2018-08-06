@@ -32,6 +32,11 @@ setup(
     author='Riccardo Coccioli',
     author_email='rcoccioli@wikimedia.org',
     description='A library for automation and orchestration of tasks in the WMF infrastructure',
+    entry_points={
+        'console_scripts': [
+            'cookbook = spicerack.cookbook:main',
+        ],
+    },
     extras_require=extras_require,
     install_requires=install_requires,
     keywords=['wmf', 'automation', 'orchestration'],

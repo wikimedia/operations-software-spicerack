@@ -9,6 +9,10 @@ test-warnings: true
 autodetect: false
 output-format: grouped
 
+ignore-paths:
+  - spicerack/tests/fixtures/cookbook/cookbooks/group3/invalid_syntax.py
+  - spicerack/tests/fixtures/cookbook/cookbooks/group3/invalid_subgroup/__init__.py
+
 pep8:
   full: true
   options:
