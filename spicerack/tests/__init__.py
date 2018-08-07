@@ -6,10 +6,10 @@ import os
 TESTS_BASE_PATH = os.path.realpath(os.path.dirname(__file__))
 
 
-def get_fixture_path(path):
+def get_fixture_path(*paths):
     """Return the absolute path of the given fixture.
 
     Arguments:
-        path: the relative path to the test's fixture directory.
+        *paths: arbitrary positional arguments used to compose the absolute path to the fixture.
     """
-    return os.path.join(TESTS_BASE_PATH, 'fixtures', path)
+    return os.path.join(TESTS_BASE_PATH, 'fixtures', *paths)
