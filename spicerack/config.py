@@ -21,6 +21,9 @@ def get_config(config_dir, no_raise=False):
     Returns:
         dict: the parsed config or an empty dictionary as a fallback.
 
+    Raises:
+        SpicerackError: if unable to load the configuration and ``no_raise`` is ``False``.
+
     """
     config_file = os.path.join(config_dir, 'config.yaml')
     config = {}

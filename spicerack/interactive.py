@@ -28,13 +28,10 @@ def ask_confirmation(message):
 
 
 def get_user():
-    """Ensure it's running as root and that the original user is detected and return it.
+    """Detect and return the effective running user even if run as root.
 
     Returns:
-        str: the name of the effective running user.
-
-    Raises:
-        SpicerackError: if unable to detect the user.
+        str: the name of the effective running user or '-' if unable to detect it.
 
     """
     user = os.getenv('USER')
