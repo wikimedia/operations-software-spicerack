@@ -1,0 +1,2 @@
+transport: clustershell
+default_backend: direct

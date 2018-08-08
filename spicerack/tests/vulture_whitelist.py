@@ -20,7 +20,17 @@ whitelist_mock.side_effect
 whitelist_log = Whitelist()
 whitelist_log.IRCSocketHandler.level
 
+whitelist_remote = Whitelist()
+whitelist_remote.execute.worker.commands
+whitelist_remote.execute.worker.commands
+whitelist_remote.execute.worker.handler
+whitelist_remote.execute.worker.success_threshold
+whitelist_remote.run_async
+whitelist_remote.run_sync
+
 whitelist_tests = Whitelist()
 whitelist_tests.unit.test_confctl.TestConfctl.setup_method
 whitelist_tests.unit.test_confctl.TestConfctl.setup_method.backend
 whitelist_tests.unit.test_confctl.TestConfctl.setup_method.config
+whitelist_tests.unit.test_remote.TestRemote.setup_method
+whitelist_tests.unit.test_remote.TestRemote.teardown_method
