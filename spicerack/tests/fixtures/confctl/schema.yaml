@@ -1,0 +1,34 @@
+# Discovery objects. they will represent a sequence of cluster/service/dc combinations
+discovery:
+  path: "discovery"
+  depends:
+    - service
+  tags:
+    - dnsdisc
+  schema:
+    pooled:
+      type: "bool"
+      default: false
+    references:
+      type: "list"
+      default: []
+    ttl:
+      type: "int"
+      default: 300
+mwconfig:
+  path: "mediawiki-config"
+  tags:
+    - scope
+  json_schema:
+    base_path: "mediawiki-config"
+    rules:
+      db_read_only:
+        schema: "db_readonly.schema"
+        selector: "name=ReadOnly"
+      wmf_datacenter:
+        schema: "wmf_datacenter.schema"
+        selector: "name=WMFMasterDatacenter"
+  schema:
+    val:
+      type: "any"
+      default: null

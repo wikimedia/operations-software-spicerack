@@ -19,3 +19,8 @@ whitelist_mock.side_effect
 
 whitelist_log = Whitelist()
 whitelist_log.IRCSocketHandler.level
+
+whitelist_tests = Whitelist()
+whitelist_tests.unit.test_confctl.TestConfctl.setup_method
+whitelist_tests.unit.test_confctl.TestConfctl.setup_method.backend
+whitelist_tests.unit.test_confctl.TestConfctl.setup_method.config
