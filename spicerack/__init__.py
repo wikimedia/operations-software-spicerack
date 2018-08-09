@@ -1,6 +1,7 @@
 """Spicerack package."""
 from spicerack import interactive
 from spicerack.confctl import Confctl
+from spicerack.dnsdisc import Discovery
 from spicerack.remote import Remote
 
 
@@ -81,3 +82,15 @@ class Spicerack:
             self._confctl = Confctl(config=self._conftool_config, schema=self._conftool_schema, dry_run=self._dry_run)
 
         return self._confctl.entity(entity_name)
+
+    def discovery(self, *records):
+        """Get a Discovery instance.
+
+        Arguments:
+            *records (str): arbitrary positional arguments, each one must be a Discovery DNS record name.
+
+        Returns:
+            spicerack.dnsdisc.Discovery: the pre-configured Discovery instance for the given records.
+
+        """
+        return Discovery(self.confctl('discovery'), self.remote(), records, dry_run=self._dry_run)

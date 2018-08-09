@@ -1,12 +1,16 @@
 """Initialization tests."""
+from unittest import mock
+
 from spicerack import Spicerack
-from spicerack.remote import Remote
 from spicerack.confctl import ConftoolEntity
+from spicerack.dnsdisc import Discovery
+from spicerack.remote import Remote
 
 from spicerack.tests import SPICERACK_TEST_PARAMS
 
 
-def test_spicerack(monkeypatch):
+@mock.patch('spicerack.remote.Remote.query')
+def test_spicerack(mocked_remote_query, monkeypatch):
     """An instance of Spicerack should allow to access all the library features."""
     monkeypatch.setenv('SUDO_USER', 'user1')
     verbose = True
@@ -19,3 +23,6 @@ def test_spicerack(monkeypatch):
     assert isinstance(spicerack.remote(), Remote)
     assert isinstance(spicerack.confctl('discovery'), ConftoolEntity)
     assert isinstance(spicerack.confctl('mwconfig'), ConftoolEntity)
+    assert isinstance(spicerack.discovery('discovery-record'), Discovery)
+
+    assert mocked_remote_query.called
