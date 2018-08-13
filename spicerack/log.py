@@ -3,7 +3,6 @@ import logging
 import os
 import socket
 
-from spicerack.dry_run import is_dry_run
 from spicerack.interactive import get_user
 
 
@@ -77,9 +76,9 @@ def setup_logging(base_path, name, dry_run=False, host=None, port=0):
     Arguments:
         base_path (str): the base path where to save the logs.
         name (str): the name of log file to use without extension.
-        dry_run (bool): whether this is a dry-run.
-        host (str): the tcpircbot hostname for the IRC logging.
-        port (int): the tcpircbot port for the IRC logging.
+        dry_run (bool, optional): whether this is a dry-run.
+        host (str, optional): the tcpircbot hostname for the IRC logging.
+        port (int, optional): the tcpircbot port for the IRC logging.
     """
     # Default INFO logging
     formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] %(message)s')
@@ -109,7 +108,7 @@ def setup_logging(base_path, name, dry_run=False, host=None, port=0):
     root_logger.raiseExceptions = False
     root_logger.setLevel(logging.DEBUG)
 
-    if not is_dry_run() and host is not None and port > 0:
+    if not dry_run and host is not None and port > 0:
         irc_logger.addHandler(IRCSocketHandler(host, port, get_user()))
         irc_logger.setLevel(logging.INFO)
 

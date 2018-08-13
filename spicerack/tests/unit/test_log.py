@@ -6,7 +6,6 @@ import uuid
 from unittest import mock
 
 from spicerack import log
-from spicerack.dry_run import DRY_RUN_ENV
 
 
 GENERIC_LOG_RECORD = logging.LogRecord('module', logging.DEBUG, '/source/file.py', 1, 'message', [], None)
@@ -116,10 +115,9 @@ def test_log_task_start(capsys, tmpdir):
     _assert_match_in_tmpdir(logged_message, tmpdir)
 
 
-def test_log_task_start_dry_run(monkeypatch, capsys, tmpdir):
+def test_log_task_start_dry_run(capsys, tmpdir):
     """Calling log_task_start() in dry-run mode should not print a START message for the task to the IRC logger."""
-    monkeypatch.setenv(DRY_RUN_ENV, '1')
-    log.setup_logging(tmpdir.strpath, 'task')
+    log.setup_logging(tmpdir.strpath, 'task', dry_run=True)
     message = str(uuid.uuid4())
     log.log_task_start(message)
 
