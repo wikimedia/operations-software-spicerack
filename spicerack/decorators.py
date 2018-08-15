@@ -1,0 +1,110 @@
+"""Decorators module."""
+import logging
+import time
+
+from datetime import timedelta
+from functools import wraps
+
+from spicerack.exceptions import SpicerackError
+
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+def ensure_wrap(func):
+    """Decorator to wrap other decorators to allow to call them both with and without arguments.
+
+    Arguments:
+        func: the decorated function, it must be a decorator. A decorator that accepts only one positional argument
+            that is also a callable is not supported.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        """Decorator wrapper."""
+        if len(args) == 1 and not kwargs and callable(args[0]):  # Called without arguments
+            return func(args[0])
+
+        return lambda real_func: func(real_func, *args, **kwargs)  # Called with arguments
+
+    return wrapper
+
+
+@ensure_wrap
+def retry(func, *, tries=3, delay=timedelta(seconds=3), backoff_mode='exponential', exceptions=(SpicerackError,)):
+    """Decorator to retry a function or method if it raises certain exceptions with customizable backoff.
+
+    Note:
+        The decorated function or method must be idempotent to avoid unwanted side effects.
+        It can be called with or without arguments, in the latter case all the default values will be used.
+
+    Arguments:
+        func (function, method): the decorated function.
+        tries (int, optional): the number of times to try calling the decorated function or method before giving up.
+            Must be a positive integer.
+        delay (datetime.timedelta, optional): the initial delay for the first retry, used also as the base for the
+            backoff algorithm.
+        backoff_mode (str, optional): the backoff mode to use for the delay, available values are:
+            constant:    delay       => 3, 3,  3,  3,   3, ...;
+            linear:      delay * N   => 3, 6,  9, 12,  15, ...; N in [1, tries]
+            power:       delay * 2^N => 3, 6, 12, 24,  48, ...; N in [0, tries - 1]
+            exponential: delay^N     => 3, 9, 27, 81, 243, ...; N in [1, tries], delay must be > 1.
+        exceptions (type, tuple, optional): the decorated function call will be retried if it fails until it succeeds
+            or `tries` attempts are reached. A retryable failure is defined as raising any of the exceptions listed.
+
+    Returns:
+        function: the decorated function.
+
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        """Decorator."""
+        if backoff_mode not in ('constant', 'linear', 'power', 'exponential'):
+            raise ValueError('Invalid backoff_mode: {mode}'.format(mode=backoff_mode))
+
+        if backoff_mode == 'exponential' and delay.total_seconds() < 1:
+            raise ValueError(
+                'Delay must be greater than 1 if backoff_mode is exponential, got {delay}'.format(delay=delay))
+
+        if tries < 1:
+            raise ValueError('Tries must be a positive integer, got {tries}'.format(tries=tries))
+
+        attempt = 0
+        while attempt < tries - 1:
+            attempt += 1
+            try:
+                return func(*args, **kwargs)  # Call the decorated function or method
+            except exceptions as e:
+                sleep = get_backoff_sleep(backoff_mode, delay.total_seconds(), attempt)
+                logger.warning("Failed to call '%s.%s' [%d/%d, retrying in %.2fs]: %s",
+                               func.__module__, func.__name__, attempt, tries, sleep, e)
+                time.sleep(sleep)
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def get_backoff_sleep(backoff_mode, base, index):
+    """Calculate the amount of sleep for this attempt.
+
+    Arguments:
+        backoff_mode (str): the backoff mode to use for the delay, see the documentation for retry().
+        base (int, float): the base for the backoff algorithm.
+        index (int): the index to calculate the Nth sleep time for the backoff.
+
+    Return:
+        int, float: the amount of sleep to perform for the backoff.
+
+    """
+    if backoff_mode == 'constant':
+        sleep = base
+    elif backoff_mode == 'linear':
+        sleep = base * index
+    elif backoff_mode == 'power':
+        sleep = base * 2 ** (index - 1)
+    elif backoff_mode == 'exponential':
+        sleep = base ** index
+    else:
+        raise ValueError('Invalid backoff_mode: {mode}'.format(mode=backoff_mode))
+
+    return sleep
