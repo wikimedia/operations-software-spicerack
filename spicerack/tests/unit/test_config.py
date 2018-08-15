@@ -1,4 +1,5 @@
 """Interactive module tests."""
+from logging import DEBUG
 from unittest import mock
 
 import pytest
@@ -15,36 +16,41 @@ def test_get_config_empty():
     assert {} == config_dict
 
 
-def test_get_config_invalid_raise():
+def test_get_config_invalid_raise(caplog):
     """Loading an invalid config should raise Exception."""
     config_dir = get_fixture_path('config', 'invalid')
     with pytest.raises(Exception):
         config.get_config(config_dir)
-    # TODO: add caplog to test log output once https://github.com/pytest-dev/pytest/issues/3099 is fixed
+
+    assert 'ERROR    Could not load config file' in caplog.text
 
 
-def test_get_config_invalid():
+def test_get_config_invalid(caplog):
     """Loading an invalid config with no_raise=True should return an empty dictionary."""
     config_dir = get_fixture_path('config', 'invalid')
-    config_dict = config.get_config(config_dir, no_raise=True)
+    with caplog.at_level(DEBUG):
+        config_dict = config.get_config(config_dir, no_raise=True)
+
     assert {} == config_dict
-    # TODO: add caplog to test log output once https://github.com/pytest-dev/pytest/issues/3099 is fixed
+    assert 'DEBUG    Could not load config file' in caplog.text
 
 
-def test_get_config_missing():
+def test_get_config_missing(caplog):
     """Loading a non-existent config should raise Exception."""
     config_dir = get_fixture_path('config', 'non-existent')
     with pytest.raises(Exception):
         config.get_config(config_dir)
-    # TODO: add caplog to test log output once https://github.com/pytest-dev/pytest/issues/3099 is fixed
+    assert 'ERROR    Could not load config file' in caplog.text
 
 
-def test_get_config_miss_no_raise():
+def test_get_config_miss_no_raise(caplog):
     """Loading a non-existent config with no_raise=True should return an empty dictionary."""
     config_dir = get_fixture_path('config', 'non-existent')
-    config_dict = config.get_config(config_dir, no_raise=True)
+    with caplog.at_level(DEBUG):
+        config_dict = config.get_config(config_dir, no_raise=True)
+
     assert {} == config_dict
-    # TODO: add caplog to test log output once https://github.com/pytest-dev/pytest/issues/3099 is fixed
+    assert 'DEBUG    Could not load config file' in caplog.text
 
 
 def test_get_config_valid():

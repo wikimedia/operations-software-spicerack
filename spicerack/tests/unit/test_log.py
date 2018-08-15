@@ -67,29 +67,28 @@ def test_cumin_filter_blocks_cumin():
     assert ret == 0
 
 
-def test_setup_logging_no_irc(tmpdir):
+def test_setup_logging_no_irc(tmpdir, caplog):
     """Calling setup_logging() should setup all the handlers of the root logger."""
     log.setup_logging(tmpdir.strpath, 'task')
     message = str(uuid.uuid4())
     logger.info(message)
-
-    # TODO: replace with caplog once https://github.com/pytest-dev/pytest/issues/3099 is fixed
-    _assert_match_in_tmpdir(message, tmpdir)
+    assert message in caplog.text
+    _assert_match_in_tmpdir(message, tmpdir.strpath)
 
 
 @mock.patch('spicerack.log.socket')
-def test_setup_logging_with_irc(mocked_socket, tmpdir):
+def test_setup_logging_with_irc(mocked_socket, tmpdir, caplog):
     """Calling setup_logging() with host and port should also setup the IRC logger."""
     log.setup_logging(tmpdir.strpath, 'task', host='host', port=123)
     message = str(uuid.uuid4())
     log.irc_logger.info(message)
 
     assert mock.call.socket().connect(('host', 123)) in mocked_socket.mock_calls
-    # TODO: replace with caplog once https://github.com/pytest-dev/pytest/issues/3099 is fixed
-    _assert_match_in_tmpdir(message, tmpdir)
+    assert message in caplog.text
+    _assert_match_in_tmpdir(message, tmpdir.strpath)
 
 
-def test_setup_logging_dry_run(capsys, tmpdir):
+def test_setup_logging_dry_run(capsys, tmpdir, caplog):
     """Calling setup_logging() when in dry run mode should setup all the handlers and the stdout with DEBUG level."""
     log.setup_logging(tmpdir.strpath, 'task', dry_run=True)
     message = str(uuid.uuid4())
@@ -98,11 +97,11 @@ def test_setup_logging_dry_run(capsys, tmpdir):
     _, err = capsys.readouterr()
     assert message in err
     assert 'DRY-RUN' in err
-    # TODO: replace with caplog once https://github.com/pytest-dev/pytest/issues/3099 is fixed
-    _assert_match_in_tmpdir(message, tmpdir)
+    assert message in caplog.text
+    _assert_match_in_tmpdir(message, tmpdir.strpath)
 
 
-def test_log_task_start(capsys, tmpdir):
+def test_log_task_start(capsys, tmpdir, caplog):
     """Calling log_task_start() should log a START message for the task to both loggers."""
     log.setup_logging(tmpdir.strpath, 'task')
     message = str(uuid.uuid4())
@@ -111,11 +110,11 @@ def test_log_task_start(capsys, tmpdir):
     logged_message = 'START - ' + message
     _, err = capsys.readouterr()
     assert logged_message in err
-    # TODO: add caplog to test log output once https://github.com/pytest-dev/pytest/issues/3099 is fixed
-    _assert_match_in_tmpdir(logged_message, tmpdir)
+    assert logged_message in caplog.text
+    _assert_match_in_tmpdir(logged_message, tmpdir.strpath)
 
 
-def test_log_task_start_dry_run(capsys, tmpdir):
+def test_log_task_start_dry_run(capsys, tmpdir, caplog):
     """Calling log_task_start() in dry-run mode should not print a START message for the task to the IRC logger."""
     log.setup_logging(tmpdir.strpath, 'task', dry_run=True)
     message = str(uuid.uuid4())
@@ -124,11 +123,11 @@ def test_log_task_start_dry_run(capsys, tmpdir):
     logged_message = 'START - ' + message
     _, err = capsys.readouterr()
     assert logged_message in err
-    # TODO: add caplog to test log output once https://github.com/pytest-dev/pytest/issues/3099 is fixed
-    _assert_match_in_tmpdir(logged_message, tmpdir)
+    assert logged_message in caplog.text
+    _assert_match_in_tmpdir(logged_message, tmpdir.strpath)
 
 
-def test_log_task_end(capsys, tmpdir):
+def test_log_task_end(capsys, tmpdir, caplog):
     """Calling log_task_end() should print an END message for the task."""
     log.setup_logging(tmpdir.strpath, 'task')
     message = str(uuid.uuid4())
@@ -137,5 +136,5 @@ def test_log_task_end(capsys, tmpdir):
     logged_message = 'END (success) - ' + message
     _, err = capsys.readouterr()
     assert logged_message in err
-    # TODO: add caplog to test log output once https://github.com/pytest-dev/pytest/issues/3099 is fixed
-    _assert_match_in_tmpdir(logged_message, tmpdir)
+    assert logged_message in caplog.text
+    _assert_match_in_tmpdir(logged_message, tmpdir.strpath)

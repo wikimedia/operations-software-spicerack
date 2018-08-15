@@ -11,5 +11,9 @@ def get_fixture_path(*paths):
 
     Arguments:
         *paths: arbitrary positional arguments used to compose the absolute path to the fixture.
+
+    Returns:
+        str: the absolute path of the selected fixture.
+
     """
     return os.path.join(TESTS_BASE_PATH, 'fixtures', *paths)
