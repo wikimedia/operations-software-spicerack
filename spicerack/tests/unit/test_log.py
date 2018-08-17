@@ -69,7 +69,7 @@ def test_cumin_filter_blocks_cumin():
 
 def test_setup_logging_no_irc(tmpdir, caplog):
     """Calling setup_logging() should setup all the handlers of the root logger."""
-    log.setup_logging(tmpdir.strpath, 'task')
+    log.setup_logging(tmpdir.strpath, 'task', 'user')
     message = str(uuid.uuid4())
     logger.info(message)
     assert message in caplog.text
@@ -79,7 +79,7 @@ def test_setup_logging_no_irc(tmpdir, caplog):
 @mock.patch('spicerack.log.socket')
 def test_setup_logging_with_irc(mocked_socket, tmpdir, caplog):
     """Calling setup_logging() with host and port should also setup the IRC logger."""
-    log.setup_logging(tmpdir.strpath, 'task', host='host', port=123, dry_run=False)
+    log.setup_logging(tmpdir.strpath, 'task', 'user', host='host', port=123, dry_run=False)
     message = str(uuid.uuid4())
     log.irc_logger.info(message)
 
@@ -90,7 +90,7 @@ def test_setup_logging_with_irc(mocked_socket, tmpdir, caplog):
 
 def test_setup_logging_dry_run(capsys, tmpdir, caplog):
     """Calling setup_logging() when in dry run mode should setup all the handlers and the stdout with DEBUG level."""
-    log.setup_logging(tmpdir.strpath, 'task', dry_run=True)
+    log.setup_logging(tmpdir.strpath, 'task', 'user', dry_run=True)
     message = str(uuid.uuid4())
     logger.info(message)
 
@@ -103,7 +103,7 @@ def test_setup_logging_dry_run(capsys, tmpdir, caplog):
 
 def test_log_task_start(capsys, tmpdir, caplog):
     """Calling log_task_start() should log a START message for the task to both loggers."""
-    log.setup_logging(tmpdir.strpath, 'task')
+    log.setup_logging(tmpdir.strpath, 'task', 'user')
     message = str(uuid.uuid4())
     log.log_task_start(message)
 
@@ -116,7 +116,7 @@ def test_log_task_start(capsys, tmpdir, caplog):
 
 def test_log_task_start_dry_run(capsys, tmpdir, caplog):
     """Calling log_task_start() in dry-run mode should not print a START message for the task to the IRC logger."""
-    log.setup_logging(tmpdir.strpath, 'task', dry_run=True)
+    log.setup_logging(tmpdir.strpath, 'task', 'user', dry_run=True)
     message = str(uuid.uuid4())
     log.log_task_start(message)
 
@@ -129,7 +129,7 @@ def test_log_task_start_dry_run(capsys, tmpdir, caplog):
 
 def test_log_task_end(capsys, tmpdir, caplog):
     """Calling log_task_end() should print an END message for the task."""
-    log.setup_logging(tmpdir.strpath, 'task', dry_run=False)
+    log.setup_logging(tmpdir.strpath, 'task', 'user', dry_run=False)
     message = str(uuid.uuid4())
     log.log_task_end('success', message)
 

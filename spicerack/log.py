@@ -3,8 +3,6 @@ import logging
 import os
 import socket
 
-from spicerack.interactive import get_user
-
 
 root_logger = logging.getLogger()  # pylint: disable=invalid-name
 irc_logger = logging.getLogger('spicerack_irc_announce')  # pylint: disable=invalid-name
@@ -70,7 +68,7 @@ class FilterOutCumin(logging.Filter):
         return 1
 
 
-def setup_logging(base_path, name, dry_run=True, host=None, port=0):
+def setup_logging(base_path, name, user, dry_run=True, host=None, port=0):
     """Setup the root logger instance.
 
     Arguments:
@@ -112,7 +110,7 @@ def setup_logging(base_path, name, dry_run=True, host=None, port=0):
     root_logger.setLevel(logging.DEBUG)
 
     if not dry_run and host is not None and port > 0:
-        irc_logger.addHandler(IRCSocketHandler(host, port, get_user()))
+        irc_logger.addHandler(IRCSocketHandler(host, port, user))
         irc_logger.setLevel(logging.INFO)
 
 

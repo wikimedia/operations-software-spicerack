@@ -7,6 +7,7 @@ import sys
 
 from spicerack import log
 from spicerack.config import get_global_config
+from spicerack.interactive import get_user
 from spicerack.exceptions import SpicerackError
 
 
@@ -559,8 +560,8 @@ def execute_cookbook(config, args, cookbooks):
 
     cookbook_path, cookbook_name = os.path.split(cookbook.path.replace('.', os.sep))
     base_path = os.path.join(config['logs_base_dir'], cookbook_path)
-    log.setup_logging(base_path, cookbook_name, dry_run=args.dry_run, host=config.get('tcpircbot_host', None),
-                      port=config.get('tcpircbot_port', 0))
+    log.setup_logging(base_path, cookbook_name, get_user(), dry_run=args.dry_run,
+                      host=config.get('tcpircbot_host', None), port=config.get('tcpircbot_port', 0))
 
     logger.debug('Executing cookbook %s with args: %s', args.cookbook, args.cookbook_args)
     return cookbook.run()
