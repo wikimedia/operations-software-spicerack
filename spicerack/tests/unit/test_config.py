@@ -1,6 +1,5 @@
 """Interactive module tests."""
 from logging import DEBUG
-from unittest import mock
 
 import pytest
 
@@ -59,7 +58,5 @@ def test_get_config_valid():
 
 def test_get_global_config():
     """Calling get_global_config() should return the library's config."""
-    with mock.patch('spicerack.config.SPICERACK_CONFIG_DIR', get_fixture_path('config', 'valid')):
-        config_dict = config.get_global_config()
-
+    config_dict = config.get_global_config(config_dir=get_fixture_path('config', 'valid'))
     assert 'key' in config_dict

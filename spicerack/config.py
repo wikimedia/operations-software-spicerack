@@ -7,7 +7,6 @@ import yaml
 from spicerack.exceptions import SpicerackError
 
 
-SPICERACK_CONFIG_DIR = os.environ.get('SPICERACK_CONFIG_DIR', '/etc/spicerack')
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -44,11 +43,14 @@ def get_config(config_dir, raises=True):
     return config
 
 
-def get_global_config():
+def get_global_config(config_dir='/etc/spicerack'):
     """Return the global configuration.
+
+    Arguments:
+        config_dir (str, optional): the directory where to look for the configuration file to load.
 
     Returns:
         dict: the parsed config or an empty dictionary as a fallback.
 
     """
-    return get_config(SPICERACK_CONFIG_DIR)
+    return get_config(config_dir)
