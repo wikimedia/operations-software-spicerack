@@ -6,7 +6,8 @@ def get_title(args):
     return '{doc}: {args}'.format(doc=__doc__, args=args)
 
 
-def main(args, verbose, dry_run):
-    """As required by spicerack."""
-    print('args={args}, verbose={verbose}, dry_run={dry_run}'.format(args=args, verbose=verbose, dry_run=dry_run))
+def main(args, spicerack):
+    """As required by spicerack.cookbook."""
+    print('args={args}, verbose={verbose}, dry_run={dry_run}'.format(
+        args=args, verbose=spicerack.verbose, dry_run=spicerack.dry_run))
     return 0

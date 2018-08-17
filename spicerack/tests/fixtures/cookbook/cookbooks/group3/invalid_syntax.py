@@ -2,6 +2,6 @@
 __title__ = __doc__
 
 
-def main(args, verbose, dry_run):  # pylint: disable=unused-argument
-    """As required by spicerack."""
+def main(args, spicerack):  # pylint: disable=unused-argument
+    """As required by spicerack.cookbook."""
     invalid =  # noqa: E999

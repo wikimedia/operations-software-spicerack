@@ -1,5 +1,4 @@
 """Tests package for Spicerack."""
-
 import os
 
 
@@ -17,3 +16,10 @@ def get_fixture_path(*paths):
 
     """
     return os.path.join(TESTS_BASE_PATH, 'fixtures', *paths)
+
+
+SPICERACK_TEST_PARAMS = {
+    'cumin_config': get_fixture_path('remote', 'config.yaml'),
+    'conftool_config': get_fixture_path('confctl', 'config.yaml'),
+    'conftool_schema': get_fixture_path('confctl', 'schema.yaml'),
+}

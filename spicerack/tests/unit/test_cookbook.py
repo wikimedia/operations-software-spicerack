@@ -6,7 +6,9 @@ from unittest import mock
 
 import pytest
 
-from spicerack import cookbook
+from spicerack import cookbook, Spicerack
+
+from spicerack.tests import SPICERACK_TEST_PARAMS
 
 
 COOKBOOKS_BASE_PATH = 'spicerack/tests/fixtures/cookbook'
@@ -114,142 +116,155 @@ def test_parse_args_list():
     assert args.cookbook is None
 
 
-@pytest.mark.parametrize('options, expected', (
-    ({}, LIST_COOKBOOKS_ALL),
-    ({'verbose': True}, LIST_COOKBOOKS_ALL_VERBOSE),
-    ({'path_filter': 'group3'}, LIST_COOKBOOKS_GROUP3),
-    ({'path_filter': 'group3.subgroup3'}, LIST_COOKBOOKS_GROUP3_SUBGROUP3),
-    ({'path_filter': 'group3.non_existent'}, ''),
-))
-def test_cookbooks_str(monkeypatch, options, expected):
-    """The string representation of the Cookbooks should print all the cookbooks as a tree, based on the options."""
-    monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
-    if not options:  # For the first test ensure there is no __pycache__ directory in one case.
-        shutil.rmtree(os.path.join(COOKBOOKS_BASE_PATH, 'cookbooks', '__pycache__'), ignore_errors=True)
+class TestCookbooks:
+    """Test class for the Cookbooks class."""
 
-    cookbooks = cookbook.Cookbooks(COOKBOOKS_BASE_PATH, [], **options)
-    assert cookbooks.menu.get_tree() == expected
+    def setup_method(self):
+        """Initialize the test environment."""
+        # pylint: disable=attribute-defined-outside-init
+        self.spicerack = Spicerack(verbose=False, dry_run=False, **SPICERACK_TEST_PARAMS)
+        self.spicerack_dry_run = Spicerack(verbose=False, dry_run=True, **SPICERACK_TEST_PARAMS)
+        self.spicerack_verbose = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
+    @pytest.mark.parametrize('path_filter, verbose, expected', (
+        (None, False, LIST_COOKBOOKS_ALL),
+        (None, True, LIST_COOKBOOKS_ALL_VERBOSE),
+        ('group3', False, LIST_COOKBOOKS_GROUP3),
+        ('group3.subgroup3', False, LIST_COOKBOOKS_GROUP3_SUBGROUP3),
+        ('group3.non_existent', False, ''),
+    ))
+    def test_cookbooks_str(self, monkeypatch, path_filter, verbose, expected):
+        """The string representation of the Cookbooks should print all the cookbooks as a tree, based on the options."""
+        monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
+        if path_filter is None and not verbose:  # For the first test ensure there is no __pycache__ directory.
+            shutil.rmtree(os.path.join(COOKBOOKS_BASE_PATH, 'cookbooks', '__pycache__'), ignore_errors=True)
 
-def test_cookbooks_non_existent():
-    """The Cookbooks class initialized with an empty path should not collect any cookbook."""
-    cookbooks = cookbook.Cookbooks(os.path.join(COOKBOOKS_BASE_PATH, 'non_existent'), [])
-    assert cookbooks.menu.get_tree() == ''
+        spicerack = self.spicerack
+        if verbose:
+            spicerack = self.spicerack_verbose
+        cookbooks = cookbook.Cookbooks(COOKBOOKS_BASE_PATH, [], spicerack, path_filter=path_filter)
+        assert cookbooks.menu.get_tree() == expected
 
+    def test_cookbooks_non_existent(self):
+        """The Cookbooks class initialized with an empty path should not collect any cookbook."""
+        cookbooks = cookbook.Cookbooks(os.path.join(COOKBOOKS_BASE_PATH, 'non_existent'), [], self.spicerack)
+        assert cookbooks.menu.get_tree() == ''
 
-def test_main_execute_cookbook_ok(tmpdir, capsys):
-    """Calling main() with a cookbook should run the cookbook."""
-    config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-    with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
-        ret = cookbook.main(['cookbook'])
+    def test_main_execute_cookbook_ok(self, tmpdir, capsys):
+        """Calling main() with a cookbook should run the cookbook."""
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
+            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+                ret = cookbook.main(['cookbook'])
 
-    _, err = capsys.readouterr()
-    assert ret == 0
-    assert 'START - Cookbook cookbook' in err
-    assert 'END (PASS) - Cookbook cookbook (exit_code=0)' in err
+        _, err = capsys.readouterr()
+        assert ret == 0
+        assert 'START - Cookbook cookbook' in err
+        assert 'END (PASS) - Cookbook cookbook (exit_code=0)' in err
 
+    def test_main_execute_cookbook_ko(self, tmpdir, capsys):
+        """Calling execute_cookbook() should return the exit status of the cookbook."""
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
+            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+                ret = cookbook.main(['group3.non_zero_exit'])
 
-def test_main_execute_cookbook_ko(tmpdir, capsys):
-    """Calling execute_cookbook() should return the exit status of the cookbook."""
-    config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-    with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
-        ret = cookbook.main(['group3.non_zero_exit'])
+        _, err = capsys.readouterr()
+        assert ret == 1
+        assert 'END (FAIL) - Cookbook group3.non_zero_exit (exit_code=1)' in err
 
-    _, err = capsys.readouterr()
-    assert ret == 1
-    assert 'END (FAIL) - Cookbook group3.non_zero_exit (exit_code=1)' in err
+    def test_main_execute_cookbook_non_existent(self, tmpdir, capsys):
+        """Calling execute_cookbook() with a non existent cookbook should return COOKBOOK_NOT_FOUND_RETCODE."""
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
+            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+                ret = cookbook.main(['non_existent'])
 
+        _, err = capsys.readouterr()
+        assert ret == cookbook.COOKBOOK_NOT_FOUND_RETCODE
+        assert 'Unable to find cookbook' in err
 
-def test_main_execute_cookbook_non_existent(tmpdir, capsys):
-    """Calling execute_cookbook() with a non existent cookbook should return COOKBOOK_NOT_FOUND_RETCODE."""
-    config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-    with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
-        ret = cookbook.main(['non_existent'])
+    @pytest.mark.parametrize('module, error, code', (
+        ('invalid_syntax', 'invalid syntax (invalid_syntax.py, line 7)', cookbook.COOKBOOK_NOT_FOUND_RETCODE),
+        ('raise_exception', 'Exception: Something went wrong', cookbook.COOKBOOK_EXCEPTION_RETCODE),
+    ))
+    def test_main_execute_cookbook_raise(self, tmpdir, capsys, module, error, code):
+        """Calling execute_cookbook() should intercept any exception raised."""
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
+            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+                ret = cookbook.main(['group3.{name}'.format(name=module)])
 
-    _, err = capsys.readouterr()
-    assert ret == cookbook.COOKBOOK_NOT_FOUND_RETCODE
-    assert 'Unable to find cookbook' in err
+        _, err = capsys.readouterr()
+        assert ret == code
+        assert error in err
 
+    def test_main_execute_dry_run(self, capsys, tmpdir):
+        """Calling main() with a cookbook and dry_run mode should execute it and set the dry run mode."""
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
+            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack_dry_run):
+                ret = cookbook.main(['-d', 'root'])
 
-@pytest.mark.parametrize('module, error, code', (
-    ('invalid_syntax', 'invalid syntax (invalid_syntax.py, line 7)', cookbook.COOKBOOK_NOT_FOUND_RETCODE),
-    ('raise_exception', 'Exception: Something went wrong', cookbook.COOKBOOK_EXCEPTION_RETCODE),
-))
-def test_main_execute_cookbook_raise(tmpdir, capsys, module, error, code):
-    """Calling execute_cookbook() should intercept any exception raised."""
-    config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-    with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
-        ret = cookbook.main(['group3.{name}'.format(name=module)])
+        assert ret == 0
+        _, err = capsys.readouterr()
+        assert 'DRY-RUN' in err
 
-    _, err = capsys.readouterr()
-    assert ret == code
-    assert error in err
+    def test_main_list(self, tmpdir, capsys):
+        """Calling main() with the -l/--list option should print the available cookbooks."""
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
+            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+                ret = cookbook.main(['-l'])
 
+        out, err = capsys.readouterr()
 
-def test_main_execute_dry_run(capsys, tmpdir):
-    """Calling main() with a cookbook and dry_run mode should execute it and set the dry run mode."""
-    config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-    with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
-        ret = cookbook.main(['-d', 'root'])
+        assert ret == 0
+        assert out == LIST_COOKBOOKS_ALL
+        lines = ['Failed to import module cookbooks.group3.invalid_syntax: invalid syntax (invalid_syntax.py, line 7)',
+                 'Failed to import module cookbooks.group3.invalid_subgroup: invalid syntax (__init__.py, line 2)']
+        for line in lines:
+            assert line in err
 
-    assert ret == 0
-    _, err = capsys.readouterr()
-    assert 'DRY-RUN' in err
+    def test_cookbooks_menu_status(self, monkeypatch):
+        """Calling status on a CookbooksMenu should show the completed and total tasks."""
+        monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
+        cookbooks = cookbook.Cookbooks(COOKBOOKS_BASE_PATH, [], self.spicerack)
+        menu = cookbooks.get_item(cookbooks.cookbooks_module_prefix)
+        assert menu.status == '0/9'
 
+    def test_cookbooks_menu_status_done(self, monkeypatch):
+        """Calling status on a CookbooksMenu with all tasks completed should return DONE."""
+        monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
+        cookbooks = cookbook.Cookbooks(COOKBOOKS_BASE_PATH, [], self.spicerack, path_filter='group1')
+        menu = cookbooks.get_item('.'.join((cookbooks.cookbooks_module_prefix, 'group1')))
+        assert menu.status == '0/1'
+        item = cookbooks.get_item('.'.join((cookbooks.cookbooks_module_prefix, 'group1', 'cookbook1')))
+        item.status = item.success
+        assert menu.status == 'DONE'
 
-def test_main_list(tmpdir, capsys):
-    """Calling main() with the -l/--list option should print the available cookbooks."""
-    config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-    with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
-        ret = cookbook.main(['-l'])
+    @pytest.mark.parametrize('tty, answer, output', (
+        (False, 'q', COOKBOOKS_MENU_NOTTY),
+        (True, 'q', COOKBOOKS_MENU_TTY),
+        (True, KeyboardInterrupt, COOKBOOKS_MENU_TTY + 'QUIT\n'),
+        (True, ['', 'q'], COOKBOOKS_MENU_TTY + COOKBOOKS_MENU_TTY),
+        (True, ['invalid', 'q'], COOKBOOKS_MENU_TTY + '==> Invalid input <==\n' + COOKBOOKS_MENU_TTY),
+        (True, ['group2', 'b', 'q'], COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU + COOKBOOKS_MENU_TTY),
+        (True, ['group2', 'cookbook2', 'b', 'q'],
+         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN + COOKBOOKS_MENU_TTY.replace(
+            '[0/3] group2', '[1/3] group2')),
+    ))
+    @mock.patch('spicerack.cookbook.sys.stdout.isatty')
+    @mock.patch('builtins.input')    # pylint: disable=too-many-arguments
+    def test_cookbooks_main_menu(self, mocked_input, mocked_tty, tty, answer, output, capsys, tmpdir):
+        """Calling main() with a menu should show the menu and allow to interact with it."""
+        mocked_tty.return_value = tty
+        mocked_input.side_effect = answer
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
+            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+                ret = cookbook.main([])
 
-    out, err = capsys.readouterr()
-    assert ret == 0
-    assert out == LIST_COOKBOOKS_ALL
-    assert 'Failed to import module cookbooks.group3.invalid_syntax: invalid syntax (invalid_syntax.py, line 7)' in err
-    assert 'Failed to import module cookbooks.group3.invalid_subgroup: invalid syntax (__init__.py, line 2)' in err
-
-
-def test_cookbooks_menu_status(monkeypatch):
-    """Calling status on a CookbooksMenu should show the completed and total tasks."""
-    monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
-    cookbooks = cookbook.Cookbooks(COOKBOOKS_BASE_PATH, [])
-    menu = cookbooks.get_item(cookbooks.cookbooks_module_prefix)
-    assert menu.status == '0/9'
-
-
-def test_cookbooks_menu_status_done(monkeypatch):
-    """Calling status on a CookbooksMenu with all tasks completed should return DONE."""
-    monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
-    cookbooks = cookbook.Cookbooks(COOKBOOKS_BASE_PATH, [], path_filter='group1')
-    menu = cookbooks.get_item('.'.join((cookbooks.cookbooks_module_prefix, 'group1')))
-    assert menu.status == '0/1'
-    item = cookbooks.get_item('.'.join((cookbooks.cookbooks_module_prefix, 'group1', 'cookbook1')))
-    item.status = item.success
-    assert menu.status == 'DONE'
-
-
-@pytest.mark.parametrize('tty, answer, output', (
-    (False, 'q', COOKBOOKS_MENU_NOTTY),
-    (True, 'q', COOKBOOKS_MENU_TTY),
-    (True, KeyboardInterrupt, COOKBOOKS_MENU_TTY + 'QUIT\n'),
-    (True, ['', 'q'], COOKBOOKS_MENU_TTY + COOKBOOKS_MENU_TTY),
-    (True, ['invalid', 'q'], COOKBOOKS_MENU_TTY + '==> Invalid input <==\n' + COOKBOOKS_MENU_TTY),
-    (True, ['group2', 'b', 'q'], COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU + COOKBOOKS_MENU_TTY),
-    (True, ['group2', 'cookbook2', 'b', 'q'],
-     COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN + COOKBOOKS_MENU_TTY.replace(
-        '[0/3] group2', '[1/3] group2')),
-))
-@mock.patch('spicerack.cookbook.sys.stdout.isatty')
-@mock.patch('builtins.input')    # pylint: disable=too-many-arguments
-def test_cookbooks_main_menu(mocked_input, mocked_tty, tty, answer, output, capsys, tmpdir):
-    """Calling main() with a menu should show the menu and allow to interact with it."""
-    mocked_tty.return_value = tty
-    mocked_input.side_effect = answer
-    config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-    with mock.patch('spicerack.cookbook.get_global_config', lambda: config):
-        ret = cookbook.main([])
-
-    out, _ = capsys.readouterr()
-    assert ret == 0
-    assert out == output
+        out, _ = capsys.readouterr()
+        assert ret == 0
+        assert out == output

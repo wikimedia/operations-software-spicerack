@@ -5,9 +5,8 @@ import logging
 import os
 import sys
 
-from spicerack import log
+from spicerack import log, Spicerack
 from spicerack.config import get_global_config
-from spicerack.interactive import get_user
 from spicerack.exceptions import SpicerackError
 
 
@@ -25,27 +24,25 @@ class Cookbooks:
 
     cookbooks_module_prefix = 'cookbooks'
 
-    def __init__(self, base_dir, args, path_filter=None, verbose=False, dry_run=True):
+    def __init__(self, base_dir, args, spicerack, path_filter=None):
         """Initialize the Cookbook class and collect CookbooksMenu and Cookbook items.
 
         Arguments:
             base_dir (str): the base directory from where to start looking for cookbooks.
             args (list, tuple): the list of arguments to pass to the collected items.
+            spicerack (spicerack.Spicerack): the initialized instance of the library.
             path_filter (str, optional): an optional relative module path to filter for. If set, only cookbooks that
                 are part of this subtree will be collected.
-            verbose (bool, optional): whether to set the verbose mode.
-            dry_run (boo, optional): whether to set the dry-run mode.
         """
         self.base_dir = os.path.join(base_dir, self.cookbooks_module_prefix)
         self.args = args
+        self.spicerack = spicerack
         if path_filter is not None:
             self.path_filter = '.'.join((self.cookbooks_module_prefix, path_filter))
         else:
             self.path_filter = path_filter
-        self.verbose = verbose
-        self.dry_run = dry_run
 
-        self.menu = CookbooksMenu(self.cookbooks_module_prefix, self.args, verbose=verbose, dry_run=dry_run)
+        self.menu = CookbooksMenu(self.cookbooks_module_prefix, self.args, self.spicerack)
         self._collect()
 
     def get_item(self, path):
@@ -94,7 +91,7 @@ class Cookbooks:
                 item = item.items[subpath]
             else:
                 module_name = '.'.join(progressive_path)
-                submenu = CookbooksMenu(module_name, self.args, verbose=self.verbose, dry_run=self.dry_run)
+                submenu = CookbooksMenu(module_name, self.args, self.spicerack)
                 add_parent = (module_name == path and self.path_filter is None)
                 item.append(submenu, add_parent=add_parent)
                 item = submenu
@@ -168,7 +165,7 @@ class Cookbooks:
             return
 
         try:
-            cookbook = Cookbook(cookbook_module_name, self.args, verbose=self.verbose, dry_run=self.dry_run)
+            cookbook = Cookbook(cookbook_module_name, self.args, self.spicerack)
         except CookbookError as e:
             logger.error(e)
             return
@@ -181,14 +178,13 @@ class BaseCookbooksItem:
 
     fallback_title = '-'
 
-    def __init__(self, module_name, args, verbose=False, dry_run=True):
+    def __init__(self, module_name, args, spicerack):
         """Base cookbooks's item constructor.
 
         Arguments:
             module_name (str): the Python module to load.
             args (list, tuple): the command line arguments to pass to the item.
-            verbose (bool, optional): whether to set the verbose mode.
-            dry_run (boo, optional): whether to set the dry-run mode.
+            spicerack (spicerack.Spicerack): the initialized instance of the library.
         """
         if '.' in module_name:
             self.name = module_name.rsplit('.', 1)[1]
@@ -199,8 +195,7 @@ class BaseCookbooksItem:
 
         self.module = import_module(module_name)
         self.args = args
-        self.verbose = verbose
-        self.dry_run = dry_run
+        self.spicerack = spicerack
         self.title = self._get_title()
 
     def _get_title(self):
@@ -259,13 +254,13 @@ class BaseCookbooksItem:
 class CookbooksMenu(BaseCookbooksItem):
     """Cookbooks Menu class."""
 
-    def __init__(self, module_name, args, verbose=False, dry_run=True):
+    def __init__(self, module_name, args, spicerack):
         """Override parent constructor to add menu-specific initialization.
 
         :Parameters:
             according to spicerack.cookbook.BaseCookbooksItem.
         """
-        super().__init__(module_name, args, verbose=verbose, dry_run=dry_run)
+        super().__init__(module_name, args, spicerack)
         self.parent = None
         self.items = {}
 
@@ -373,7 +368,7 @@ class CookbooksMenu(BaseCookbooksItem):
             name = self.items[key].path
             prefix = self._get_line_prefix(level, cont_levels, is_final)
 
-            if self.verbose:
+            if self.spicerack.verbose:
                 line = '{prefix}{name}: {title}'.format(prefix=prefix, name=name, title=self.items[key].title)
             else:
                 line = '{prefix}{name}'.format(prefix=prefix, name=name)
@@ -436,13 +431,13 @@ class Cookbook(BaseCookbooksItem):
     statuses = ('NOTRUN', 'PASS', 'FAIL')  # Status labels
     not_run, success, failed = statuses  # Valid statuses variables
 
-    def __init__(self, module_name, args, verbose=False, dry_run=True):
+    def __init__(self, module_name, args, spicerack):
         """Override parent constructor to add menu-specific initialization.
 
         :Parameters:
             according to spicerack.cookbook.BaseCookbooksItem.
         """
-        super().__init__(module_name, args, verbose=verbose, dry_run=dry_run)
+        super().__init__(module_name, args, spicerack)
         self.status = self.not_run
 
     def run(self):
@@ -454,7 +449,7 @@ class Cookbook(BaseCookbooksItem):
         """
         log.log_task_start('Cookbook ' + self.path)
         try:
-            ret = self.module.main(self.args, verbose=self.verbose, dry_run=self.dry_run)
+            ret = self.module.main(self.args, self.spicerack)
         except Exception:  # pylint: disable=broad-except
             logger.exception('Exception raised while executing cookbook %s:', self.path)
             self.status = self.failed
@@ -560,7 +555,7 @@ def execute_cookbook(config, args, cookbooks):
 
     cookbook_path, cookbook_name = os.path.split(cookbook.path.replace('.', os.sep))
     base_path = os.path.join(config['logs_base_dir'], cookbook_path)
-    log.setup_logging(base_path, cookbook_name, get_user(), dry_run=args.dry_run,
+    log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.user, dry_run=args.dry_run,
                       host=config.get('tcpircbot_host', None), port=config.get('tcpircbot_port', 0))
 
     logger.debug('Executing cookbook %s with args: %s', args.cookbook, args.cookbook_args)
@@ -581,8 +576,8 @@ def main(argv=None):
     config = get_global_config()
     sys.path.append(config['cookbooks_base_dir'])
 
-    cookbooks = Cookbooks(config['cookbooks_base_dir'], args.cookbook_args, path_filter=args.cookbook,
-                          verbose=args.verbose, dry_run=args.dry_run)
+    spicerack = Spicerack(verbose=args.verbose, dry_run=args.dry_run)
+    cookbooks = Cookbooks(config['cookbooks_base_dir'], args.cookbook_args, spicerack, path_filter=args.cookbook)
 
     if args.list:
         print(cookbooks.menu.get_tree(), end='')
