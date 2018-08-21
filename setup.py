@@ -20,6 +20,7 @@ extras_require = {
         'pytest-cov>=1.8.0',
         'pytest-xdist>=1.15.0',
         'pytest>=3.0.3',
+        'requests-mock>=1.3.0',
     ],
 }
 

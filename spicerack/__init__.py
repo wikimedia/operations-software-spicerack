@@ -2,6 +2,7 @@
 from spicerack import interactive
 from spicerack.confctl import Confctl
 from spicerack.dnsdisc import Discovery
+from spicerack.mediawiki import MediaWiki
 from spicerack.remote import Remote
 
 
@@ -94,3 +95,12 @@ class Spicerack:
 
         """
         return Discovery(self.confctl('discovery'), self.remote(), records, dry_run=self._dry_run)
+
+    def mediawiki(self):
+        """Get a MediaWiki instance.
+
+        Returns:
+            spicerack.mediawiki.MediaWiki: the pre-configured MediaWiki instance.
+
+        """
+        return MediaWiki(self.confctl('mwconfig'), self.remote(), self._user, dry_run=self._dry_run)
