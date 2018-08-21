@@ -23,35 +23,30 @@ class TestConfctl:
         schema = get_fixture_path('confctl', 'schema.yaml')
         with mock.patch('spicerack.confctl.kvobject.KVObject.setup'):
             self.confctl = confctl.Confctl(config=config, schema=schema, dry_run=False)
-            self.confctl_dry_run = confctl.Confctl(config=config, schema=schema)
-            self.discovery = self.confctl.entity('discovery')
-            self.discovery_dry_run = self.confctl_dry_run.entity('discovery')
+            self.entity = self.confctl._schema.entities['discovery']  # pylint: disable=protected-access
 
-    def test_init(self):
-        """Initializing the class should load the schema."""
-        assert self.confctl.schema.entities
+        self.entity.query = mock.MagicMock(return_value=[self.entity('test', 'dnsdisc')])
+        self.discovery = confctl.ConftoolEntity(self.entity, dry_run=False)
+        self.discovery_dry_run = confctl.ConftoolEntity(self.entity)
 
     def test_get_existing(self):
         """Calling get() should return the object matched by the tags."""
-        self.discovery.entity.query = mock.MagicMock(return_value=[self.discovery.entity('test', 'dnsdisc')])
         for obj in self.discovery.get(dnsdisc='test'):
             assert obj.tags == {'dnsdisc': 'test'}
 
     def test_get_non_existing(self):
         """Calling get() without matches should not return any object."""
-        self.discovery.entity.query = mock.MagicMock(return_value=[])
-        assert list(self.discovery.get(dnsdisc='test')) == []
+        self.entity.query = mock.MagicMock(return_value=[])
+        discovery = confctl.ConftoolEntity(self.entity, dry_run=False)
+        assert list(discovery.get(dnsdisc='test')) == []
 
     def test_update_ok(self):
         """Calling update() should update the objects matched by the tags."""
-        self.discovery.entity.query = mock.MagicMock(return_value=[self.discovery.entity('test', 'dnsdisc')])
         self.discovery.update({'pooled': True}, dnsdisc='test')
         assert list(self.discovery.get(dnsdisc='test'))[0].pooled
 
     def test_update_dry_run(self):
         """Calling update() in dry_run mode should not update the objects matched by the tags."""
-        self.discovery_dry_run.entity.query = mock.MagicMock(
-            return_value=[self.discovery_dry_run.entity('test', 'dnsdisc')])
         list(self.discovery_dry_run.get(dnsdisc='test'))[0].update = mock.MagicMock(side_effect=Exception('test'))
         self.discovery_dry_run.update({'pooled': True}, dnsdisc='test')
 
@@ -61,7 +56,6 @@ class TestConfctl:
     ))
     def test_update_errors(self, exc_class, message):
         """Calling update() should raise ConfctlError if there is an error in the backend."""
-        self.discovery.entity.query = mock.MagicMock(return_value=[self.discovery.entity('test', 'dnsdisc')])
         list(self.discovery.get(dnsdisc='test'))[0].update = mock.MagicMock(side_effect=exc_class('test'))
 
         with pytest.raises(confctl.ConfctlError, match=message):

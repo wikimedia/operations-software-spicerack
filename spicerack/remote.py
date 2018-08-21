@@ -33,8 +33,8 @@ class Remote:
             config (str): the path of Cumin's configuration file.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
-        self.config = Config(config)
-        self.dry_run = dry_run
+        self._config = Config(config)
+        self._dry_run = dry_run
 
     def query(self, query_string):
         """Execute a Cumin query and return the matching hosts.
@@ -47,11 +47,11 @@ class Remote:
 
         """
         try:
-            hosts = query.Query(self.config).execute(query_string)
+            hosts = query.Query(self._config).execute(query_string)
         except CuminError as e:
             raise RemoteError('Failed to execute Cumin query') from e
 
-        return RemoteHosts(self.config, hosts, dry_run=self.dry_run)
+        return RemoteHosts(self._config, hosts, dry_run=self._dry_run)
 
 
 class RemoteHosts:
@@ -65,9 +65,19 @@ class RemoteHosts:
             hosts (cumin.NodeSet, list): the hosts to target for the remote execution.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
-        self.config = config
-        self.hosts = hosts
-        self.dry_run = dry_run
+        self._config = config
+        self._hosts = hosts
+        self._dry_run = dry_run
+
+    @property
+    def hosts(self):
+        """Getter for the hosts property.
+
+        Returns:
+            cumin.NodeSet, list: the targeted hosts.
+
+        """
+        return self._hosts
 
     def run_async(self, *commands, success_threshold=1.0, batch_size=None, batch_sleep=None, is_safe=False):
         """Execute commands on hosts matching a query via Cumin in async mode.
@@ -140,21 +150,21 @@ class RemoteHosts:
             parsed_batch_size = target_batch_size(str(batch_size))
 
         target = transports.Target(
-            self.hosts, batch_size=parsed_batch_size['value'], batch_size_ratio=parsed_batch_size['ratio'],
+            self._hosts, batch_size=parsed_batch_size['value'], batch_size_ratio=parsed_batch_size['ratio'],
             batch_sleep=batch_sleep)
-        worker = transport.Transport.new(self.config, target)
+        worker = transport.Transport.new(self._config, target)
         worker.commands = list(commands)
         worker.handler = mode
         worker.success_threshold = success_threshold
 
         logger.debug('Executing commands %s on %d hosts: %s', commands, len(target.hosts), str(target.hosts))
 
-        if self.dry_run and not is_safe:
+        if self._dry_run and not is_safe:
             return iter(())  # Empty generator
 
         ret = worker.execute()
 
-        if ret != 0 and not self.dry_run:
+        if ret != 0 and not self._dry_run:
             raise RemoteExecutionError(ret, 'Cumin execution failed')
 
         return worker.get_results()

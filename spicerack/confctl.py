@@ -26,8 +26,8 @@ class Confctl:
             schema (str, optional): the path to the Conftool schema to load.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
-        self.dry_run = dry_run
-        self.schema = loader.Schema.from_file(schema)
+        self._dry_run = dry_run
+        self._schema = loader.Schema.from_file(schema)
         kvobject.KVObject.setup(configuration.get(config))
 
     def entity(self, entity_name):
@@ -40,7 +40,7 @@ class Confctl:
             spicerack.confctl.ConftoolEntity: and entity-specific class to perform Conftool operations.
 
         """
-        return ConftoolEntity(self.schema.entities[entity_name], dry_run=self.dry_run)
+        return ConftoolEntity(self._schema.entities[entity_name], dry_run=self._dry_run)
 
 
 class ConftoolEntity:
@@ -53,8 +53,8 @@ class ConftoolEntity:
             entity (conftool.kvobject.Entity): an instance of Conftool entity.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
-        self.entity = entity
-        self.dry_run = dry_run
+        self._entity = entity
+        self._dry_run = dry_run
 
     def _select(self, tags):
         """Generator that yields the selected objects based on the provided tags.
@@ -70,7 +70,7 @@ class ConftoolEntity:
         for tag, expr in tags.items():
             selectors[tag] = re.compile('^{}$'.format(expr))
 
-        for obj in self.entity.query(selectors):
+        for obj in self._entity.query(selectors):
             yield obj
 
     def update(self, changed, **tags):
@@ -88,14 +88,14 @@ class ConftoolEntity:
 
         """
         logger.debug('Updating conftool matching tags: %s', tags)
-        if self.dry_run:
+        if self._dry_run:
             message_prefix = 'Updating conftool'
         else:
             message_prefix = 'DRY-RUN mode, skipping conftool update'
 
         for obj in self._select(tags):
             logger.debug('%s: %s -> %s', message_prefix, obj, changed)
-            if self.dry_run:
+            if self._dry_run:
                 continue
 
             try:
