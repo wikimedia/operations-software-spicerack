@@ -1,9 +1,9 @@
 """DNS Discovery module."""
 import logging
-import time
 
 from dns import resolver
 
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 
 
@@ -88,38 +88,37 @@ class Discovery:
                 raise DiscoveryError("Expected TTL '{expected}', got '{ttl}' for record {record}".format(
                     expected=ttl, ttl=record.ttl, record=record))
 
-    def check_record(self, name, expected_name, attempts=3, sleep=3):
-        """Check that a record resolves on all resolvers to the correct IP, comparing it to a given name.
+    @retry(backoff_mode='linear', exceptions=(DiscoveryError,))
+    def check_record(self, name, expected_name):
+        """Check that a Discovery record resolves on all authoritative resolvers to the correct IP.
 
-        TODO: replace retry logic with the @retry decorator once available in the library.
+        The IP to use for the comparison it obtained resolving the expected_name record.
+        For example with name='servicename-rw.discovery.wmnet' and expected_name='servicename.svc.eqiad.wmnet', this
+        method will resolve the 'expected_name' to get its IP address and then verify that on all authoritative
+        resolvers the record for 'name' resolves to the same IP.
+        It is retried to allow the change to be propagated through all authoritative resolvers.
+
+        See Also:
+            https://wikitech.wikimedia.org/wiki/DNS/Discovery
 
         Arguments:
             name (str): the record to check the resolution for.
             expected_name (str): the name of a record to be resolved and used as the expected address.
-            attempts (int, optional): how many retries are allowed before failing.
-            sleep (int, optional): seconds to sleep between one attempt and the next.
 
         Raises:
-            DiscoveryError: if the expected TTL is not found within the attemps and not in DRY-RUN.
+            DiscoveryError: if the record doesn't match the IP of the expected_name.
 
         """
         expected_address = self.resolve_address(expected_name)
         logger.debug('Checking that %s.discovery.wmnet records matches %s (%s)', name, expected_name, expected_address)
 
-        for i in range(attempts):
-            logger.debug('Attempt %d to check resolution for record %s', i, name)
-            failed = False
-            for record in self.resolve(name=name):
-                if not self._dry_run and record[0].address != expected_address:
-                    failed = True
-                    logger.error("Expected IP '%s', got '%s' for record %s", expected_address, record[0].address, name)
+        failed = False
+        for record in self.resolve(name=name):
+            if not self._dry_run and record[0].address != expected_address:
+                failed = True
+                logger.error("Expected IP '%s', got '%s' for record %s", expected_address, record[0].address, name)
 
-            if not failed:
-                break
-            elif i != (attempts - 1):  # Do not sleep after the last attempt
-                time.sleep(sleep)
-
-        else:
+        if failed:
             raise DiscoveryError('Failed to check record {name}'.format(name=name))
 
     def resolve(self, name=None):

@@ -82,7 +82,10 @@ class TestDiscovery:
         """Calling check_record() should verify that a record has a certain value on the nameservers."""
         self.discovery.check_record(self.records[0], 'ok.svc.eqiad.wmnet')
 
-    def test_check_record_ko(self):
+    @mock.patch('spicerack.decorators.time.sleep')
+    def test_check_record_ko(self, mocked_sleep):
         """Calling check_record() should raise DiscoveryError if unable to check the records."""
         with pytest.raises(DiscoveryError, match='Failed to check record {record}'.format(record=self.records[0])):
-            self.discovery.check_record(self.records[0], 'fail.svc.eqiad.wmnet', attempts=2, sleep=0.01)
+            self.discovery.check_record(self.records[0], 'fail.svc.eqiad.wmnet')
+
+        assert mocked_sleep.called

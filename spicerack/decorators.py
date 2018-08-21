@@ -29,8 +29,9 @@ def ensure_wrap(func):
     return wrapper
 
 
+# TODO: 'func=None' is a workaround for https://github.com/PyCQA/pylint/issues/259, restore it to 'func, *' once fixed.
 @ensure_wrap
-def retry(func, *, tries=3, delay=timedelta(seconds=3), backoff_mode='exponential', exceptions=(SpicerackError,)):
+def retry(func=None, tries=3, delay=timedelta(seconds=3), backoff_mode='exponential', exceptions=(SpicerackError,)):
     """Decorator to retry a function or method if it raises certain exceptions with customizable backoff.
 
     Note:
