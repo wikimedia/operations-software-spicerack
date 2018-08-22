@@ -1,4 +1,6 @@
 """Initialization tests."""
+import logging
+
 from unittest import mock
 
 from spicerack import Spicerack
@@ -21,6 +23,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert spicerack.verbose is verbose
     assert spicerack.dry_run is dry_run
     assert spicerack.user == 'user1'
+    assert isinstance(spicerack.irc_logger, logging.Logger)
     assert isinstance(spicerack.remote(), Remote)
     assert isinstance(spicerack.confctl('discovery'), ConftoolEntity)
     assert isinstance(spicerack.confctl('mwconfig'), ConftoolEntity)

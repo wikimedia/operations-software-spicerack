@@ -2,6 +2,7 @@
 from spicerack import interactive
 from spicerack.confctl import Confctl
 from spicerack.dnsdisc import Discovery
+from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.remote import Remote
 
@@ -28,6 +29,7 @@ class Spicerack:
         self._conftool_schema = conftool_schema
 
         self._user = interactive.get_user()
+        self._irc_logger = irc_logger
         self._confctl = None
 
     @property
@@ -59,6 +61,16 @@ class Spicerack:
 
         """
         return self._user
+
+    @property
+    def irc_logger(self):
+        """Getter for the irc_logger property.
+
+        Returns:
+            logging.Logger: the logger instance to write to IRC.
+
+        """
+        return self._irc_logger
 
     def remote(self):
         """Get a Remote instance.
