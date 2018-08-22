@@ -483,6 +483,8 @@ def parse_args(argv):
         '-l', '--list', action='store_true',
         help=('List all available cookbooks, if -v/--verbose is set print also their description. If a COOKBOOK is '
               'also specified, it will be used as a prefix filter.'))
+    parser.add_argument('-c', '--config-dir', default='/etc/spicerack',
+                        help='Path to the Spicerack configuration directory.')
     parser.add_argument('-d', '--dry-run', action='store_true', help='Set the DRY-RUN mode, also for the cookbook.')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output, also for the cookbook.')
     parser.add_argument(
@@ -573,7 +575,7 @@ def main(argv=None):
 
     """
     args = parse_args(argv)
-    config = get_global_config()
+    config = get_global_config(config_dir=args.config_dir)
     sys.path.append(config['cookbooks_base_dir'])
 
     spicerack = Spicerack(verbose=args.verbose, dry_run=args.dry_run)
