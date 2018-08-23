@@ -5,6 +5,8 @@ import logging
 import os
 import sys
 
+from abc import abstractmethod
+
 from spicerack import log, Spicerack
 from spicerack.config import get_global_config
 from spicerack.exceptions import SpicerackError
@@ -198,6 +200,23 @@ class BaseCookbooksItem:
         self.spicerack = spicerack
         self.title = self._get_title()
 
+    @abstractmethod
+    def run(self):
+        """Excecute the item."""
+
+    @property
+    def verbose_title(self):
+        """Getter for the verbose_title property, uses the module name if there is no title.
+
+        Returns:
+            str: the verbose title of the item.
+
+        """
+        if self.title != self.fallback_title:
+            return self.title
+
+        return self.name
+
     def _get_title(self):
         """Calculate the title of the instance item.
 
@@ -254,6 +273,9 @@ class BaseCookbooksItem:
 class CookbooksMenu(BaseCookbooksItem):
     """Cookbooks Menu class."""
 
+    back_answer = 'b'
+    quit_answer = 'q'
+
     def __init__(self, module_name, args, spicerack):
         """Override parent constructor to add menu-specific initialization.
 
@@ -293,11 +315,10 @@ class CookbooksMenu(BaseCookbooksItem):
         self.items[item.name] = item
 
     def run(self):
-        """Excecute the menu in an interactive."""
-        menu = self
+        """Execute the menu in an interactive way (infinite loop)."""
         try:
             while True:
-                menu = self._run(menu)
+                self.run_once()
         except StopIteration:
             pass
 
@@ -310,9 +331,9 @@ class CookbooksMenu(BaseCookbooksItem):
             print('[{status}] {name}: {title}'.format(status=item.status, name=name, title=item.title))
 
         if self.parent is None:
-            print('q - Quit')
+            print('{answer} - Quit'.format(answer=CookbooksMenu.quit_answer))
         else:
-            print('b - Back to parent menu')
+            print('{answer} - Back to parent menu'.format(answer=CookbooksMenu.back_answer))
 
     def calculate_status(self):
         """Calculate the status of a menu, checking the status of all it's tasks recursively.
@@ -380,15 +401,15 @@ class CookbooksMenu(BaseCookbooksItem):
 
         return lines
 
-    @staticmethod
-    def _run(menu):
+    def run_once(self):
         """Run the menu in an interactive way.
 
-        Arguments:
-            menu (spicerack.cookbook.CookbooksMenu): the menu to execute.
+        Returns:
+            spicerack.cookbook.CookbooksMenu: the current menu instance.
+
         """
-        print('#--- {title} ---#'.format(title=menu.title if menu.title != menu.fallback_title else menu.name))
-        menu.show()
+        print('#--- {title} ---#'.format(title=self.verbose_title))
+        self.show()
 
         if not sys.stdout.isatty():
             print('Not a tty, exiting.')
@@ -401,27 +422,19 @@ class CookbooksMenu(BaseCookbooksItem):
             raise StopIteration  # Ctrl+d or Ctrl+c pressed while waiting for input
 
         if not answer:
-            return menu
+            return
 
-        if answer == 'q' and menu.parent is None:
+        if answer == CookbooksMenu.quit_answer and self.parent is None:
             raise StopIteration
 
-        if answer == 'b' and menu.parent is not None:
-            return menu.parent
+        if answer == CookbooksMenu.back_answer and self.parent is not None:
+            raise StopIteration
 
-        if answer not in menu.items.keys():
+        if answer not in self.items.keys():
             print('==> Invalid input <==')
-            return menu
+            return
 
-        item = menu.items[answer]
-        if isinstance(item, CookbooksMenu):
-            return item
-
-        if isinstance(item, Cookbook):
-            item.run()
-            return menu
-
-        raise CookbookError('Unknown item of type {type}'.format(type=type(item)))  # pragma: no cover
+        self.items[answer].run()
 
 
 class Cookbook(BaseCookbooksItem):

@@ -73,6 +73,10 @@ COOKBOOKS_MENU_NOTTY = """#--- cookbooks ---#
 q - Quit
 Not a tty, exiting.
 """
+COOKBOOKS_GROUP1_MENU = """#--- Group1 Test Cookbooks ---#
+[NOTRUN] cookbook1: Group1 Cookbook1
+b - Back to parent menu
+"""
 COOKBOOKS_GROUP2_MENU = """#--- group2 ---#
 [NOTRUN] cookbook2: Group2 Cookbook2
 [0/1] subgroup1: -
@@ -249,7 +253,7 @@ class TestCookbooks:
         (True, KeyboardInterrupt, COOKBOOKS_MENU_TTY + 'QUIT\n'),
         (True, ['', 'q'], COOKBOOKS_MENU_TTY + COOKBOOKS_MENU_TTY),
         (True, ['invalid', 'q'], COOKBOOKS_MENU_TTY + '==> Invalid input <==\n' + COOKBOOKS_MENU_TTY),
-        (True, ['group2', 'b', 'q'], COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU + COOKBOOKS_MENU_TTY),
+        (True, ['group1', 'b', 'q'], COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP1_MENU + COOKBOOKS_MENU_TTY),
         (True, ['group2', 'cookbook2', 'b', 'q'],
          COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN + COOKBOOKS_MENU_TTY.replace(
             '[0/3] group2', '[1/3] group2')),
