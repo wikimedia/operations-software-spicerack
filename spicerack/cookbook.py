@@ -3,6 +3,7 @@ import argparse
 import importlib
 import logging
 import os
+import shlex
 import sys
 
 from abc import abstractmethod
@@ -431,7 +432,7 @@ class CookbooksMenu(BaseCookbooksItem):
             spicerack.cookbook.CookbooksMenu: the current menu instance.
 
         """
-        print('#--- {title} ---#'.format(title=self.verbose_title))
+        print('#--- {title} args={args} ---#'.format(title=self.verbose_title, args=self.args))
         self.show()
 
         if not sys.stdout.isatty():
@@ -453,11 +454,30 @@ class CookbooksMenu(BaseCookbooksItem):
         if answer == CookbooksMenu.back_answer and self.parent is not None:
             raise StopIteration
 
-        if answer not in self.items.keys():
+        name, *args = shlex.split(answer)
+        if name not in self.items.keys():
             print('==> Invalid input <==')
             return
 
-        self.items[answer].run()
+        item = self.items[name]
+        item.args = self._get_item_args(item, args)
+        item.run()
+
+    def _get_item_args(self, item, args):
+        """Get the arguments to pass to the given item.
+
+        Arguments:
+            item (spicerack.cookbook.Base): the item to pass the arguments to.
+            args (list): the arguments passed via interactive menu to this item.
+
+        """
+        if args:  # Override the item arguments with the ones passed interactively, if any.
+            return args
+
+        if self.args:  # Override the item arguments with the ones of the menu, if any.
+            return self.args
+
+        return item.args
 
 
 class Cookbook(BaseCookbooksItem):

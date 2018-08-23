@@ -59,7 +59,7 @@ LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
     `-- group3.subgroup3
         `-- group3.subgroup3.cookbook4
 """
-COOKBOOKS_MENU_TTY = """#--- cookbooks ---#
+COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level cookbook
 [0/1] group1: Group1 Test Cookbooks
 [0/3] group2: -
@@ -67,7 +67,7 @@ COOKBOOKS_MENU_TTY = """#--- cookbooks ---#
 [NOTRUN] root: Top level cookbook: []
 q - Quit
 """
-COOKBOOKS_MENU_NOTTY = """#--- cookbooks ---#
+COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level cookbook
 [0/1] group1: Group1 Test Cookbooks
 [0/3] group2: -
@@ -76,18 +76,18 @@ COOKBOOKS_MENU_NOTTY = """#--- cookbooks ---#
 q - Quit
 Not a tty, exiting.
 """
-COOKBOOKS_GROUP1_MENU = """#--- Group1 Test Cookbooks ---#
+COOKBOOKS_GROUP1_MENU = """#--- Group1 Test Cookbooks args=[] ---#
 [NOTRUN] cookbook1: Group1 Cookbook1
 b - Back to parent menu
 """
-COOKBOOKS_GROUP2_MENU = """#--- group2 ---#
+COOKBOOKS_GROUP2_MENU = """#--- group2 args=[] ---#
 [NOTRUN] cookbook2: Group2 Cookbook2
 [0/1] subgroup1: -
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu
 """
 COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """args=[], verbose=False, dry_run=False
-#--- group2 ---#
+#--- group2 args=[] ---#
 [PASS] cookbook2: Group2 Cookbook2
 [0/1] subgroup1: -
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
@@ -261,6 +261,14 @@ class TestCookbooks:
         (True, ['group2', 'cookbook2', 'b', 'q'],
          COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN + COOKBOOKS_MENU_TTY.replace(
             '[0/3] group2', '[1/3] group2')),
+        (True, ['group2', 'cookbook2 --argument value', 'b', 'q'],
+         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU +
+         COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('args=[], verbose', "args=['--argument', 'value'], verbose") +
+         COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
+        (True, ['group2 -k', 'cookbook2', 'b', 'q'],
+         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU.replace('args=[] ---', "args=['-k'] ---") +
+         COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('args=[]', "args=['-k']") +
+         COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
     ))
     @mock.patch('spicerack.cookbook.sys.stdout.isatty')
     @mock.patch('builtins.input')    # pylint: disable=too-many-arguments
