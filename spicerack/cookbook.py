@@ -494,7 +494,7 @@ class Cookbook(BaseCookbooksItem):
             according to spicerack.cookbook.BaseCookbooksItem.
         """
         super().__init__(module_name, args, spicerack)
-        self.status = self.not_run
+        self.status = Cookbook.not_run
 
     def run(self):
         """Run the cookbook, calling its main() function.
@@ -508,22 +508,52 @@ class Cookbook(BaseCookbooksItem):
             ret = self.module.main(self.args, self.spicerack)
         except KeyboardInterrupt:
             logger.error('Ctrl+c pressed')
-            self.status = self.error
+            self.status = Cookbook.error
             ret = COOKBOOK_INTERRUPTED_RETCODE
+        except SystemExit as e:
+            ret, self.status = self._handle_system_exit(e)
         except Exception:  # pylint: disable=broad-except
             logger.exception('Exception raised while executing cookbook %s:', self.path)
-            self.status = self.failed
+            self.status = Cookbook.failed
             ret = COOKBOOK_EXCEPTION_RETCODE
         else:
-            if ret == 0:
-                self.status = self.success
-            else:
-                self.status = self.failed
+            self.status = Cookbook.success if ret == 0 else Cookbook.failed
 
         log.log_task_end(self.status, 'Cookbook {name} (exit_code={ret})'.format(
             name=self.path, ret=ret))
 
         return ret
+
+    def _handle_system_exit(self, exc):
+        """Handle the SystemExit exception catching.
+
+        Arguments:
+            exc (SystemExit): the catched exception to handle.
+
+        Returns:
+            tuple: (int, str): tuple with (return code, status) to use based on the SystemExit properties.
+
+        """
+        message = 'raised while executing cookbook'
+
+        if isinstance(exc.code, int):
+            ret = exc.code
+            if exc.code == 0:
+                if '-h' in self.args or '--help' in self.args:
+                    logger.error('SystemExit(0) raised by argparse -h/--help')
+                    status = Cookbook.not_run
+                else:
+                    logger.error('SystemExit(0) %s %s, assuming success:', message, self.path)
+                    status = Cookbook.success
+            else:
+                logger.exception('SystemExit(%d) %s %s:', exc.code, message, self.path)
+                status = Cookbook.error
+        else:
+            ret = COOKBOOK_EXCEPTION_RETCODE
+            logger.exception("SystemExit('%s') %s %s:", exc.code, message, self.path)
+            status = Cookbook.error
+
+        return ret, status
 
 
 def parse_args(argv):
