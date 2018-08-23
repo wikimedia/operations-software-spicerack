@@ -73,7 +73,7 @@ class Cookbooks:
         return item
 
     def _create_menu_for_path(self, path):
-        """Create the menu for a given path, if missing. Return the existing one if any.
+        """Create the menu for a given path, including intermediate levels, if missing. Return the existing one if any.
 
         Arguments:
             path (str): the path of the item to look for.
@@ -94,11 +94,33 @@ class Cookbooks:
             else:
                 module_name = '.'.join(progressive_path)
                 submenu = CookbooksMenu(module_name, self.args, self.spicerack)
-                add_parent = (module_name == path and self.path_filter is None)
-                item.append(submenu, add_parent=add_parent)
+                item.append(submenu, add_parent=self._submenu_add_parent(module_name, path))
                 item = submenu
 
         return item
+
+    def _submenu_add_parent(self, module_name, path):
+        """Determine if the submenu item to be appended should have a link to the parent menu or not.
+
+        When collecting the cookbooks and creating the CookbooksMenu instances, the relation to the parent menu should
+        be skipped for those intermediate menus created for coherence but that should not be accessible by the user,
+        like when using a path_filter.
+
+        Arguments:
+            module_name (str): the module name of the submenu.
+            path (str): of the item to be add.
+
+        Returns:
+            bool: True if the link to the parent menu should be set, False otherwise.
+
+        """
+        if module_name != path:
+            return False
+
+        if self.path_filter is None:
+            return True
+
+        return path.startswith(self.path_filter) and len(path) > len(self.path_filter)
 
     @staticmethod
     def _filter_dirnames_and_filenames(dirnames, filenames):
