@@ -22,6 +22,7 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |   |   `-- group2.subgroup1.cookbook3
 |   `-- group2.zcookbook4
 |-- group3
+|   |-- group3.keyboard_interrupt
 |   |-- group3.non_zero_exit
 |   |-- group3.raise_exception
 |   `-- group3.subgroup3
@@ -38,6 +39,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3
 |   `-- group2.zcookbook4: UNKNOWN (unable to detect title)
 |-- group3: -
+|   |-- group3.keyboard_interrupt: Group3 Raise KeyboardInterrupt
 |   |-- group3.non_zero_exit: Group3 Non-Zero return code
 |   |-- group3.raise_exception: Group3 Raise Exception Cookbook
 |   `-- group3.subgroup3: -
@@ -46,6 +48,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 """
 LIST_COOKBOOKS_GROUP3 = """cookbooks
 `-- group3
+    |-- group3.keyboard_interrupt
     |-- group3.non_zero_exit
     |-- group3.raise_exception
     `-- group3.subgroup3
@@ -60,7 +63,7 @@ COOKBOOKS_MENU_TTY = """#--- cookbooks ---#
 [NOTRUN] cookbook: Top level cookbook
 [0/1] group1: Group1 Test Cookbooks
 [0/3] group2: -
-[0/3] group3: -
+[0/4] group3: -
 [NOTRUN] root: Top level cookbook: []
 q - Quit
 """
@@ -68,7 +71,7 @@ COOKBOOKS_MENU_NOTTY = """#--- cookbooks ---#
 [NOTRUN] cookbook: Top level cookbook
 [0/1] group1: Group1 Test Cookbooks
 [0/3] group2: -
-[0/3] group3: -
+[0/4] group3: -
 [NOTRUN] root: Top level cookbook: []
 q - Quit
 Not a tty, exiting.
@@ -191,6 +194,7 @@ class TestCookbooks:
     @pytest.mark.parametrize('module, error, code', (
         ('invalid_syntax', 'invalid syntax (invalid_syntax.py, line 7)', cookbook.COOKBOOK_NOT_FOUND_RETCODE),
         ('raise_exception', 'Exception: Something went wrong', cookbook.COOKBOOK_EXCEPTION_RETCODE),
+        ('keyboard_interrupt', 'Ctrl+c pressed', cookbook.COOKBOOK_INTERRUPTED_RETCODE),
     ))
     def test_main_execute_cookbook_raise(self, tmpdir, capsys, module, error, code):
         """Calling execute_cookbook() should intercept any exception raised."""
@@ -235,7 +239,7 @@ class TestCookbooks:
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         cookbooks = cookbook.Cookbooks(COOKBOOKS_BASE_PATH, [], self.spicerack)
         menu = cookbooks.get_item(cookbooks.cookbooks_module_prefix)
-        assert menu.status == '0/9'
+        assert menu.status == '0/10'
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a CookbooksMenu with all tasks completed should return DONE."""

@@ -12,6 +12,7 @@ from spicerack.config import get_global_config
 from spicerack.exceptions import SpicerackError
 
 
+COOKBOOK_INTERRUPTED_RETCODE = 97
 COOKBOOK_NOT_FOUND_RETCODE = 98
 COOKBOOK_EXCEPTION_RETCODE = 99
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -463,8 +464,8 @@ class Cookbook(BaseCookbooksItem):
     """Cookbook class."""
 
     fallback_title = 'UNKNOWN (unable to detect title)'
-    statuses = ('NOTRUN', 'PASS', 'FAIL')  # Status labels
-    not_run, success, failed = statuses  # Valid statuses variables
+    statuses = ('NOTRUN', 'PASS', 'FAIL', 'ERROR')  # Status labels
+    not_run, success, failed, error = statuses  # Valid statuses variables
 
     def __init__(self, module_name, args, spicerack):
         """Override parent constructor to add menu-specific initialization.
@@ -485,6 +486,10 @@ class Cookbook(BaseCookbooksItem):
         log.log_task_start('Cookbook ' + self.path)
         try:
             ret = self.module.main(self.args, self.spicerack)
+        except KeyboardInterrupt:
+            logger.error('Ctrl+c pressed')
+            self.status = self.error
+            ret = COOKBOOK_INTERRUPTED_RETCODE
         except Exception:  # pylint: disable=broad-except
             logger.exception('Exception raised while executing cookbook %s:', self.path)
             self.status = self.failed
