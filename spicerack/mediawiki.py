@@ -98,6 +98,18 @@ class MediaWiki:
         """
         self._set_and_verify_conftool(scope='common', name='WMFMasterDatacenter', value=datacenter)
 
+    def get_maintenance_host(self, datacenter):
+        """Get an instance to execute commands on the maintenance hosts in a given datacenter.
+
+        Arguments:
+            datacenter (str): the datacenter to filter for.
+
+        Returns:
+            spicerack.remote.RemoteHosts: the instance for the target host.
+
+        """
+        return self._remote.query('P{O:mediawiki_maintenance} and A:' + datacenter)
+
     def check_cronjobs_enabled(self, datacenter):
         """Check that MediaWiki cronjobs are set in the given DC.
 
@@ -108,8 +120,7 @@ class MediaWiki:
             spicerack.remote.RemoteExecutionError: on failure.
 
         """
-        targets = self._remote.query('R:class = role::mediawiki_maintenance and A:{dc}'.format(dc=datacenter))
-        targets.run_sync('test ' + self._list_cronjobs_command, is_safe=True)
+        self.get_maintenance_host(datacenter).run_sync('test ' + self._list_cronjobs_command, is_safe=True)
 
     def stop_cronjobs(self, datacenter):
         """Remove and ensure MediaWiki cronjobs are not present in the given DC.
@@ -121,7 +132,7 @@ class MediaWiki:
             spicerack.remote.RemoteExecutionError: on failure.
 
         """
-        targets = self._remote.query('R:class = role::mediawiki_maintenance and A:{dc}'.format(dc=datacenter))
+        targets = self.get_maintenance_host(datacenter)
         logger.info('Disabling MediaWiki cronjobs in %s', datacenter)
         targets.run_async('crontab -u www-data -r', 'killall -r php', 'sleep 5', 'killall -9 -r php')
         targets.run_sync('test -z ' + self._list_cronjobs_command, is_safe=True)
