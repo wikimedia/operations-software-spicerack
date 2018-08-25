@@ -62,7 +62,7 @@ class RemoteHosts:
 
         Arguments:
             config (cumin.Config): the configuration for Cumin.
-            hosts (cumin.NodeSet, list): the hosts to target for the remote execution.
+            hosts (cumin.NodeSet): the hosts to target for the remote execution.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
         self._config = config
@@ -74,10 +74,10 @@ class RemoteHosts:
         """Getter for the hosts property.
 
         Returns:
-            cumin.NodeSet, list: the targeted hosts.
+            cumin.NodeSet: a copy of the targeted hosts.
 
         """
-        return self._hosts
+        return self._hosts.copy()
 
     def run_async(self, *commands, success_threshold=1.0, batch_size=None, batch_sleep=None, is_safe=False):
         """Execute commands on hosts matching a query via Cumin in async mode.
