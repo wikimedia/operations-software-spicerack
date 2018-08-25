@@ -36,11 +36,14 @@ class Remote:
         self._config = Config(config)
         self._dry_run = dry_run
 
-    def query(self, query_string):
+    def query(self, query_string, remote_hosts_factory=None):
         """Execute a Cumin query and return the matching hosts.
 
         Arguments:
             query_string (str): the Cumin query string to execute.
+            remote_hosts_factory (function, optional): a function(config, hosts, dry_run=True) to be used instead of
+                `spicerack.remote.default_remote_hosts_factory` to instantiate the target returned by the remote query.
+                It must return an instance of `spicerack.remote.RemoteHosts` or any derived class.
 
         Returns:
             spicerack.remote.RemoteHosts: already initialized with Cumin's configuration and the target hosts.
@@ -51,11 +54,18 @@ class Remote:
         except CuminError as e:
             raise RemoteError('Failed to execute Cumin query') from e
 
-        return RemoteHosts(self._config, hosts, dry_run=self._dry_run)
+        if remote_hosts_factory is None:
+            remote_hosts_factory = default_remote_hosts_factory
+
+        return remote_hosts_factory(self._config, hosts, dry_run=self._dry_run)
 
 
 class RemoteHosts:
-    """Remote Executor class."""
+    """Remote Executor class.
+
+    This class can be extended to customize the interaction with remote hosts passing a custom factory function to
+    `spicerack.remote.Remote.query`.
+    """
 
     def __init__(self, config, hosts, dry_run=True):
         """Initiliaze the instance.
@@ -175,3 +185,18 @@ class RemoteHosts:
             raise RemoteExecutionError(ret, 'Cumin execution failed')
 
         return worker.get_results()
+
+
+def default_remote_hosts_factory(config, hosts, dry_run=True):
+    """Default remote hosts factory function used in `Remote.query()`.
+
+    Arguments:
+        config (cumin.Config): the configuration for Cumin.
+        hosts (cumin.NodeSet): the hosts to target for the remote execution.
+        dry_run (bool, optional): whether this is a DRY-RUN.
+
+    Returns:
+        spicerack.remote.RemoteHosts: an initialized instance.
+
+    """
+    return RemoteHosts(config, hosts, dry_run=dry_run)

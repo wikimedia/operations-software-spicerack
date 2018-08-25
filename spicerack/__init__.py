@@ -4,6 +4,7 @@ from spicerack.confctl import Confctl
 from spicerack.dnsdisc import Discovery
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
+from spicerack.mysql import Mysql
 from spicerack.remote import Remote
 
 
@@ -116,3 +117,12 @@ class Spicerack:
 
         """
         return MediaWiki(self.confctl('mwconfig'), self.remote(), self._user, dry_run=self._dry_run)
+
+    def mysql(self):
+        """Get a Mysql instance.
+
+        Returns:
+            spicerack.mysql.Mysql: the pre-configured Mysql instance.
+
+        """
+        return Mysql(self.remote(), dry_run=self._dry_run)

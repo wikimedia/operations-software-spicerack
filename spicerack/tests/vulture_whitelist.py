@@ -20,6 +20,10 @@ whitelist_mock.side_effect
 whitelist_log = Whitelist()
 whitelist_log.IRCSocketHandler.level
 
+whitelist_mysql = Whitelist()
+whitelist_mysql.set_core_masters_readonly
+whitelist_mysql.set_core_masters_readwrite
+
 whitelist_remote = Whitelist()
 whitelist_remote.execute.worker.commands
 whitelist_remote.execute.worker.commands

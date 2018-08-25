@@ -7,6 +7,7 @@ from spicerack import Spicerack
 from spicerack.confctl import ConftoolEntity
 from spicerack.dnsdisc import Discovery
 from spicerack.mediawiki import MediaWiki
+from spicerack.mysql import Mysql
 from spicerack.remote import Remote
 
 from spicerack.tests import SPICERACK_TEST_PARAMS
@@ -29,5 +30,6 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.confctl('mwconfig'), ConftoolEntity)
     assert isinstance(spicerack.discovery('discovery-record'), Discovery)
     assert isinstance(spicerack.mediawiki(), MediaWiki)
+    assert isinstance(spicerack.mysql(), Mysql)
 
     assert mocked_remote_query.called
