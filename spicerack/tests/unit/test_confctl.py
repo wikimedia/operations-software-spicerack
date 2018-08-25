@@ -35,10 +35,10 @@ class TestConfctl:
             assert obj.tags == {'dnsdisc': 'test'}
 
     def test_get_non_existing(self):
-        """Calling get() without matches should not return any object."""
-        self.entity.query = mock.MagicMock(return_value=[])
-        discovery = confctl.ConftoolEntity(self.entity, dry_run=False)
-        assert list(discovery.get(dnsdisc='test')) == []
+        """Calling get() without matches should raise ConfctlError."""
+        self.entity.query.return_value = []
+        with pytest.raises(confctl.ConfctlError, match='No match found'):
+            list(self.discovery.get(dnsdisc='non-existing'))
 
     def test_update_ok(self):
         """Calling update() should update the objects matched by the tags."""

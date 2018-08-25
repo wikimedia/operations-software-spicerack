@@ -65,13 +65,20 @@ class ConftoolEntity:
         Yields:
             conftool.kvobject.Entity: the selected object.
 
+        Raises:
+            spicerack.confctl.ConfctlError: if not match is found.
+
         """
         selectors = {}
         for tag, expr in tags.items():
             selectors[tag] = re.compile('^{}$'.format(expr))
 
+        obj = None
         for obj in self._entity.query(selectors):
             yield obj
+
+        if obj is None:
+            raise ConfctlError('No match found')
 
     def update(self, changed, **tags):
         """Updates the value of conftool objects corresponding to the selection done with tags.

@@ -64,7 +64,14 @@ class RemoteHosts:
             config (cumin.Config): the configuration for Cumin.
             hosts (cumin.NodeSet): the hosts to target for the remote execution.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
+        Raises:
+            spicerack.remote.RemoteError: if no hosts were provided.
+
         """
+        if not hosts:
+            raise RemoteError('No hosts provided')
+
         self._config = config
         self._hosts = hosts
         self._dry_run = dry_run

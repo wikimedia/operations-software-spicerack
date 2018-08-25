@@ -52,12 +52,17 @@ class TestRemoteHosts:
     @mock.patch('spicerack.remote.transports', autospec=True)
     def setup_method(self, _, mocked_transports):
         """Setup the test environment."""
-        config = Config(get_fixture_path('remote', 'config.yaml'))
         # pylint: disable=attribute-defined-outside-init
+        self.config = Config(get_fixture_path('remote', 'config.yaml'))
         self.mocked_transports = mocked_transports
-        self.remote_hosts = remote.RemoteHosts(config, NodeSet('host[1-9]'), dry_run=False)
-        self.remote_hosts_dry_run = remote.RemoteHosts(config, NodeSet('host[1-9]'))
+        self.remote_hosts = remote.RemoteHosts(self.config, NodeSet('host[1-9]'), dry_run=False)
+        self.remote_hosts_dry_run = remote.RemoteHosts(self.config, NodeSet('host[1-9]'))
         self.expected = [('host1', 'output1')]
+
+    def test_init_no_hosts(self):
+        """Should raise RemoteError if initialized without hosts."""
+        with pytest.raises(remote.RemoteError, match='No hosts provided'):
+            remote.RemoteHosts(self.config, NodeSet(), dry_run=False)
 
     @pytest.mark.parametrize('func_name', ('run_sync', 'run_async'))
     def test_execute(self, func_name):
