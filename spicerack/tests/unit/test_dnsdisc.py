@@ -76,10 +76,13 @@ class TestDiscovery:
         """Calling check_ttl() should verify that the correct TTL is returned by the authoritative nameservers."""
         self.discovery.check_ttl(10)
 
-    def test_check_ttl_ko(self):
+    @mock.patch('spicerack.decorators.time.sleep')
+    def test_check_ttl_ko(self, mocked_sleep):
         """Calling check_ttl() should raise DiscoveryError if the check fails."""
         with pytest.raises(DiscoveryError, match="Expected TTL '20', got '10'"):
             self.discovery.check_ttl(20)
+
+        assert mocked_sleep.called
 
     def test_check_record_ok(self):
         """Calling check_record() should verify that a record has a certain value on the nameservers."""

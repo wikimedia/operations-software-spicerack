@@ -71,6 +71,7 @@ class Discovery:
         else:
             self.check_ttl(ttl)
 
+    @retry(backoff_mode='linear', exceptions=(DiscoveryError,))
     def check_ttl(self, ttl):
         """Check the TTL for all records.
 
