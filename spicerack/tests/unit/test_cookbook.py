@@ -174,7 +174,7 @@ class TestCookbooks:
     def test_main_execute_cookbook_ok(self, tmpdir, capsys):
         """Calling main() with a cookbook should run the cookbook."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.get_global_config', lambda config_dir: config):
+        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main(['cookbook'])
 
@@ -186,7 +186,7 @@ class TestCookbooks:
     def test_main_execute_cookbook_ko(self, tmpdir, capsys):
         """Calling execute_cookbook() should return the exit status of the cookbook."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.get_global_config', lambda config_dir: config):
+        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main(['group3.non_zero_exit'])
 
@@ -197,7 +197,7 @@ class TestCookbooks:
     def test_main_execute_cookbook_non_existent(self, tmpdir, capsys):
         """Calling execute_cookbook() with a non existent cookbook should return COOKBOOK_NOT_FOUND_RETCODE."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.get_global_config', lambda config_dir: config):
+        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main(['non_existent'])
 
@@ -217,7 +217,7 @@ class TestCookbooks:
     def test_main_execute_cookbook_raise(self, tmpdir, capsys, module, error, code, args):
         """Calling execute_cookbook() should intercept any exception raised."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.get_global_config', lambda config_dir: config):
+        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main(['group3.{name}'.format(name=module)] + args)
 
@@ -228,7 +228,7 @@ class TestCookbooks:
     def test_main_execute_dry_run(self, capsys, tmpdir):
         """Calling main() with a cookbook and dry_run mode should execute it and set the dry run mode."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.get_global_config', lambda config_dir: config):
+        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack_dry_run):
                 ret = cookbook.main(['-d', 'root'])
 
@@ -239,7 +239,7 @@ class TestCookbooks:
     def test_main_list(self, tmpdir, capsys):
         """Calling main() with the -l/--list option should print the available cookbooks."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.get_global_config', lambda config_dir: config):
+        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main(['-l'])
 
@@ -297,7 +297,7 @@ class TestCookbooks:
         mocked_tty.return_value = tty
         mocked_input.side_effect = answer
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.get_global_config', lambda config_dir: config):
+        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main([])
 

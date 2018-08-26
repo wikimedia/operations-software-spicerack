@@ -3,60 +3,39 @@ from logging import DEBUG
 
 import pytest
 
-from spicerack import config
-
+from spicerack.config import load_yaml_config
+from spicerack.exceptions import SpicerackError
 from spicerack.tests import get_fixture_path
 
 
-def test_get_config_empty():
+def test_load_yaml_config_empty():
     """Loading an empty config should return an empty dictionary."""
-    config_dir = get_fixture_path('config', 'empty')
-    config_dict = config.get_config(config_dir)
+    config_dict = load_yaml_config(get_fixture_path('config', 'empty.yaml'))
     assert {} == config_dict
 
 
-def test_get_config_invalid_raise():
+@pytest.mark.parametrize('name, message', (
+    ('invalid.yaml', 'ParserError'),
+    ('non-existent.yaml', 'FileNotFoundError'),
+))
+def test_load_yaml_config_raise(name, message):
     """Loading an invalid config should raise Exception."""
-    config_dir = get_fixture_path('config', 'invalid')
-    with pytest.raises(Exception):
-        config.get_config(config_dir)
+    with pytest.raises(SpicerackError, match=message):
+        load_yaml_config(get_fixture_path('config', name))
 
 
-def test_get_config_invalid(caplog):
+@pytest.mark.parametrize('name', ('invalid.yaml', 'non-existent.yaml'))
+def test_load_yaml_config_no_raise(caplog, name):
     """Loading an invalid config with raises=False should return an empty dictionary."""
-    config_dir = get_fixture_path('config', 'invalid')
     with caplog.at_level(DEBUG):
-        config_dict = config.get_config(config_dir, raises=False)
+        config_dict = load_yaml_config(get_fixture_path('config', name), raises=False)
 
     assert {} == config_dict
     assert 'DEBUG    Could not load config file' in caplog.text
 
 
-def test_get_config_missing():
-    """Loading a non-existent config should raise Exception."""
-    config_dir = get_fixture_path('config', 'non-existent')
-    with pytest.raises(Exception):
-        config.get_config(config_dir)
-
-
-def test_get_config_miss_no_raise(caplog):
-    """Loading a non-existent config with raises=False should return an empty dictionary."""
-    config_dir = get_fixture_path('config', 'non-existent')
-    with caplog.at_level(DEBUG):
-        config_dict = config.get_config(config_dir, raises=False)
-
-    assert {} == config_dict
-    assert 'DEBUG    Could not load config file' in caplog.text
-
-
-def test_get_config_valid():
+def test_load_yaml_config_valid():
     """Loading a valid config should return its content."""
-    config_dir = get_fixture_path('config', 'valid')
-    config_dict = config.get_config(config_dir)
-    assert 'key' in config_dict
-
-
-def test_get_global_config():
-    """Calling get_global_config() should return the library's config."""
-    config_dict = config.get_global_config(config_dir=get_fixture_path('config', 'valid'))
+    config_dir = get_fixture_path('config', 'valid.yaml')
+    config_dict = load_yaml_config(config_dir)
     assert 'key' in config_dict
