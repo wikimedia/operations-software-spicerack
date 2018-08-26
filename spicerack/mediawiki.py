@@ -49,7 +49,7 @@ class MediaWiki:
         """
         noc_server = self._remote.query('O:Noc::Site').hosts[0]
         url = 'http://{noc}/conf/{filename}.php.txt'.format(noc=noc_server, filename=filename)
-        mwconfig = requests.get(url, headers={'Host': 'noc.wikimedia.org'})
+        mwconfig = requests.get(url, headers={'Host': 'noc.wikimedia.org'}, timeout=10)
         found = (expected in mwconfig.text)
         logger.debug('Checked message (found=%s) in MediaWiki config %s:\n%s', found, url, expected)
 
