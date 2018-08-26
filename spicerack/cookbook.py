@@ -367,6 +367,8 @@ class Cookbook(BaseCookbooksItem):
         log.log_task_start('Cookbook ' + self.path)
         try:
             ret = self.module.main(self.args, self.spicerack)
+            if ret is None:
+                ret = 0
         except KeyboardInterrupt:
             logger.error('Ctrl+c pressed')
             self.status = Cookbook.error
