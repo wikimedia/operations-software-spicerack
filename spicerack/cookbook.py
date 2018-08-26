@@ -13,10 +13,57 @@ from spicerack.config import get_global_config
 from spicerack.exceptions import SpicerackError
 
 
-COOKBOOK_INTERRUPTED_RETCODE = 97
-COOKBOOK_NOT_FOUND_RETCODE = 98
-COOKBOOK_EXCEPTION_RETCODE = 99
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+COOKBOOK_INTERRUPTED_RETCODE = 97
+"""int: the reserved exit code used when the execution is interrupted."""
+COOKBOOK_NOT_FOUND_RETCODE = 98
+"""int: the reserved exit code used when no cookbook is found for the selection."""
+COOKBOOK_EXCEPTION_RETCODE = 99
+"""int: the reserved exit code used when the cookbook raised an exception."""
+COOKBOOKS_MENU_HELP_MESSAGE = """Cookbooks interactive menu help
+
+Available cookbooks and cookbook groups are shown in the menu with the format:
+  [STATUS] NAME: DESCRIPTION
+Additional control commands are also shown.
+To select an item just input its name and press Enter.
+
+Group of cookbooks:
+  They have a status that represent the number of the executed cookbooks over
+  the total number of cookbooks in that group and its child groups
+  (i.e. [2/11]) or the status 'DONE' in case all cookbooks in that group were
+  executed during the current session.
+  When selected the child cookbooks group is shown.
+
+Single cookbooks:
+  Their status has one of the following values:
+  {statuses}
+  When selected the cookbook is executed and then the current menu is shown
+  again after its execution, with the status updated based on the result of the
+  execution.
+
+Control commands:
+  b: shown when inside a child group of cookbooks to go back one level to the
+     parent menu.
+  q: shown when at the top level of the current session menu to exit the
+     program.
+  h: always shown, print this help message.
+
+  Note: 'q' and 'b' are mutually exclusive, only one of them is shown.
+
+CLI arguments:
+  It's possible to pass CLI parameters to cookbooks and group of cookbooks
+  when selecting them (i.e. cookbook_name -a param value1 value2).
+  Passing arguments to cookbook groups propagate them also to their cookbooks
+  and child cookbook groups.
+  Passing arguments override any other argument that might have been passed
+  to the cookbook executable or to any of the parent groups when selected.
+
+Interrupting execution:
+  Pressing Ctrl+c/d while executing a cookbook interrupts it and show the
+  current menu, marking the cookbook status as ERROR.
+  Pressing Ctrl+c/d while in a menu is equivalent to select 'b' or 'q'.
+"""
+"""str: the generic CookbooksMenu help message, unformatted."""
 
 
 class CookbookError(SpicerackError):
@@ -294,11 +341,93 @@ class BaseCookbooksItem:
         return ''.join(levels) + base_sep
 
 
+class Cookbook(BaseCookbooksItem):
+    """Cookbook class."""
+
+    fallback_title = 'UNKNOWN (unable to detect title)'
+    statuses = ('NOTRUN', 'PASS', 'FAIL', 'ERROR')  # Status labels
+    not_run, success, failed, error = statuses  # Valid statuses variables
+
+    def __init__(self, module_name, args, spicerack):
+        """Override parent constructor to add menu-specific initialization.
+
+        :Parameters:
+            according to spicerack.cookbook.BaseCookbooksItem.
+        """
+        super().__init__(module_name, args, spicerack)
+        self.status = Cookbook.not_run
+
+    def run(self):
+        """Run the cookbook, calling its main() function.
+
+        Return:
+            int: the return code of the cookbook execution. Zero for success, non-zero for failure.
+
+        """
+        log.log_task_start('Cookbook ' + self.path)
+        try:
+            ret = self.module.main(self.args, self.spicerack)
+        except KeyboardInterrupt:
+            logger.error('Ctrl+c pressed')
+            self.status = Cookbook.error
+            ret = COOKBOOK_INTERRUPTED_RETCODE
+        except SystemExit as e:
+            ret, self.status = self._handle_system_exit(e)
+        except Exception:  # pylint: disable=broad-except
+            logger.exception('Exception raised while executing cookbook %s:', self.path)
+            self.status = Cookbook.failed
+            ret = COOKBOOK_EXCEPTION_RETCODE
+        else:
+            self.status = Cookbook.success if ret == 0 else Cookbook.failed
+
+        log.log_task_end(self.status, 'Cookbook {name} (exit_code={ret})'.format(
+            name=self.path, ret=ret))
+
+        return ret
+
+    def _handle_system_exit(self, exc):
+        """Handle the SystemExit exception catching.
+
+        Arguments:
+            exc (SystemExit): the catched exception to handle.
+
+        Returns:
+            tuple: (int, str): tuple with (return code, status) to use based on the SystemExit properties.
+
+        """
+        message = 'raised while executing cookbook'
+
+        if isinstance(exc.code, int):
+            ret = exc.code
+            if exc.code == 0:
+                if '-h' in self.args or '--help' in self.args:
+                    logger.error('SystemExit(0) raised by argparse -h/--help')
+                    status = Cookbook.not_run
+                else:
+                    logger.error('SystemExit(0) %s %s, assuming success:', message, self.path)
+                    status = Cookbook.success
+            else:
+                logger.exception('SystemExit(%d) %s %s:', exc.code, message, self.path)
+                status = Cookbook.error
+        else:
+            ret = COOKBOOK_EXCEPTION_RETCODE
+            logger.exception("SystemExit('%s') %s %s:", exc.code, message, self.path)
+            status = Cookbook.error
+
+        return ret, status
+
+
 class CookbooksMenu(BaseCookbooksItem):
     """Cookbooks Menu class."""
 
     back_answer = 'b'
+    """str: interactive menu answer to go back to the parent menu."""
+    help_answer = 'h'
+    """str: interactive menu answer to print the generic CookbooksMenu help message."""
     quit_answer = 'q'
+    """str: answer to quit the interactive menu."""
+    help_message = COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=Cookbook.statuses)
+    """str: the generic CookbooksMenu help message."""
 
     def __init__(self, module_name, args, spicerack):
         """Override parent constructor to add menu-specific initialization.
@@ -358,6 +487,8 @@ class CookbooksMenu(BaseCookbooksItem):
             print('{answer} - Quit'.format(answer=CookbooksMenu.quit_answer))
         else:
             print('{answer} - Back to parent menu'.format(answer=CookbooksMenu.back_answer))
+
+        print('{answer} - Help'.format(answer=CookbooksMenu.help_answer))
 
     def calculate_status(self):
         """Calculate the status of a menu, checking the status of all it's tasks recursively.
@@ -448,6 +579,10 @@ class CookbooksMenu(BaseCookbooksItem):
         if not answer:
             return
 
+        if answer == CookbooksMenu.help_answer:
+            print(self.help_message)
+            return
+
         if answer == CookbooksMenu.quit_answer and self.parent is None:
             raise StopIteration
 
@@ -480,82 +615,6 @@ class CookbooksMenu(BaseCookbooksItem):
         return item.args
 
 
-class Cookbook(BaseCookbooksItem):
-    """Cookbook class."""
-
-    fallback_title = 'UNKNOWN (unable to detect title)'
-    statuses = ('NOTRUN', 'PASS', 'FAIL', 'ERROR')  # Status labels
-    not_run, success, failed, error = statuses  # Valid statuses variables
-
-    def __init__(self, module_name, args, spicerack):
-        """Override parent constructor to add menu-specific initialization.
-
-        :Parameters:
-            according to spicerack.cookbook.BaseCookbooksItem.
-        """
-        super().__init__(module_name, args, spicerack)
-        self.status = Cookbook.not_run
-
-    def run(self):
-        """Run the cookbook, calling its main() function.
-
-        Return:
-            int: the return code of the cookbook execution. Zero for success, non-zero for failure.
-
-        """
-        log.log_task_start('Cookbook ' + self.path)
-        try:
-            ret = self.module.main(self.args, self.spicerack)
-        except KeyboardInterrupt:
-            logger.error('Ctrl+c pressed')
-            self.status = Cookbook.error
-            ret = COOKBOOK_INTERRUPTED_RETCODE
-        except SystemExit as e:
-            ret, self.status = self._handle_system_exit(e)
-        except Exception:  # pylint: disable=broad-except
-            logger.exception('Exception raised while executing cookbook %s:', self.path)
-            self.status = Cookbook.failed
-            ret = COOKBOOK_EXCEPTION_RETCODE
-        else:
-            self.status = Cookbook.success if ret == 0 else Cookbook.failed
-
-        log.log_task_end(self.status, 'Cookbook {name} (exit_code={ret})'.format(
-            name=self.path, ret=ret))
-
-        return ret
-
-    def _handle_system_exit(self, exc):
-        """Handle the SystemExit exception catching.
-
-        Arguments:
-            exc (SystemExit): the catched exception to handle.
-
-        Returns:
-            tuple: (int, str): tuple with (return code, status) to use based on the SystemExit properties.
-
-        """
-        message = 'raised while executing cookbook'
-
-        if isinstance(exc.code, int):
-            ret = exc.code
-            if exc.code == 0:
-                if '-h' in self.args or '--help' in self.args:
-                    logger.error('SystemExit(0) raised by argparse -h/--help')
-                    status = Cookbook.not_run
-                else:
-                    logger.error('SystemExit(0) %s %s, assuming success:', message, self.path)
-                    status = Cookbook.success
-            else:
-                logger.exception('SystemExit(%d) %s %s:', exc.code, message, self.path)
-                status = Cookbook.error
-        else:
-            ret = COOKBOOK_EXCEPTION_RETCODE
-            logger.exception("SystemExit('%s') %s %s:", exc.code, message, self.path)
-            status = Cookbook.error
-
-        return ret, status
-
-
 def parse_args(argv):
     """Parse command line arguments and return them.
 
@@ -580,10 +639,11 @@ def parse_args(argv):
     parser.add_argument(
         'cookbook', metavar='COOKBOOK', nargs='?', type=cookbook_path_type,
         help=('Either a relative path of the Python file to execute (group/cookbook.py) or the name of the Python '
-              'module to execute (group.cookbook).'))
+              'module to execute (group.cookbook). If the selected path/module is a directory or is not set, an '
+              'interactive menu will be shown.'))
     parser.add_argument(
         'cookbook_args', metavar='COOKBOOK_ARGS', nargs=argparse.REMAINDER,
-        help='Collect all the remaining arguments to be passed to the cookbook to execute.')
+        help='Collect all the remaining arguments to be passed to the cookbook or menu to execute.')
 
     args = parser.parse_args(args=argv)
 

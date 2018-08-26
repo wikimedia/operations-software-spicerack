@@ -75,6 +75,7 @@ COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
 [0/7] group3: -
 [NOTRUN] root: Top level cookbook: []
 q - Quit
+h - Help
 """
 COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level cookbook
@@ -83,17 +84,20 @@ COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
 [0/7] group3: -
 [NOTRUN] root: Top level cookbook: []
 q - Quit
+h - Help
 Not a tty, exiting.
 """
 COOKBOOKS_GROUP1_MENU = """#--- Group1 Test Cookbooks args=[] ---#
 [NOTRUN] cookbook1: Group1 Cookbook1
 b - Back to parent menu
+h - Help
 """
 COOKBOOKS_GROUP2_MENU = """#--- group2 args=[] ---#
 [NOTRUN] cookbook2: Group2 Cookbook2
 [0/1] subgroup1: -
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu
+h - Help
 """
 COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """args=[], verbose=False, dry_run=False
 #--- group2 args=[] ---#
@@ -101,6 +105,7 @@ COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """args=[], verbose=False, dry_run=False
 [0/1] subgroup1: -
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu
+h - Help
 """
 
 
@@ -282,6 +287,8 @@ class TestCookbooks:
          COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU.replace('args=[] ---', "args=['-k'] ---") +
          COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('args=[]', "args=['-k']") +
          COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
+        (True, 'h', COOKBOOKS_MENU_TTY +
+         cookbook.COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=cookbook.Cookbook.statuses) + '\n' + COOKBOOKS_MENU_TTY),
     ))
     @mock.patch('spicerack.cookbook.sys.stdout.isatty')
     @mock.patch('builtins.input')    # pylint: disable=too-many-arguments
