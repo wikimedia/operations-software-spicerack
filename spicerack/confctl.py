@@ -96,9 +96,9 @@ class ConftoolEntity:
         """
         logger.debug('Updating conftool matching tags: %s', tags)
         if self._dry_run:
-            message_prefix = 'Updating conftool'
+            message_prefix = 'Skipping conftool update on dry-run mode'
         else:
-            message_prefix = 'DRY-RUN mode, skipping conftool update'
+            message_prefix = 'Updating conftool'
 
         for obj in self._select(tags):
             logger.debug('%s: %s -> %s', message_prefix, obj, changed)
