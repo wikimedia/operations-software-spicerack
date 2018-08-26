@@ -5,7 +5,11 @@ import uuid
 
 from unittest import mock
 
+import pytest
+
 from spicerack import log
+
+from spicerack.tests import caplog_not_available
 
 
 GENERIC_LOG_RECORD = logging.LogRecord('module', logging.DEBUG, '/source/file.py', 1, 'message', [], None)
@@ -67,6 +71,7 @@ def test_cumin_filter_blocks_cumin():
     assert ret == 0
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 def test_setup_logging_no_irc(tmpdir, caplog):
     """Calling setup_logging() should setup all the handlers of the root logger."""
     log.setup_logging(tmpdir.strpath, 'task', 'user')
@@ -76,6 +81,7 @@ def test_setup_logging_no_irc(tmpdir, caplog):
     _assert_match_in_tmpdir(message, tmpdir.strpath)
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 @mock.patch('spicerack.log.socket')
 def test_setup_logging_with_irc(mocked_socket, tmpdir, caplog):
     """Calling setup_logging() with host and port should also setup the IRC logger."""
@@ -88,6 +94,7 @@ def test_setup_logging_with_irc(mocked_socket, tmpdir, caplog):
     _assert_match_in_tmpdir(message, tmpdir.strpath)
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 def test_setup_logging_dry_run(capsys, tmpdir, caplog):
     """Calling setup_logging() when in dry run mode should setup all the handlers and the stdout with DEBUG level."""
     log.setup_logging(tmpdir.strpath, 'task', 'user', dry_run=True)
@@ -101,6 +108,7 @@ def test_setup_logging_dry_run(capsys, tmpdir, caplog):
     _assert_match_in_tmpdir(message, tmpdir.strpath)
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 def test_log_task_start(capsys, tmpdir, caplog):
     """Calling log_task_start() should log a START message for the task to both loggers."""
     log.setup_logging(tmpdir.strpath, 'task', 'user')
@@ -114,6 +122,7 @@ def test_log_task_start(capsys, tmpdir, caplog):
     _assert_match_in_tmpdir(logged_message, tmpdir.strpath)
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 def test_log_task_start_dry_run(capsys, tmpdir, caplog):
     """Calling log_task_start() in dry-run mode should not print a START message for the task to the IRC logger."""
     log.setup_logging(tmpdir.strpath, 'task', 'user', dry_run=True)
@@ -127,6 +136,7 @@ def test_log_task_start_dry_run(capsys, tmpdir, caplog):
     _assert_match_in_tmpdir(logged_message, tmpdir.strpath)
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 def test_log_task_end(capsys, tmpdir, caplog):
     """Calling log_task_end() should print an END message for the task."""
     log.setup_logging(tmpdir.strpath, 'task', 'user', dry_run=False)

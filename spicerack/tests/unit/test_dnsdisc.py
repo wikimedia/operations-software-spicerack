@@ -6,6 +6,8 @@ import pytest
 
 from spicerack.dnsdisc import Discovery, DiscoveryError
 
+from spicerack.tests import caplog_not_available
+
 
 MockedRecord = namedtuple('Record', ['address'])
 
@@ -64,6 +66,7 @@ class TestDiscovery:
         records = '({records})'.format(records='|'.join(self.records))
         self.mocked_confctl.assert_has_calls([mock.call.update({'ttl': 10}, dnsdisc=records)])
 
+    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
     def test_update_ttl_dry_run(self, caplog):
         """Calling update_ttl() in DRY-RUN mode should skip the verification."""
         self.discovery_dry_run.update_ttl(10)

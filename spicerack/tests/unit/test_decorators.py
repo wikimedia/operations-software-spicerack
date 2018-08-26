@@ -7,6 +7,8 @@ import pytest
 from spicerack.decorators import get_backoff_sleep, retry
 from spicerack.exceptions import SpicerackError
 
+from spicerack.tests import caplog_not_available
+
 
 def _generate_mocked_function(calls):
     func = mock.Mock()
@@ -15,6 +17,7 @@ def _generate_mocked_function(calls):
     return func
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 @pytest.mark.parametrize('calls, messages', (
     ([True], []),
     ([SpicerackError('error1'), True], ["Failed to call 'unittest.mock.mocked' [1/3, retrying in 3.00s]: error1"]),
@@ -49,6 +52,7 @@ def test_retry_fail_no_args(mocked_sleep, exc, calls):
     func.assert_has_calls([mock.call()] * len(calls))
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 @pytest.mark.parametrize('calls, messages, kwargs', (
     ([True], [], {'delay': timedelta(seconds=11), 'tries': 1}),
     ([Exception('error1'), True],

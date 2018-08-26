@@ -5,7 +5,7 @@ import pytest
 
 from spicerack.config import load_yaml_config
 from spicerack.exceptions import SpicerackError
-from spicerack.tests import get_fixture_path
+from spicerack.tests import get_fixture_path, caplog_not_available
 
 
 def test_load_yaml_config_empty():
@@ -24,6 +24,7 @@ def test_load_yaml_config_raise(name, message):
         load_yaml_config(get_fixture_path('config', name))
 
 
+@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
 @pytest.mark.parametrize('name', ('invalid.yaml', 'non-existent.yaml'))
 def test_load_yaml_config_no_raise(caplog, name):
     """Loading an invalid config with raises=False should return an empty dictionary."""

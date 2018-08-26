@@ -7,6 +7,8 @@ import pytest
 from spicerack.mediawiki import MediaWiki, MediaWikiError
 from spicerack.remote import RemoteExecutionError
 
+from spicerack.tests import requests_mock_not_available
+
 
 ConftoolObj = namedtuple('ConftoolObj', ['key', 'val'])
 
@@ -25,6 +27,7 @@ class TestMediaWiki:
         self.mediawiki = MediaWiki(self.mocked_confctl, self.mocked_remote, self.user, dry_run=False)
         self.mediawiki_dry_run = MediaWiki(self.mocked_confctl, self.mocked_remote, self.user)
 
+    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_check_config_line(self, requests_mock):
         """It should verify the config published at noc.wikimedia.org."""
         requests_mock.get('http://host1/conf/file1.php.txt', text='data')
