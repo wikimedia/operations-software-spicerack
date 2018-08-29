@@ -3,6 +3,7 @@ import logging
 
 import requests
 
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteExecutionError
 
@@ -18,6 +19,7 @@ class MediaWiki:
     """Class to manage MediaWiki-specific resources."""
 
     _list_cronjobs_command = '"$(crontab -u www-data -l | sed -r \'/^(#|$)/d\')"'
+    _siteinfo_url = 'http://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2'
 
     def __init__(self, conftool, remote, user, dry_run=True):
         """Initialize the instance.
@@ -54,6 +56,55 @@ class MediaWiki:
         logger.debug('Checked message (found=%s) in MediaWiki config %s:\n%s', found, url, expected)
 
         return found
+
+    @staticmethod
+    def get_siteinfo(datacenter):
+        """Get the JSON paylod for siteinfo from a random host in a given datacenter.
+
+        Arguments:
+            datacenter (str): the DC where to query for siteinfo.
+
+        Returns:
+            dict: the parsed JSON from siteinfo.
+
+        Raises:
+            requests.exceptions.RequestException: on failure.
+
+        """
+        url = MediaWiki._siteinfo_url.format(dc=datacenter)
+        headers = {'X-Forwarded-Proto': 'https', 'Host': 'en.wikipedia.org'}
+
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        return response.json()
+
+    @retry(backoff_mode='linear', exceptions=(MediaWikiError,))
+    def check_siteinfo(self, datacenter, path, expected):
+        """Check that a specific value in siteinfo matches the expected one, retrying if doesn't match.
+
+        Arguments:
+            datacenter (str): the DC where to query for siteinfo.
+            path (list): path of keys to traverse the siteinfo dictionary to get the value (i.e. ['key1', 'key2'] will
+                look for the value of siteinfo['key1']['key2']).
+            expected (mixed): the expected value to use for comparison.
+
+        Raises:
+            MediaWikiError: if the value doesn't match and retry the check up to the configured times.
+            KeyError: if unable to traverse the dictionary with the provided keys.
+
+        """
+        value = MediaWiki.get_siteinfo(datacenter)
+        for key in path:
+            value = value[key]
+
+        if value != expected:
+            message = "Expected '{expected}', got '{value}' for path: {path}".format(
+                expected=expected, value=value, path=path)
+            if self._dry_run:
+                logger.debug(message)
+            else:
+                raise MediaWikiError(message)
 
     def scap_sync_config_file(self, filename, message):
         """Execute scap sync-file to deploy a specific configuration file of wmf-config.
@@ -120,7 +171,7 @@ class MediaWiki:
             spicerack.remote.RemoteExecutionError: on failure.
 
         """
-        self.get_maintenance_host(datacenter).run_sync('test ' + self._list_cronjobs_command, is_safe=True)
+        self.get_maintenance_host(datacenter).run_sync('test ' + MediaWiki._list_cronjobs_command, is_safe=True)
 
     def stop_cronjobs(self, datacenter):
         """Remove and ensure MediaWiki cronjobs are not present in the given DC.
@@ -135,7 +186,7 @@ class MediaWiki:
         targets = self.get_maintenance_host(datacenter)
         logger.info('Disabling MediaWiki cronjobs in %s', datacenter)
         targets.run_async('crontab -u www-data -r', 'killall -r php', 'sleep 5', 'killall -9 -r php')
-        targets.run_sync('test -z ' + self._list_cronjobs_command, is_safe=True)
+        targets.run_sync('test -z ' + MediaWiki._list_cronjobs_command, is_safe=True)
 
         try:
             targets.run_sync('! pgrep -c php', is_safe=True)
