@@ -42,7 +42,7 @@ setup(
     install_requires=install_requires,
     keywords=['wmf', 'automation', 'orchestration'],
     license='GPLv3+',
-    name='spicerack',
+    name='wikimedia-spicerack',
     packages=find_packages(exclude=['*.tests', '*.tests.*']),
     platforms=['GNU/Linux'],
     setup_requires=setup_requires,
