@@ -79,7 +79,7 @@ class MediaWiki:
 
         return response.json()
 
-    @retry(backoff_mode='linear', exceptions=(MediaWikiError,))
+    @retry(exceptions=(MediaWikiError,))
     def check_siteinfo(self, datacenter, path, expected):
         """Check that a specific value in siteinfo matches the expected one, retrying if doesn't match.
 
@@ -123,19 +123,33 @@ class MediaWiki:
             user=self._user, filename=filename, message=message)
         self._remote.query(query).run_sync(command)
 
-    def set_readonly(self, datacenter, readonly):
+    def set_readonly(self, datacenter, message):
         """Set the Conftool readonly variable for MediaWiki config in a specific datacenter.
 
         Arguments:
             datacenter (str): the DC for which the configuration must be changed.
-            readonly (str, bool): the readonly message to set it read-only, False to set it read-write.
-                It follows MediaWiki logic.
+            message (str): the readonly message string to set in MediaWiki.
 
         Raises:
-            spicerack.mediawiki.MediaWikiError: on error.
+            spicerack.mediawiki.MediaWikiError: on error and failed validation.
 
         """
-        self._set_and_verify_conftool(scope=datacenter, name='ReadOnly', value=readonly)
+        self._set_and_verify_conftool(scope=datacenter, name='ReadOnly', value=message)
+        self.check_siteinfo(datacenter, ['query', 'general', 'readonly'], True)
+        self.check_siteinfo(datacenter, ['query', 'general', 'readonlyreason'], message)
+
+    def set_readwrite(self, datacenter):
+        """Set the Conftool readonly variable for MediaWiki config to False to make it read-write.
+
+        Arguments:
+            datacenter (str): the DC for which the configuration must be changed.
+
+        Raises:
+            spicerack.mediawiki.MediaWikiError: on error and failed validation.
+
+        """
+        self._set_and_verify_conftool(scope=datacenter, name='ReadOnly', value=False)
+        self.check_siteinfo(datacenter, ['query', 'general', 'readonly'], False)
 
     def set_master_datacenter(self, datacenter):
         """Set the MediaWiki config master datacenter variable in Conftool.
