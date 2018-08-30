@@ -32,7 +32,7 @@ setup_requires = [
 setup(
     author='Riccardo Coccioli',
     author_email='rcoccioli@wikimedia.org',
-    description='A library for automation and orchestration of tasks in the WMF infrastructure',
+    description='Automation framework for the WMF production infrastructure',
     entry_points={
         'console_scripts': [
             'cookbook = spicerack.cookbook:main',
@@ -42,6 +42,7 @@ setup(
     install_requires=install_requires,
     keywords=['wmf', 'automation', 'orchestration'],
     license='GPLv3+',
+    long_description="Automation and orchestration framework for the Wikimedia Foundation's production infrastructure.",
     name='wikimedia-spicerack',
     packages=find_packages(exclude=['*.tests', '*.tests.*']),
     platforms=['GNU/Linux'],
