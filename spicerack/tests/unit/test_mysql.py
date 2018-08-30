@@ -122,25 +122,25 @@ class TestMysql:
         with pytest.raises(mysql.MysqlError, match='Verification failed that core DB masters'):
             self.mysql.verify_core_masters_readonly('eqiad', True)
 
-    def test_ensure_core_masters_in_sync_ok(self):
-        """Should ensure that all core masters are in sync with the master in the other DC."""
+    def test_check_core_masters_in_sync_ok(self):
+        """Should check that all core masters are in sync with the master in the other DC."""
         answer = mock.MagicMock()
         answer.message.side_effect = [b'GTID_POSITION', b'0'] * 11
         self.mocked_remote.query.return_value.hosts = NodeSet('db1001')
         self.mocked_remote.query.return_value.run_query.return_value = [[NodeSet('db1001'), answer]]
-        self.mysql.ensure_core_masters_in_sync('eqiad', 'codfw')
+        self.mysql.check_core_masters_in_sync('eqiad', 'codfw')
 
-    def test_ensure_core_masters_in_sync_fail_gtid(self):
+    def test_check_core_masters_in_sync_fail_gtid(self):
         """Should raise MysqlError if unable to get the GTID position from the current master."""
         self.mocked_remote.query.return_value.hosts = NodeSet('db1001')
         with pytest.raises(mysql.MysqlError, match='Unable to get GTID pos from master'):
-            self.mysql.ensure_core_masters_in_sync('eqiad', 'codfw')
+            self.mysql.check_core_masters_in_sync('eqiad', 'codfw')
 
-    def test_ensure_core_masters_in_sync_not_in_sync(self):
+    def test_check_core_masters_in_sync_not_in_sync(self):
         """Should raise MysqlError if a master is not in sync with the one in the other DC."""
         answer = mock.MagicMock()
         answer.message.side_effect = [b'GTID_POSITION', b'1']
         self.mocked_remote.query.return_value.hosts = NodeSet('db1001')
         self.mocked_remote.query.return_value.run_query.return_value = [[NodeSet('db1001'), answer]]
         with pytest.raises(mysql.MysqlError, match='GTID not in sync after timeout for host'):
-            self.mysql.ensure_core_masters_in_sync('eqiad', 'codfw')
+            self.mysql.check_core_masters_in_sync('eqiad', 'codfw')
