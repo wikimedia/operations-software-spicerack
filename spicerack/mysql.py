@@ -76,6 +76,18 @@ class Mysql:
         self._remote = remote
         self._dry_run = dry_run
 
+    def get_dbs(self, query):
+        """Get a MysqlRemoteHosts instance for the matching hosts.
+
+        Arguments:
+            query (str): the Remote query to use to fetch the DB hosts.
+
+        Returns:
+            spicerack.mysql.MysqlRemoteHosts: an instance with the remote targets.
+
+        """
+        return self._remote.query(query, remote_hosts_factory=mysql_remote_hosts_factory)
+
     def get_core_dbs(self, *, datacenter=None, section=None, replication_role=None):
         """Find the core databases matching the parameters.
 
@@ -91,7 +103,7 @@ class Mysql:
             spicerack.mysql.MysqlError: on invalid data or unexpected matching hosts.
 
         Returns:
-            spicerack.remote.RemoteHosts: an instance with the remote targets.
+            spicerack.mysql.MysqlRemoteHosts: an instance with the remote targets.
 
         """
         query_parts = ['P{O:mariadb::core}']

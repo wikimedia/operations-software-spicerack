@@ -47,6 +47,11 @@ class TestMysql:
         self.mocked_remote.query.return_value = mock.MagicMock(spec_set=mysql.MysqlRemoteHosts)
         self.mysql = mysql.Mysql(self.mocked_remote, dry_run=False)
 
+    def test_get_dbs(self):
+        """It should return and instance of MysqlRemoteHosts for the matching hosts."""
+        self.mysql.get_dbs('query')
+        self.mocked_remote.query.assert_called_once_with('query', remote_hosts_factory=mysql.mysql_remote_hosts_factory)
+
     @pytest.mark.parametrize('kwargs, query, match', (
         ({}, 'P{O:mariadb::core}', 'db10[01-99],db20[01-99]'),
         ({'datacenter': 'eqiad'}, 'P{O:mariadb::core} and A:eqiad', 'db10[01-99]'),
