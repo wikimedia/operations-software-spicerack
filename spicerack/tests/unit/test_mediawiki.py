@@ -1,7 +1,6 @@
 """MediaWiki module tests."""
 import json
 
-from collections import namedtuple
 from unittest import mock
 
 import pytest
@@ -10,9 +9,6 @@ from spicerack.mediawiki import MediaWiki, MediaWikiError
 from spicerack.remote import RemoteExecutionError
 
 from spicerack.tests import caplog_not_available, requests_mock_not_available
-
-
-ConftoolObj = namedtuple('ConftoolObj', ['key', 'val'])
 
 
 class TestMediaWiki:
@@ -108,32 +104,23 @@ class TestMediaWiki:
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
         message = self.siteinfo_ro['query']['general']['readonlyreason']
         self.mediawiki.set_readonly('eqiad', message)
-        self.mocked_confctl.update.assert_called_once_with({'val': message}, name='ReadOnly', scope='eqiad')
+        self.mocked_confctl.set_and_verify.assert_called_once_with('val', message, name='ReadOnly', scope='eqiad')
 
     @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_set_readwrite(self, requests_mock):
         """It should set the readonly variale in Conftool to False and verify it in siteinfo."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_rw))
         self.mediawiki.set_readwrite('eqiad')
-        self.mocked_confctl.update.assert_called_once_with({'val': False}, name='ReadOnly', scope='eqiad')
+        self.mocked_confctl.set_and_verify.assert_called_once_with('val', False, name='ReadOnly', scope='eqiad')
 
-    def test_set_master_datacenter(self):
+    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    def test_set_master_datacenter(self, requests_mock):
         """It should set the master datacenter in Conftool."""
-        self.mediawiki.set_master_datacenter('dc1')
-        self.mocked_confctl.update.assert_called_once_with({'val': 'dc1'}, name='WMFMasterDatacenter', scope='common')
-        self.mocked_confctl.get.assert_called_once_with(scope='common', name='WMFMasterDatacenter')
-
-    def test_set_master_datacenter_fail(self):
-        """It should raise MediaWikiError if failed to verify the new value."""
-        self.mocked_confctl.get.return_value = [ConftoolObj(key='key1', val='invalid_value')]
-        with pytest.raises(
-                MediaWikiError, match='MediaWiki config WMFMasterDatacenter record was not set for scope common'):
-            self.mediawiki.set_master_datacenter('dc1')
-
-    def test_set_master_datacenter_fail_dry_run(self):
-        """It should not raise MediaWikiError if failed to verify the new value in DRY-RUN mode."""
-        self.mocked_confctl.get.return_value = [ConftoolObj(key='key1', val='invalid_value')]
-        self.mediawiki_dry_run.set_master_datacenter('dc1')
+        requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
+        requests_mock.get(self.siteinfo_url.replace('eqiad', 'codfw'), text=json.dumps(self.siteinfo_ro))
+        self.mediawiki.set_master_datacenter('eqiad')
+        self.mocked_confctl.set_and_verify.assert_called_once_with(
+            'val', 'eqiad', name='WMFMasterDatacenter', scope='common')
 
     def test_check_cronjobs_enabled(self):
         """It should ensure that the cronjobs are present and not commented out."""

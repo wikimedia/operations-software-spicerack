@@ -3,6 +3,7 @@ import logging
 
 import requests
 
+from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteExecutionError
@@ -131,10 +132,11 @@ class MediaWiki:
             message (str): the readonly message string to set in MediaWiki.
 
         Raises:
-            spicerack.mediawiki.MediaWikiError: on error and failed validation.
+            spicerack.confctl.ConfctlError: on Conftool errors and failed validation.
+            spicerack.mediawiki.MediaWikiError: on failed siteinfo validation.
 
         """
-        self._set_and_verify_conftool(scope=datacenter, name='ReadOnly', value=message)
+        self._conftool.set_and_verify('val', message, scope=datacenter, name='ReadOnly')
         self.check_siteinfo(datacenter, ['query', 'general', 'readonly'], True)
         self.check_siteinfo(datacenter, ['query', 'general', 'readonlyreason'], message)
 
@@ -145,10 +147,11 @@ class MediaWiki:
             datacenter (str): the DC for which the configuration must be changed.
 
         Raises:
-            spicerack.mediawiki.MediaWikiError: on error and failed validation.
+            spicerack.confctl.ConfctlError: on Conftool errors and failed validation.
+            spicerack.mediawiki.MediaWikiError: on failed siteinfo validation.
 
         """
-        self._set_and_verify_conftool(scope=datacenter, name='ReadOnly', value=False)
+        self._conftool.set_and_verify('val', False, scope=datacenter, name='ReadOnly')
         self.check_siteinfo(datacenter, ['query', 'general', 'readonly'], False)
 
     def set_master_datacenter(self, datacenter):
@@ -158,10 +161,12 @@ class MediaWiki:
             datacenter (str): the new master datacenter.
 
         Raises:
-            spicerack.mediawiki.MediaWikiError: on error.
+            spicerack.confctl.ConfctlError: on error.
 
         """
-        self._set_and_verify_conftool(scope='common', name='WMFMasterDatacenter', value=datacenter)
+        self._conftool.set_and_verify('val', datacenter, scope='common', name='WMFMasterDatacenter')
+        for dc in CORE_DATACENTERS:
+            self.check_siteinfo(dc, ['query', 'general', 'wmf-config', 'wmfMasterDatacenter'], datacenter)
 
     def get_maintenance_host(self, datacenter):
         """Get an instance to execute commands on the maintenance hosts in a given datacenter.
@@ -207,22 +212,3 @@ class MediaWiki:
         except RemoteExecutionError:
             # We just log an error, don't actually report a failure to the system. We can live with this.
             logger.error('Stray php processes still present on the maintenance host, please check')
-
-    def _set_and_verify_conftool(self, *, scope, name, value):
-        """Set the MediaWiki config Conftool value.
-
-        Arguments:
-            scope (str): the Conftool mwconfig scope.
-            name (str): the Conftool mwconfig variable name (key).
-            value (str): the value to set the variable to.
-
-        Raises:
-            spicerack.mediawiki.MediaWikiError: on error.
-
-        """
-        self._conftool.update({'val': value}, name=name, scope=scope)
-        for obj in self._conftool.get(name=name, scope=scope):
-            if obj.val != value and not self._dry_run:
-                raise MediaWikiError(
-                    'MediaWiki config {name} record was not set for scope {scope}: {record}'.format(
-                        name=name, scope=scope, record=obj.key))
