@@ -36,6 +36,16 @@ class Discovery:
             self._resolvers[nameserver] = resolver.Resolver()
             self._resolvers[nameserver].nameservers = [rdata.address for rdata in resolver.query(nameserver)]
 
+    @property
+    def _conftool_selector(self):
+        """Generate the Conftool selector for the records.
+
+        Returns:
+            str: the Conftool selector.
+
+        """
+        return '({regexp})'.format(regexp='|'.join(self._records))
+
     def resolve_address(self, name):
         """Resolve the IP of a given record.
 
@@ -62,9 +72,8 @@ class Discovery:
 
         """
         # DRY-RUN handled by confctl
-        dnsdisc = '({regexp})'.format(regexp='|'.join(self._records))
-        logger.debug('Updating the TTL of %s to %d seconds', dnsdisc, ttl)
-        self._conftool.update({'ttl': ttl}, dnsdisc=dnsdisc)
+        logger.debug('Updating the TTL of %s to %d seconds', self._conftool_selector, ttl)
+        self._conftool.update({'ttl': ttl}, dnsdisc=self._conftool_selector)
 
         if self._dry_run:
             logger.info('Skipping check of modified TTL in DRY-RUN mode')
@@ -144,3 +153,19 @@ class Discovery:
                 answer = dns_resolver.query('{record}.discovery.wmnet'.format(record=record))
                 logger.debug('[%s] %s -> %s TTL %d', nameserver, record, answer[0].address, answer.ttl)
                 yield answer
+
+    def pool(self, datacenter):
+        """Set the records as pooled in the given datacenter.
+
+        Arguments:
+            datacenter (str): the DC in which to pool the discovery records.
+        """
+        self._conftool.set_and_verify('pooled', True, dnsdisc=self._conftool_selector, name=datacenter)
+
+    def depool(self, datacenter):
+        """Set the records as depooled in the given datacenter.
+
+        Arguments:
+            datacenter (str): the DC from which to depool the discovery records.
+        """
+        self._conftool.set_and_verify('pooled', False, dnsdisc=self._conftool_selector, name=datacenter)

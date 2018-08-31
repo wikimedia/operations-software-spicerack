@@ -39,6 +39,7 @@ class TestDiscovery:
         """Initialize the test environment for Discovery."""
         # pylint: disable=attribute-defined-outside-init
         self.records = ['record1', 'record2']
+        self.conftool_records = '({records})'.format(records='|'.join(self.records))
         self.nameservers = ['authdns1', 'authdns2']
 
         self.mocked_confctl = mock.MagicMock()
@@ -63,8 +64,7 @@ class TestDiscovery:
     def test_update_ttl(self):
         """Calling update_ttl() should update the TTL of the conftool objects."""
         self.discovery.update_ttl(10)
-        records = '({records})'.format(records='|'.join(self.records))
-        self.mocked_confctl.assert_has_calls([mock.call.update({'ttl': 10}, dnsdisc=records)])
+        self.mocked_confctl.assert_has_calls([mock.call.update({'ttl': 10}, dnsdisc=self.conftool_records)])
 
     @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
     def test_update_ttl_dry_run(self, caplog):
@@ -95,3 +95,10 @@ class TestDiscovery:
             self.discovery.check_record(self.records[0], 'fail.svc.eqiad.wmnet')
 
         assert mocked_sleep.called
+
+    @pytest.mark.parametrize('func, value', (('pool', True), ('depool', False)))
+    def test_pool(self, func, value):
+        """Calling pool() should update the pooled value of the conftool objects to True."""
+        getattr(self.discovery, func)('eqiad')
+        self.mocked_confctl.set_and_verify.assert_called_once_with(
+            'pooled', value, dnsdisc=self.conftool_records, name='eqiad')
