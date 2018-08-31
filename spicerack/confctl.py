@@ -60,7 +60,7 @@ class ConftoolEntity:
         """Generator that yields the selected objects based on the provided tags.
 
         Arguments:
-            tags (dict): dictionary with tag: expression pairs of selectors.
+            tags (dict): dictionary with tag: expression pairs of Conftool selectors.
 
         Yields:
             conftool.kvobject.Entity: the selected object.
@@ -85,10 +85,10 @@ class ConftoolEntity:
 
         Arguments:
             changed (dict): the new values to set for the selected objects.
-            **tags: arbitrary tags as keyword arguments.
+            **tags: arbitrary Conftool tags as keyword arguments.
 
         Raises:
-            ConfctlError: on etcd or Conftool errors.
+            spicerack.confctl.ConfctlError: on etcd or Conftool errors.
 
         Examples:
             >>> confctl.update({'pooled': False}, service='appservers-.*', name='eqiad')
@@ -116,7 +116,7 @@ class ConftoolEntity:
         """Generator that yields conftool objects corresponding to the selection.
 
         Arguments:
-            **tags: arbitrary tags as keyword arguments.
+            **tags: arbitrary Conftool tags as keyword arguments.
 
         Yields:
             conftool.kvobject.Entity: the selected object.
@@ -125,3 +125,24 @@ class ConftoolEntity:
         for obj in self._select(tags):
             logger.debug('Selected conftool object: %s', obj)
             yield obj
+
+    def set_and_verify(self, key, value, **tags):
+        """Set and verify a single Conftool value.
+
+        Arguments:
+            key (str): the key in Conftool to modify.
+            value (mixed): the value to set.
+            **tags: arbitrary Conftool tags as keyword arguments.
+
+        Raises:
+            spicerack.confctl.ConfctlError: on etcd or Conftool errors or failing to verify the changes.
+
+        """
+        logger.debug('Set %s=%s for tags: %s', key, value, tags)
+        self.update({key: value}, **tags)
+
+        for obj in self.get(**tags):  # Verify the changes were applied
+            new = getattr(obj, key)
+            if new != value and not self._dry_run:
+                raise ConfctlError("Conftool key {key} has value '{new}', expecting '{value}' for tags: {tags}".format(
+                    key=key, new=new, value=value, tags=tags))
