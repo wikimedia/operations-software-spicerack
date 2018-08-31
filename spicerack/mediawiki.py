@@ -192,6 +192,18 @@ class MediaWiki:
         """
         self.get_maintenance_host(datacenter).run_sync('test ' + MediaWiki._list_cronjobs_command, is_safe=True)
 
+    def check_cronjobs_disabled(self, datacenter):
+        """Check that MediaWiki cronjobs are not set in the given DC.
+
+        Arguments:
+            datacenter (str): the name of the datacenter to work on.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: on failure.
+
+        """
+        self.get_maintenance_host(datacenter).run_sync('test -z ' + MediaWiki._list_cronjobs_command, is_safe=True)
+
     def stop_cronjobs(self, datacenter):
         """Remove and ensure MediaWiki cronjobs are not present in the given DC.
 
@@ -205,7 +217,7 @@ class MediaWiki:
         targets = self.get_maintenance_host(datacenter)
         logger.info('Disabling MediaWiki cronjobs in %s', datacenter)
         targets.run_async('crontab -u www-data -r', 'killall -r php', 'sleep 5', 'killall -9 -r php')
-        targets.run_sync('test -z ' + MediaWiki._list_cronjobs_command, is_safe=True)
+        self.check_cronjobs_disabled(datacenter)
 
         try:
             targets.run_sync('! pgrep -c php', is_safe=True)
