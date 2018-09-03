@@ -216,7 +216,19 @@ class MediaWiki:
         """
         targets = self.get_maintenance_host(datacenter)
         logger.info('Disabling MediaWiki cronjobs in %s', datacenter)
-        targets.run_async('crontab -u www-data -r', 'killall -r php', 'sleep 5', 'killall -9 -r php')
+
+        targets.run_async(
+            'crontab -u www-data -r',  # Cleanup the crontab
+            'pkill -U www-data sh',  # Kill all processes created by CRON for the www-data user
+            # Kill MediaWiki wrappers, see modules/scap/manifests/scripts.pp in the Puppet repo
+            'pkill --full "/usr/local/bin/foreachwiki"',
+            'pkill --full "/usr/local/bin/foreachwikiindblist"',
+            'pkill --full "/usr/local/bin/expanddblist"',
+            'pkill --full "/usr/local/bin/mwscript"',
+            'pkill --full "/usr/local/bin/mwscriptwikiset"',
+            'killall -r php',  # Kill all remaining PHP processes for all users
+            'sleep 5',
+            'killall -9 -r php')  # No more time to be gentle
         self.check_cronjobs_disabled(datacenter)
 
         try:
