@@ -1,10 +1,13 @@
 """Spicerack package."""
+import os
+
 from spicerack import interactive
 from spicerack.confctl import Confctl
 from spicerack.dnsdisc import Discovery
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
+from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote
 
 
@@ -12,7 +15,8 @@ class Spicerack:
     """Spicerack service locator."""
 
     def __init__(self, *, verbose=False, dry_run=True, cumin_config='/etc/cumin/config.yaml',
-                 conftool_config='/etc/conftool/config.yaml', conftool_schema='/etc/conftool/schema.yaml'):
+                 conftool_config='/etc/conftool/config.yaml', conftool_schema='/etc/conftool/schema.yaml',
+                 spicerack_config_dir='/etc/spicerack'):
         """Initialize the service locator for the Spicerack library.
 
         Arguments:
@@ -21,6 +25,8 @@ class Spicerack:
             cumin_config (str): the path of Cumin's configuration file.
             conftool_config (str, optional): the path of Conftool's configuration file.
             conftool_schema (str, optional): the path of Conftool's schema file.
+            spicerack_config_dir (str, optional): the path for the root configuration directory for Spicerack.
+                Module-specific configuration will be loaded from `config_dir/module_name/`.
         """
         # Attributes
         self._verbose = verbose
@@ -28,6 +34,7 @@ class Spicerack:
         self._cumin_config = cumin_config
         self._conftool_config = conftool_config
         self._conftool_schema = conftool_schema
+        self._spicerack_config_dir = spicerack_config_dir
 
         self._user = interactive.get_user()
         self._irc_logger = irc_logger
@@ -126,3 +133,15 @@ class Spicerack:
 
         """
         return Mysql(self.remote(), dry_run=self._dry_run)
+
+    def redis_cluster(self, cluster):
+        """Get a RedisCluster instance.
+
+        Arguments:
+            cluster (str): the name of the cluster.
+
+        Returns:
+            spicerack.redis_cluster.RedisCluster: the cluster instance.
+
+        """
+        return RedisCluster(cluster, os.path.join(self._spicerack_config_dir, 'redis_cluster'), dry_run=self._dry_run)
