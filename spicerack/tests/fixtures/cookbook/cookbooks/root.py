@@ -1,4 +1,5 @@
 """Top level cookbook"""
+import argparse
 
 
 def get_title(args):
@@ -6,8 +7,12 @@ def get_title(args):
     return '{doc}: {args}'.format(doc=__doc__, args=args)
 
 
-def main(args, spicerack):
+def argument_parser():
     """As required by spicerack.cookbook."""
-    print('args={args}, verbose={verbose}, dry_run={dry_run}'.format(
-        args=args, verbose=spicerack.verbose, dry_run=spicerack.dry_run))
+    return argparse.ArgumentParser('Argparse')
+
+
+def run(args, _):
+    """As required by spicerack.cookbook."""
+    print(args)
     return 0

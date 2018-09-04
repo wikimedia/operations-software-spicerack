@@ -1,9 +1,20 @@
 """Group2 Cookbook2"""
+import argparse
+
+
 __title__ = __doc__
 
 
-def main(args, spicerack):
+def argument_parser():
     """As required by spicerack.cookbook."""
-    print('args={args}, verbose={verbose}, dry_run={dry_run}'.format(
-        args=args, verbose=spicerack.verbose, dry_run=spicerack.dry_run))
+    parser = argparse.ArgumentParser('Argparse')
+    parser.add_argument('-k', action='store_true')
+    parser.add_argument('--argument')
+
+    return parser
+
+
+def run(args, spicerack):
+    """As required by spicerack.cookbook."""
+    print([args, spicerack.verbose, spicerack.dry_run])
     return 0
