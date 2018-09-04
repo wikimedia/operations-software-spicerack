@@ -12,6 +12,15 @@ from spicerack.tests import caplog_not_available
 MockedRecord = namedtuple('Record', ['address'])
 
 
+def mock_obj(datacenter, svc, pooled):
+    """Creates a mock conftool object"""
+    obj = mock.MagicMock()
+    obj.tags = {'dnsdisc': svc}
+    obj.name = datacenter
+    obj.pooled = pooled
+    return obj
+
+
 class MockedQuery:
     """Class to mock a return object from a call to dns.resolver.query()."""
 
@@ -102,3 +111,55 @@ class TestDiscovery:
         getattr(self.discovery, func)('eqiad')
         self.mocked_confctl.set_and_verify.assert_called_once_with(
             'pooled', value, dnsdisc=self.conftool_records, name='eqiad')
+
+    def test_active_datacenters(self):
+        """The list of active datacenter is correctly composed."""
+        self.mocked_confctl.get.return_value = [
+            mock_obj('dcA', 'svcA', True),
+            mock_obj('dcB', 'svcA', False),
+            mock_obj('dcA', 'svcB', True),
+            mock_obj('dcB', 'svcB', True)
+        ]
+        expected = {'svcA': ['dcA'], 'svcB': ['dcA', 'dcB']}
+        assert expected == self.discovery.active_datacenters
+        self.mocked_confctl.get.assert_called_once_with(dnsdisc=self.conftool_records)
+
+    def test_check_if_depoolable_ok(self):
+        """No exception is raised if the active datacenters are ok"""
+        self.mocked_confctl.get.return_value = [
+            mock_obj('dcA', 'svcA', False),
+            mock_obj('dcB', 'svcA', True),
+            mock_obj('dcA', 'svcB', True),
+            mock_obj('dcB', 'svcB', True)
+        ]
+        self.discovery.check_if_depoolable('dcA')
+        # now let's assume a service is competely down. We should still get
+        # a green light.
+        self.mocked_confctl.get.return_value = [
+            mock_obj('dcA', 'svcA', False),
+            mock_obj('dcB', 'svcA', False),
+            mock_obj('dcA', 'svcB', True),
+            mock_obj('dcB', 'svcB', True)
+        ]
+        self.discovery.check_if_depoolable('dcA')
+
+    def test_check_if_depoolable_ko(self):
+        """A DiscoveryError is raised when a service would be taken out of commission."""
+        self.mocked_confctl.get.return_value = [
+            mock_obj('dcA', 'svcA', False),
+            mock_obj('dcB', 'svcA', True),
+            mock_obj('dcA', 'svcB', False),
+            mock_obj('dcB', 'svcB', False)
+        ]
+        with pytest.raises(DiscoveryError,
+                           match='Services svcA cannot be depooled as they are only active in dcB'):
+            self.discovery.check_if_depoolable('dcB')
+        self.mocked_confctl.get.return_value = [
+            mock_obj('dcA', 'svcA', False),
+            mock_obj('dcB', 'svcA', True),
+            mock_obj('dcA', 'svcB', False),
+            mock_obj('dcB', 'svcB', True)
+        ]
+        with pytest.raises(DiscoveryError,
+                           match='Services svcA, svcB cannot be depooled as they are only active in dcB'):
+            self.discovery.check_if_depoolable('dcB')
