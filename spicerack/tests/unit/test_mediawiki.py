@@ -61,25 +61,42 @@ class TestMediaWiki:
     def test_check_siteinfo_ok(self, requests_mock):
         """It should check that a specific key in siteinfo API matches a value and not raise exception."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_rw))
-        self.mediawiki.check_siteinfo('eqiad', ['query', 'general', 'wmf-config', 'wmfEtcdLastModifiedIndex'], 123456)
+        self.mediawiki.check_siteinfo('eqiad', {('query', 'general', 'wmf-config', 'wmfEtcdLastModifiedIndex'): 123456})
+
+    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    def test_check_siteinfo_multi_ok(self, requests_mock):
+        """It should check that multiple keys in siteinfo API matches multiple values and not raise exception."""
+        requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_rw))
+        self.mediawiki.check_siteinfo('eqiad', {
+            ('query', 'general', 'wmf-config', 'wmfEtcdLastModifiedIndex'): 123456,
+            ('batchcomplete',): True,
+            ('query', 'general', 'readonly'): False})
 
     @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_check_siteinfo_raise(self, mocked_sleep, requests_mock):
         """It should retry if it doesn't match and raise MediaWikiError after all retries have failed."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
-        with pytest.raises(MediaWikiError, match=r"Expected 'invalid', got 'True' for path: \['batchcomplete'\]"):
-            self.mediawiki.check_siteinfo('eqiad', ['batchcomplete'], 'invalid')
+        with pytest.raises(MediaWikiError, match=r"Expected 'invalid', got 'True' for path: \('batchcomplete',\)"):
+            self.mediawiki.check_siteinfo('eqiad', {('batchcomplete',): 'invalid'})
 
         assert mocked_sleep.called
 
     @pytest.mark.skipif(caplog_not_available() or requests_mock_not_available(),
                         reason='Requires caplog and requests-mock fixtures')
-    def test_check_siteinfo_dry_run(self, requests_mock, caplog):
+    def test_check_siteinfo_dry_run_wrong_value(self, requests_mock, caplog):
         """It should retry if it doesn't match and not raise if failed but in dry-run."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
-        self.mediawiki_dry_run.check_siteinfo('eqiad', ['batchcomplete'], 'invalid')
-        assert "Expected 'invalid', got 'True' for path: ['batchcomplete']" in caplog.text
+        self.mediawiki_dry_run.check_siteinfo('eqiad', {('batchcomplete',): 'invalid'})
+        assert "Expected 'invalid', got 'True' for path: ('batchcomplete',)" in caplog.text
+
+    @pytest.mark.skipif(caplog_not_available() or requests_mock_not_available(),
+                        reason='Requires caplog and requests-mock fixtures')
+    def test_check_siteinfo_dry_run_wrong_key(self, requests_mock, caplog):
+        """It should retry if it doesn't find the key and not raise in dry-run."""
+        requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
+        self.mediawiki_dry_run.check_siteinfo('eqiad', {('not', 'valid'): 'invalid'})
+        assert "Path ('not', 'valid') not found in siteinfo, key 'not' is missing" in caplog.text
 
     @pytest.mark.skipif(caplog_not_available() or requests_mock_not_available(),
                         reason='Requires caplog and requests-mock fixtures')
@@ -88,7 +105,7 @@ class TestMediaWiki:
         """It should retry if it doesn't match and not raise if failed but in dry-run."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
         with pytest.raises(KeyError):
-            self.mediawiki.check_siteinfo('eqiad', ['invalid'], 'invalid')
+            self.mediawiki.check_siteinfo('eqiad', {('invalid'): 'invalid'})
 
         assert not mocked_sleep.called
 
