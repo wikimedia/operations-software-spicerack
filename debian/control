@@ -14,6 +14,7 @@ Build-Depends:
   python3-pytest,
   python3-pytest-cov,
   python3-pytest-runner,
+  python3-redis,
   python3-requests,
   python3-requests-mock,
   python3-setuptools,
