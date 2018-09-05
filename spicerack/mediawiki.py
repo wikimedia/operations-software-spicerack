@@ -80,32 +80,40 @@ class MediaWiki:
 
         return response.json()
 
-    @retry(exceptions=(MediaWikiError,))
-    def check_siteinfo(self, datacenter, path, expected):
+    @retry(tries=5, backoff_mode='constant', exceptions=(MediaWikiError,))
+    def check_siteinfo(self, datacenter, checks):
         """Check that a specific value in siteinfo matches the expected one, retrying if doesn't match.
 
         Arguments:
             datacenter (str): the DC where to query for siteinfo.
-            path (list): path of keys to traverse the siteinfo dictionary to get the value (i.e. ['key1', 'key2'] will
-                look for the value of siteinfo['key1']['key2']).
-            expected (mixed): the expected value to use for comparison.
+            checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
+                the siteinfo dictionary to get the value and the values are the expected values to check. For example:
+                    {('key1', 'key2'): 'value'}
+                will check siteinfo[key1][key2] for value 'value'.
 
         Raises:
             MediaWikiError: if the value doesn't match and retry the check up to the configured times.
             KeyError: if unable to traverse the dictionary with the provided keys.
 
         """
-        value = MediaWiki.get_siteinfo(datacenter)
-        for key in path:
-            value = value[key]
+        siteinfo = MediaWiki.get_siteinfo(datacenter)
 
-        if value != expected:
-            message = "Expected '{expected}', got '{value}' for path: {path}".format(
-                expected=expected, value=value, path=path)
-            if self._dry_run:
-                logger.debug(message)
-            else:
-                raise MediaWikiError(message)
+        for path, expected in checks.items():
+            value = siteinfo.copy()  # No need for deepcopy, it will not be modified
+            for key in path:
+                if self._dry_run and key not in value:
+                    logger.debug("Path %s not found in siteinfo, key '%s' is missing", path, key)
+                    break
+
+                value = value[key]
+
+            if value != expected:
+                message = "Expected '{expected}', got '{value}' for path: {path}".format(
+                    expected=expected, value=value, path=path)
+                if self._dry_run:
+                    logger.debug(message)
+                else:
+                    raise MediaWikiError(message)
 
     def scap_sync_config_file(self, filename, message):
         """Execute scap sync-file to deploy a specific configuration file of wmf-config.
@@ -137,8 +145,10 @@ class MediaWiki:
 
         """
         self._conftool.set_and_verify('val', message, scope=datacenter, name='ReadOnly')
-        self.check_siteinfo(datacenter, ['query', 'general', 'readonly'], True)
-        self.check_siteinfo(datacenter, ['query', 'general', 'readonlyreason'], message)
+        for _ in range(10):  # Randomly check on up to 10 different hosts from the load balancer
+            self.check_siteinfo(datacenter, {
+                ('query', 'general', 'readonly'): True,
+                ('query', 'general', 'readonlyreason'): message})
 
     def set_readwrite(self, datacenter):
         """Set the Conftool readonly variable for MediaWiki config to False to make it read-write.
@@ -152,7 +162,8 @@ class MediaWiki:
 
         """
         self._conftool.set_and_verify('val', False, scope=datacenter, name='ReadOnly')
-        self.check_siteinfo(datacenter, ['query', 'general', 'readonly'], False)
+        for _ in range(10):  # Randomly check on up to 10 different hosts from the load balancer
+            self.check_siteinfo(datacenter, {('query', 'general', 'readonly'):  False})
 
     def set_master_datacenter(self, datacenter):
         """Set the MediaWiki config master datacenter variable in Conftool.
@@ -166,7 +177,8 @@ class MediaWiki:
         """
         self._conftool.set_and_verify('val', datacenter, scope='common', name='WMFMasterDatacenter')
         for dc in CORE_DATACENTERS:
-            self.check_siteinfo(dc, ['query', 'general', 'wmf-config', 'wmfMasterDatacenter'], datacenter)
+            for _ in range(10):  # Randomly check on up to 10 different hosts from the load balancer per datacenter
+                self.check_siteinfo(dc, {('query', 'general', 'wmf-config', 'wmfMasterDatacenter'): datacenter})
 
     def get_maintenance_host(self, datacenter):
         """Get an instance to execute commands on the maintenance hosts in a given datacenter.
