@@ -60,3 +60,19 @@ class TestConfctl:
 
         with pytest.raises(confctl.ConfctlError, match=message):
             self.discovery.update({'pooled': True}, dnsdisc='test')
+
+    def test_set_and_verify_ok(self):
+        """It should update the objects matched by the tags and check them."""
+        self.discovery.set_and_verify('pooled', True, dnsdisc='test')
+        assert list(self.discovery.get(dnsdisc='test'))[0].pooled
+
+    def test_set_and_verify_fail(self):
+        """It should raise ConfctlError if failing to check the modified objects."""
+        list(self.discovery.get(dnsdisc='test'))[0].update = mock.MagicMock()  # Don't allow to update the record
+        with pytest.raises(confctl.ConfctlError, match="Conftool key pooled has value 'False', expecting 'True'"):
+            self.discovery.set_and_verify('pooled', True, dnsdisc='test')
+
+    def test_set_and_verify_dry_run(self):
+        """In dry_run mode it should not update the objects and not raise on failure to check them."""
+        self.discovery_dry_run.set_and_verify('pooled', True, dnsdisc='test')
+        assert not list(self.discovery.get(dnsdisc='test'))[0].pooled

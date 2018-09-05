@@ -76,6 +76,18 @@ class Mysql:
         self._remote = remote
         self._dry_run = dry_run
 
+    def get_dbs(self, query):
+        """Get a MysqlRemoteHosts instance for the matching hosts.
+
+        Arguments:
+            query (str): the Remote query to use to fetch the DB hosts.
+
+        Returns:
+            spicerack.mysql.MysqlRemoteHosts: an instance with the remote targets.
+
+        """
+        return self._remote.query(query, remote_hosts_factory=mysql_remote_hosts_factory)
+
     def get_core_dbs(self, *, datacenter=None, section=None, replication_role=None):
         """Find the core databases matching the parameters.
 
@@ -91,7 +103,7 @@ class Mysql:
             spicerack.mysql.MysqlError: on invalid data or unexpected matching hosts.
 
         Returns:
-            spicerack.remote.RemoteHosts: an instance with the remote targets.
+            spicerack.mysql.MysqlRemoteHosts: an instance with the remote targets.
 
         """
         query_parts = ['P{O:mariadb::core}']
@@ -189,8 +201,8 @@ class Mysql:
             raise MysqlError('Verification failed that core DB masters in {dc} have read-only={ro}'.format(
                 dc=datacenter, ro=is_read_only))
 
-    def ensure_core_masters_in_sync(self, dc_from, dc_to):
-        """Ensure all core masters in dc_to are in sync with the core masters in dc_from.
+    def check_core_masters_in_sync(self, dc_from, dc_to):
+        """Check that all core masters in dc_to are in sync with the core masters in dc_from.
 
         Arguments:
             dc_from (str): the name of the datacenter from where to get the master positions.

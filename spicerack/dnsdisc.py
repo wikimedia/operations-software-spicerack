@@ -1,6 +1,8 @@
 """DNS Discovery module."""
 import logging
 
+from collections import defaultdict
+
 from dns import resolver
 
 from spicerack.decorators import retry
@@ -36,6 +38,33 @@ class Discovery:
             self._resolvers[nameserver] = resolver.Resolver()
             self._resolvers[nameserver].nameservers = [rdata.address for rdata in resolver.query(nameserver)]
 
+    @property
+    def _conftool_selector(self):
+        """Generate the Conftool selector for the records.
+
+        Returns:
+            str: the Conftool selector.
+
+        """
+        return '({regexp})'.format(regexp='|'.join(self._records))
+
+    @property
+    def active_datacenters(self):
+        """Information about pooled state of services.
+
+        Returns:
+            dict: a map of services, with values given by a list of datacenters
+                  where the service is pooled, i.e. {svc_foo: [dc1, dc2], svc_bar: [dc1]}
+
+        """
+        services = defaultdict(list)
+        for obj in self._conftool.get(dnsdisc=self._conftool_selector):
+            if obj.pooled:
+                service = obj.tags['dnsdisc']
+                services[service].append(obj.name)
+
+        return services
+
     def resolve_address(self, name):
         """Resolve the IP of a given record.
 
@@ -58,13 +87,13 @@ class Discovery:
             ttl (int): the new TTL value to set.
 
         Raises:
-            DiscoveryError: if the check of the modified TTL fail and not in DRY-RUN mode.
+            spicerack.discovery.DiscoveryError: if the check of the modified TTL fail and not
+                                                in DRY-RUN mode.
 
         """
         # DRY-RUN handled by confctl
-        dnsdisc = '({regexp})'.format(regexp='|'.join(self._records))
-        logger.debug('Updating the TTL of %s to %d seconds', dnsdisc, ttl)
-        self._conftool.update({'ttl': ttl}, dnsdisc=dnsdisc)
+        logger.debug('Updating the TTL of %s to %d seconds', self._conftool_selector, ttl)
+        self._conftool.update({'ttl': ttl}, dnsdisc=self._conftool_selector)
 
         if self._dry_run:
             logger.info('Skipping check of modified TTL in DRY-RUN mode')
@@ -144,3 +173,37 @@ class Discovery:
                 answer = dns_resolver.query('{record}.discovery.wmnet'.format(record=record))
                 logger.debug('[%s] %s -> %s TTL %d', nameserver, record, answer[0].address, answer.ttl)
                 yield answer
+
+    def pool(self, datacenter):
+        """Set the records as pooled in the given datacenter.
+
+        Arguments:
+            datacenter (str): the DC in which to pool the discovery records.
+        """
+        self._conftool.set_and_verify('pooled', True, dnsdisc=self._conftool_selector, name=datacenter)
+
+    def depool(self, datacenter):
+        """Set the records as depooled in the given datacenter.
+
+        Arguments:
+            datacenter (str): the DC from which to depool the discovery records.
+        """
+        self.check_if_depoolable(datacenter)
+        self._conftool.set_and_verify('pooled', False, dnsdisc=self._conftool_selector, name=datacenter)
+
+    def check_if_depoolable(self, datacenter):
+        """Determine if a datacenter can be depooled for all records.
+
+        Arguments:
+            datacenter (str): the datacenter to depool
+
+        Raises:
+            spicerack.discovery.DiscoveryError: if any service cannot be depooled.
+
+        """
+        # NB: we only discard services that would become inactive removing the current DC
+        # we don't care about services that are completely down.
+        non_depoolable = [svc for svc, dcs in self.active_datacenters.items() if dcs == [datacenter]]
+        if non_depoolable:
+            raise DiscoveryError("Services {svcs} cannot be depooled as they are only active in {dc}".format(
+                svcs=", ".join(sorted(non_depoolable)), dc=datacenter))

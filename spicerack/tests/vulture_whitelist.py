@@ -20,6 +20,10 @@ whitelist_mock.side_effect
 whitelist_log = Whitelist()
 whitelist_log.IRCSocketHandler.level
 
+whitelist_dnsdisc = Whitelist()
+whitelist_dnsdisc.pool
+whitelist_dnsdisc.depool
+
 whitelist_mysql = Whitelist()
 whitelist_mysql.set_core_masters_readonly
 whitelist_mysql.set_core_masters_readwrite

@@ -1,0 +1,16 @@
+password: password
+shards:
+  dc1:
+    shard01:
+      host: host1
+      port: 123
+    shard02:
+      host: host2
+      port: 123
+  dc2:
+    shard01:
+      host: host3
+      port: 123
+    shard02:
+      host: host4
+      port: 123

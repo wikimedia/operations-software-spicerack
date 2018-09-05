@@ -3,6 +3,7 @@ import logging
 
 import requests
 
+from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteExecutionError
@@ -79,7 +80,7 @@ class MediaWiki:
 
         return response.json()
 
-    @retry(backoff_mode='linear', exceptions=(MediaWikiError,))
+    @retry(exceptions=(MediaWikiError,))
     def check_siteinfo(self, datacenter, path, expected):
         """Check that a specific value in siteinfo matches the expected one, retrying if doesn't match.
 
@@ -123,19 +124,35 @@ class MediaWiki:
             user=self._user, filename=filename, message=message)
         self._remote.query(query).run_sync(command)
 
-    def set_readonly(self, datacenter, readonly):
+    def set_readonly(self, datacenter, message):
         """Set the Conftool readonly variable for MediaWiki config in a specific datacenter.
 
         Arguments:
             datacenter (str): the DC for which the configuration must be changed.
-            readonly (str, bool): the readonly message to set it read-only, False to set it read-write.
-                It follows MediaWiki logic.
+            message (str): the readonly message string to set in MediaWiki.
 
         Raises:
-            spicerack.mediawiki.MediaWikiError: on error.
+            spicerack.confctl.ConfctlError: on Conftool errors and failed validation.
+            spicerack.mediawiki.MediaWikiError: on failed siteinfo validation.
 
         """
-        self._set_and_verify_conftool(scope=datacenter, name='ReadOnly', value=readonly)
+        self._conftool.set_and_verify('val', message, scope=datacenter, name='ReadOnly')
+        self.check_siteinfo(datacenter, ['query', 'general', 'readonly'], True)
+        self.check_siteinfo(datacenter, ['query', 'general', 'readonlyreason'], message)
+
+    def set_readwrite(self, datacenter):
+        """Set the Conftool readonly variable for MediaWiki config to False to make it read-write.
+
+        Arguments:
+            datacenter (str): the DC for which the configuration must be changed.
+
+        Raises:
+            spicerack.confctl.ConfctlError: on Conftool errors and failed validation.
+            spicerack.mediawiki.MediaWikiError: on failed siteinfo validation.
+
+        """
+        self._conftool.set_and_verify('val', False, scope=datacenter, name='ReadOnly')
+        self.check_siteinfo(datacenter, ['query', 'general', 'readonly'], False)
 
     def set_master_datacenter(self, datacenter):
         """Set the MediaWiki config master datacenter variable in Conftool.
@@ -144,10 +161,12 @@ class MediaWiki:
             datacenter (str): the new master datacenter.
 
         Raises:
-            spicerack.mediawiki.MediaWikiError: on error.
+            spicerack.confctl.ConfctlError: on error.
 
         """
-        self._set_and_verify_conftool(scope='common', name='WMFMasterDatacenter', value=datacenter)
+        self._conftool.set_and_verify('val', datacenter, scope='common', name='WMFMasterDatacenter')
+        for dc in CORE_DATACENTERS:
+            self.check_siteinfo(dc, ['query', 'general', 'wmf-config', 'wmfMasterDatacenter'], datacenter)
 
     def get_maintenance_host(self, datacenter):
         """Get an instance to execute commands on the maintenance hosts in a given datacenter.
@@ -173,6 +192,18 @@ class MediaWiki:
         """
         self.get_maintenance_host(datacenter).run_sync('test ' + MediaWiki._list_cronjobs_command, is_safe=True)
 
+    def check_cronjobs_disabled(self, datacenter):
+        """Check that MediaWiki cronjobs are not set in the given DC.
+
+        Arguments:
+            datacenter (str): the name of the datacenter to work on.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: on failure.
+
+        """
+        self.get_maintenance_host(datacenter).run_sync('test -z ' + MediaWiki._list_cronjobs_command, is_safe=True)
+
     def stop_cronjobs(self, datacenter):
         """Remove and ensure MediaWiki cronjobs are not present in the given DC.
 
@@ -185,30 +216,23 @@ class MediaWiki:
         """
         targets = self.get_maintenance_host(datacenter)
         logger.info('Disabling MediaWiki cronjobs in %s', datacenter)
-        targets.run_async('crontab -u www-data -r', 'killall -r php', 'sleep 5', 'killall -9 -r php')
-        targets.run_sync('test -z ' + MediaWiki._list_cronjobs_command, is_safe=True)
+
+        targets.run_async(
+            'crontab -u www-data -r',  # Cleanup the crontab
+            'pkill -U www-data sh',  # Kill all processes created by CRON for the www-data user
+            # Kill MediaWiki wrappers, see modules/scap/manifests/scripts.pp in the Puppet repo
+            'pkill --full "/usr/local/bin/foreachwiki"',
+            'pkill --full "/usr/local/bin/foreachwikiindblist"',
+            'pkill --full "/usr/local/bin/expanddblist"',
+            'pkill --full "/usr/local/bin/mwscript"',
+            'pkill --full "/usr/local/bin/mwscriptwikiset"',
+            'killall -r php',  # Kill all remaining PHP processes for all users
+            'sleep 5',
+            'killall -9 -r php')  # No more time to be gentle
+        self.check_cronjobs_disabled(datacenter)
 
         try:
             targets.run_sync('! pgrep -c php', is_safe=True)
         except RemoteExecutionError:
             # We just log an error, don't actually report a failure to the system. We can live with this.
             logger.error('Stray php processes still present on the maintenance host, please check')
-
-    def _set_and_verify_conftool(self, *, scope, name, value):
-        """Set the MediaWiki config Conftool value.
-
-        Arguments:
-            scope (str): the Conftool mwconfig scope.
-            name (str): the Conftool mwconfig variable name (key).
-            value (str): the value to set the variable to.
-
-        Raises:
-            spicerack.mediawiki.MediaWikiError: on error.
-
-        """
-        self._conftool.update({'val': value}, name=name, scope=scope)
-        for obj in self._conftool.get(name=name, scope=scope):
-            if obj.val != value and not self._dry_run:
-                raise MediaWikiError(
-                    'MediaWiki config {name} record was not set for scope {scope}: {record}'.format(
-                        name=name, scope=scope, record=obj.key))
