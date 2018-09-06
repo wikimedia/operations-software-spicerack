@@ -1,4 +1,5 @@
 """Mysql module tests."""
+from datetime import datetime
 from unittest import mock
 
 import pytest
@@ -130,22 +131,44 @@ class TestMysql:
     def test_check_core_masters_in_sync_ok(self):
         """Should check that all core masters are in sync with the master in the other DC."""
         answer = mock.MagicMock()
-        answer.message.side_effect = [b'GTID_POSITION', b'0'] * 11
+        answer.message.side_effect = ([b'2018-09-06T10:00:00.000000'] * len(mysql.CORE_SECTIONS) +
+                                      [b'2018-09-06T10:00:00.999999'] * len(mysql.CORE_SECTIONS))
         self.mocked_remote.query.return_value.hosts = NodeSet('db1001')
         self.mocked_remote.query.return_value.run_query.return_value = [[NodeSet('db1001'), answer]]
         self.mysql.check_core_masters_in_sync('eqiad', 'codfw')
 
-    def test_check_core_masters_in_sync_fail_gtid(self):
-        """Should raise MysqlError if unable to get the GTID position from the current master."""
+    def test_check_core_masters_in_sync_fail_heartbeat(self):
+        """Should raise MysqlError if unable to get the heartbeat from the current master."""
         self.mocked_remote.query.return_value.hosts = NodeSet('db1001')
-        with pytest.raises(mysql.MysqlError, match='Unable to get GTID pos from master'):
+        with pytest.raises(mysql.MysqlError, match='Unable to get heartbeat from master'):
             self.mysql.check_core_masters_in_sync('eqiad', 'codfw')
 
-    def test_check_core_masters_in_sync_not_in_sync(self):
+    @mock.patch('spicerack.decorators.time.sleep', return_value=None)
+    def test_check_core_masters_in_sync_not_in_sync(self, mocked_sleep):
         """Should raise MysqlError if a master is not in sync with the one in the other DC."""
         answer = mock.MagicMock()
-        answer.message.side_effect = [b'GTID_POSITION', b'1']
+        answer.message.side_effect = [b'2018-09-06T10:00:00.000000'] * (len(mysql.CORE_SECTIONS) + 3)  # 3 retries
         self.mocked_remote.query.return_value.hosts = NodeSet('db1001')
         self.mocked_remote.query.return_value.run_query.return_value = [[NodeSet('db1001'), answer]]
-        with pytest.raises(mysql.MysqlError, match='GTID not in sync after timeout for host'):
+        with pytest.raises(mysql.MysqlError, match=r'Heartbeat from master db1001 for section .* not yet in sync'):
             self.mysql.check_core_masters_in_sync('eqiad', 'codfw')
+
+        assert mocked_sleep.called
+
+    def test_get_core_masters_heartbeats_wrong_data(self):
+        """Should raise MysqlError if unable to convert the heartbeat into a datetime."""
+        answer = mock.MagicMock()
+        answer.message.side_effect = [b'2018-09-06-10:00:00.000000']
+        self.mocked_remote.query.return_value.hosts = NodeSet('db1001')
+        self.mocked_remote.query.return_value.run_query.return_value = [[NodeSet('db1001'), answer]]
+        with pytest.raises(mysql.MysqlError, match='Unable to convert heartbeat'):
+            self.mysql.get_core_masters_heartbeats('eqiad', 'codfw')
+
+    @mock.patch('spicerack.decorators.time.sleep', return_value=None)
+    def test_check_core_masters_heartbeats_fail(self, mocked_sleep):
+        """Should raise MysqlError if unable to get the heartbeat from the master."""
+        self.mocked_remote.query.return_value.hosts = NodeSet('db1001')
+        with pytest.raises(mysql.MysqlError, match='Unable to get heartbeat from master'):
+            self.mysql.check_core_masters_heartbeats('eqiad', 'codfw', {'s1': datetime.utcnow()})
+
+        assert mocked_sleep.called

@@ -4,7 +4,10 @@ TODO: replace with a proper MySQL module that uses a Python MySQL client, prefer
 """
 import logging
 
+from datetime import datetime
+
 from spicerack.constants import CORE_DATACENTERS
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteHosts
 
@@ -65,6 +68,10 @@ def mysql_remote_hosts_factory(config, hosts, dry_run=True):
 
 class Mysql:
     """Class to manage MySQL servers."""
+
+    heartbeat_query = ("SELECT ts FROM heartbeat.heartbeat WHERE datacenter = '{dc}' and shard = '{section}' "
+                       "ORDER BY ts DESC LIMIT 1")
+    """Query pattern to check the heartbeat for a given datacenter and section."""
 
     def __init__(self, remote, dry_run=True):
         """Initialize the instance.
@@ -213,22 +220,102 @@ class Mysql:
 
         """
         logger.debug('Waiting for the core DB masters in %s to catch up', dc_to)
+        heartbeats = self.get_core_masters_heartbeats(dc_from, dc_from)
+        self.check_core_masters_heartbeats(dc_to, dc_from, heartbeats)
 
+    def get_core_masters_heartbeats(self, datacenter, heartbeat_dc):
+        """Get the current heartbeat values from core DB masters in DC for a given heartbeat DC.
+
+        Arguments:
+            datacenter (str): the name of the datacenter from where to get the heartbeat values.
+            heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
+
+        Returns:
+            dict: a dictionary with section (str): heartbeat (datetime.datetime) for each core section. For example:
+                {'s1': datetime.datetime(2018, 1, 2, 11, 22, 33, 123456)}
+
+        Raises:
+            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
+
+        """
+        heartbeats = {}
         for section in CORE_SECTIONS:
-            gtid = ''
-            remote_from = self.get_core_dbs(datacenter=dc_from, section=section, replication_role='master')
+            core_dbs = self.get_core_dbs(datacenter=datacenter, section=section, replication_role='master')
+            heartbeats[section] = Mysql._get_heartbeat(core_dbs, section, heartbeat_dc)
 
-            for nodeset, output in remote_from.run_query('SELECT @@GLOBAL.gtid_binlog_pos', is_safe=True):
-                gtid = output.message().decode()
+        return heartbeats
+
+    def check_core_masters_heartbeats(self, datacenter, heartbeat_dc, heartbeats):
+        """Check the current heartbeat values in the core DB masters in DC are in sync with the provided heartbeats.
+
+        Arguments:
+            datacenter (str): the name of the datacenter from where to get the heartbeat values.
+            heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
+            heartbeats (dict): a dictionary with section (str): heartbeat (datetime.datetime) for each core section.
+
+        Raises:
+            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
+
+        """
+        for section, heartbeat in heartbeats.items():
+            self._check_core_master_in_sync(datacenter, heartbeat_dc, section, heartbeat)
+
+    @retry(exceptions=(MysqlError,))
+    def _check_core_master_in_sync(self, datacenter, heartbeat_dc, section, parent_heartbeat):
+        """Check and retry that the heartbeat value in a core DB master in DC is in sync with the provided heartbeat.
+
+        Arguments:
+            datacenter (str): the name of the datacenter from where to get the heartbeat value.
+            heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
+            section (str): the section name from where to get the heartbeat value and filter the heartbeat query.
+            master_heartbeat (datetime.datetime): the reference heartbeat from the parent master to use to verify this
+                master is in sync with it.
+
+        Raises:
+            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime or not yet
+                in sync.
+
+        """
+        core_dbs = self.get_core_dbs(datacenter=datacenter, section=section, replication_role='master')
+        local_heartbeat = Mysql._get_heartbeat(core_dbs, section, heartbeat_dc)
+
+        # The check requires that local_heartbeat is stricly greater than parent_heartbeat because heartbeat writes also
+        # when the DB is in read-only mode and has a granularity of 1s (as of 2018-09), meaning that an event could have
+        # been written after the last heartbeat but before the DB was set in read-only mode and that event could not
+        # have been replicated, hence checking the next heartbeat to ensure they are in sync.
+        if local_heartbeat <= parent_heartbeat:
+            delta = (local_heartbeat - parent_heartbeat).total_seconds()
+            raise MysqlError(('Heartbeat from master {host} for section {section} not yet in sync: {hb} < {master_hb} '
+                              '(delta={delta})').format(host=core_dbs.hosts, section=section, hb=local_heartbeat,
+                                                        master_hb=parent_heartbeat, delta=delta))
+
+    @staticmethod
+    def _get_heartbeat(remote_host, section, heartbeat_dc):
+        """Get the heartbeat from the remote host for a given DC.
+
+        Arguments:
+            remote_host (spicerack.mysql.MysqlRemoteHosts): the instance for the target DB to query.
+            section (str): the DB section for which to get the heartbeat.
+            heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
+
+        Returns:
+            datetime.datetime: the converted heartbeat.
+
+        Raises:
+            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
+
+        """
+        query = Mysql.heartbeat_query.format(dc=heartbeat_dc, section=section)
+
+        for _, output in remote_host.run_query(query, is_safe=True):
+            try:
+                heartbeat_str = output.message().decode()
+                heartbeat = datetime.strptime(heartbeat_str, '%Y-%m-%dT%H:%M:%S.%f')
                 break
-            else:
-                raise MysqlError('Unable to get GTID pos from master {host} for section {section}'.format(
-                    host=remote_from.hosts, section=section))
+            except (TypeError, ValueError) as e:
+                raise MysqlError("Unable to convert heartbeat '{hb}' into datetime".format(hb=heartbeat_str)) from e
+        else:
+            raise MysqlError('Unable to get heartbeat from master {host} for section {section}'.format(
+                host=remote_host.hosts, section=section))
 
-            remote_to = self.get_core_dbs(datacenter=dc_to, section=section, replication_role='master')
-            # Wait for master is in sync, fail after 30s
-            query = "SELECT MASTER_GTID_WAIT('{gtid}', 30)".format(gtid=gtid)
-
-            for nodeset, output in remote_to.run_query(query, is_safe=True):
-                if output.message().decode() != '0':  # See https://mariadb.com/kb/en/mariadb/master_gtid_wait/
-                    raise MysqlError('GTID not in sync after timeout for host(s): {hosts}'.format(hosts=nodeset))
+        return heartbeat

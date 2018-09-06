@@ -32,7 +32,7 @@ class IRCSocketHandler(logging.Handler):
 
         See https://docs.python.org/3/library/logging.html#handler-objects
         """
-        message = '!log {msg} (switchdc/{user}@{host})'.format(
+        message = '!log {msg} ({user}@{host})'.format(
             msg=record.getMessage(), user=self.user, host=socket.gethostname())
         sock = None
 
