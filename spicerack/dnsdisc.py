@@ -180,6 +180,7 @@ class Discovery:
         Arguments:
             datacenter (str): the DC in which to pool the discovery records.
         """
+        # DRY-RUN handled by confctl
         self._conftool.set_and_verify('pooled', True, dnsdisc=self._conftool_selector, name=datacenter)
 
     def depool(self, datacenter):
@@ -189,6 +190,7 @@ class Discovery:
             datacenter (str): the DC from which to depool the discovery records.
         """
         self.check_if_depoolable(datacenter)
+        # DRY-RUN handled by confctl
         self._conftool.set_and_verify('pooled', False, dnsdisc=self._conftool_selector, name=datacenter)
 
     def check_if_depoolable(self, datacenter):
@@ -205,5 +207,9 @@ class Discovery:
         # we don't care about services that are completely down.
         non_depoolable = [svc for svc, dcs in self.active_datacenters.items() if dcs == [datacenter]]
         if non_depoolable:
-            raise DiscoveryError("Services {svcs} cannot be depooled as they are only active in {dc}".format(
-                svcs=", ".join(sorted(non_depoolable)), dc=datacenter))
+            message = "Services {svcs} cannot be depooled as they are only active in {dc}".format(
+                svcs=", ".join(sorted(non_depoolable)), dc=datacenter)
+            if self._dry_run:
+                logger.debug(message)
+            else:
+                raise DiscoveryError(message)

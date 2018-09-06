@@ -163,3 +163,15 @@ class TestDiscovery:
         with pytest.raises(DiscoveryError,
                            match='Services svcA, svcB cannot be depooled as they are only active in dcB'):
             self.discovery.check_if_depoolable('dcB')
+
+    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
+    def test_check_if_depoolable_ko_dry_run(self, caplog):
+        """Doesn't raise exception when a service would be taken out of commission but in dry-run mode."""
+        self.mocked_confctl.get.return_value = [
+            mock_obj('dcA', 'svcA', False),
+            mock_obj('dcB', 'svcA', True),
+            mock_obj('dcA', 'svcB', False),
+            mock_obj('dcB', 'svcB', False)
+        ]
+        self.discovery_dry_run.check_if_depoolable('dcB')
+        assert 'cannot be depooled as they are only active in' in caplog.text
