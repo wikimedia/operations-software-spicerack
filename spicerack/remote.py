@@ -115,7 +115,7 @@ class RemoteHosts:
             RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
-        return self._execute(commands, mode='async', success_threshold=success_threshold, batch_size=batch_size,
+        return self._execute(list(commands), mode='async', success_threshold=success_threshold, batch_size=batch_size,
                              batch_sleep=batch_sleep, is_safe=is_safe)
 
     def run_sync(self, *commands, success_threshold=1.0, batch_size=None, batch_sleep=None, is_safe=False):
@@ -137,7 +137,7 @@ class RemoteHosts:
             RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
-        return self._execute(commands, mode='sync', success_threshold=success_threshold, batch_size=batch_size,
+        return self._execute(list(commands), mode='sync', success_threshold=success_threshold, batch_size=batch_size,
                              batch_sleep=batch_sleep, is_safe=is_safe)
 
     def _execute(self, commands, mode='sync', success_threshold=1.0,  # pylint: disable=too-many-arguments
@@ -145,7 +145,7 @@ class RemoteHosts:
         """Lower level Cumin's execution of commands on the target nodes.
 
         Arguments:
-            commands (list): the list of commands to execute on the target hosts.
+            commands (list): the list of commands to execute on the target hosts, either a list of .
             mode (str, optional): the Cumin's mode of execution. Accepted values: sync, async.
             success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
             batch_size (int, str, optional): the batch size for cumin, either as percentage (i.e. '25%')
@@ -170,7 +170,7 @@ class RemoteHosts:
             self._hosts, batch_size=parsed_batch_size['value'], batch_size_ratio=parsed_batch_size['ratio'],
             batch_sleep=batch_sleep)
         worker = transport.Transport.new(self._config, target)
-        worker.commands = list(commands)
+        worker.commands = commands
         worker.handler = mode
         worker.success_threshold = success_threshold
 
