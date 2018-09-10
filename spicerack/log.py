@@ -113,6 +113,10 @@ def setup_logging(base_path, name, user, dry_run=True, host=None, port=0):
         irc_logger.addHandler(IRCSocketHandler(host, port, user))
         irc_logger.setLevel(logging.INFO)
 
+    # Silence external noisy loggers
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger('requests').setLevel(logging.WARNING)
+
 
 def log_task_start(message):
     """Log the start of a task both on the logs and IRC.
