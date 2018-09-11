@@ -116,7 +116,7 @@ class Discovery:
         for record in self.resolve():
             if record.ttl != ttl:
                 raise DiscoveryError("Expected TTL '{expected}', got '{ttl}' for record {record}".format(
-                    expected=ttl, ttl=record.ttl, record=record))
+                    expected=ttl, ttl=record.ttl, record=record[0].address))
 
     @retry(backoff_mode='linear', exceptions=(DiscoveryError,))
     def check_record(self, name, expected_name):
@@ -140,7 +140,7 @@ class Discovery:
 
         """
         expected_address = self.resolve_address(expected_name)
-        logger.debug('Checking that %s.discovery.wmnet records matches %s (%s)', name, expected_name, expected_address)
+        logger.info('Checking that %s.discovery.wmnet records matches %s (%s)', name, expected_name, expected_address)
 
         failed = False
         for record in self.resolve(name=name):

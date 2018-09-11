@@ -3,6 +3,8 @@ import logging
 
 import requests
 
+from cumin.transports import Command
+
 from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
@@ -229,18 +231,21 @@ class MediaWiki:
         targets = self.get_maintenance_host(datacenter)
         logger.info('Disabling MediaWiki cronjobs in %s', datacenter)
 
+        pkill_ok_codes = [0, 1]  # Accept both matches and no matches
         targets.run_async(
-            'crontab -u www-data -r',  # Cleanup the crontab
-            'pkill -U www-data sh',  # Kill all processes created by CRON for the www-data user
+            Command('crontab -u www-data -r', ok_codes=[]),  # Cleanup the crontab
+            # Kill all processes created by CRON for the www-data user
+            Command('pkill -U www-data sh', ok_codes=pkill_ok_codes),
             # Kill MediaWiki wrappers, see modules/scap/manifests/scripts.pp in the Puppet repo
-            'pkill --full "/usr/local/bin/foreachwiki"',
-            'pkill --full "/usr/local/bin/foreachwikiindblist"',
-            'pkill --full "/usr/local/bin/expanddblist"',
-            'pkill --full "/usr/local/bin/mwscript"',
-            'pkill --full "/usr/local/bin/mwscriptwikiset"',
-            'killall -r php',  # Kill all remaining PHP processes for all users
+            Command('pkill --full "/usr/local/bin/foreachwiki"', ok_codes=pkill_ok_codes),
+            Command('pkill --full "/usr/local/bin/foreachwikiindblist"', ok_codes=pkill_ok_codes),
+            Command('pkill --full "/usr/local/bin/expanddblist"', ok_codes=pkill_ok_codes),
+            Command('pkill --full "/usr/local/bin/mwscript"', ok_codes=pkill_ok_codes),
+            Command('pkill --full "/usr/local/bin/mwscriptwikiset"', ok_codes=pkill_ok_codes),
+            Command('killall -r php', ok_codes=[]),  # Kill all remaining PHP processes for all users
             'sleep 5',
-            'killall -9 -r php')  # No more time to be gentle
+            Command('killall -9 -r php', ok_codes=[]),  # No more time to be gentle
+        )
         self.check_cronjobs_disabled(datacenter)
 
         try:

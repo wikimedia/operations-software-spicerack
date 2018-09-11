@@ -138,7 +138,7 @@ class ConftoolEntity:
             spicerack.confctl.ConfctlError: on etcd or Conftool errors or failing to verify the changes.
 
         """
-        logger.debug('Set %s=%s for tags: %s', key, value, tags)
+        logger.info('Setting %s=%s for tags: %s', key, value, tags)
         self.update({key: value}, **tags)
 
         for obj in self.get(**tags):  # Verify the changes were applied
