@@ -6,7 +6,7 @@ from collections import defaultdict
 from dns import resolver
 
 from spicerack.decorators import retry
-from spicerack.exceptions import SpicerackError
+from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -14,6 +14,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class DiscoveryError(SpicerackError):
     """Custom exception class for errors of the Discovery class."""
+
+
+class DiscoveryCheckError(SpicerackCheckError):
+    """Custom exception class for errors while performing checks."""
 
 
 class Discovery:
@@ -93,14 +97,14 @@ class Discovery:
         """
         # DRY-RUN handled by confctl
         logger.debug('Updating the TTL of %s to %d seconds', self._conftool_selector, ttl)
-        self._conftool.update({'ttl': ttl}, dnsdisc=self._conftool_selector)
-
-        if self._dry_run:
-            logger.info('Skipping check of modified TTL in DRY-RUN mode')
-        else:
+        self._conftool.set_and_verify('ttl', ttl, dnsdisc=self._conftool_selector)
+        try:
             self.check_ttl(ttl)
+        except DiscoveryCheckError:
+            if not self._dry_run:
+                raise
 
-    @retry(backoff_mode='linear', exceptions=(DiscoveryError,))
+    @retry(backoff_mode='linear', exceptions=(DiscoveryCheckError,))
     def check_ttl(self, ttl):
         """Check the TTL for all records.
 
@@ -115,7 +119,7 @@ class Discovery:
 
         for record in self.resolve():
             if record.ttl != ttl:
-                raise DiscoveryError("Expected TTL '{expected}', got '{ttl}' for record {record}".format(
+                raise DiscoveryCheckError("Expected TTL '{expected}', got '{ttl}' for record {record}".format(
                     expected=ttl, ttl=record.ttl, record=record[0].address))
 
     @retry(backoff_mode='linear', exceptions=(DiscoveryError,))

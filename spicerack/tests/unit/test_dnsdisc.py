@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from spicerack.dnsdisc import Discovery, DiscoveryError
+from spicerack.dnsdisc import Discovery, DiscoveryCheckError, DiscoveryError
 
 from spicerack.tests import caplog_not_available
 
@@ -73,13 +73,21 @@ class TestDiscovery:
     def test_update_ttl(self):
         """Calling update_ttl() should update the TTL of the conftool objects."""
         self.discovery.update_ttl(10)
-        self.mocked_confctl.assert_has_calls([mock.call.update({'ttl': 10}, dnsdisc=self.conftool_records)])
+        self.mocked_confctl.assert_has_calls([mock.call.set_and_verify('ttl', 10, dnsdisc=self.conftool_records)])
 
-    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
-    def test_update_ttl_dry_run(self, caplog):
-        """Calling update_ttl() in DRY-RUN mode should skip the verification."""
-        self.discovery_dry_run.update_ttl(10)
-        assert 'Skipping check of modified TTL' in caplog.text
+    @mock.patch('spicerack.decorators.time.sleep')
+    def test_update_ttl_dry_run(self, mocked_sleep):
+        """Calling update_ttl() in DRY-RUN mode should not raise when verifying the TTL."""
+        self.discovery_dry_run.update_ttl(20)
+        assert mocked_sleep.called
+
+    @mock.patch('spicerack.decorators.time.sleep')
+    def test_update_ttl_ko(self, mocked_sleep):
+        """Calling update_ttl() should raise DiscoveryCheckError if unable to verify the value."""
+        with pytest.raises(DiscoveryCheckError, match="Expected TTL '20', got '10'"):
+            self.discovery.update_ttl(20)
+
+        assert mocked_sleep.called
 
     def test_check_ttl_ok(self):
         """Calling check_ttl() should verify that the correct TTL is returned by the authoritative nameservers."""
@@ -87,8 +95,8 @@ class TestDiscovery:
 
     @mock.patch('spicerack.decorators.time.sleep')
     def test_check_ttl_ko(self, mocked_sleep):
-        """Calling check_ttl() should raise DiscoveryError if the check fails."""
-        with pytest.raises(DiscoveryError, match="Expected TTL '20', got '10'"):
+        """Calling check_ttl() should raise DiscoveryCheckError if the check fails."""
+        with pytest.raises(DiscoveryCheckError, match="Expected TTL '20', got '10'"):
             self.discovery.check_ttl(20)
 
         assert mocked_sleep.called
