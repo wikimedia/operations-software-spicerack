@@ -1,3 +1,9 @@
+spicerack (0.0.8-1) jessie-wikimedia; urgency=medium
+
+  * v0.0.8 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Tue, 11 Sep 2018 13:36:01 +0200
+
 spicerack (0.0.7-1) jessie-wikimedia; urgency=medium
 
   * v0.0.7 upstream release.
