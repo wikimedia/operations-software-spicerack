@@ -4,6 +4,7 @@ import logging
 from collections import defaultdict
 
 from dns import resolver
+from dns.exception import DNSException
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
@@ -31,6 +32,10 @@ class Discovery:
             remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
             records (list): list of strings, each one must be a Discovery DNS record name.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
+        Raises:
+            spicerack.dnsdisc.DiscoveryError: if unable to initialize the resolvers.
+
         """
         self._conftool = conftool
         self._remote = remote
@@ -40,7 +45,10 @@ class Discovery:
         self._resolvers = {}
         for nameserver in self._remote.query('A:dns-auth').hosts:
             self._resolvers[nameserver] = resolver.Resolver()
-            self._resolvers[nameserver].nameservers = [rdata.address for rdata in resolver.query(nameserver)]
+            try:
+                self._resolvers[nameserver].nameservers = [rdata.address for rdata in resolver.query(nameserver)]
+            except DNSException as e:
+                raise DiscoveryError('Unable to resolve {name}'.format(name=nameserver)) from e
 
     @property
     def _conftool_selector(self):
@@ -80,9 +88,14 @@ class Discovery:
         Returns:
             str: the resolved IP address.
 
+        Raises:
+            spicerack.discovery.DiscoveryError: if unable to resolve the address.
+
         """
-        # Querying the first resolver
-        return next(iter(self._resolvers.values())).query(name)[0].address
+        try:  # Querying the first resolver
+            return next(iter(self._resolvers.values())).query(name)[0].address
+        except DNSException as e:
+            raise DiscoveryError('Unable to resolve {name}'.format(name=name)) from e
 
     def update_ttl(self, ttl):
         """Update the TTL for all registered records.
@@ -91,8 +104,7 @@ class Discovery:
             ttl (int): the new TTL value to set.
 
         Raises:
-            spicerack.discovery.DiscoveryError: if the check of the modified TTL fail and not
-                                                in DRY-RUN mode.
+            spicerack.discovery.DiscoveryError: if the check of the modified TTL fail and not in DRY-RUN mode.
 
         """
         # DRY-RUN handled by confctl
@@ -166,6 +178,9 @@ class Discovery:
         Yields:
             dns.resolver.Answer: the DNS response.
 
+        Raises:
+            spicerack.discovery.DiscoveryError: if unable to resolve the address.
+
         """
         if name is not None:
             records = [name]
@@ -174,7 +189,13 @@ class Discovery:
 
         for nameserver, dns_resolver in self._resolvers.items():
             for record in records:
-                answer = dns_resolver.query('{record}.discovery.wmnet'.format(record=record))
+                try:
+                    record_name = '{record}.discovery.wmnet'.format(record=record)
+                    answer = dns_resolver.query(record_name)
+                except DNSException as e:
+                    raise DiscoveryError(
+                        'Unable to resolve {name} from {ns}'.format(name=record_name, ns=nameserver)) from e
+
                 logger.debug('[%s] %s -> %s TTL %d', nameserver, record, answer[0].address, answer.ttl)
                 yield answer
 
