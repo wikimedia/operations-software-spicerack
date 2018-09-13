@@ -7,7 +7,7 @@ install_requires = [
     'cumin>=3.0.2',
     'dnspython>=1.15.0',
     'pyyaml>=3.11',
-    'redis>=2.10.0'
+    'redis>=2.10.0',
     'requests>=2.11.1',
 ]
 
