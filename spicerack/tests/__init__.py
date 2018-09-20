@@ -9,6 +9,7 @@ import pytest
 TESTS_BASE_PATH = os.path.realpath(os.path.dirname(__file__))
 CAPLOG_MIN_VERSION = '3.3.0'
 REQUESTS_MOCK_MIN_VERSION = '1.5.0'
+ELASTICSEARCH_MIN_VERSION = '5.0.0'
 
 
 def get_fixture_path(*paths):
@@ -50,3 +51,13 @@ def requests_mock_not_available():
 
     """
     return parse_version(get_distribution('requests_mock').version) < parse_version(REQUESTS_MOCK_MIN_VERSION)
+
+
+def elasticsearch_too_old():
+    """Check if elasticsearch version is less than 5.0.0
+
+    Returns:
+        bool: True if elasticsearch version is less 5.0.0, False if otherwise
+
+    """
+    return parse_version(get_distribution('elasticsearch').version) < parse_version(ELASTICSEARCH_MIN_VERSION)

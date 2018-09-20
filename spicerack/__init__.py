@@ -4,6 +4,7 @@ import os
 from spicerack import interactive
 from spicerack.confctl import Confctl
 from spicerack.dnsdisc import Discovery
+from spicerack.elasticsearch_cluster import create_elasticsearch_cluster
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
@@ -145,3 +146,15 @@ class Spicerack:
 
         """
         return RedisCluster(cluster, os.path.join(self._spicerack_config_dir, 'redis_cluster'), dry_run=self._dry_run)
+
+    def elasticsearch_cluster(self, name):
+        """Get an ElasticsearchCluster instance.
+
+        Arguments:
+            name (str): name of the cluster
+
+        Returns:
+            spicerack.elasticsearch_cluster.ElasticsearchCluster: ElasticsearchCluster instance
+
+        """
+        return create_elasticsearch_cluster(name, self.remote(), dry_run=self._dry_run)

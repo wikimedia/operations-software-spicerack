@@ -6,6 +6,7 @@ from unittest import mock
 from spicerack import Spicerack
 from spicerack.confctl import ConftoolEntity
 from spicerack.dnsdisc import Discovery
+from spicerack.elasticsearch_cluster import ElasticsearchCluster
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.redis_cluster import RedisCluster
@@ -33,5 +34,6 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.mediawiki(), MediaWiki)
     assert isinstance(spicerack.mysql(), Mysql)
     assert isinstance(spicerack.redis_cluster('cluster'), RedisCluster)
+    assert isinstance(spicerack.elasticsearch_cluster('eqiad'), ElasticsearchCluster)
 
     assert mocked_remote_query.called
