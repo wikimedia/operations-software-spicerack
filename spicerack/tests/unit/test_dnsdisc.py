@@ -4,7 +4,9 @@ from unittest import mock
 
 import pytest
 
-from spicerack.dnsdisc import Discovery, DiscoveryError
+from dns.exception import DNSException
+
+from spicerack.dnsdisc import Discovery, DiscoveryCheckError, DiscoveryError
 
 from spicerack.tests import caplog_not_available
 
@@ -29,6 +31,8 @@ class MockedQuery:
         if record == 'fail.svc.eqiad.wmnet':
             self.address = '10.1.1.1'
             self.ttl = 600
+        elif record.startswith('raise'):
+            raise DNSException
         else:
             self.address = '10.0.0.1'
             self.ttl = 10
@@ -70,16 +74,35 @@ class TestDiscovery:
             [mock.call(self.nameservers[0]), mock.call(self.nameservers[1])], any_order=True)
         assert self.mocked_resolver.query.call_count == 4
 
+    def test_init_ko(self):
+        """Creating a Discovery instance should raise DiscoveryError if unable to initialize the resolvers."""
+        self.mocked_resolver.Resolver.return_value.query.side_effect = DNSException
+        with pytest.raises(DiscoveryError, match='Unable to resolve authdns1'):
+            Discovery(self.mocked_confctl, self.mocked_remote, self.records, dry_run=False)
+
+    def test_resolve_address(self):
+        """Calling resolve_address() sould raise DiscoveryError if unable to resolve the address."""
+        with pytest.raises(DiscoveryError, match='Unable to resolve raise.svc.eqiad.wmnet'):
+            self.discovery.resolve_address('raise.svc.eqiad.wmnet')
+
     def test_update_ttl(self):
         """Calling update_ttl() should update the TTL of the conftool objects."""
         self.discovery.update_ttl(10)
-        self.mocked_confctl.assert_has_calls([mock.call.update({'ttl': 10}, dnsdisc=self.conftool_records)])
+        self.mocked_confctl.assert_has_calls([mock.call.set_and_verify('ttl', 10, dnsdisc=self.conftool_records)])
 
-    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
-    def test_update_ttl_dry_run(self, caplog):
-        """Calling update_ttl() in DRY-RUN mode should skip the verification."""
-        self.discovery_dry_run.update_ttl(10)
-        assert 'Skipping check of modified TTL' in caplog.text
+    @mock.patch('spicerack.decorators.time.sleep')
+    def test_update_ttl_dry_run(self, mocked_sleep):
+        """Calling update_ttl() in DRY-RUN mode should not raise when verifying the TTL."""
+        self.discovery_dry_run.update_ttl(20)
+        assert mocked_sleep.called
+
+    @mock.patch('spicerack.decorators.time.sleep')
+    def test_update_ttl_ko(self, mocked_sleep):
+        """Calling update_ttl() should raise DiscoveryCheckError if unable to verify the value."""
+        with pytest.raises(DiscoveryCheckError, match="Expected TTL '20', got '10'"):
+            self.discovery.update_ttl(20)
+
+        assert mocked_sleep.called
 
     def test_check_ttl_ok(self):
         """Calling check_ttl() should verify that the correct TTL is returned by the authoritative nameservers."""
@@ -87,8 +110,8 @@ class TestDiscovery:
 
     @mock.patch('spicerack.decorators.time.sleep')
     def test_check_ttl_ko(self, mocked_sleep):
-        """Calling check_ttl() should raise DiscoveryError if the check fails."""
-        with pytest.raises(DiscoveryError, match="Expected TTL '20', got '10'"):
+        """Calling check_ttl() should raise DiscoveryCheckError if the check fails."""
+        with pytest.raises(DiscoveryCheckError, match="Expected TTL '20', got '10'"):
             self.discovery.check_ttl(20)
 
         assert mocked_sleep.called
@@ -104,6 +127,12 @@ class TestDiscovery:
             self.discovery.check_record(self.records[0], 'fail.svc.eqiad.wmnet')
 
         assert mocked_sleep.called
+
+    def test_resolve(self):
+        """Calling resolve() should raise a DiscoveryError if unable to resolve the address."""
+        with pytest.raises(DiscoveryError, match='Unable to resolve raise.discovery.wmnet from authdns'):
+            for _ in self.discovery.resolve(name='raise'):
+                pass
 
     @pytest.mark.parametrize('func, value', (('pool', True), ('depool', False)))
     def test_pool(self, func, value):

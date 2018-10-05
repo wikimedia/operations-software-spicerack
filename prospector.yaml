@@ -12,6 +12,9 @@ output-format: grouped
 ignore-paths:
   - spicerack/tests/fixtures/cookbook/cookbooks/group3/invalid_syntax.py
   - spicerack/tests/fixtures/cookbook/cookbooks/group3/invalid_subgroup/__init__.py
+  - build/
+  - dist/
+  - logs/
 
 pep8:
   full: true

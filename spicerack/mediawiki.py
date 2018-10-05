@@ -7,7 +7,7 @@ from cumin.transports import Command
 
 from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
-from spicerack.exceptions import SpicerackError
+from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import RemoteExecutionError
 
 
@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class MediaWikiError(SpicerackError):
     """Custom exception class for errors in this module."""
+
+
+class MediaWikiCheckError(SpicerackCheckError):
+    """Custom exception class for checking errors in this module."""
 
 
 class MediaWiki:
@@ -82,9 +86,9 @@ class MediaWiki:
 
         return response.json()
 
-    @retry(tries=5, backoff_mode='constant', exceptions=(MediaWikiError,))
-    def check_siteinfo(self, datacenter, checks):
-        """Check that a specific value in siteinfo matches the expected one, retrying if doesn't match.
+    @staticmethod
+    def check_siteinfo(datacenter, checks, samples=1):
+        """Check that a specific value in siteinfo matches the expected ones, on multiple hosts.
 
         Arguments:
             datacenter (str): the DC where to query for siteinfo.
@@ -92,30 +96,16 @@ class MediaWiki:
                 the siteinfo dictionary to get the value and the values are the expected values to check. For example:
                     {('key1', 'key2'): 'value'}
                 will check siteinfo[key1][key2] for value 'value'.
+            samples (int, optional): the number of different calls to siteinfo to perform.
 
         Raises:
-            MediaWikiError: if the value doesn't match and retry the check up to the configured times.
-            KeyError: if unable to traverse the dictionary with the provided keys.
+            MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary after all tries.
+            MediaWikiCheckError: if the value doesn't match after all tries.
 
         """
-        siteinfo = MediaWiki.get_siteinfo(datacenter)
-
-        for path, expected in checks.items():
-            value = siteinfo.copy()  # No need for deepcopy, it will not be modified
-            for key in path:
-                if self._dry_run and key not in value:
-                    logger.debug("Path %s not found in siteinfo, key '%s' is missing", path, key)
-                    break
-
-                value = value[key]
-
-            if value != expected:
-                message = "Expected '{expected}', got '{value}' for path: {path}".format(
-                    expected=expected, value=value, path=path)
-                if self._dry_run:
-                    logger.debug(message)
-                else:
-                    raise MediaWikiError(message)
+        for i in range(1, samples + 1):  # Randomly check different hosts from the load balancer
+            logger.debug('Checking siteinfo %d/%d', i, samples)
+            MediaWiki._check_siteinfo(datacenter, checks)
 
     def scap_sync_config_file(self, filename, message):
         """Execute scap sync-file to deploy a specific configuration file of wmf-config.
@@ -147,10 +137,9 @@ class MediaWiki:
 
         """
         self._conftool.set_and_verify('val', message, scope=datacenter, name='ReadOnly')
-        for _ in range(10):  # Randomly check on up to 10 different hosts from the load balancer
-            self.check_siteinfo(datacenter, {
-                ('query', 'general', 'readonly'): True,
-                ('query', 'general', 'readonlyreason'): message})
+        self._check_siteinfo_dry_run_aware(datacenter, {
+            ('query', 'general', 'readonly'): True,
+            ('query', 'general', 'readonlyreason'): message}, samples=10)
 
     def set_readwrite(self, datacenter):
         """Set the Conftool readonly variable for MediaWiki config to False to make it read-write.
@@ -164,8 +153,7 @@ class MediaWiki:
 
         """
         self._conftool.set_and_verify('val', False, scope=datacenter, name='ReadOnly')
-        for _ in range(10):  # Randomly check on up to 10 different hosts from the load balancer
-            self.check_siteinfo(datacenter, {('query', 'general', 'readonly'):  False})
+        self._check_siteinfo_dry_run_aware(datacenter, {('query', 'general', 'readonly'):  False}, samples=10)
 
     def set_master_datacenter(self, datacenter):
         """Set the MediaWiki config master datacenter variable in Conftool.
@@ -179,8 +167,8 @@ class MediaWiki:
         """
         self._conftool.set_and_verify('val', datacenter, scope='common', name='WMFMasterDatacenter')
         for dc in CORE_DATACENTERS:
-            for _ in range(10):  # Randomly check on up to 10 different hosts from the load balancer per datacenter
-                self.check_siteinfo(dc, {('query', 'general', 'wmf-config', 'wmfMasterDatacenter'): datacenter})
+            self._check_siteinfo_dry_run_aware(dc, {
+                ('query', 'general', 'wmf-config', 'wmfMasterDatacenter'): datacenter}, samples=10)
 
     def get_maintenance_host(self, datacenter):
         """Get an instance to execute commands on the maintenance hosts in a given datacenter.
@@ -253,3 +241,65 @@ class MediaWiki:
         except RemoteExecutionError:
             # We just log an error, don't actually report a failure to the system. We can live with this.
             logger.error('Stray php processes still present on the maintenance host, please check')
+
+    @staticmethod
+    @retry(tries=5, backoff_mode='constant', exceptions=(MediaWikiError, MediaWikiCheckError))
+    def _check_siteinfo(datacenter, checks):
+        """Check that a specific value in siteinfo matches the expected ones, retrying if doesn't match.
+
+        Arguments:
+            datacenter (str): the DC where to query for siteinfo.
+            checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
+                the siteinfo dictionary to get the value and the values are the expected values to check. For example:
+                    {('key1', 'key2'): 'value'}
+                will check siteinfo[key1][key2] for value 'value'.
+
+        Raises:
+            MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary after all tries.
+            MediaWikiCheckError: if the value doesn't match after all tries.
+
+        """
+        try:
+            siteinfo = MediaWiki.get_siteinfo(datacenter)
+        except Exception as e:
+            raise MediaWikiError('Failed to get siteinfo') from e
+
+        for path, expected in checks.items():
+            value = siteinfo.copy()  # No need for deepcopy, it will not be modified
+            for key in path:
+                try:
+                    value = value[key]
+                except (KeyError, TypeError) as e:
+                    raise MediaWikiError('Failed to traverse siteinfo for key {key}'.format(key=key)) from e
+
+            if value != expected:
+                raise MediaWikiCheckError("Expected '{expected}', got '{value}' for path: {path}".format(
+                    expected=expected, value=value, path=path))
+
+    def _check_siteinfo_dry_run_aware(self, datacenter, checks, samples=1):
+        """Dry-run mode aware check_siteinfo. See check_siteinfo() documentation for more details.
+
+        Arguments:
+            datacenter (str): the DC where to query for siteinfo.
+            checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
+                the siteinfo dictionary to get the value and the values are the expected values to check. For example:
+                    {('key1', 'key2'): 'value'}
+                will check siteinfo[key1][key2] for value 'value'.
+            samples (int, optional): the number of different calls to siteinfo to perform.
+
+        Raises:
+            MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary after all tries.
+            MediaWikiCheckError: if the value doesn't match after all tries.
+
+        """
+        if self._dry_run:
+            logger.debug('Reset samples to check_siteinfo from %s to 1 in dry-run mode', samples)
+            samples = 1
+
+        try:
+            self.check_siteinfo(datacenter, checks, samples=samples)
+        except (MediaWikiError, MediaWikiCheckError) as e:
+            if self._dry_run:
+                logger.info(e)
+            else:
+                raise
