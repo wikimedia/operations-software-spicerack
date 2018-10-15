@@ -230,9 +230,14 @@ class MediaWiki:
             Command('pkill --full "/usr/local/bin/expanddblist"', ok_codes=pkill_ok_codes),
             Command('pkill --full "/usr/local/bin/mwscript"', ok_codes=pkill_ok_codes),
             Command('pkill --full "/usr/local/bin/mwscriptwikiset"', ok_codes=pkill_ok_codes),
+            Command('killall -r hhvm', ok_codes=[]),  # Kill all remaining HHVM processes for all users
             Command('killall -r php', ok_codes=[]),  # Kill all remaining PHP processes for all users
             'sleep 5',
+            Command('killall -9 -r hhvm', ok_codes=[]),  # No more time to be gentle
             Command('killall -9 -r php', ok_codes=[]),  # No more time to be gentle
+            'sleep 1',
+            Command('systemctl start hhvm'),  # Restart the HHVM server that was killed above
+
         )
         self.check_cronjobs_disabled(datacenter)
 
