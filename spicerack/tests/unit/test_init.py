@@ -5,6 +5,7 @@ from unittest import mock
 
 from spicerack import Spicerack
 from spicerack.confctl import ConftoolEntity
+from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchCluster
 from spicerack.mediawiki import MediaWiki
@@ -30,6 +31,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.remote(), Remote)
     assert isinstance(spicerack.confctl('discovery'), ConftoolEntity)
     assert isinstance(spicerack.confctl('mwconfig'), ConftoolEntity)
+    assert isinstance(spicerack.dns(), Dns)
     assert isinstance(spicerack.discovery('discovery-record'), Discovery)
     assert isinstance(spicerack.mediawiki(), MediaWiki)
     assert isinstance(spicerack.mysql(), Mysql)

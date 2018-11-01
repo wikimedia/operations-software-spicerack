@@ -3,6 +3,7 @@ import os
 
 from spicerack import interactive
 from spicerack.confctl import Confctl
+from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_cluster
 from spicerack.log import irc_logger
@@ -104,6 +105,15 @@ class Spicerack:
             self._confctl = Confctl(config=self._conftool_config, schema=self._conftool_schema, dry_run=self._dry_run)
 
         return self._confctl.entity(entity_name)
+
+    def dns(self):
+        """Get a Dns instance.
+
+        Returns:
+            spicerack.dns.Dns: a Dns instance that will use the operating system default namserver(s).
+
+        """
+        return Dns(dry_run=self._dry_run)
 
     def discovery(self, *records):
         """Get a Discovery instance.
