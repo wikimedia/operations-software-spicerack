@@ -84,7 +84,7 @@ def test_wait_for_green_elasticsearch_call():
     mocked_elastic.cluster.health.return_value = True
     elasticsearchcluster = ec.ElasticsearchCluster(mocked_elastic, None, dry_run=False)
     elasticsearchcluster.wait_for_green(timedelta(seconds=13))
-    mocked_elastic.cluster.health.assert_called()
+    mocked_elastic.cluster.health.assert_called_once_with(params={'timeout': '1s'}, wait_for_status='green')
 
 
 @mock.patch('spicerack.elasticsearch_cluster.retry')
