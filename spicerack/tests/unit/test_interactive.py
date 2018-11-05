@@ -49,3 +49,35 @@ def test_get_user_ok(monkeypatch):
     monkeypatch.setenv('USER', 'root')
     monkeypatch.setenv('SUDO_USER', 'user')
     assert interactive.get_user() == 'user'
+
+
+@mock.patch('spicerack.interactive.os.isatty')
+def test_ensure_shell_is_durable_interactive(mocked_isatty):
+    """Should raise SpicerackError if in an interactive shell."""
+    mocked_isatty.return_value = True
+    with pytest.raises(SpicerackError, match='Must be run in non-interactive mode or inside a screen or tmux.'):
+        interactive.ensure_shell_is_durable()
+
+    assert mocked_isatty.called
+
+
+@mock.patch('spicerack.interactive.os.isatty')
+def test_ensure_shell_is_durable_non_interactive(mocked_isatty):
+    """Should raise SpicerackError if in an interactive shell."""
+    mocked_isatty.return_value = False
+    interactive.ensure_shell_is_durable()
+    assert mocked_isatty.called
+
+
+@mock.patch('spicerack.interactive.os.isatty')
+@pytest.mark.parametrize('env_name, env_value', (
+    ('STY', '12345.pts-1.host'),
+    ('TMUX', '/tmux-1001/default,12345,0'),
+    ('TERM', 'screen-example'),
+))
+def test_ensure_shell_is_durable_sty(mocked_isatty, env_name, env_value, monkeypatch):
+    """Should not raise if in an interactive shell with STY set, TMUX set or a screen-line TERM."""
+    mocked_isatty.return_value = True
+    monkeypatch.setenv(env_name, env_value)
+    interactive.ensure_shell_is_durable()
+    assert mocked_isatty.called

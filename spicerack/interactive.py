@@ -44,3 +44,15 @@ def get_user():
         return user
 
     return '-'
+
+
+def ensure_shell_is_durable():
+    """Ensure it is running either in non-interactive mode or in a screen/tmux session, raise otherwise.
+
+    Raises:
+        spicerack.exceptions.SpicerackError: if in a non-durable shell session.
+
+    """
+    if (os.isatty(0) and not os.getenv('STY', '') and not os.getenv('TMUX', '') and
+            'screen' not in os.getenv('TERM', '')):
+        raise SpicerackError('Must be run in non-interactive mode or inside a screen or tmux.')
