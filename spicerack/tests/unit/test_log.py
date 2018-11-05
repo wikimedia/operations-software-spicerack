@@ -47,7 +47,7 @@ def test_irc_socket_handler_emit_ok(mocked_socket):
 def test_irc_socket_handler_emit_ko(mocked_socket):
     """If an error occur while calling emit() on an IRCSocketHandler instance, it should call ."""
     handler = log.IRCSocketHandler('host', 123, 'user')
-    handler.handleError = mock.MagicMock()  # pylint: disable=invalid-name
+    handler.handleError = mock.MagicMock()
     mocked_socket.socket.side_effect = OSError
 
     handler.emit(GENERIC_LOG_RECORD)
