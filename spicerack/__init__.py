@@ -8,7 +8,7 @@ from spicerack.administrative import Reason
 from spicerack.confctl import Confctl
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
-from spicerack.elasticsearch_cluster import create_elasticsearch_cluster
+from spicerack.elasticsearch_cluster import create_elasticsearch_clusters
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
@@ -163,17 +163,17 @@ class Spicerack:
         """
         return RedisCluster(cluster, os.path.join(self._spicerack_config_dir, 'redis_cluster'), dry_run=self._dry_run)
 
-    def elasticsearch_cluster(self, name):
-        """Get an ElasticsearchCluster instance.
+    def elasticsearch_clusters(self, clustergroup):
+        """Get an ElasticsearchClusters instance.
 
         Arguments:
-            name (str): name of the cluster
+            clustergroup (str): name of cluster group e.g search_eqiad
 
         Returns:
-            spicerack.elasticsearch_cluster.ElasticsearchCluster: ElasticsearchCluster instance
+            spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance
 
         """
-        return create_elasticsearch_cluster(name, self.remote(), dry_run=self._dry_run)
+        return create_elasticsearch_clusters(clustergroup, self.remote(), dry_run=self._dry_run)
 
     def admin_reason(self, reason, task_id=''):
         """Get an administrative Reason instance.

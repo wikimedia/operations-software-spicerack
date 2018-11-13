@@ -9,7 +9,7 @@ from spicerack.confctl import ConftoolEntity
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.icinga import Icinga
-from spicerack.elasticsearch_cluster import ElasticsearchCluster
+from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.puppet import PuppetHosts
@@ -41,7 +41,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.mediawiki(), MediaWiki)
     assert isinstance(spicerack.mysql(), Mysql)
     assert isinstance(spicerack.redis_cluster('cluster'), RedisCluster)
-    assert isinstance(spicerack.elasticsearch_cluster('eqiad'), ElasticsearchCluster)
+    assert isinstance(spicerack.elasticsearch_clusters('search_eqiad'), ElasticsearchClusters)
     assert isinstance(spicerack.admin_reason('Reason message', task_id='T12345'), Reason)
     assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), PuppetHosts)
 
