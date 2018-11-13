@@ -23,6 +23,42 @@ class RemoteExecutionError(RemoteError):
         self.retcode = retcode
 
 
+class RemoteHostsAdapter:
+    """Base adapter to write classes that expand the capabilities of RemoteHosts.
+
+    This adapter class is a helper class to reduce duplication when writing classes that needs to add capabilities to a
+    RemoteHosts instance. The goal is to not extend the RemoteHosts but instead delegate to its instances.
+    This class fits when a single RemoteHosts instance is enough, but for more complex cases, in which multiple
+    RemoteHosts instances should be orchestrated, it's ok to not extend this class and create a standalone one.
+    """
+
+    def __init__(self, remote_hosts):
+        """Initialize the instance.
+
+        Arguments:
+            remote_hosts (spicerack.remote.RemoteHosts): the instance to act on the remote hosts.
+        """
+        self._remote_hosts = remote_hosts
+
+    def __str__(self):
+        """String representation of the instance.
+
+        Returns:
+            str: the string representation of the target hosts.
+
+        """
+        return str(self._remote_hosts)
+
+    def __len__(self):
+        """Length of the instance.
+
+        Returns:
+            int: the number of target hosts.
+
+        """
+        return len(self._remote_hosts)
+
+
 class Remote:
     """Remote class to interact with Cumin."""
 
@@ -36,17 +72,14 @@ class Remote:
         self._config = Config(config)
         self._dry_run = dry_run
 
-    def query(self, query_string, remote_hosts_factory=None):
+    def query(self, query_string):
         """Execute a Cumin query and return the matching hosts.
 
         Arguments:
             query_string (str): the Cumin query string to execute.
-            remote_hosts_factory (function, optional): a function(config, hosts, dry_run=True) to be used instead of
-                `spicerack.remote.default_remote_hosts_factory` to instantiate the target returned by the remote query.
-                It must return an instance of `spicerack.remote.RemoteHosts` or any derived class.
 
         Returns:
-            spicerack.remote.RemoteHosts: already initialized with Cumin's configuration and the target hosts.
+            spicerack.remote.RemoteHosts: RemoteHosts instance matching the given query.
 
         """
         try:
@@ -54,10 +87,7 @@ class Remote:
         except CuminError as e:
             raise RemoteError('Failed to execute Cumin query') from e
 
-        if remote_hosts_factory is None:
-            remote_hosts_factory = default_remote_hosts_factory
-
-        return remote_hosts_factory(self._config, hosts, dry_run=self._dry_run)
+        return RemoteHosts(self._config, hosts, dry_run=self._dry_run)
 
 
 class RemoteHosts:
@@ -95,6 +125,24 @@ class RemoteHosts:
 
         """
         return self._hosts.copy()
+
+    def __str__(self):
+        """String representation of the instance.
+
+        Returns:
+            str: the string representation of the target hosts.
+
+        """
+        return str(self._hosts)
+
+    def __len__(self):
+        """Length of the instance.
+
+        Returns:
+            int: the number of target hosts.
+
+        """
+        return len(self._hosts)
 
     def run_async(self, *commands, success_threshold=1.0, batch_size=None, batch_sleep=None, is_safe=False):
         """Execute commands on hosts matching a query via Cumin in async mode.
@@ -145,7 +193,8 @@ class RemoteHosts:
         """Lower level Cumin's execution of commands on the target nodes.
 
         Arguments:
-            commands (list): the list of commands to execute on the target hosts, either a list of .
+            commands (list): the list of commands to execute on the target hosts, either a list of commands or a list
+                of cumin.transports.Command instances.
             mode (str, optional): the Cumin's mode of execution. Accepted values: sync, async.
             success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
             batch_size (int, str, optional): the batch size for cumin, either as percentage (i.e. '25%')
@@ -185,18 +234,3 @@ class RemoteHosts:
             raise RemoteExecutionError(ret, 'Cumin execution failed')
 
         return worker.get_results()
-
-
-def default_remote_hosts_factory(config, hosts, dry_run=True):
-    """Default remote hosts factory function used in `Remote.query()`.
-
-    Arguments:
-        config (cumin.Config): the configuration for Cumin.
-        hosts (cumin.NodeSet): the hosts to target for the remote execution.
-        dry_run (bool, optional): whether this is a DRY-RUN.
-
-    Returns:
-        spicerack.remote.RemoteHosts: an initialized instance.
-
-    """
-    return RemoteHosts(config, hosts, dry_run=dry_run)

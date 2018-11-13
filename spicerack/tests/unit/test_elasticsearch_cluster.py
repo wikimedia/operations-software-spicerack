@@ -4,11 +4,10 @@ from unittest import mock
 
 import pytest
 
-from cumin import NodeSet
 from elasticsearch import Elasticsearch, TransportError
 
 from spicerack import elasticsearch_cluster as ec
-from spicerack.remote import Remote
+from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import elasticsearch_too_old
 
 
@@ -29,26 +28,22 @@ def test_create_elasticsearch_cluster_fail():
         ec.create_elasticsearch_cluster('wmnet', None)
 
 
-def test_elasticsearch_remote_host_factory():
-    """It should return an instance of ElasticsearchHosts."""
-    target = ec.elasticsearch_remote_hosts_factory({}, NodeSet('host[1-9]'))
-    assert isinstance(target, ec.ElasticsearchHosts)
-
-
 def test_start_elasticsearch():
     """Test that start elasticsearch service is called correctly."""
-    elastic_hosts = ec.ElasticsearchHosts({}, hosts=NodeSet('host1'))
-    elastic_hosts.run_sync = mock.Mock(return_value=iter(()))
+    mocked_remote_hosts = mock.MagicMock(spec_set=RemoteHosts)
+    mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
+    elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts)
     elastic_hosts.start_elasticsearch()
-    elastic_hosts.run_sync.assert_called_with('systemctl start elasticsearch')
+    mocked_remote_hosts.run_sync.assert_called_with('systemctl start elasticsearch')
 
 
 def test_stop_elasticsearch():
     """Test that stop elasticsearch service is called correctly."""
-    elastic_hosts = ec.ElasticsearchHosts({}, hosts=NodeSet('host1'))
-    elastic_hosts.run_sync = mock.Mock(return_value=iter(()))
+    mocked_remote_hosts = mock.MagicMock(spec_set=RemoteHosts)
+    mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
+    elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts)
     elastic_hosts.stop_elasticsearch()
-    elastic_hosts.run_sync.assert_called_with('systemctl stop elasticsearch')
+    mocked_remote_hosts.run_sync.assert_called_with('systemctl stop elasticsearch')
 
 
 def test_stopped_replication():

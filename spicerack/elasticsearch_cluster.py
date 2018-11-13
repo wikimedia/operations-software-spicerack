@@ -12,7 +12,7 @@ from elasticsearch import Elasticsearch, TransportError
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
-from spicerack.remote import RemoteHosts
+from spicerack.remote import RemoteHostsAdapter
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -35,7 +35,7 @@ def create_elasticsearch_cluster(name, remote, dry_run=True):
 
     Arguments:
         name (str): name of the cluster.
-        remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+        remote (spicerack.remote.Remote): the Remote instance.
         dry_run (bool, optional):  whether this is a DRY-RUN.
 
     Raises:
@@ -53,31 +53,18 @@ def create_elasticsearch_cluster(name, remote, dry_run=True):
     return ElasticsearchCluster(Elasticsearch(endpoint), remote, dry_run)
 
 
-def elasticsearch_remote_hosts_factory(config, hosts, dry_run=True):
-    """Custom remote hosts factory to return ElasticsearchHosts instances.
-
-    Arguments:
-        According to `spicerack.remote.default_remote_hosts_factory`.
-
-    Returns:
-        spicerack.elasticsearch_cluster.ElasticsearchHosts: the initialized instance.
-
-    """
-    return ElasticsearchHosts(config, hosts, dry_run=dry_run)
-
-
-class ElasticsearchHosts(RemoteHosts):
+class ElasticsearchHosts(RemoteHostsAdapter):
     """Class for managing elasticsearch nodes."""
 
     def start_elasticsearch(self):
         """Starts elasticsearch service"""
-        logger.info('Stopping elasticsearch on %s', self.hosts)
-        self.run_sync('systemctl start elasticsearch')
+        logger.info('Stopping elasticsearch on %s', self)
+        self._remote_hosts.run_sync('systemctl start elasticsearch')
 
     def stop_elasticsearch(self):
         """Stops elasticsearch service"""
-        logger.info('Starting elasticsearch on %s', self.hosts)
-        self.run_sync('systemctl stop elasticsearch')
+        logger.info('Starting elasticsearch on %s', self)
+        self._remote_hosts.run_sync('systemctl stop elasticsearch')
 
 
 class ElasticsearchCluster:
@@ -88,7 +75,7 @@ class ElasticsearchCluster:
 
         Arguments:
             elasticsearch (elasticsearch.Elasticsearch): elasticsearch instance
-            remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+            remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional):  whether this is a DRY-RUN.
         """
         self._elasticsearch = elasticsearch
@@ -170,7 +157,7 @@ class ElasticsearchCluster:
         rows = ElasticsearchCluster._to_rows(nodes_to_process)
         sorted_rows = sorted(rows.values(), key=len, reverse=True)
         nodes_names = [node['name'] + '*' for node in sorted_rows[0][:size]]
-        return self._remote.query(','.join(nodes_names), remote_hosts_factory=elasticsearch_remote_hosts_factory)
+        return ElasticsearchHosts(self._remote.query(','.join(nodes_names)))
 
     @staticmethod
     def _to_rows(nodes):
