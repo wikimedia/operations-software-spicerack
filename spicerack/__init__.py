@@ -9,6 +9,7 @@ from spicerack.confctl import Confctl
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_cluster
+from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
@@ -186,3 +187,13 @@ class Spicerack:
 
         """
         return Reason(reason, self._username, self._current_hostname, task_id=task_id)
+
+    def icinga(self):
+        """Get an Icinga instance.
+
+        Returns:
+            spicerack.icinga.Icinga: Icinga instance.
+
+        """
+        icinga_host = self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
+        return Icinga(icinga_host)
