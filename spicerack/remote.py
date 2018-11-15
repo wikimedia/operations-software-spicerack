@@ -98,7 +98,7 @@ class RemoteHosts:
     """
 
     def __init__(self, config, hosts, dry_run=True):
-        """Initiliaze the instance.
+        """Initialize the instance.
 
         Arguments:
             config (cumin.Config): the configuration for Cumin.

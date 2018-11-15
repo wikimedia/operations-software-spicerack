@@ -30,25 +30,25 @@ def test_ask_confirmation_ko(mocked_input, capsys):
     assert out.count('Invalid response') == 3
 
 
-def test_get_user_no_env(monkeypatch):
-    """Calling get_user() if no env variable is set should return '-'."""
+def test_get_username_no_env(monkeypatch):
+    """If no env variable is set should return '-'."""
     monkeypatch.delenv('USER', raising=False)
     monkeypatch.delenv('SUDO_USER', raising=False)
-    assert interactive.get_user() == '-'
+    assert interactive.get_username() == '-'
 
 
-def test_get_user_root(monkeypatch):
-    """Calling get_user() when unable to detect the real user should return 'root'."""
+def test_get_username_root(monkeypatch):
+    """When unable to detect the real user should return 'root'."""
     monkeypatch.setenv('USER', 'root')
     monkeypatch.delenv('SUDO_USER', raising=False)
-    assert interactive.get_user() == 'root'
+    assert interactive.get_username() == 'root'
 
 
-def test_get_user_ok(monkeypatch):
-    """Calling get_user() from a normal user with sudo should return the user's name."""
+def test_get_username_ok(monkeypatch):
+    """As a normal user with sudo should return the user's name."""
     monkeypatch.setenv('USER', 'root')
     monkeypatch.setenv('SUDO_USER', 'user')
-    assert interactive.get_user() == 'user'
+    assert interactive.get_username() == 'user'
 
 
 @mock.patch('spicerack.interactive.os.isatty')

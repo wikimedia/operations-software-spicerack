@@ -709,7 +709,7 @@ def execute_cookbook(config, args, cookbooks):
 
     cookbook_path, cookbook_name = os.path.split(cookbook.path.replace('.', os.sep))
     base_path = os.path.join(config['logs_base_dir'], cookbook_path)
-    log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.user, dry_run=args.dry_run,
+    log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.username, dry_run=args.dry_run,
                       host=config.get('tcpircbot_host', None), port=config.get('tcpircbot_port', 0))
 
     logger.debug('Executing cookbook %s with args: %s', args.cookbook, args.cookbook_args)

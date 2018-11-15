@@ -21,7 +21,7 @@ class TestMediaWiki:
         self.mocked_confctl = mock.MagicMock()
         self.mocked_remote = mock.MagicMock()
         self.mocked_remote.query.return_value.hosts = ['host1']
-        self.user = 'user1'
+        self.username = 'user1'
         self.siteinfo_url = 'http://api.svc.eqiad.wmnet/w/api.php'
         self.siteinfo_rw = {
             'batchcomplete': True,
@@ -43,8 +43,8 @@ class TestMediaWiki:
             },
         }
 
-        self.mediawiki = MediaWiki(self.mocked_confctl, self.mocked_remote, self.user, dry_run=False)
-        self.mediawiki_dry_run = MediaWiki(self.mocked_confctl, self.mocked_remote, self.user)
+        self.mediawiki = MediaWiki(self.mocked_confctl, self.mocked_remote, self.username, dry_run=False)
+        self.mediawiki_dry_run = MediaWiki(self.mocked_confctl, self.mocked_remote, self.username)
 
     @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_check_config_line(self, requests_mock):

@@ -27,8 +27,8 @@ def ask_confirmation(message):
         raise SpicerackError('Too many invalid confirmation answers')
 
 
-def get_user():
-    """Detect and return the effective running user even if run as root.
+def get_username():
+    """Detect and return the name of the effective running user even if run as root.
 
     Returns:
         str: the name of the effective running user or '-' if unable to detect it.

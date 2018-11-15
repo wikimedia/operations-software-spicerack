@@ -1,7 +1,10 @@
 """Spicerack package."""
 import os
 
+from socket import gethostname
+
 from spicerack import interactive
+from spicerack.administrative import Reason
 from spicerack.confctl import Confctl
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
@@ -38,7 +41,8 @@ class Spicerack:
         self._conftool_schema = conftool_schema
         self._spicerack_config_dir = spicerack_config_dir
 
-        self._user = interactive.get_user()
+        self._username = interactive.get_username()
+        self._current_hostname = gethostname()
         self._irc_logger = irc_logger
         self._confctl = None
 
@@ -63,14 +67,14 @@ class Spicerack:
         return self._verbose
 
     @property
-    def user(self):
-        """Getter for the user property.
+    def username(self):
+        """Getter for the username property.
 
         Returns:
             str: the name of the effective running user.
 
         """
-        return self._user
+        return self._username
 
     @property
     def irc_logger(self):
@@ -134,7 +138,7 @@ class Spicerack:
             spicerack.mediawiki.MediaWiki: the pre-configured MediaWiki instance.
 
         """
-        return MediaWiki(self.confctl('mwconfig'), self.remote(), self._user, dry_run=self._dry_run)
+        return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
 
     def mysql(self):
         """Get a Mysql instance.
@@ -168,3 +172,17 @@ class Spicerack:
 
         """
         return create_elasticsearch_cluster(name, self.remote(), dry_run=self._dry_run)
+
+    def admin_reason(self, reason, task_id=''):
+        """Get an administrative Reason instance.
+
+        Arguments:
+            reason (str): the reason to use to justify an administrative action. See `spicerack.administrative.Reason`
+                for all the details.
+            task_id (str, optional): the task ID to mention in the reason.
+
+        Returns:
+            spicerack.administrative.Reason: the administrative Reason instance.
+
+        """
+        return Reason(reason, self._username, self._current_hostname, task_id=task_id)

@@ -29,7 +29,7 @@ def test_irc_socket_handler_init():
     """An instance of IRCSocketHandler should set the address for the socket and the user."""
     handler = log.IRCSocketHandler('host', 123, 'user')
     assert handler.addr == ('host', 123)
-    assert handler.user == 'user'
+    assert handler.username == 'user'
 
 
 @mock.patch('spicerack.log.socket')
