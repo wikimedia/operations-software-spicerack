@@ -12,8 +12,9 @@ from spicerack.icinga import Icinga
 from spicerack.elasticsearch_cluster import ElasticsearchCluster
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
+from spicerack.puppet import PuppetHosts
 from spicerack.redis_cluster import RedisCluster
-from spicerack.remote import Remote
+from spicerack.remote import Remote, RemoteHosts
 
 from spicerack.tests import SPICERACK_TEST_PARAMS
 from spicerack.tests.unit.test_dns import MockedDnsAnswer, MockedDnsTarget, MockedTarget
@@ -42,6 +43,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.redis_cluster('cluster'), RedisCluster)
     assert isinstance(spicerack.elasticsearch_cluster('eqiad'), ElasticsearchCluster)
     assert isinstance(spicerack.admin_reason('Reason message', task_id='T12345'), Reason)
+    assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), PuppetHosts)
 
     assert mocked_remote_query.called
 

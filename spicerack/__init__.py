@@ -13,6 +13,7 @@ from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
+from spicerack.puppet import PuppetHosts
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote
 
@@ -197,3 +198,15 @@ class Spicerack:
         """
         icinga_host = self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
         return Icinga(icinga_host)
+
+    def puppet(self, remote_hosts):  # pylint: disable=no-self-use
+        """Get a PuppetHosts instance for the given remote hosts.
+
+        Arguments:
+            remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
+
+        Returns:
+            spicerack.puppet.PuppetHosts: the instance to manage Puppet on the target hosts.
+
+        """
+        return PuppetHosts(remote_hosts)
