@@ -4,7 +4,6 @@ from unittest import mock
 import pytest
 
 from ClusterShell.MsgTree import MsgTreeElem
-
 from cumin import Config, NodeSet
 from cumin.transports import clustershell, Target
 

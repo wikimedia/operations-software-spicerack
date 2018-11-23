@@ -3,7 +3,7 @@ import logging
 
 from unittest import mock
 
-from spicerack import Spicerack
+from spicerack import puppet, Spicerack
 from spicerack.administrative import Reason
 from spicerack.confctl import ConftoolEntity
 from spicerack.dns import Dns
@@ -12,7 +12,6 @@ from spicerack.icinga import Icinga
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
-from spicerack.puppet import PuppetHosts
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 
@@ -43,7 +42,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.redis_cluster('cluster'), RedisCluster)
     assert isinstance(spicerack.elasticsearch_clusters('search_eqiad'), ElasticsearchClusters)
     assert isinstance(spicerack.admin_reason('Reason message', task_id='T12345'), Reason)
-    assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), PuppetHosts)
+    assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), puppet.PuppetHosts)
 
     assert mocked_remote_query.called
 
@@ -62,4 +61,18 @@ def test_spicerack_icinga(mocked_remote_query, mocked_resolver, mocked_hostname,
 
     assert isinstance(spicerack.icinga(), Icinga)
     mocked_hostname.assert_called_once_with()
+    assert mocked_remote_query.called
+
+
+@mock.patch('spicerack.puppet.get_puppet_ca_hostname', return_value='puppetmaster.example.com')
+@mock.patch('spicerack.remote.Remote.query', autospec=True)
+def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostname):
+    """An instance of Spicerack should allow to get a PuppetMaster instance."""
+    host = mock.MagicMock(spec_set=RemoteHosts)
+    host.__len__.return_value = 1
+    mocked_remote_query.return_value = host
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    assert isinstance(spicerack.puppet_master(), puppet.PuppetMaster)
+    mocked_get_puppet_ca_hostname.assert_called_once_with()
     assert mocked_remote_query.called

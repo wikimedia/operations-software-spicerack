@@ -3,7 +3,7 @@ import os
 
 from socket import gethostname
 
-from spicerack import interactive
+from spicerack import interactive, puppet
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl
 from spicerack.dns import Dns
@@ -13,7 +13,6 @@ from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
-from spicerack.puppet import PuppetHosts
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote
 
@@ -209,4 +208,13 @@ class Spicerack:
             spicerack.puppet.PuppetHosts: the instance to manage Puppet on the target hosts.
 
         """
-        return PuppetHosts(remote_hosts)
+        return puppet.PuppetHosts(remote_hosts)
+
+    def puppet_master(self):
+        """Get a PuppetMaster instance to manage hosts and certificates from a Puppet master.
+
+        Returns:
+            spicerack.puppet.PuppetMaster: the instance to manage Puppet hosts and certificates.
+
+        """
+        return puppet.PuppetMaster(self.remote().query(puppet.get_puppet_ca_hostname()))
