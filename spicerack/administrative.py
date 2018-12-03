@@ -9,7 +9,7 @@ class ReasonError(SpicerackError):
 class Reason:
     """Class to manage the reason for administrative actions."""
 
-    def __init__(self, reason, username, hostname, *, task_id=''):
+    def __init__(self, reason, username, hostname, *, task_id=None):
         """Initialize the instance.
 
         Arguments:
@@ -36,7 +36,7 @@ class Reason:
             ReasonError: on validation error of the parameters.
 
         """
-        if '"' in value:
+        if value is not None and '"' in value:
             raise ReasonError('Property {name} cannot contain double quotes: {value}'.format(name=name, value=value))
 
         super().__setattr__(name, value)
@@ -52,7 +52,7 @@ class Reason:
             self._reason,
             '{user}@{host}'.format(user=self._username, host=self._hostname),
         ]
-        if self._task_id:
+        if self._task_id is not None:
             parts.append(self._task_id)
 
         return ' - '.join(parts)
