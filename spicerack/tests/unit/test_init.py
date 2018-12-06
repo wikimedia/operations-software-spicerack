@@ -9,6 +9,7 @@ from spicerack.confctl import ConftoolEntity
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.icinga import Icinga
+from spicerack.ipmi import Ipmi
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
@@ -76,3 +77,10 @@ def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostn
     assert isinstance(spicerack.puppet_master(), puppet.PuppetMaster)
     mocked_get_puppet_ca_hostname.assert_called_once_with()
     assert mocked_remote_query.called
+
+
+def test_spicerack_ipmi(monkeypatch):
+    """Should instantiate an instance of Ipmi."""
+    monkeypatch.setenv('MGMT_PASSWORD', 'env_password')
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    assert isinstance(spicerack.ipmi(), Ipmi)

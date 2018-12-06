@@ -10,6 +10,7 @@ from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_clusters
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
+from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
@@ -218,3 +219,12 @@ class Spicerack:
 
         """
         return puppet.PuppetMaster(self.remote().query(puppet.get_puppet_ca_hostname()))
+
+    def ipmi(self):  # pylint: disable=no-self-use
+        """Get an Ipmi instance to send remote IPMI commands to management consoles.
+
+        Returns:
+            spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
+
+        """
+        return Ipmi(interactive.get_management_password())

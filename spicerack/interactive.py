@@ -1,7 +1,12 @@
 """Interactive module."""
+import getpass
+import logging
 import os
 
 from spicerack.exceptions import SpicerackError
+
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def ask_confirmation(message):
@@ -56,3 +61,28 @@ def ensure_shell_is_durable():
     if (os.isatty(0) and not os.getenv('STY', '') and not os.getenv('TMUX', '') and
             'screen' not in os.getenv('TERM', '')):
         raise SpicerackError('Must be run in non-interactive mode or inside a screen or tmux.')
+
+
+def get_management_password():
+    """Get the management password either from the environment or asking for it.
+
+    Returns:
+        str: the password.
+
+    Raises:
+        spicerack.exceptions.SpicerackError: if the password is empty.
+
+    """
+    password = os.getenv('MGMT_PASSWORD')
+
+    if password is None:
+        logger.debug('MGMT_PASSWORD environment variable not found')
+        # Ask for a password, raise exception if not a tty
+        password = getpass.getpass(prompt='Management Password: ')
+    else:
+        logger.info('Using Management Password from the MGMT_PASSWORD environment variable')
+
+    if not password:
+        raise SpicerackError('Empty Management Password')
+
+    return password
