@@ -12,7 +12,7 @@ from spicerack.remote import RemoteHosts
 
 
 class TestIcinga:
-    """Test class for the Remote class."""
+    """Test class for the Icinga class."""
 
     def setup_method(self):
         """Setup the test environment."""
