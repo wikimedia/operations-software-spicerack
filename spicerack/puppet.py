@@ -3,12 +3,14 @@ import json
 import logging
 
 from contextlib import contextmanager
-from datetime import timedelta
+from datetime import datetime, timedelta
 from subprocess import CalledProcessError, check_output  # nosec
+
+from cumin.transports import Command
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
-from spicerack.remote import RemoteHostsAdapter
+from spicerack.remote import RemoteExecutionError, RemoteHostsAdapter
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -34,6 +36,14 @@ def get_puppet_ca_hostname():
         raise PuppetMasterError('Got empty ca_server from Puppet agent')
 
     return output
+
+
+class PuppetHostsError(SpicerackError):
+    """Custom base exception class for errors in the PuppetHosts class."""
+
+
+class PuppetHostsCheckError(SpicerackError):
+    """Custom base exception class for check errors in the PuppetHosts class."""
 
 
 class PuppetMasterError(SpicerackError):
@@ -84,6 +94,124 @@ class PuppetHosts(RemoteHostsAdapter):
         """
         logger.info('Enabling Puppet with reason %s on %d hosts: %s', reason.quoted(), len(self), self)
         self._remote_hosts.run_sync('enable-puppet {reason}'.format(reason=reason.quoted()))
+
+    def run(self, timeout=300, enable_reason=None, quiet=False,  # pylint: disable=too-many-arguments
+            failed_only=False, force=False, attempts=0):
+        """Run Puppet.
+
+        Arguments:
+            timeout (int, optional): the timeout in seconds to set in Cumin for the execution of the command.
+            enable_reason (spicerack.administrative.Reason, optional): the reason to use to contestually re-enable
+                Puppet if it was disabled.
+            quiet (bool, optional): suppress Puppet output if True.
+            failed_only (bool, optional): run Puppet only if the last run failed.
+            force (bool, optional): forcely re-enable Puppet if it was disabled with ANY message.
+            attempts (int, optional): override the default number of attempts waiting that an in-flight Puppet run
+                completes before timing out as set in run-puppet-agent.
+        """
+        args = []
+        if enable_reason is not None:
+            args += ['--enable', enable_reason.quoted()]
+        if quiet:
+            args.append('--quiet')
+        if failed_only:
+            args.append('--failed-only')
+        if force:
+            args.append('--force')
+        if attempts:
+            args += ['--attempts', str(attempts)]
+
+        args_string = ' '.join(args)
+        command = 'run-puppet-agent {args}'.format(args=args_string)
+        logger.info('Running Puppet with args %s on %d hosts: %s', args_string, len(self), self)
+        self._remote_hosts.run_sync(Command(command, timeout=timeout))
+
+    def first_run(self, has_systemd=True):
+        """Perform the first Puppet run on a clean host without using custom wrappers.
+
+        Arguments:
+            has_systemd (bool, optional): if the host has systemd as init system.
+        """
+        commands = []
+        if has_systemd:
+            commands += ['systemctl stop puppet.service', 'systemctl reset-failed puppet.service || true']
+
+        commands += [
+            'puppet agent --enable',
+            Command(('puppet agent --onetime --no-daemonize --verbose --no-splay --show_diff --ignorecache '
+                     '--no-usecacheonfailure'), timeout=10800)]
+
+        logger.info('Starting first Puppet run (sit back, relax, and enjoy the wait)')
+        self._remote_hosts.run_sync(*commands)
+        logger.info('First Puppet run completed')
+
+    def regenerate_certificate(self):
+        """Delete the local Puppet certificate and generate a new CSR.
+
+        Returns:
+            dict: a dictionary with hostnames as keys and CSR fingerprint as values.
+
+        """
+        logger.info('Deleting local Puppet certificate on %d hosts: %s', len(self), self)
+        self._remote_hosts.run_sync('rm -rfv /var/lib/puppet/ssl')
+
+        fingerprints = {}
+        logger.info('Generating a new Puppet certificate on %d hosts: %s', len(self), self)
+        for nodeset, output in self._remote_hosts.run_sync('puppet agent --test --color=false'):
+            for line in output.message().decode().splitlines():
+                if 'Certificate Request fingerprint' not in line:
+                    continue
+
+                fingerprint = ':'.join(line.split(':')[2:]).strip()
+                if not fingerprint:
+                    continue
+
+                logger.info('Generated CSR for host %s: %s', nodeset, fingerprint)
+                for host in nodeset:
+                    fingerprints[host] = fingerprint
+
+        if len(fingerprints) != len(self):
+            raise PuppetHostsError('Unable to find CSR fingerprints for all hosts')
+
+        return fingerprints
+
+    def wait(self):
+        """Wait until the next successful Puppet run is completed."""
+        self.wait_since(datetime.utcnow())
+
+    @retry(tries=60, delay=timedelta(seconds=30), backoff_mode='linear', exceptions=(PuppetHostsCheckError,))
+    def wait_since(self, start):
+        """Wait until a successful Puppet run is completed after the start time.
+
+        Arguments:
+            start (datetime.datetime): wait until a Puppet run is completed after this time.
+
+        Raises:
+            spicerack.puppet.PuppetHostsCheckError: if unable to get a successful Puppet run within the timeout.
+
+        """
+        remaining_nodes = self._remote_hosts.hosts
+        command = ("source /usr/local/share/bash/puppet-common.sh && last_run_success && "
+                   "awk /last_run/'{ print $2 }' \"${PUPPET_SUMMARY}\"")
+
+        logger.info('Polling the completion of a successful Puppet run')
+        try:
+            for nodeset, output in self._remote_hosts.run_sync(command, is_safe=True):
+                last_run = datetime.utcfromtimestamp(int(output.message().decode()))
+                if last_run <= start:
+                    raise PuppetHostsCheckError('Successful Puppet run too old ({run} <= {start}) on: {nodes}'.format(
+                        run=last_run, start=start, nodes=nodeset))
+
+                remaining_nodes.difference_update(nodeset, strict=False)
+
+        except RemoteExecutionError as e:
+            raise PuppetHostsCheckError('Unable to find a successful Puppet run') from e
+
+        if remaining_nodes:
+            raise PuppetHostsCheckError(
+                'Unable to get successful Puppet run from: {nodes}'.format(nodes=remaining_nodes))
+
+        logger.info('Successful Puppet run found')
 
 
 class PuppetMaster:
