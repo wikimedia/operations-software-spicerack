@@ -118,30 +118,30 @@ h - Help
 """
 
 
-def test_parse_args_converts_path():
-    """Calling parse_args() with a path-based cookbook should convert it into a module path."""
+def test_argument_parser_converts_path():
+    """It should convert a path-based cookbook into a module path."""
     argv = ['group1/cookbook1.py']
-    args = cookbook.parse_args(argv)
+    args = cookbook.argument_parser().parse_args(argv)
     assert args.cookbook == 'group1.cookbook1'
 
 
-def test_parse_args_keeps_module():
-    """Calling parse_args() with a module-based cookbook should keep it as is."""
+def test_argument_parser_keeps_module():
+    """It should keep a module-based cookbook as it is."""
     argv = ['group1.cookbook1']
-    args = cookbook.parse_args(argv)
+    args = cookbook.argument_parser().parse_args(argv)
     assert args.cookbook == argv[0]
 
 
-def test_parse_args_accept_empty():
-    """Calling parse_args() without arguments should not raise error."""
-    args = cookbook.parse_args([])
+def test_argument_parser_accept_empty():
+    """With no args it should not fail."""
+    args = cookbook.argument_parser().parse_args([])
     assert args.cookbook is None
 
 
 def test_parse_args_list():
-    """Calling parse_args() with -l/--list should keep the cookbook None and set list."""
+    """Passing -l/--list should keep the cookbook None and set list."""
     argv = ['--list']
-    args = cookbook.parse_args(argv)
+    args = cookbook.argument_parser().parse_args(argv)
     assert args.list
     assert args.cookbook is None
 

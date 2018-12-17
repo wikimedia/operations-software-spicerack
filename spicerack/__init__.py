@@ -3,6 +3,8 @@ import os
 
 from socket import gethostname
 
+from pkg_resources import DistributionNotFound, get_distribution
+
 from spicerack import interactive, puppet
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl
@@ -16,6 +18,13 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote
+
+
+try:
+    __version__ = get_distribution(__name__).version
+    """:py:class:`str`: the version of the current Spicerack module."""
+except DistributionNotFound:  # pragma: no cover - this should never happen during tests
+    pass  # package is not installed
 
 
 class Spicerack:

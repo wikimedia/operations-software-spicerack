@@ -235,7 +235,8 @@ class ElasticsearchClusters:
         """Create nodes_group for each nodes.
 
         Returns:
-            dict: merged clusters nodes. e.g:
+            dict: merged clusters nodes. e.g::
+
                 {'el5':
                     {'name': 'el5', 'clusters': ['alpha', 'beta],
                     'clusters_instances': [spicerack.elasticsearch_cluster.ElasticsearchCluster],

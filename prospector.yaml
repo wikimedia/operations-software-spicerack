@@ -12,6 +12,7 @@ output-format: grouped
 ignore-paths:
   - spicerack/tests/fixtures/cookbook/cookbooks/group3/invalid_syntax.py
   - spicerack/tests/fixtures/cookbook/cookbooks/group3/invalid_subgroup/__init__.py
+  - doc/source/conf.py
   - build/
   - dist/
   - logs/

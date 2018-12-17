@@ -656,16 +656,13 @@ class CookbooksMenu(BaseCookbooksItem):
         return item.args
 
 
-def parse_args(argv):
-    """Parse command line arguments and return them.
+def argument_parser():
+    """Get the CLI argument parser.
 
     If the COOKBOOK is passed as a path, it will be converted to a Python module syntax.
 
-    Arguments:
-        argv (list): the list of command line arguments to parse.
-
     Returns:
-        argparse.Namespace: the parsed arguments.
+        argparse.ArgumentParser: the argument parser instance.
 
     """
     parser = argparse.ArgumentParser(description='Spicerack Cookbook Runner')
@@ -686,9 +683,7 @@ def parse_args(argv):
         'cookbook_args', metavar='COOKBOOK_ARGS', nargs=argparse.REMAINDER,
         help='Collect all the remaining arguments to be passed to the cookbook or menu to execute.')
 
-    args = parser.parse_args(args=argv)
-
-    return args
+    return parser
 
 
 def cookbook_path_type(path):
@@ -765,7 +760,7 @@ def main(argv=None):
         int: the return code, zero on success, non-zero on failure.
 
     """
-    args = parse_args(argv)
+    args = argument_parser().parse_args(argv)
     config = load_yaml_config(args.config_file)
     sys.path.append(config['cookbooks_base_dir'])
 
