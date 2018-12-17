@@ -1,10 +1,13 @@
 """Remote module to execute commands on hosts via Cumin."""
 import logging
 
+from datetime import datetime, timedelta
+
 from cumin import Config, CuminError, query, transport, transports
 from cumin.cli import target_batch_size
 
-from spicerack.exceptions import SpicerackError
+from spicerack.decorators import retry
+from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -12,6 +15,10 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class RemoteError(SpicerackError):
     """Custom exception class for errors of this module."""
+
+
+class RemoteCheckError(SpicerackCheckError):
+    """Custom exception class for check errors of this module."""
 
 
 class RemoteExecutionError(RemoteError):
@@ -187,6 +194,94 @@ class RemoteHosts:
         """
         return self._execute(list(commands), mode='sync', success_threshold=success_threshold, batch_size=batch_size,
                              batch_sleep=batch_sleep, is_safe=is_safe)
+
+    def reboot(self, batch_size=1, batch_sleep=180.0):
+        """Reboot hosts.
+
+        Arguments:
+            batch_size (int, optional): how many hosts to reboot in parallel.
+            batch_sleep (float, optional): how long to sleep between one reboot and the next.
+        """
+        logger.info('Rebooting %d hosts in batches of %d with %.1fs of sleep: %s',
+                    len(self._hosts), batch_size, batch_sleep, self._hosts)
+        self.run_sync(transports.Command('reboot-host', timeout=30), batch_size=batch_size, batch_sleep=batch_sleep)
+
+    @retry(tries=25, delay=timedelta(seconds=10), backoff_mode='linear',
+           exceptions=(RemoteExecutionError, RemoteCheckError))
+    def wait_reboot_since(self, since):
+        """Poll the host until is reachable and has an uptime lower than the provided datetime.
+
+        Arguments:
+            since (datetime.datetime): the time after which the host should have booted.
+
+        Raises:
+            spicerack.remote.RemoteCheckError: if unable to connect to the host or the uptime is higher than expected.
+
+        """
+        remaining = self.hosts
+        delta = (datetime.utcnow() - since).total_seconds()
+        for nodeset, uptime in self.uptime():
+            if uptime >= delta:
+                raise RemoteCheckError('Uptime for {hosts} higher than threshold: {uptime} > {delta}'.format(
+                    hosts=nodeset, uptime=uptime, delta=delta))
+
+            remaining.difference_update(nodeset)
+
+        if remaining:
+            raise RemoteCheckError('Unable to check uptime from {num} hosts: {hosts}'.format(
+                num=len(remaining), hosts=remaining))
+
+        logger.info('Found reboot since %s for hosts %s', since, self._hosts)
+
+    def uptime(self):
+        """Get current uptime.
+
+        Returns:
+            list: a list of 2-element tuples with hosts NodeSet as first item and float uptime as second item.
+
+        """
+        results = self.run_sync(transports.Command('cat /proc/uptime', timeout=10), is_safe=True)
+        # Callback to extract the uptime from /proc/uptime (i.e. 12345.67 123456789.00).
+        return RemoteHosts.results_to_list(results, callback=lambda output: float(output.split()[0]))
+
+    def init_system(self):
+        """Detect the init system."""
+        results = self.run_sync(transports.Command('ps --no-headers -o comm 1', timeout=10), is_safe=True)
+        return RemoteHosts.results_to_list(results)
+
+    @staticmethod
+    def results_to_list(results, callback=None):
+        """Extract execution results into a list converting them with an optional callback.
+
+        TODO: move it directly into Cumin.
+
+        Arguments:
+            results (generator): generator returned by run_sync() and run_async() to iterate over the results.
+            callback (callable, optional): an optional callable to apply to each result output (it can be multiline).
+                The callback will be called with a the string output as the only parameter and must return the
+                extracted value. The return type can be chosen freely.
+
+        Returns:
+            list: a list of 2-element tuples with hosts NodeSet as first item and and extracted outputs as second.
+                This is because NodeSet are not hashable.
+
+        Raises:
+            spicerack.remote.RemoteError: if unable to run the callback.
+
+        """
+        extracted = []
+        for nodeset, output in results:
+            result = output.message().decode().strip()
+            if callback is not None:
+                try:
+                    result = callback(result)
+                except Exception as e:
+                    raise RemoteError('Unable to extract data with {cb} for {hosts} from: {output}'.format(
+                        cb=callback.__name__, hosts=nodeset, output=result)) from e
+
+            extracted.append((nodeset, result))
+
+        return extracted
 
     def _execute(self, commands, mode='sync', success_threshold=1.0,  # pylint: disable=too-many-arguments
                  batch_size=None, batch_sleep=None, is_safe=False):
