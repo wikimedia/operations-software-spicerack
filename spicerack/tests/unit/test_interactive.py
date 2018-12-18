@@ -8,8 +8,10 @@ from spicerack.exceptions import SpicerackError
 
 
 @mock.patch('builtins.input')
-def test_ask_confirmation_ok(mocked_input, capsys):
+@mock.patch('spicerack.interactive.sys.stdout.isatty')
+def test_ask_confirmation_ok(mocked_isatty, mocked_input, capsys):
     """Calling ask_confirmation() should not raise if the correct answer is provided."""
+    mocked_isatty.return_value = True
     mocked_input.return_value = 'done'
     message = 'Test message'
     interactive.ask_confirmation(message)
@@ -18,8 +20,10 @@ def test_ask_confirmation_ok(mocked_input, capsys):
 
 
 @mock.patch('builtins.input')
-def test_ask_confirmation_ko(mocked_input, capsys):
+@mock.patch('spicerack.interactive.sys.stdout.isatty')
+def test_ask_confirmation_ko(mocked_isatty, mocked_input, capsys):
     """Calling ask_confirmation() should raise if the correct answer is not provided."""
+    mocked_isatty.return_value = True
     mocked_input.return_value = 'invalid'
     message = 'Test message'
     with pytest.raises(SpicerackError, match='Too many invalid confirmation answers'):
@@ -28,6 +32,14 @@ def test_ask_confirmation_ko(mocked_input, capsys):
     out, _ = capsys.readouterr()
     assert message in out
     assert out.count('Invalid response') == 3
+
+
+@mock.patch('spicerack.interactive.sys.stdout.isatty')
+def test_ask_confirmation_no_tty(mocked_isatty):
+    """It should raise SpicerackError if not in a TTY."""
+    mocked_isatty.return_value = False
+    with pytest.raises(SpicerackError, match='Not in a TTY, unable to ask for confirmation'):
+        interactive.ask_confirmation('message')
 
 
 def test_get_username_no_env(monkeypatch):
@@ -51,7 +63,7 @@ def test_get_username_ok(monkeypatch):
     assert interactive.get_username() == 'user'
 
 
-@mock.patch('spicerack.interactive.os.isatty')
+@mock.patch('spicerack.interactive.sys.stdout.isatty')
 def test_ensure_shell_is_durable_interactive(mocked_isatty):
     """Should raise SpicerackError if in an interactive shell."""
     mocked_isatty.return_value = True
@@ -61,7 +73,7 @@ def test_ensure_shell_is_durable_interactive(mocked_isatty):
     assert mocked_isatty.called
 
 
-@mock.patch('spicerack.interactive.os.isatty')
+@mock.patch('spicerack.interactive.sys.stdout.isatty')
 def test_ensure_shell_is_durable_non_interactive(mocked_isatty):
     """Should raise SpicerackError if in an interactive shell."""
     mocked_isatty.return_value = False
@@ -69,7 +81,7 @@ def test_ensure_shell_is_durable_non_interactive(mocked_isatty):
     assert mocked_isatty.called
 
 
-@mock.patch('spicerack.interactive.os.isatty')
+@mock.patch('spicerack.interactive.sys.stdout.isatty')
 @pytest.mark.parametrize('env_name, env_value', (
     ('STY', '12345.pts-1.host'),
     ('TMUX', '/tmux-1001/default,12345,0'),

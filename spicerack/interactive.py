@@ -2,6 +2,7 @@
 import getpass
 import logging
 import os
+import sys
 
 from spicerack.exceptions import SpicerackError
 
@@ -16,9 +17,12 @@ def ask_confirmation(message):
         message (str): the message to be printed before asking for confirmation.
 
     Raises:
-        SpicerackError: on too many invalid answers.
+        SpicerackError: on too many invalid answers or if not in a TTY.
 
     """
+    if not sys.stdout.isatty():
+        raise SpicerackError('Not in a TTY, unable to ask for confirmation')
+
     print(message)
     print('Type "done" to proceed')
 
@@ -58,7 +62,9 @@ def ensure_shell_is_durable():
         spicerack.exceptions.SpicerackError: if in a non-durable shell session.
 
     """
-    if (os.isatty(0) and not os.getenv('STY', '') and not os.getenv('TMUX', '') and
+    # STY is for screen, TMUX is for tmux. Not using `getenv('NAME') is not None` to check they are not empty.
+    # TODO: verify if the check on TERM is redundant.
+    if (sys.stdout.isatty() and not os.getenv('STY', '') and not os.getenv('TMUX', '') and
             'screen' not in os.getenv('TERM', '')):
         raise SpicerackError('Must be run in non-interactive mode or inside a screen or tmux.')
 
