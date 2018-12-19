@@ -10,6 +10,8 @@ Build-Depends:
   python3-all (>= 3.4),
   python3-conftool,
   python3-dnspython,
+  python3-elasticsearch,
+  python3-elasticsearch-curator,
   python3-flake8,
   python3-mock (>= 2.0.0),
   python3-pytest,
@@ -20,6 +22,10 @@ Build-Depends:
   python3-requests-mock,
   python3-setuptools,
   python3-setuptools-scm,
+  python3-sphinx,
+  python3-sphinx-argparse,
+  python3-sphinx-rtd-theme,
+  python3-urllib3 (<= 1.23),
   python3-yaml
 Homepage: https://github.com/wikimedia/operations-software-spicerack
 X-Python3-Version: >= 3.4

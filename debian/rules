@@ -12,3 +12,8 @@ override_dh_auto_test:
 
 override_dh_auto_clean:
 	# Skip the default dh_auto_clean
+
+override_dh_installman:
+	SETUPTOOLS_SCM_PRETEND_VERSION="$(shell dpkg-parsechangelog -S version | cut -d '+' -f 1)" python3 setup.py build_sphinx -b man
+	sed -i='' -e 's/^\.B/.B /' doc/build/man/cookbook.1
+	dh_installman
