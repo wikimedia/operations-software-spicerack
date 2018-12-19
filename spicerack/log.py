@@ -14,17 +14,17 @@ class IRCSocketHandler(logging.Handler):
     Sends log events to a tcpircbot server for relay to an IRC channel.
     """
 
-    def __init__(self, host, port, user):
+    def __init__(self, host, port, username):
         """Initialize the IRC socket handler.
 
         Arguments:
             host (str): tcpircbot hostname.
             port (int): tcpircbot listening port.
-            user (str): the user to refer in the IRC messages.
+            username (str): the user to refer in the IRC messages.
         """
         super().__init__()
         self.addr = (host, port)
-        self.user = user
+        self.username = username
         self.level = logging.INFO
 
     def emit(self, record):
@@ -33,7 +33,7 @@ class IRCSocketHandler(logging.Handler):
         See https://docs.python.org/3/library/logging.html#handler-objects
         """
         message = '!log {msg} ({user}@{host})'.format(
-            msg=record.getMessage(), user=self.user, host=socket.gethostname())
+            msg=record.getMessage(), user=self.username, host=socket.gethostname())
         sock = None
 
         try:

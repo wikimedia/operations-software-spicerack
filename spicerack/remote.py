@@ -1,10 +1,13 @@
 """Remote module to execute commands on hosts via Cumin."""
 import logging
 
+from datetime import datetime, timedelta
+
 from cumin import Config, CuminError, query, transport, transports
 from cumin.cli import target_batch_size
 
-from spicerack.exceptions import SpicerackError
+from spicerack.decorators import retry
+from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -14,6 +17,10 @@ class RemoteError(SpicerackError):
     """Custom exception class for errors of this module."""
 
 
+class RemoteCheckError(SpicerackCheckError):
+    """Custom exception class for check errors of this module."""
+
+
 class RemoteExecutionError(RemoteError):
     """Custom exception class for remote execution errors."""
 
@@ -21,6 +28,42 @@ class RemoteExecutionError(RemoteError):
         """Override parent constructor to add the return code attribute."""
         super().__init__('{msg} (exit_code={ret})'.format(msg=message, ret=retcode))
         self.retcode = retcode
+
+
+class RemoteHostsAdapter:
+    """Base adapter to write classes that expand the capabilities of RemoteHosts.
+
+    This adapter class is a helper class to reduce duplication when writing classes that needs to add capabilities to a
+    RemoteHosts instance. The goal is to not extend the RemoteHosts but instead delegate to its instances.
+    This class fits when a single RemoteHosts instance is enough, but for more complex cases, in which multiple
+    RemoteHosts instances should be orchestrated, it's ok to not extend this class and create a standalone one.
+    """
+
+    def __init__(self, remote_hosts):
+        """Initialize the instance.
+
+        Arguments:
+            remote_hosts (spicerack.remote.RemoteHosts): the instance to act on the remote hosts.
+        """
+        self._remote_hosts = remote_hosts
+
+    def __str__(self):
+        """String representation of the instance.
+
+        Returns:
+            str: the string representation of the target hosts.
+
+        """
+        return str(self._remote_hosts)
+
+    def __len__(self):
+        """Length of the instance.
+
+        Returns:
+            int: the number of target hosts.
+
+        """
+        return len(self._remote_hosts)
 
 
 class Remote:
@@ -36,17 +79,14 @@ class Remote:
         self._config = Config(config)
         self._dry_run = dry_run
 
-    def query(self, query_string, remote_hosts_factory=None):
+    def query(self, query_string):
         """Execute a Cumin query and return the matching hosts.
 
         Arguments:
             query_string (str): the Cumin query string to execute.
-            remote_hosts_factory (function, optional): a function(config, hosts, dry_run=True) to be used instead of
-                `spicerack.remote.default_remote_hosts_factory` to instantiate the target returned by the remote query.
-                It must return an instance of `spicerack.remote.RemoteHosts` or any derived class.
 
         Returns:
-            spicerack.remote.RemoteHosts: already initialized with Cumin's configuration and the target hosts.
+            spicerack.remote.RemoteHosts: RemoteHosts instance matching the given query.
 
         """
         try:
@@ -54,10 +94,7 @@ class Remote:
         except CuminError as e:
             raise RemoteError('Failed to execute Cumin query') from e
 
-        if remote_hosts_factory is None:
-            remote_hosts_factory = default_remote_hosts_factory
-
-        return remote_hosts_factory(self._config, hosts, dry_run=self._dry_run)
+        return RemoteHosts(self._config, hosts, dry_run=self._dry_run)
 
 
 class RemoteHosts:
@@ -68,7 +105,7 @@ class RemoteHosts:
     """
 
     def __init__(self, config, hosts, dry_run=True):
-        """Initiliaze the instance.
+        """Initialize the instance.
 
         Arguments:
             config (cumin.Config): the configuration for Cumin.
@@ -95,6 +132,24 @@ class RemoteHosts:
 
         """
         return self._hosts.copy()
+
+    def __str__(self):
+        """String representation of the instance.
+
+        Returns:
+            str: the string representation of the target hosts.
+
+        """
+        return str(self._hosts)
+
+    def __len__(self):
+        """Length of the instance.
+
+        Returns:
+            int: the number of target hosts.
+
+        """
+        return len(self._hosts)
 
     def run_async(self, *commands, success_threshold=1.0, batch_size=None, batch_sleep=None, is_safe=False):
         """Execute commands on hosts matching a query via Cumin in async mode.
@@ -140,12 +195,101 @@ class RemoteHosts:
         return self._execute(list(commands), mode='sync', success_threshold=success_threshold, batch_size=batch_size,
                              batch_sleep=batch_sleep, is_safe=is_safe)
 
+    def reboot(self, batch_size=1, batch_sleep=180.0):
+        """Reboot hosts.
+
+        Arguments:
+            batch_size (int, optional): how many hosts to reboot in parallel.
+            batch_sleep (float, optional): how long to sleep between one reboot and the next.
+        """
+        logger.info('Rebooting %d hosts in batches of %d with %.1fs of sleep: %s',
+                    len(self._hosts), batch_size, batch_sleep, self._hosts)
+        self.run_sync(transports.Command('reboot-host', timeout=30), batch_size=batch_size, batch_sleep=batch_sleep)
+
+    @retry(tries=25, delay=timedelta(seconds=10), backoff_mode='linear',
+           exceptions=(RemoteExecutionError, RemoteCheckError))
+    def wait_reboot_since(self, since):
+        """Poll the host until is reachable and has an uptime lower than the provided datetime.
+
+        Arguments:
+            since (datetime.datetime): the time after which the host should have booted.
+
+        Raises:
+            spicerack.remote.RemoteCheckError: if unable to connect to the host or the uptime is higher than expected.
+
+        """
+        remaining = self.hosts
+        delta = (datetime.utcnow() - since).total_seconds()
+        for nodeset, uptime in self.uptime():
+            if uptime >= delta:
+                raise RemoteCheckError('Uptime for {hosts} higher than threshold: {uptime} > {delta}'.format(
+                    hosts=nodeset, uptime=uptime, delta=delta))
+
+            remaining.difference_update(nodeset)
+
+        if remaining:
+            raise RemoteCheckError('Unable to check uptime from {num} hosts: {hosts}'.format(
+                num=len(remaining), hosts=remaining))
+
+        logger.info('Found reboot since %s for hosts %s', since, self._hosts)
+
+    def uptime(self):
+        """Get current uptime.
+
+        Returns:
+            list: a list of 2-element tuples with hosts NodeSet as first item and float uptime as second item.
+
+        """
+        results = self.run_sync(transports.Command('cat /proc/uptime', timeout=10), is_safe=True)
+        # Callback to extract the uptime from /proc/uptime (i.e. 12345.67 123456789.00).
+        return RemoteHosts.results_to_list(results, callback=lambda output: float(output.split()[0]))
+
+    def init_system(self):
+        """Detect the init system."""
+        results = self.run_sync(transports.Command('ps --no-headers -o comm 1', timeout=10), is_safe=True)
+        return RemoteHosts.results_to_list(results)
+
+    @staticmethod
+    def results_to_list(results, callback=None):
+        """Extract execution results into a list converting them with an optional callback.
+
+        TODO: move it directly into Cumin.
+
+        Arguments:
+            results (generator): generator returned by run_sync() and run_async() to iterate over the results.
+            callback (callable, optional): an optional callable to apply to each result output (it can be multiline).
+                The callback will be called with a the string output as the only parameter and must return the
+                extracted value. The return type can be chosen freely.
+
+        Returns:
+            list: a list of 2-element tuples with hosts NodeSet as first item and and extracted outputs as second.
+                This is because NodeSet are not hashable.
+
+        Raises:
+            spicerack.remote.RemoteError: if unable to run the callback.
+
+        """
+        extracted = []
+        for nodeset, output in results:
+            result = output.message().decode().strip()
+            if callback is not None:
+                try:
+                    result = callback(result)
+                except Exception as e:
+                    raise RemoteError('Unable to extract data with {cb} for {hosts} from: {output}'.format(
+                        cb=callback.__name__, hosts=nodeset, output=result)) from e
+
+            extracted.append((nodeset, result))
+
+        return extracted
+
     def _execute(self, commands, mode='sync', success_threshold=1.0,  # pylint: disable=too-many-arguments
                  batch_size=None, batch_sleep=None, is_safe=False):
         """Lower level Cumin's execution of commands on the target nodes.
 
         Arguments:
-            commands (list): the list of commands to execute on the target hosts, either a list of .
+            commands (list): the list of commands to execute on the target hosts, either a list of commands or a list
+                of cumin.transports.Command instances.
             mode (str, optional): the Cumin's mode of execution. Accepted values: sync, async.
             success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
             batch_size (int, str, optional): the batch size for cumin, either as percentage (i.e. '25%')
@@ -185,18 +329,3 @@ class RemoteHosts:
             raise RemoteExecutionError(ret, 'Cumin execution failed')
 
         return worker.get_results()
-
-
-def default_remote_hosts_factory(config, hosts, dry_run=True):
-    """Default remote hosts factory function used in `Remote.query()`.
-
-    Arguments:
-        config (cumin.Config): the configuration for Cumin.
-        hosts (cumin.NodeSet): the hosts to target for the remote execution.
-        dry_run (bool, optional): whether this is a DRY-RUN.
-
-    Returns:
-        spicerack.remote.RemoteHosts: an initialized instance.
-
-    """
-    return RemoteHosts(config, hosts, dry_run=dry_run)

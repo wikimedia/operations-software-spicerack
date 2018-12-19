@@ -11,9 +11,13 @@ INSTALL_REQUIRES = [
     'conftool>=1.0.1',
     'cumin>=3.0.2',
     'dnspython>=1.15.0',
+    'elasticsearch>=5.0.0,<6.0.0',
+    'elasticsearch-curator>=5.0.0,<5.4.0',
     'pyyaml>=3.11',
     'redis>=2.10.0',
     'requests>=2.11.1',
+    # Temporary fix as pip is trying to install the latest 1.24 that is not compatible with requests and botocore
+    'urllib3<1.24',
 ]
 
 # Extra dependencies
@@ -27,6 +31,9 @@ EXTRAS_REQUIRE = {
         'pytest-xdist>=1.15.0',
         'pytest>=3.0.3',
         'requests-mock>=1.3.0',
+        'sphinx_rtd_theme>=0.1.6',
+        'sphinx-argparse>=0.1.15',
+        'Sphinx>=1.4.9',
     ],
 }
 

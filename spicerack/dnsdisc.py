@@ -29,7 +29,7 @@ class Discovery:
 
         Arguments:
             conftool (spicerack.confctl.ConftoolEntity): the conftool instance for the discovery type objects.
-            remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+            remote (spicerack.remote.Remote): the Remote instance.
             records (list): list of strings, each one must be a Discovery DNS record name.
             dry_run (bool, optional): whether this is a DRY-RUN.
 

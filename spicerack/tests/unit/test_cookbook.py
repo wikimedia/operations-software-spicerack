@@ -22,6 +22,9 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |   |   `-- group2.subgroup1.cookbook3
 |   `-- group2.zcookbook4
 |-- group3
+|   |-- group3.argparse
+|   |-- group3.argument_parser_raise
+|   |-- group3.argument_parser_raise_system_exit_str
 |   |-- group3.keyboard_interrupt
 |   |-- group3.non_zero_exit
 |   |-- group3.raise_exception
@@ -42,6 +45,9 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3
 |   `-- group2.zcookbook4: UNKNOWN (unable to detect title)
 |-- group3: -
+|   |-- group3.argparse: Group3 argparse
+|   |-- group3.argument_parser_raise: Group3 argument_parser() raise
+|   |-- group3.argument_parser_raise_system_exit_str: Group3 Raise SystemExit('message') in argument_parser()
 |   |-- group3.keyboard_interrupt: Group3 Raise KeyboardInterrupt
 |   |-- group3.non_zero_exit: Group3 Non-Zero return code
 |   |-- group3.raise_exception: Group3 Raise Exception
@@ -54,6 +60,9 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 """
 LIST_COOKBOOKS_GROUP3 = """cookbooks
 `-- group3
+    |-- group3.argparse
+    |-- group3.argument_parser_raise
+    |-- group3.argument_parser_raise_system_exit_str
     |-- group3.keyboard_interrupt
     |-- group3.non_zero_exit
     |-- group3.raise_exception
@@ -72,7 +81,7 @@ COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level cookbook
 [0/1] group1: Group1 Test Cookbooks
 [0/3] group2: -
-[0/7] group3: -
+[0/10] group3: -
 [NOTRUN] root: Top level cookbook: []
 q - Quit
 h - Help
@@ -81,7 +90,7 @@ COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level cookbook
 [0/1] group1: Group1 Test Cookbooks
 [0/3] group2: -
-[0/7] group3: -
+[0/10] group3: -
 [NOTRUN] root: Top level cookbook: []
 q - Quit
 h - Help
@@ -99,7 +108,7 @@ COOKBOOKS_GROUP2_MENU = """#--- group2 args=[] ---#
 b - Back to parent menu
 h - Help
 """
-COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """args=[], verbose=False, dry_run=False
+COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """[Namespace(argument=None, k=False), False, False]
 #--- group2 args=[] ---#
 [PASS] cookbook2: Group2 Cookbook2
 [0/1] subgroup1: -
@@ -109,30 +118,30 @@ h - Help
 """
 
 
-def test_parse_args_converts_path():
-    """Calling parse_args() with a path-based cookbook should convert it into a module path."""
+def test_argument_parser_converts_path():
+    """It should convert a path-based cookbook into a module path."""
     argv = ['group1/cookbook1.py']
-    args = cookbook.parse_args(argv)
+    args = cookbook.argument_parser().parse_args(argv)
     assert args.cookbook == 'group1.cookbook1'
 
 
-def test_parse_args_keeps_module():
-    """Calling parse_args() with a module-based cookbook should keep it as is."""
+def test_argument_parser_keeps_module():
+    """It should keep a module-based cookbook as it is."""
     argv = ['group1.cookbook1']
-    args = cookbook.parse_args(argv)
+    args = cookbook.argument_parser().parse_args(argv)
     assert args.cookbook == argv[0]
 
 
-def test_parse_args_accept_empty():
-    """Calling parse_args() without arguments should not raise error."""
-    args = cookbook.parse_args([])
+def test_argument_parser_accept_empty():
+    """With no args it should not fail."""
+    args = cookbook.argument_parser().parse_args([])
     assert args.cookbook is None
 
 
 def test_parse_args_list():
-    """Calling parse_args() with -l/--list should keep the cookbook None and set list."""
+    """Passing -l/--list should keep the cookbook None and set list."""
     argv = ['--list']
-    args = cookbook.parse_args(argv)
+    args = cookbook.argument_parser().parse_args(argv)
     assert args.list
     assert args.cookbook is None
 
@@ -171,59 +180,40 @@ class TestCookbooks:
         cookbooks = cookbook.Cookbooks(os.path.join(COOKBOOKS_BASE_PATH, 'non_existent'), [], self.spicerack)
         assert cookbooks.menu.get_tree() == ''
 
-    def test_main_execute_cookbook_ok(self, tmpdir, capsys):
-        """Calling main() with a cookbook should run the cookbook."""
-        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
-            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
-                ret = cookbook.main(['cookbook'])
-
-        _, err = capsys.readouterr()
-        assert ret == 0
-        assert 'START - Cookbook cookbook' in err
-        assert 'END (PASS) - Cookbook cookbook (exit_code=0)' in err
-
-    def test_main_execute_cookbook_ko(self, tmpdir, capsys):
-        """Calling execute_cookbook() should return the exit status of the cookbook."""
-        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
-            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
-                ret = cookbook.main(['group3.non_zero_exit'])
-
-        _, err = capsys.readouterr()
-        assert ret == 1
-        assert 'END (FAIL) - Cookbook group3.non_zero_exit (exit_code=1)' in err
-
-    def test_main_execute_cookbook_non_existent(self, tmpdir, capsys):
-        """Calling execute_cookbook() with a non existent cookbook should return COOKBOOK_NOT_FOUND_RETCODE."""
-        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
-            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
-                ret = cookbook.main(['non_existent'])
-
-        _, err = capsys.readouterr()
-        assert ret == cookbook.COOKBOOK_NOT_FOUND_RETCODE
-        assert 'Unable to find cookbook' in err
-
-    @pytest.mark.parametrize('module, error, code, args', (
-        ('invalid_syntax', 'invalid syntax (invalid_syntax.py, line 7)', cookbook.COOKBOOK_NOT_FOUND_RETCODE, []),
-        ('keyboard_interrupt', 'Ctrl+c pressed', cookbook.COOKBOOK_INTERRUPTED_RETCODE, []),
-        ('raise_exception', 'Exception: Something went wrong', cookbook.COOKBOOK_EXCEPTION_RETCODE, []),
-        ('raise_system_exit_0', 'SystemExit(0) raised', 0, []),
-        ('raise_system_exit_0', 'SystemExit(0) raised by argparse -h/--help', 0, ['-h']),
-        ('raise_system_exit_9', 'SystemExit(9) raised', 9, []),
-        ('raise_system_exit_str', "SystemExit('message') raised", cookbook.COOKBOOK_EXCEPTION_RETCODE, []),
+    @pytest.mark.parametrize('module, err_messages, absent_err_messages, code, args', (
+        ('cookbook', ['START - Cookbook cookbook', 'END (PASS) - Cookbook cookbook (exit_code=0)'], [], 0, []),
+        ('cookbook', [], ['START - Cookbook', 'END ('], cookbook.COOKBOOK_NO_PARSER_WITH_ARGS_RETCODE, ['arg1']),
+        ('group3.non_zero_exit', ['END (FAIL) - Cookbook group3.non_zero_exit (exit_code=1)'], [], 1, []),
+        ('group3.non_zero_exit', ['END (FAIL) - Cookbook group3.non_zero_exit (exit_code=1)'], [], 1, []),
+        ('group3.non_existent', ['Unable to find cookbook'], [], cookbook.COOKBOOK_NOT_FOUND_RETCODE, []),
+        ('group3.argparse', [], ['START - Cookbook', 'END ('], 0, ['-h']),
+        ('group3.argparse', ['Argparse: error: unrecognized arguments'], ['START - Cookbook', 'END ('],
+         2, ['--invalid']),
+        ('group3.invalid_syntax', ['invalid syntax (invalid_syntax.py, line 7)'], [],
+         cookbook.COOKBOOK_NOT_FOUND_RETCODE, []),
+        ('group3.keyboard_interrupt', ['Ctrl+c pressed'], [], cookbook.COOKBOOK_INTERRUPTED_RETCODE, []),
+        ('group3.argument_parser_raise', ['raised while parsing arguments for cookbook'], ['START - Cookbook', 'END ('],
+         cookbook.COOKBOOK_PARSE_ARGS_FAIL_RETCODE, []),
+        ('group3.argument_parser_raise_system_exit_str', ["SystemExit('argument_parser')"],
+         ['START - Cookbook', 'END ('], cookbook.COOKBOOK_PARSE_ARGS_FAIL_RETCODE, []),
+        ('group3.raise_exception', ['Exception: Something went wrong'], [], cookbook.COOKBOOK_EXCEPTION_RETCODE, []),
+        ('group3.raise_system_exit_0', ['SystemExit(0) raised'], [], 0, []),
+        ('group3.raise_system_exit_9', ['SystemExit(9) raised'], [], 9, []),
+        ('group3.raise_system_exit_str', ["SystemExit('message') raised"], [], cookbook.COOKBOOK_EXCEPTION_RETCODE, []),
     ))  # pylint: disable=too-many-arguments
-    def test_main_execute_cookbook_raise(self, tmpdir, capsys, module, error, code, args):
+    def test_main_execute_cookbook(self, tmpdir, capsys, module, err_messages, absent_err_messages, code, args):
         """Calling execute_cookbook() should intercept any exception raised."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
         with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
-                ret = cookbook.main(['group3.{name}'.format(name=module)] + args)
+                ret = cookbook.main([module] + args)
 
         _, err = capsys.readouterr()
         assert ret == code
-        assert error in err
+        for message in err_messages:
+            assert message in err
+        for message in absent_err_messages:
+            assert message not in err
 
     def test_main_execute_dry_run(self, capsys, tmpdir):
         """Calling main() with a cookbook and dry_run mode should execute it and set the dry run mode."""
@@ -257,7 +247,7 @@ class TestCookbooks:
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         cookbooks = cookbook.Cookbooks(COOKBOOKS_BASE_PATH, [], self.spicerack)
         menu = cookbooks.get_item(cookbooks.cookbooks_module_prefix)
-        assert menu.status == '0/13'
+        assert menu.status == '0/16'
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a CookbooksMenu with all tasks completed should return DONE."""
@@ -281,11 +271,11 @@ class TestCookbooks:
             '[0/3] group2', '[1/3] group2')),
         (True, ['group2', 'cookbook2 --argument value', 'b', 'q'],
          COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU +
-         COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('args=[], verbose', "args=['--argument', 'value'], verbose") +
+         COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('argument=None', "argument='value'") +
          COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
         (True, ['group2 -k', 'cookbook2', 'b', 'q'],
-         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU.replace('args=[] ---', "args=['-k'] ---") +
-         COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('args=[]', "args=['-k']") +
+         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU.replace('[]', "['-k']") +
+         COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('[]', "['-k']").replace('k=False', 'k=True') +
          COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
         (True, 'h', COOKBOOKS_MENU_TTY +
          cookbook.COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=cookbook.Cookbook.statuses) + '\n' + COOKBOOKS_MENU_TTY),

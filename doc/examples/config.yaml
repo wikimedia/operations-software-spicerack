@@ -1,0 +1,4 @@
+# Base path of the cookbooks. It's usually a checkout of a different repository that has all the cookbooks.
+cookbooks_base_dir: /path/to/cookbooks/checkout
+# Base directory for cookbook's logs.
+logs_base_dir:  /var/log/spicerack

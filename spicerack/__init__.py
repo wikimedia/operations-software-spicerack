@@ -1,14 +1,30 @@
 """Spicerack package."""
 import os
 
-from spicerack import interactive
+from socket import gethostname
+
+from pkg_resources import DistributionNotFound, get_distribution
+
+from spicerack import interactive, puppet
+from spicerack.administrative import Reason
 from spicerack.confctl import Confctl
+from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
+from spicerack.elasticsearch_cluster import create_elasticsearch_clusters
+from spicerack.icinga import Icinga, ICINGA_DOMAIN
+from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote
+
+
+try:
+    __version__ = get_distribution(__name__).version
+    """:py:class:`str`: the version of the current Spicerack module."""
+except DistributionNotFound:  # pragma: no cover - this should never happen during tests
+    pass  # package is not installed
 
 
 class Spicerack:
@@ -36,7 +52,8 @@ class Spicerack:
         self._conftool_schema = conftool_schema
         self._spicerack_config_dir = spicerack_config_dir
 
-        self._user = interactive.get_user()
+        self._username = interactive.get_username()
+        self._current_hostname = gethostname()
         self._irc_logger = irc_logger
         self._confctl = None
 
@@ -61,14 +78,14 @@ class Spicerack:
         return self._verbose
 
     @property
-    def user(self):
-        """Getter for the user property.
+    def username(self):
+        """Getter for the username property.
 
         Returns:
             str: the name of the effective running user.
 
         """
-        return self._user
+        return self._username
 
     @property
     def irc_logger(self):
@@ -104,6 +121,15 @@ class Spicerack:
 
         return self._confctl.entity(entity_name)
 
+    def dns(self):
+        """Get a Dns instance.
+
+        Returns:
+            spicerack.dns.Dns: a Dns instance that will use the operating system default namserver(s).
+
+        """
+        return Dns(dry_run=self._dry_run)
+
     def discovery(self, *records):
         """Get a Discovery instance.
 
@@ -123,7 +149,7 @@ class Spicerack:
             spicerack.mediawiki.MediaWiki: the pre-configured MediaWiki instance.
 
         """
-        return MediaWiki(self.confctl('mwconfig'), self.remote(), self._user, dry_run=self._dry_run)
+        return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
 
     def mysql(self):
         """Get a Mysql instance.
@@ -145,3 +171,69 @@ class Spicerack:
 
         """
         return RedisCluster(cluster, os.path.join(self._spicerack_config_dir, 'redis_cluster'), dry_run=self._dry_run)
+
+    def elasticsearch_clusters(self, clustergroup):
+        """Get an ElasticsearchClusters instance.
+
+        Arguments:
+            clustergroup (str): name of cluster group e.g search_eqiad
+
+        Returns:
+            spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance
+
+        """
+        return create_elasticsearch_clusters(clustergroup, self.remote(), dry_run=self._dry_run)
+
+    def admin_reason(self, reason, task_id=''):
+        """Get an administrative Reason instance.
+
+        Arguments:
+            reason (str): the reason to use to justify an administrative action. See `spicerack.administrative.Reason`
+                for all the details.
+            task_id (str, optional): the task ID to mention in the reason.
+
+        Returns:
+            spicerack.administrative.Reason: the administrative Reason instance.
+
+        """
+        return Reason(reason, self._username, self._current_hostname, task_id=task_id)
+
+    def icinga(self):
+        """Get an Icinga instance.
+
+        Returns:
+            spicerack.icinga.Icinga: Icinga instance.
+
+        """
+        icinga_host = self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
+        return Icinga(icinga_host)
+
+    def puppet(self, remote_hosts):  # pylint: disable=no-self-use
+        """Get a PuppetHosts instance for the given remote hosts.
+
+        Arguments:
+            remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
+
+        Returns:
+            spicerack.puppet.PuppetHosts: the instance to manage Puppet on the target hosts.
+
+        """
+        return puppet.PuppetHosts(remote_hosts)
+
+    def puppet_master(self):
+        """Get a PuppetMaster instance to manage hosts and certificates from a Puppet master.
+
+        Returns:
+            spicerack.puppet.PuppetMaster: the instance to manage Puppet hosts and certificates.
+
+        """
+        return puppet.PuppetMaster(self.remote().query(puppet.get_puppet_ca_hostname()))
+
+    def ipmi(self):  # pylint: disable=no-self-use
+        """Get an Ipmi instance to send remote IPMI commands to management consoles.
+
+        Returns:
+            spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
+
+        """
+        return Ipmi(interactive.get_management_password())

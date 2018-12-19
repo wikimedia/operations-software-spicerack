@@ -14,12 +14,16 @@ from spicerack.exceptions import SpicerackError
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+COOKBOOK_NO_PARSER_WITH_ARGS_RETCODE = 95
+"""int: reserved exit code: the cookbook doesn't have an argument_parser() function but was called with arguments."""
+COOKBOOK_PARSE_ARGS_FAIL_RETCODE = 96
+"""int: reserved exit code: the cookbook fail to parse arguments."""
 COOKBOOK_INTERRUPTED_RETCODE = 97
-"""int: the reserved exit code used when the execution is interrupted."""
+"""int: reserved exit code: the execution was interrupted."""
 COOKBOOK_NOT_FOUND_RETCODE = 98
-"""int: the reserved exit code used when no cookbook is found for the selection."""
+"""int: reserved exit code: no cookbook is found for the selection."""
 COOKBOOK_EXCEPTION_RETCODE = 99
-"""int: the reserved exit code used when the cookbook raised an exception."""
+"""int: reserved exit code: the cookbook raised an exception while executing."""
 COOKBOOKS_MENU_HELP_MESSAGE = """Cookbooks interactive menu help
 
 Available cookbooks and cookbook groups are shown in the menu with the format:
@@ -358,15 +362,36 @@ class Cookbook(BaseCookbooksItem):
         self.status = Cookbook.not_run
 
     def run(self):
-        """Run the cookbook, calling its main() function.
+        """Run the cookbook, calling both its `argument_parser` and `run` functions.
 
-        Return:
-            int: the return code of the cookbook execution. Zero for success, non-zero for failure.
+        Returns:
+            int: the return code to use for this cookbook, it should be zero on success, a positive integer smaller than
+                128 and not in the range 90-99 (reserved exit codes) in case of failure.
+
+        """
+        ret, args = self._parse_args()
+        if ret != -1:
+            return ret
+
+        return self._run(args)
+
+    def _run(self, args):
+        """Run the cookbook's `run()` function.
+
+        Arguments:
+            args (argparse.Namespace, None): the parsed arguments or None if the cookbook doesn't define a
+                `argument_parser()` function.
+
+        Returns:
+            int: the return code to use for this cookbook, it should be zero on success, a positive integer smaller than
+                128 and not in the range 90-99 (reserved exit codes) in case of failure.
 
         """
         log.log_task_start('Cookbook ' + self.path)
+        message = 'raised while executing cookbook'
+
         try:
-            ret = self.module.main(self.args, self.spicerack)
+            ret = self.module.run(args, self.spicerack)
             if ret is None:
                 ret = 0
         except KeyboardInterrupt:
@@ -374,9 +399,20 @@ class Cookbook(BaseCookbooksItem):
             self.status = Cookbook.error
             ret = COOKBOOK_INTERRUPTED_RETCODE
         except SystemExit as e:
-            ret, self.status = self._handle_system_exit(e)
-        except Exception:  # pylint: disable=broad-except
-            logger.exception('Exception raised while executing cookbook %s:', self.path)
+            if isinstance(e.code, int):
+                ret = e.code
+                if e.code == 0:
+                    logger.info('SystemExit(0) %s %s, assuming success:', message, self.path)
+                    self.status = Cookbook.success
+                else:
+                    logger.exception('SystemExit(%d) %s %s:', e.code, message, self.path)
+                    self.status = Cookbook.error
+            else:
+                logger.exception("SystemExit('%s') %s %s:", e.code, message, self.path)
+                self.status = Cookbook.error
+                ret = COOKBOOK_EXCEPTION_RETCODE
+        except BaseException:
+            logger.exception('Exception %s %s:', message, self.path)
             self.status = Cookbook.failed
             ret = COOKBOOK_EXCEPTION_RETCODE
         else:
@@ -387,36 +423,39 @@ class Cookbook(BaseCookbooksItem):
 
         return ret
 
-    def _handle_system_exit(self, exc):
-        """Handle the SystemExit exception catching.
-
-        Arguments:
-            exc (SystemExit): the catched exception to handle.
+    def _parse_args(self):
+        """Get the argument parser from the cookbook, if it exists, and parse the arguments.
 
         Returns:
-            tuple: (int, str): tuple with (return code, status) to use based on the SystemExit properties.
+            tuple: (int, argparse.Namespace) with the return code to use and the parsed arguments. If the return code is
+                different from -1 it means that the cookbook should not be executed either because the help message was
+                requested or the parse of the arguments failed or arguments were passed but the cookbook doesn't define
+                a argument_parser() function.
 
         """
-        message = 'raised while executing cookbook'
+        ret = -1
+        args = None
+        message = 'raised while parsing arguments for cookbook'
 
-        if isinstance(exc.code, int):
-            ret = exc.code
-            if exc.code == 0:
-                if '-h' in self.args or '--help' in self.args:
-                    logger.error('SystemExit(0) raised by argparse -h/--help')
-                    status = Cookbook.not_run
-                else:
-                    logger.error('SystemExit(0) %s %s, assuming success:', message, self.path)
-                    status = Cookbook.success
+        if not hasattr(self.module, 'argument_parser'):
+            if self.args:
+                ret = COOKBOOK_NO_PARSER_WITH_ARGS_RETCODE
+
+            return ret, args
+
+        try:
+            args = self.module.argument_parser().parse_args(self.args)
+        except SystemExit as e:
+            if isinstance(e.code, int):
+                ret = e.code
             else:
-                logger.exception('SystemExit(%d) %s %s:', exc.code, message, self.path)
-                status = Cookbook.error
-        else:
-            ret = COOKBOOK_EXCEPTION_RETCODE
-            logger.exception("SystemExit('%s') %s %s:", exc.code, message, self.path)
-            status = Cookbook.error
+                logger.exception("SystemExit('%s') %s %s:", e.code, message, self.path)
+                ret = COOKBOOK_PARSE_ARGS_FAIL_RETCODE
+        except BaseException:
+            logger.exception('Exception %s %s:', message, self.path)
+            ret = COOKBOOK_PARSE_ARGS_FAIL_RETCODE
 
-        return ret, status
+        return ret, args
 
 
 class CookbooksMenu(BaseCookbooksItem):
@@ -617,16 +656,13 @@ class CookbooksMenu(BaseCookbooksItem):
         return item.args
 
 
-def parse_args(argv):
-    """Parse command line arguments and return them.
+def argument_parser():
+    """Get the CLI argument parser.
 
     If the COOKBOOK is passed as a path, it will be converted to a Python module syntax.
 
-    Arguments:
-        argv (list): the list of command line arguments to parse.
-
     Returns:
-        argparse.Namespace: the parsed arguments.
+        argparse.ArgumentParser: the argument parser instance.
 
     """
     parser = argparse.ArgumentParser(description='Spicerack Cookbook Runner')
@@ -647,9 +683,7 @@ def parse_args(argv):
         'cookbook_args', metavar='COOKBOOK_ARGS', nargs=argparse.REMAINDER,
         help='Collect all the remaining arguments to be passed to the cookbook or menu to execute.')
 
-    args = parser.parse_args(args=argv)
-
-    return args
+    return parser
 
 
 def cookbook_path_type(path):
@@ -709,7 +743,7 @@ def execute_cookbook(config, args, cookbooks):
 
     cookbook_path, cookbook_name = os.path.split(cookbook.path.replace('.', os.sep))
     base_path = os.path.join(config['logs_base_dir'], cookbook_path)
-    log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.user, dry_run=args.dry_run,
+    log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.username, dry_run=args.dry_run,
                       host=config.get('tcpircbot_host', None), port=config.get('tcpircbot_port', 0))
 
     logger.debug('Executing cookbook %s with args: %s', args.cookbook, args.cookbook_args)
@@ -726,7 +760,7 @@ def main(argv=None):
         int: the return code, zero on success, non-zero on failure.
 
     """
-    args = parse_args(argv)
+    args = argument_parser().parse_args(argv)
     config = load_yaml_config(args.config_file)
     sys.path.append(config['cookbooks_base_dir'])
 

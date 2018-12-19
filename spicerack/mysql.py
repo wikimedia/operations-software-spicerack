@@ -9,7 +9,7 @@ from datetime import datetime
 from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
-from spicerack.remote import RemoteHosts
+from spicerack.remote import RemoteHostsAdapter
 
 
 REPLICATION_ROLES = ('master', 'slave', 'standalone')
@@ -23,7 +23,7 @@ class MysqlError(SpicerackError):
     """Custom exception class for errors of this module."""
 
 
-class MysqlRemoteHosts(RemoteHosts):
+class MysqlRemoteHosts(RemoteHostsAdapter):
     """Custom RemoteHosts class to execute MySQL queries."""
 
     def run_query(self, query, database='', success_threshold=1.0,  # pylint: disable=too-many-arguments
@@ -49,21 +49,8 @@ class MysqlRemoteHosts(RemoteHosts):
         """
         command = 'mysql --skip-ssl --skip-column-names --batch -e "{query}" {database}'.format(
             query=query, database=database).strip()
-        return self.run_sync(command, success_threshold=success_threshold, batch_size=batch_size,
-                             batch_sleep=batch_sleep, is_safe=is_safe)
-
-
-def mysql_remote_hosts_factory(config, hosts, dry_run=True):
-    """Custom remote hosts factory to return MysqlRemoteHosts instances.
-
-    Arguments:
-        According to `spicerack.remote.default_remote_hosts_factory`.
-
-    Returns:
-        spicerack.mysql.MysqlRemoteHosts: the initialized instance.
-
-    """
-    return MysqlRemoteHosts(config, hosts, dry_run=dry_run)
+        return self._remote_hosts.run_sync(command, success_threshold=success_threshold, batch_size=batch_size,
+                                           batch_sleep=batch_sleep, is_safe=is_safe)
 
 
 class Mysql:
@@ -77,7 +64,7 @@ class Mysql:
         """Initialize the instance.
 
         Arguments:
-            remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+            remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
         self._remote = remote
@@ -93,7 +80,7 @@ class Mysql:
             spicerack.mysql.MysqlRemoteHosts: an instance with the remote targets.
 
         """
-        return self._remote.query(query, remote_hosts_factory=mysql_remote_hosts_factory)
+        return MysqlRemoteHosts(self._remote.query(query))
 
     def get_core_dbs(self, *, datacenter=None, section=None, replication_role=None):
         """Find the core databases matching the parameters.
@@ -141,14 +128,14 @@ class Mysql:
             query_parts.append(
                 'P{{C:mariadb::config and R:Class%replication_role = "{role}"}}'.format(role=replication_role))
 
-        remote_hosts = self._remote.query(' and '.join(query_parts), remote_hosts_factory=mysql_remote_hosts_factory)
+        mysql_hosts = MysqlRemoteHosts(self._remote.query(' and '.join(query_parts)))
 
         # Sanity check of matched hosts in case of master selection
-        if replication_role == 'master' and len(remote_hosts.hosts) != dc_multipler * section_multiplier:
+        if replication_role == 'master' and len(mysql_hosts) != dc_multipler * section_multiplier:
             raise MysqlError('Matched {matched} masters, expected {expected}'.format(
-                matched=len(remote_hosts.hosts), expected=dc_multipler * section_multiplier))
+                matched=len(mysql_hosts), expected=dc_multipler * section_multiplier))
 
-        return remote_hosts
+        return mysql_hosts
 
     def set_core_masters_readonly(self, datacenter):
         """Set the core masters in read-only.
@@ -285,16 +272,16 @@ class Mysql:
         # have been replicated, hence checking the next heartbeat to ensure they are in sync.
         if local_heartbeat <= parent_heartbeat:
             delta = (local_heartbeat - parent_heartbeat).total_seconds()
-            raise MysqlError(('Heartbeat from master {host} for section {section} not yet in sync: {hb} < {master_hb} '
-                              '(delta={delta})').format(host=core_dbs.hosts, section=section, hb=local_heartbeat,
+            raise MysqlError(('Heartbeat from master {host} for section {section} not yet in sync: {hb} <= {master_hb} '
+                              '(delta={delta})').format(host=core_dbs, section=section, hb=local_heartbeat,
                                                         master_hb=parent_heartbeat, delta=delta))
 
     @staticmethod
-    def _get_heartbeat(remote_host, section, heartbeat_dc):
+    def _get_heartbeat(mysql_hosts, section, heartbeat_dc):
         """Get the heartbeat from the remote host for a given DC.
 
         Arguments:
-            remote_host (spicerack.mysql.MysqlRemoteHosts): the instance for the target DB to query.
+            mysql_hosts (spicerack.mysql.MysqlRemoteHosts): the instance for the target DB to query.
             section (str): the DB section for which to get the heartbeat.
             heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
 
@@ -307,7 +294,7 @@ class Mysql:
         """
         query = Mysql.heartbeat_query.format(dc=heartbeat_dc, section=section)
 
-        for _, output in remote_host.run_query(query, is_safe=True):
+        for _, output in mysql_hosts.run_query(query, is_safe=True):
             try:
                 heartbeat_str = output.message().decode()
                 heartbeat = datetime.strptime(heartbeat_str, '%Y-%m-%dT%H:%M:%S.%f')
@@ -316,6 +303,6 @@ class Mysql:
                 raise MysqlError("Unable to convert heartbeat '{hb}' into datetime".format(hb=heartbeat_str)) from e
         else:
             raise MysqlError('Unable to get heartbeat from master {host} for section {section}'.format(
-                host=remote_host.hosts, section=section))
+                host=mysql_hosts, section=section))
 
         return heartbeat

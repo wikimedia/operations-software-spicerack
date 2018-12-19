@@ -1,0 +1,120 @@
+"""Icinga module."""
+import configparser
+import logging
+import time
+
+from datetime import timedelta
+
+from spicerack.exceptions import SpicerackError
+
+
+DOWNTIME_COMMAND = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
+ICINGA_DOMAIN = 'icinga.wikimedia.org'
+MIN_DOWNTIME_SECONDS = 60  # Minimum time in seconds the downtime can be set
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+class IcingaError(SpicerackError):
+    """Custom exception class for errors of this module."""
+
+
+class Icinga:
+    """Class to interact with the Icinga server."""
+
+    def __init__(self, icinga_host, *, config_file='/etc/icinga/icinga.cfg'):
+        """Initialize the instance.
+
+        Arguments:
+            icinga_host (spicerack.remote.RemoteHosts): the RemoteHosts instance for the Icinga server.
+        """
+        self._icinga_host = icinga_host
+        self._config_file = config_file
+        self._command_file = None
+
+    @property
+    def command_file(self):
+        """Getter for the command_file property.
+
+        Raises:
+            spicerack.icinga.IcingaError: if unable to get the command file path.
+
+        Returns:
+            str: the path of the Icinga command file.
+
+        """
+        if self._command_file:
+            return self._command_file
+
+        try:
+            # In order to read the Icinga config file with configparser, inject a default section at the top.
+            config = configparser.ConfigParser(strict=False)
+            with open(self._config_file, 'r') as f:
+                config.read_string('[{default}]\n{config}'.format(default=configparser.DEFAULTSECT, config=f.read()))
+
+            command_file = config['DEFAULT']['command_file']
+            if not command_file:
+                raise configparser.Error('Empty or no value found for command_file configuration')
+
+        except (OSError, configparser.Error, KeyError) as e:
+            raise IcingaError('Unable to read command_file configuration') from e
+
+        self._command_file = command_file
+        return self._command_file
+
+    def downtime_hosts(self, hosts, reason, *, duration=timedelta(hours=4)):
+        """Downtime hosts on the Icinga server for the given time with a message.
+
+        Arguments:
+            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to downtime.
+            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
+            duration (datetime.timedelta, optional): the length of the downtime period.
+        """
+        duration_seconds = int(duration.total_seconds())
+        if duration_seconds < MIN_DOWNTIME_SECONDS:
+            raise IcingaError('Downtime duration must be at least 1 minute, got: {duration}'.format(duration=duration))
+
+        if not hosts:
+            raise IcingaError('Got empty hosts list to downtime')
+
+        hostnames = [host.split('.')[0] for host in hosts]
+        commands = [DOWNTIME_COMMAND.format(hostname=name, duration=duration_seconds, reason=reason.quoted())
+                    for name in hostnames]
+
+        logger.info('Scheduling downtime on Icinga server %s for hosts: %s', self._icinga_host, hosts)
+        self._icinga_host.run_sync(*commands)
+
+    def remove_downtime(self, hosts):
+        """Remove a downtime from a set of hosts.
+
+        Arguments:
+            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+        """
+        self.host_command('DEL_DOWNTIME_BY_HOST_NAME', hosts)
+
+    def host_command(self, command, hosts, *args):
+        """Execute a host-specific Icinga command on the Icinga server for a set of hosts.
+
+        Arguments:
+            command (str): the Icinga command to execute.
+            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+            *args: optional positional arguments to pass to the command.
+
+        See Also:
+            https://icinga.com/docs/icinga1/latest/en/extcommands2.html
+
+        """
+        commands = [self._get_command_string(command, host.split('.')[0], *args) for host in hosts]
+        self._icinga_host.run_sync(*commands)
+
+    def _get_command_string(self, *args):
+        """Get the Icinga command to execute given the current arguments.
+
+        Arguments:
+            *args: positional arguments to use to compose the Icinga command string.
+
+        Returns:
+            str: the command line to execute on the Icinga host.
+
+        """
+        return 'echo -n "[{now}] {args}" > {command_file}'.format(
+            now=int(time.time()), args=';'.join(args), command_file=self.command_file)

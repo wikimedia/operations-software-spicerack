@@ -12,6 +12,7 @@ output-format: grouped
 ignore-paths:
   - spicerack/tests/fixtures/cookbook/cookbooks/group3/invalid_syntax.py
   - spicerack/tests/fixtures/cookbook/cookbooks/group3/invalid_subgroup/__init__.py
+  - doc/source/conf.py
   - build/
   - dist/
   - logs/
@@ -34,6 +35,7 @@ pylint:
   disable:
     - pointless-string-statement  # used as documentation for class attributes
   options:
+    good-names: handleError  # From logging.Handler, inline disable doesn't work, used in test_log.py
     ignore: vulture_whitelist.py
     max-line-length: 120
     max-args: 6

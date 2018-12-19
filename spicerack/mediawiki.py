@@ -33,7 +33,7 @@ class MediaWiki:
 
         Arguments:
             conftool (spicerack.confctl.ConftoolEntity): the conftool instance for the mwconfig type objects.
-            remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+            remote (spicerack.remote.Remote): the Remote instance.
             user (str): the name of the effective running user.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
@@ -93,9 +93,11 @@ class MediaWiki:
         Arguments:
             datacenter (str): the DC where to query for siteinfo.
             checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
-                the siteinfo dictionary to get the value and the values are the expected values to check. For example:
+                the siteinfo dictionary to get the value and the values are the expected values to check. To check
+                ``siteinfo[key1][key2]`` for a value ``value``, use::
+
                     {('key1', 'key2'): 'value'}
-                will check siteinfo[key1][key2] for value 'value'.
+
             samples (int, optional): the number of different calls to siteinfo to perform.
 
         Raises:
@@ -230,9 +232,14 @@ class MediaWiki:
             Command('pkill --full "/usr/local/bin/expanddblist"', ok_codes=pkill_ok_codes),
             Command('pkill --full "/usr/local/bin/mwscript"', ok_codes=pkill_ok_codes),
             Command('pkill --full "/usr/local/bin/mwscriptwikiset"', ok_codes=pkill_ok_codes),
+            Command('killall -r hhvm', ok_codes=[]),  # Kill all remaining HHVM processes for all users
             Command('killall -r php', ok_codes=[]),  # Kill all remaining PHP processes for all users
             'sleep 5',
+            Command('killall -9 -r hhvm', ok_codes=[]),  # No more time to be gentle
             Command('killall -9 -r php', ok_codes=[]),  # No more time to be gentle
+            'sleep 1',
+            Command('systemctl start hhvm'),  # Restart the HHVM server that was killed above
+
         )
         self.check_cronjobs_disabled(datacenter)
 
@@ -250,9 +257,10 @@ class MediaWiki:
         Arguments:
             datacenter (str): the DC where to query for siteinfo.
             checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
-                the siteinfo dictionary to get the value and the values are the expected values to check. For example:
+                the siteinfo dictionary to get the value and the values are the expected values to check. To check
+                ``siteinfo[key1][key2]`` for a value ``value``, use::
+
                     {('key1', 'key2'): 'value'}
-                will check siteinfo[key1][key2] for value 'value'.
 
         Raises:
             MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary after all tries.
@@ -282,9 +290,11 @@ class MediaWiki:
         Arguments:
             datacenter (str): the DC where to query for siteinfo.
             checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
-                the siteinfo dictionary to get the value and the values are the expected values to check. For example:
+                the siteinfo dictionary to get the value and the values are the expected values to check. To check
+                ``siteinfo[key1][key2]`` for a value ``value``, use::
+
                     {('key1', 'key2'): 'value'}
-                will check siteinfo[key1][key2] for value 'value'.
+
             samples (int, optional): the number of different calls to siteinfo to perform.
 
         Raises:
