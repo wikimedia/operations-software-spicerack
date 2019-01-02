@@ -69,6 +69,9 @@ class Dns:
         Returns:
             list: the list of IPv4 and IPv6 addresses as strings returned by the DNS response.
 
+        Raises:
+            spicerack.dns.DnsNotFound: when no address is found.
+
         """
         addresses = []
         for func in ('resolve_ipv4', 'resolve_ipv6'):
@@ -130,7 +133,7 @@ class Dns:
         try:
             response = self._resolver.query(qname, record_type)
             logger.debug('Resolved %s record for %s: %s', record_type, qname, response)
-        except dns.resolver.NoAnswer as e:
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
             raise DnsNotFound('Record {record_type} not found for {qname}'.format(
                 record_type=record_type, qname=qname)) from e
         except dns.exception.DNSException as e:
