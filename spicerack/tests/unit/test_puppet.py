@@ -39,7 +39,7 @@ def test_get_puppet_ca_hostname_ok(mocked_check_output):
     """It should get the hostname of the Puppet CA from the local Puppet agent."""
     ca = puppet.get_puppet_ca_hostname()
     assert ca == 'puppetmaster.example.com'
-    mocked_check_output.assert_called_once_with('puppet config print --section agent ca_server')
+    mocked_check_output.assert_called_once_with(['puppet', 'config', 'print', '--section', 'agent', 'ca_server'])
 
 
 @mock.patch('spicerack.puppet.check_output', side_effect=CalledProcessError(1, 'executed_command'))
