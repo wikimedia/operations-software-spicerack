@@ -184,7 +184,7 @@ class Spicerack:
         """
         return create_elasticsearch_clusters(clustergroup, self.remote(), dry_run=self._dry_run)
 
-    def admin_reason(self, reason, task_id=''):
+    def admin_reason(self, reason, task_id=None):
         """Get an administrative Reason instance.
 
         Arguments:
