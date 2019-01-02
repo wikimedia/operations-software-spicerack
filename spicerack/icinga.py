@@ -1,5 +1,4 @@
 """Icinga module."""
-import configparser
 import logging
 import time
 
@@ -35,27 +34,26 @@ class Icinga:
     def command_file(self):
         """Getter for the command_file property.
 
-        Raises:
-            spicerack.icinga.IcingaError: if unable to get the command file path.
-
         Returns:
             str: the path of the Icinga command file.
+
+        Raises:
+            spicerack.icinga.IcingaError: if unable to get the command file path.
 
         """
         if self._command_file:
             return self._command_file
 
         try:
-            # In order to read the Icinga config file with configparser, inject a default section at the top.
-            config = configparser.ConfigParser(strict=False)
-            with open(self._config_file, 'r') as f:
-                config.read_string('[{default}]\n{config}'.format(default=configparser.DEFAULTSECT, config=f.read()))
+            # Get the command_file value in the Icinga configuration.
+            command = r"""awk '/^\s*command_file=/{split($0, a, "="); print a[2] }' """ + self._config_file
+            for _, output in self._icinga_host.run_sync(command, is_safe=True):
+                command_file = output.message().decode().strip()
 
-            command_file = config['DEFAULT']['command_file']
             if not command_file:
-                raise configparser.Error('Empty or no value found for command_file configuration')
+                raise ValueError('Empty or no value found for command_file configuration')
 
-        except (OSError, configparser.Error, KeyError) as e:
+        except (SpicerackError, ValueError) as e:
             raise IcingaError('Unable to read command_file configuration') from e
 
         self._command_file = command_file

@@ -4,13 +4,18 @@ from unittest import mock
 
 import pytest
 
+from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
 
 from spicerack import icinga
 from spicerack.administrative import Reason
 from spicerack.remote import RemoteHosts
 
-from spicerack.tests import get_fixture_path
+
+def set_mocked_icinga_host_output(mocked_icinga_host, output):
+    """Setup the mocked icinga_host return value with the given output."""
+    out = MsgTreeElem(output.encode(), parent=MsgTreeElem())
+    mocked_icinga_host.run_sync.return_value = iter([(NodeSet('icinga-host'), out)])
 
 
 class TestIcinga:
@@ -19,35 +24,31 @@ class TestIcinga:
     def setup_method(self):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
-        self.reason = Reason('Downtime reason', 'user1', 'icinga-host', task_id='T12345')
+        self.reason = Reason('Downtime reason', 'user1', 'orchestration-host', task_id='T12345')
         self.mocked_icinga_host = mock.MagicMock(spec_set=RemoteHosts)
-        self.icinga = icinga.Icinga(self.mocked_icinga_host, config_file=get_fixture_path('icinga', 'valid.cfg'))
+        set_mocked_icinga_host_output(self.mocked_icinga_host, '/var/lib/icinga/rw/icinga.cmd')
+        self.icinga = icinga.Icinga(self.mocked_icinga_host)
 
     def test_command_file_ok(self):
         """It should return the command_file setting from the Icinga configuration."""
         assert self.icinga.command_file == '/var/lib/icinga/rw/icinga.cmd'
 
-    @pytest.mark.parametrize('config', (
-        'invalid.cfg',
-        'emptyvalue.cfg',
-        'novalue.cfg',
-        'missingkey.cfg',
-        'nonexistent.cfg',
+    @pytest.mark.parametrize('output', (
+        '',
+        ' ',
     ))
-    def test_command_file_raise(self, config):
+    def test_command_file_raise(self, output):
         """It should raise IcingaError if failing to get the configuration value."""
-        icinga_obj = icinga.Icinga(self.mocked_icinga_host, config_file=get_fixture_path('icinga', config))
+        set_mocked_icinga_host_output(self.mocked_icinga_host, output)
         with pytest.raises(icinga.IcingaError, match='Unable to read command_file configuration'):
-            icinga_obj.command_file  # pylint: disable=pointless-statement
+            self.icinga.command_file  # pylint: disable=pointless-statement
 
     def test_command_file_cached(self):
         """It should return the already cached value of the command_file if accessed again."""
         command_file = self.icinga.command_file
-        mocked_open = mock.mock_open()
-        with mock.patch('builtins.open', mocked_open):
-            assert self.icinga.command_file == command_file
-
-        assert not mocked_open.called
+        self.mocked_icinga_host.reset_mock()
+        assert self.icinga.command_file == command_file
+        assert not self.mocked_icinga_host.called
 
     @pytest.mark.parametrize('hosts', (
         ['host1'],
@@ -91,13 +92,14 @@ class TestIcinga:
         calls = [
             'echo -n "[1514764800] TEST_COMMAND;{host};arg1;arg2" > /var/lib/icinga/rw/icinga.cmd'.format(host=host)
             for host in hosts]
-        self.mocked_icinga_host.run_sync.assert_called_once_with(*calls)
+
+        self.mocked_icinga_host.run_sync.assert_called_with(*calls)
         assert mocked_time.called
 
     @mock.patch('spicerack.icinga.time.time', return_value=1514764800)
     def test_remove_downtime(self, mocked_time):
         """It should remove the downtime for the hosts on the Icinga server."""
         self.icinga.remove_downtime(NodeSet('host1'))
-        self.mocked_icinga_host.run_sync.assert_called_once_with(
+        self.mocked_icinga_host.run_sync.assert_called_with(
             'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1" > /var/lib/icinga/rw/icinga.cmd')
         assert mocked_time.called
