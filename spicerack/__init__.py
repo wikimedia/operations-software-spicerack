@@ -16,6 +16,7 @@ from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
+from spicerack.phabricator import create_phabricator
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote
 
@@ -237,3 +238,26 @@ class Spicerack:
 
         """
         return Ipmi(interactive.get_management_password())
+
+    def phabricator(self, bot_config_file, section='phabricator_bot'):  # pylint: disable=no-self-use
+        """Get a Phabricator instance to interact with a Phabricator website.
+
+        Arguments:
+            bot_config_file (str): the path to the configuration file for the Phabricator bot, with the following
+                structure::
+
+                    [section_name]
+                    host = https://phabricator.example.org/api/
+                    username = phab-bot
+                    token = api-12345
+
+            section (str, optional): the name of the section of the configuration file where to find the required
+                parameters.
+
+        Returns:
+            spicerack.phabricator.Phabricator: the instance.
+
+        """
+        # Allow to specify the configuration file as opposed to other methods so that different clients can use
+        # different Phabricator BOT accounts, potentially with different permissions.
+        return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)

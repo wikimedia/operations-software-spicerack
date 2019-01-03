@@ -29,6 +29,7 @@ Spicerack Python API autodoc.
    spicerack.log
    spicerack.mediawiki
    spicerack.mysql
+   spicerack.phabricator
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote
