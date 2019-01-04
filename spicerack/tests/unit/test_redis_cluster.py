@@ -15,7 +15,7 @@ class TestRedisCluster:
     @mock.patch('spicerack.redis_cluster.StrictRedis')
     def setup_method(self, _, mocked_redis):
         """Initialize the test environment for RedisCluster."""
-        config_dir = get_fixture_path('spicerack', 'redis_cluster')
+        config_dir = get_fixture_path('redis_cluster')
         # pylint: disable=attribute-defined-outside-init
         self.mocked_redis = mocked_redis
         self.redis_cluster = RedisCluster('cluster', config_dir, dry_run=False)

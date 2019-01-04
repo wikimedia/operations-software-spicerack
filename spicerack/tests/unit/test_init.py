@@ -6,6 +6,7 @@ from unittest import mock
 from spicerack import puppet, Spicerack
 from spicerack.administrative import Reason
 from spicerack.confctl import ConftoolEntity
+from spicerack.debmonitor import Debmonitor
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.icinga import Icinga
@@ -46,6 +47,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.admin_reason('Reason message', task_id='T12345'), Reason)
     assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), puppet.PuppetHosts)
     assert isinstance(spicerack.phabricator(get_fixture_path('phabricator', 'valid.conf')), Phabricator)
+    assert isinstance(spicerack.debmonitor(), Debmonitor)
 
     assert mocked_remote_query.called
 

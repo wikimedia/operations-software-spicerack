@@ -8,6 +8,8 @@ from pkg_resources import DistributionNotFound, get_distribution
 from spicerack import interactive, puppet
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl
+from spicerack.config import load_yaml_config
+from spicerack.debmonitor import Debmonitor
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_clusters
@@ -261,3 +263,23 @@ class Spicerack:
         # Allow to specify the configuration file as opposed to other methods so that different clients can use
         # different Phabricator BOT accounts, potentially with different permissions.
         return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)
+
+    def debmonitor(self):
+        """Get a Debmonitor instance to interact with a Debmonitor website.
+
+        It requires that a ``debmonitor/config.yaml`` configuration file exists inside the ``spicerack_config_dir`` that
+        was passed to the Spicerack constructor with those fields::
+
+            host: debmonitor.example.com
+            cert: /path/to/tls/certificate
+            key: /path/to/tls/key
+
+        Returns:
+            spicerack.debmonitor.Debmonitor: the instance.
+
+        Raises:
+            spicerack.exceptions.SpicerackError: if unble to read the configuration file.
+
+        """
+        config = load_yaml_config(os.path.join(self._spicerack_config_dir, 'debmonitor', 'config.yaml'))
+        return Debmonitor(dry_run=self._dry_run, **config)

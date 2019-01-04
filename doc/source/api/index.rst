@@ -18,6 +18,7 @@ Spicerack Python API autodoc.
    spicerack.config
    spicerack.constants
    spicerack.cookbook
+   spicerack.debmonitor
    spicerack.decorators
    spicerack.dns
    spicerack.dnsdisc
