@@ -1,6 +1,24 @@
 Spicerack Changelog
 -------------------
 
+
+`v0.0.11`_ (2019-01-08)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* debmonitor: add debmonitor module
+* phabricator: add phabricator module
+
+Bug Fixes
+"""""""""
+
+* icinga: fix ``command_file`` property
+* puppet: fix ``subprocess`` call to ``check_output()``
+* dns: include ``NXDOMAIN`` in the ``DnsNotFound`` exception
+* admin_reason: fix default value for task
+
 `v0.0.10`_ (2018-12-19)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -157,3 +175,4 @@ New features
 .. _`v0.0.8`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.8
 .. _`v0.0.9`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.9
 .. _`v0.0.10`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.10
+.. _`v0.0.11`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.11
