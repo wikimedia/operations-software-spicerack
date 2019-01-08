@@ -13,6 +13,7 @@ INSTALL_REQUIRES = [
     'dnspython>=1.15.0',
     'elasticsearch>=5.0.0,<6.0.0',
     'elasticsearch-curator>=5.0.0,<5.4.0',
+    'phabricator>=0.7.0',
     'pyyaml>=3.11',
     'redis>=2.10.0',
     'requests>=2.11.1',

@@ -18,6 +18,7 @@ Spicerack Python API autodoc.
    spicerack.config
    spicerack.constants
    spicerack.cookbook
+   spicerack.debmonitor
    spicerack.decorators
    spicerack.dns
    spicerack.dnsdisc
@@ -29,6 +30,7 @@ Spicerack Python API autodoc.
    spicerack.log
    spicerack.mediawiki
    spicerack.mysql
+   spicerack.phabricator
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote

@@ -27,7 +27,8 @@ def get_puppet_ca_hostname():
 
     """
     try:
-        output = check_output('puppet config print --section agent ca_server').decode().strip()  # nosec
+        output = check_output(  # nosec
+            ['puppet', 'config', 'print', '--section', 'agent', 'ca_server']).decode().strip()
     except CalledProcessError as e:
         raise PuppetMasterError('Get Puppet ca_server failed (exit={code}): {output}'.format(
             code=e.returncode, output=e.output)) from e
