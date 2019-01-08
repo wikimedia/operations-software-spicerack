@@ -14,6 +14,7 @@ Build-Depends:
   python3-elasticsearch-curator,
   python3-flake8,
   python3-mock (>= 2.0.0),
+  python3-phabricator,
   python3-pytest,
   python3-pytest-cov,
   python3-pytest-runner,
