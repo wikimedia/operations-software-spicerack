@@ -143,14 +143,14 @@ class TestRemoteHosts:
 
     @mock.patch('spicerack.remote.transports.Target')
     def test_reboot_single(self, mocked_target):
-        """It should call the reboot script on the target host with default batch size and sleep."""
+        """It should call the reboot script on the target host with default batch size and no sleep."""
         hosts = NodeSet('host1')
         remote_hosts = remote.RemoteHosts(self.config, hosts, dry_run=False)
         mock_cumin(self.mocked_transports, 0)
         remote_hosts.reboot()
         self.mocked_transports.clustershell.ClusterShellWorker.execute.assert_called_once_with()
         mocked_target.assert_has_calls([
-            mock.call(hosts, batch_size_ratio=None, batch_sleep=180.0, batch_size=1)])
+            mock.call(hosts, batch_size_ratio=None, batch_sleep=None, batch_size=1)])
 
     @mock.patch('spicerack.remote.transports.Target')
     def test_reboot_many(self, mocked_target):

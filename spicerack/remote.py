@@ -202,7 +202,10 @@ class RemoteHosts:
             batch_size (int, optional): how many hosts to reboot in parallel.
             batch_sleep (float, optional): how long to sleep between one reboot and the next.
         """
-        logger.info('Rebooting %d hosts in batches of %d with %.1fs of sleep: %s',
+        if len(self._hosts) == 1:  # Temporary workaround until T213296 is fixed.
+            batch_sleep = None
+
+        logger.info('Rebooting %d hosts in batches of %d with %.1fs of sleep in between: %s',
                     len(self._hosts), batch_size, batch_sleep, self._hosts)
         self.run_sync(transports.Command('reboot-host', timeout=30), batch_size=batch_size, batch_sleep=batch_sleep)
 
