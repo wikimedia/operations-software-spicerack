@@ -97,7 +97,7 @@ class PuppetHosts(RemoteHostsAdapter):
         self._remote_hosts.run_sync('enable-puppet {reason}'.format(reason=reason.quoted()))
 
     def run(self, timeout=300, enable_reason=None, quiet=False,  # pylint: disable=too-many-arguments
-            failed_only=False, force=False, attempts=0):
+            failed_only=False, force=False, attempts=0, batch_size=10):
         """Run Puppet.
 
         Arguments:
@@ -109,6 +109,8 @@ class PuppetHosts(RemoteHostsAdapter):
             force (bool, optional): forcely re-enable Puppet if it was disabled with ANY message.
             attempts (int, optional): override the default number of attempts waiting that an in-flight Puppet run
                 completes before timing out as set in run-puppet-agent.
+            batch_size (int, optional): how many concurrent Puppet runs to perform. The default value is tailored to
+                not overload the Puppet masters.
         """
         args = []
         if enable_reason is not None:
@@ -125,7 +127,7 @@ class PuppetHosts(RemoteHostsAdapter):
         args_string = ' '.join(args)
         command = 'run-puppet-agent {args}'.format(args=args_string)
         logger.info('Running Puppet with args %s on %d hosts: %s', args_string, len(self), self)
-        self._remote_hosts.run_sync(Command(command, timeout=timeout))
+        self._remote_hosts.run_sync(Command(command, timeout=timeout), batch_size=batch_size)
 
     def first_run(self, has_systemd=True):
         """Perform the first Puppet run on a clean host without using custom wrappers.

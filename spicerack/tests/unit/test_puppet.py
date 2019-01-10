@@ -114,12 +114,13 @@ class TestPuppetHosts:
         """It should run Puppet with the specified arguments."""
         self.puppet_hosts.run(**kwargs)
         self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            puppet.Command('run-puppet-agent {exp}'.format(exp=expected), timeout=300.0))
+            puppet.Command('run-puppet-agent {exp}'.format(exp=expected), timeout=300.0), batch_size=10)
 
     def test_run_timeout(self):
         """It should run Puppet with the customized timeout."""
         self.puppet_hosts.run(timeout=30)
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(puppet.Command('run-puppet-agent ', timeout=30.0))
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(
+            puppet.Command('run-puppet-agent ', timeout=30.0), batch_size=10)
 
     def test_first_run(self):
         """It should enable and Puppet with a very long timeout without using custom wrappers."""
