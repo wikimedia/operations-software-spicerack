@@ -232,14 +232,14 @@ class Spicerack:
         """
         return puppet.PuppetMaster(self.remote().query(puppet.get_puppet_ca_hostname()))
 
-    def ipmi(self):  # pylint: disable=no-self-use
+    def ipmi(self):
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
 
         Returns:
             spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
 
         """
-        return Ipmi(interactive.get_management_password())
+        return Ipmi(interactive.get_management_password(), dry_run=self._dry_run)
 
     def phabricator(self, bot_config_file, section='phabricator_bot'):  # pylint: disable=no-self-use
         """Get a Phabricator instance to interact with a Phabricator website.

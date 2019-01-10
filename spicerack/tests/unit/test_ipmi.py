@@ -31,7 +31,8 @@ class TestIpmi:
     def setup_method(self):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
-        self.ipmi = ipmi.Ipmi('password')
+        self.ipmi = ipmi.Ipmi('password', dry_run=False)
+        self.ipmi_dry_run = ipmi.Ipmi('password')
 
     def test_init(self):
         """It should initialize the instance and set the IPMITOOL_PASSWORD environment variable."""
@@ -46,6 +47,12 @@ class TestIpmi:
             ['ipmitool', '-I', 'lanplus', '-H', 'test-mgmt.example.com', '-U', 'root', '-E', 'test_command'])
 
     @mock.patch('spicerack.ipmi.check_output')
+    def test_command_dry_run_ok(self, mocked_check_output):
+        """It should not execute the IPMI command if in DRY RUN mode."""
+        assert self.ipmi_dry_run.command('test-mgmt.example.com', ['test_command']) == ''
+        assert not mocked_check_output.called
+
+    @mock.patch('spicerack.ipmi.check_output')
     def test_command_raise(self, mocked_check_output):
         """It should raise IpmiError if failed to execute the command."""
         mocked_check_output.side_effect = CalledProcessError(1, 'executed_command')
@@ -55,7 +62,7 @@ class TestIpmi:
     @mock.patch('spicerack.ipmi.check_output', return_value=b'Chassis Power is on')
     def test_check_connection_ok(self, mocked_check_output):
         """It should check that the connection to the remote IPMI works running a simple command."""
-        self.ipmi.check_connection('test-mgmt.example.com')
+        self.ipmi_dry_run.check_connection('test-mgmt.example.com')
         mocked_check_output.assert_called_once_with(
             ['ipmitool', '-I', 'lanplus', '-H', 'test-mgmt.example.com', '-U', 'root', '-E',
              'chassis', 'power', 'status'])
@@ -83,7 +90,7 @@ class TestIpmi:
         mocked_check_output.return_value = BOOTPARAMS_OUTPUT.format(bootparams='0004000000', pxe='Force PXE').encode()
         with pytest.raises(ipmi.IpmiCheckError,
                            match=r"Expected BIOS boot params in \('0000000000', '8000020000'\) got: 0004000000"):
-            self.ipmi.check_bootparams('test-mgmt.example.com')
+            self.ipmi_dry_run.check_bootparams('test-mgmt.example.com')
 
         assert mocked_check_output.called
 
