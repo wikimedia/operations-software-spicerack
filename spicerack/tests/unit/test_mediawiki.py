@@ -204,13 +204,13 @@ class TestMediaWiki:
     def test_check_cronjobs_enabled(self):
         """It should ensure that the cronjobs are present and not commented out."""
         self.mediawiki.check_cronjobs_enabled('dc1')
-        self.mocked_remote.query.assert_called_once_with('P{O:mediawiki_maintenance} and A:dc1')
+        self.mocked_remote.query.assert_called_once_with('P{O:mediawiki::maintenance} and A:dc1')
         assert 'crontab -u www-data -l' in self.mocked_remote.query.return_value.run_sync.call_args[0][0]
 
     def test_stop_cronjobs(self):
         """It should ensure that the cronjobs are present and not commented out."""
         self.mediawiki.stop_cronjobs('dc1')
-        self.mocked_remote.query.assert_called_with('P{O:mediawiki_maintenance} and A:dc1')
+        self.mocked_remote.query.assert_called_with('P{O:mediawiki::maintenance} and A:dc1')
         assert 'crontab -u www-data -r' in self.mocked_remote.query.return_value.run_async.call_args[0][0].command
 
     def test_stop_cronjobs_stray_procs(self):
