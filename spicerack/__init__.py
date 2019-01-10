@@ -241,7 +241,7 @@ class Spicerack:
         """
         return Ipmi(interactive.get_management_password(), dry_run=self._dry_run)
 
-    def phabricator(self, bot_config_file, section='phabricator_bot'):  # pylint: disable=no-self-use
+    def phabricator(self, bot_config_file, section='phabricator_bot'):
         """Get a Phabricator instance to interact with a Phabricator website.
 
         Arguments:
