@@ -8,7 +8,7 @@ from pkg_resources import DistributionNotFound, get_distribution
 from spicerack import interactive, puppet
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl
-from spicerack.config import load_yaml_config
+from spicerack.config import load_ini_config
 from spicerack.debmonitor import Debmonitor
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
@@ -35,15 +35,24 @@ class Spicerack:
 
     def __init__(self, *, verbose=False, dry_run=True, cumin_config='/etc/cumin/config.yaml',
                  conftool_config='/etc/conftool/config.yaml', conftool_schema='/etc/conftool/schema.yaml',
+                 debmonitor_config='/etc/debmonitor.conf',
                  spicerack_config_dir='/etc/spicerack'):
         """Initialize the service locator for the Spicerack library.
 
         Arguments:
             verbose (bool, optional): whether to set the verbose mode.
             dry_run (bool, optional): whether this is a DRY-RUN.
-            cumin_config (str): the path of Cumin's configuration file.
-            conftool_config (str, optional): the path of Conftool's configuration file.
-            conftool_schema (str, optional): the path of Conftool's schema file.
+            cumin_config (str): the path to Cumin's configuration file.
+            conftool_config (str, optional): the path to Conftool's configuration file.
+            conftool_schema (str, optional): the path to Conftool's schema file.
+            debmonitor_config (str): the path to Debmonitor's INI configuration file. It must have at least the
+                following schema::
+
+                    [DEFAULT]
+                    server=debmonitor.example.com
+                    cert=/etc/debmonitor/ssl/cert.pem
+                    key=/etc/debmonitor/ssl/server.key
+
             spicerack_config_dir (str, optional): the path for the root configuration directory for Spicerack.
                 Module-specific configuration will be loaded from `config_dir/module_name/`.
         """
@@ -53,6 +62,7 @@ class Spicerack:
         self._cumin_config = cumin_config
         self._conftool_config = conftool_config
         self._conftool_schema = conftool_schema
+        self._debmonitor_config = debmonitor_config
         self._spicerack_config_dir = spicerack_config_dir
 
         self._username = interactive.get_username()
@@ -232,16 +242,16 @@ class Spicerack:
         """
         return puppet.PuppetMaster(self.remote().query(puppet.get_puppet_ca_hostname()))
 
-    def ipmi(self):  # pylint: disable=no-self-use
+    def ipmi(self):
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
 
         Returns:
             spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
 
         """
-        return Ipmi(interactive.get_management_password())
+        return Ipmi(interactive.get_management_password(), dry_run=self._dry_run)
 
-    def phabricator(self, bot_config_file, section='phabricator_bot'):  # pylint: disable=no-self-use
+    def phabricator(self, bot_config_file, section='phabricator_bot'):
         """Get a Phabricator instance to interact with a Phabricator website.
 
         Arguments:
@@ -267,19 +277,12 @@ class Spicerack:
     def debmonitor(self):
         """Get a Debmonitor instance to interact with a Debmonitor website.
 
-        It requires that a ``debmonitor/config.yaml`` configuration file exists inside the ``spicerack_config_dir`` that
-        was passed to the Spicerack constructor with those fields::
-
-            host: debmonitor.example.com
-            cert: /path/to/tls/certificate
-            key: /path/to/tls/key
-
         Returns:
             spicerack.debmonitor.Debmonitor: the instance.
 
         Raises:
-            spicerack.exceptions.SpicerackError: if unble to read the configuration file.
+            KeyError: if any configuration option is missing.
 
         """
-        config = load_yaml_config(os.path.join(self._spicerack_config_dir, 'debmonitor', 'config.yaml'))
-        return Debmonitor(dry_run=self._dry_run, **config)
+        options = load_ini_config(self._debmonitor_config).defaults()
+        return Debmonitor(options['server'], options['cert'], options['key'], dry_run=self._dry_run)

@@ -2,6 +2,41 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.12`_ (2019-01-10)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* ipmi: add support for DRY RUN mode
+* config: add load_ini_config() function to parse INI files.
+* debmonitor: use the existing configuration file
+
+  * Instead of requiring a new configuration file, use the existing one already setup by Puppet for the debmonitor
+    client.
+  * Inject the path of the Debmonitor config into the ctor with a default value.
+
+* puppet: add default ``batch_size`` when running puppet
+
+  * Allow to specify the ``batch_size`` when running puppet on a set of hosts.
+  * Add a default ``batch_size`` to avoid to overload the Puppet master hosts.
+
+Bug Fixes
+"""""""""
+
+* phabricator: remove unneded pylint ignore
+* mediawiki: update maintenance host Cumin query
+* remote: add workaround for Cumin bug
+
+  * To avoid unnecessary waiting on the most common use case of ``reboot()``, that is with only one host, unset the
+    default ``batch_sleep`` as a workaround for `T213296`_.
+
+* puppet: fix regenerate_certificate()
+
+  * When re-generating the certificate, Puppet will exit with status code ``1`` both if successful or on failure.
+  * Restrict the accepted exit codes to ``1``.
+  * Detect errors in the output and raises if any.
+
 `v0.0.11`_ (2019-01-08)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -176,3 +211,6 @@ New features
 .. _`v0.0.9`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.9
 .. _`v0.0.10`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.10
 .. _`v0.0.11`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.11
+.. _`v0.0.12`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.12
+
+.. _`T213296`: https://phabricator.wikimedia.org/T213296

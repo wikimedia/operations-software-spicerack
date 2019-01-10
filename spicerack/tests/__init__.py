@@ -29,6 +29,7 @@ SPICERACK_TEST_PARAMS = {
     'cumin_config': get_fixture_path('remote', 'config.yaml'),
     'conftool_config': get_fixture_path('confctl', 'config.yaml'),
     'conftool_schema': get_fixture_path('confctl', 'schema.yaml'),
+    'debmonitor_config': get_fixture_path('debmonitor', 'config.ini'),
     'spicerack_config_dir': get_fixture_path(),
 }
 

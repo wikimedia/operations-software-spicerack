@@ -97,7 +97,7 @@ class PuppetHosts(RemoteHostsAdapter):
         self._remote_hosts.run_sync('enable-puppet {reason}'.format(reason=reason.quoted()))
 
     def run(self, timeout=300, enable_reason=None, quiet=False,  # pylint: disable=too-many-arguments
-            failed_only=False, force=False, attempts=0):
+            failed_only=False, force=False, attempts=0, batch_size=10):
         """Run Puppet.
 
         Arguments:
@@ -109,6 +109,8 @@ class PuppetHosts(RemoteHostsAdapter):
             force (bool, optional): forcely re-enable Puppet if it was disabled with ANY message.
             attempts (int, optional): override the default number of attempts waiting that an in-flight Puppet run
                 completes before timing out as set in run-puppet-agent.
+            batch_size (int, optional): how many concurrent Puppet runs to perform. The default value is tailored to
+                not overload the Puppet masters.
         """
         args = []
         if enable_reason is not None:
@@ -125,7 +127,7 @@ class PuppetHosts(RemoteHostsAdapter):
         args_string = ' '.join(args)
         command = 'run-puppet-agent {args}'.format(args=args_string)
         logger.info('Running Puppet with args %s on %d hosts: %s', args_string, len(self), self)
-        self._remote_hosts.run_sync(Command(command, timeout=timeout))
+        self._remote_hosts.run_sync(Command(command, timeout=timeout), batch_size=batch_size)
 
     def first_run(self, has_systemd=True):
         """Perform the first Puppet run on a clean host without using custom wrappers.
@@ -157,9 +159,16 @@ class PuppetHosts(RemoteHostsAdapter):
         self._remote_hosts.run_sync('rm -rfv /var/lib/puppet/ssl')
 
         fingerprints = {}
+        errors = []
+        # Puppet exits with 1 when generating the CSR
+        command = Command('puppet agent --test --color=false', ok_codes=[1])
         logger.info('Generating a new Puppet certificate on %d hosts: %s', len(self), self)
-        for nodeset, output in self._remote_hosts.run_sync('puppet agent --test --color=false'):
+        for nodeset, output in self._remote_hosts.run_sync(command):
             for line in output.message().decode().splitlines():
+                if line.startswith('Error:'):
+                    errors.append((nodeset, line))
+                    continue
+
                 if 'Certificate Request fingerprint' not in line:
                     continue
 
@@ -172,7 +181,10 @@ class PuppetHosts(RemoteHostsAdapter):
                     fingerprints[host] = fingerprint
 
         if len(fingerprints) != len(self):
-            raise PuppetHostsError('Unable to find CSR fingerprints for all hosts')
+            formatted_errors = '\n'.join('{}: {}'.format(*error) for error in errors)
+            raise PuppetHostsError(
+                'Unable to find CSR fingerprints for all hosts, detected errors are:\n{errors}'.format(
+                    errors=formatted_errors))
 
         return fingerprints
 

@@ -1,4 +1,5 @@
 """Config module."""
+import configparser
 import logging
 
 import yaml
@@ -37,5 +38,21 @@ def load_yaml_config(config_file, raises=True):
 
     if config is None:
         config = {}
+
+    return config
+
+
+def load_ini_config(config_file):
+    """Parse an INI config file and return it.
+
+    Arguments:
+        config_file (str): the path of the configuration file.
+
+    Returns:
+        configparser.ConfigParser: the parsed config.
+
+    """
+    config = configparser.ConfigParser()
+    config.read(config_file)
 
     return config

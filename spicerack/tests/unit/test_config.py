@@ -1,9 +1,11 @@
 """Interactive module tests."""
+import configparser
+
 from logging import DEBUG
 
 import pytest
 
-from spicerack.config import load_yaml_config
+from spicerack.config import load_ini_config, load_yaml_config
 from spicerack.exceptions import SpicerackError
 from spicerack.tests import get_fixture_path, caplog_not_available
 
@@ -40,3 +42,10 @@ def test_load_yaml_config_valid():
     config_dir = get_fixture_path('config', 'valid.yaml')
     config_dict = load_yaml_config(config_dir)
     assert 'key' in config_dict
+
+
+def test_load_ini_config():
+    """Loading a INI config should return a configparser.ConfigParser object."""
+    config = load_ini_config(get_fixture_path('config', 'config.ini'))
+    assert isinstance(config, configparser.ConfigParser)
+    assert config.defaults()['key'] == 'value'

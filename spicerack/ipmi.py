@@ -27,21 +27,24 @@ class IpmiCheckError(SpicerackCheckError):
 class Ipmi:
     """Class to manage remote IPMI via ipmitool."""
 
-    def __init__(self, password):
+    def __init__(self, password, dry_run=True):
         """Initialize the instance.
 
         Arguments:
             password (str): the password to use to connect via IPMI.
+            dry_run (bool, optional): whether this is a DRY-RUN.
         """
         # FIXME: move to subprocess.run() with env once Python 3.4 support is dropped or directly to pyghmi.
         os.environ['IPMITOOL_PASSWORD'] = password
+        self._dry_run = dry_run
 
-    def command(self, mgmt_hostname, command_parts):  # pylint: disable=no-self-use
+    def command(self, mgmt_hostname, command_parts, is_safe=False):  # pylint: disable=no-self-use
         """Run an ipmitool command for a remote managment console hostname.
 
         Arguments:
             mgmt_hostname (str): the FQDN of the management interface of the host to target.
             command_parts (list): a list with the IPMI command components to execute.
+            is_safe (bool, optional): if this is a safe command to run also in DRY RUN mode.
 
         Returns:
             str: the output of the ipmitool command.
@@ -52,6 +55,9 @@ class Ipmi:
         """
         command = ['ipmitool', '-I', 'lanplus', '-H', mgmt_hostname, '-U', 'root', '-E'] + command_parts
         logger.info('Running IPMI command: %s', ' '.join(command))
+
+        if self._dry_run and not is_safe:
+            return ''
 
         try:
             output = check_output(command).decode()  # nosec
@@ -73,7 +79,7 @@ class Ipmi:
             spicerack.ipmi.IpmiError: if unable to connect or execute a test command.
 
         """
-        status = self.command(mgmt_hostname, ['chassis', 'power', 'status'])
+        status = self.command(mgmt_hostname, ['chassis', 'power', 'status'], is_safe=True)
         if not status.startswith('Chassis Power is'):
             raise IpmiError('Unexpected chassis status: {status}'.format(status=status))
 
@@ -122,7 +128,7 @@ class Ipmi:
             str: the value of the parameter.
 
         """
-        bootparams = self.command(mgmt_hostname, ['chassis', 'bootparam', 'get', '5'])
+        bootparams = self.command(mgmt_hostname, ['chassis', 'bootparam', 'get', '5'], is_safe=True)
         for line in bootparams.splitlines():
             if param_label in line:
                 try:

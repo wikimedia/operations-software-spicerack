@@ -24,13 +24,27 @@ PUPPET_CA_CERT_METADATA_REQUESTED = (
     b'[{"name":"test.example.com","state":"requested","fingerprint":"00:AA",'
     b'"fingerprints":{"default":"00:AA","SHA1":"11:BB","SHA256": "00:AA","SHA512":"22:CC"},'
     b'"dns_alt_names":["DNS:service.example.com"]}]')
-PUPPET_GENERATE_CERTIFICATE = b"""Info: Creating a new SSL key for test.example.com
+PUPPET_GENERATE_CERTIFICATE_SUCCESS = b"""Info: Creating a new SSL key for test.example.com
 Info: Caching certificate for ca
 Info: csr_attributes file loading from /etc/puppet/csr_attributes.yaml
 Info: Creating a new SSL certificate request for test.example.com
 Info: Certificate Request fingerprint (SHA256): 00:FF
 Info: Caching certificate for ca
 Exiting; no certificate found and waitforcert is disabled
+"""
+PUPPET_GENERATE_CERTIFICATE_FAILED = rb"""Info: Creating a new SSL key for test.example.com
+Info: Caching certificate for ca
+Info: Caching certificate for test.example.com
+Error: Could not request certificate: The certificate retrieved from the master does not match the agent's private key.
+Certificate fingerprint: 00:FF
+To fix this, remove the certificate from both the master and the agent and then start a puppet run, which will...
+On the master:
+  puppet cert clean test.example.com
+On the agent:
+  1a. On most platforms: find /var/lib/puppet/ssl -name test.example.com.pem -delete
+  1b. On Windows: del "\var\lib\puppet\ssl\certs\test.example.com.pem" /f
+  2. puppet agent -t
+Exiting; failed to retrieve certificate and waitforcert is disabled
 """
 
 
@@ -114,12 +128,13 @@ class TestPuppetHosts:
         """It should run Puppet with the specified arguments."""
         self.puppet_hosts.run(**kwargs)
         self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            puppet.Command('run-puppet-agent {exp}'.format(exp=expected), timeout=300.0))
+            puppet.Command('run-puppet-agent {exp}'.format(exp=expected), timeout=300.0), batch_size=10)
 
     def test_run_timeout(self):
         """It should run Puppet with the customized timeout."""
         self.puppet_hosts.run(timeout=30)
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(puppet.Command('run-puppet-agent ', timeout=30.0))
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(
+            puppet.Command('run-puppet-agent ', timeout=30.0), batch_size=10)
 
     def test_first_run(self):
         """It should enable and Puppet with a very long timeout without using custom wrappers."""
@@ -141,23 +156,35 @@ class TestPuppetHosts:
 
     def test_regenerate_certificate_ok(self):
         """It should delete and regenerate the Puppet certificate."""
-        results = [(NodeSet('test.example.com'), MsgTreeElem(PUPPET_GENERATE_CERTIFICATE, parent=MsgTreeElem()))]
+        results = [(NodeSet('test.example.com'),
+                    MsgTreeElem(PUPPET_GENERATE_CERTIFICATE_SUCCESS, parent=MsgTreeElem()))]
         self.mocked_remote_hosts.run_sync.side_effect = [iter(()), iter(results)]
 
         fingerprints = self.puppet_hosts.regenerate_certificate()
 
         self.mocked_remote_hosts.run_sync.assert_has_calls([
             mock.call('rm -rfv /var/lib/puppet/ssl'),
-            mock.call('puppet agent --test --color=false')])
+            mock.call(puppet.Command('puppet agent --test --color=false', ok_codes=[1]))])
         assert fingerprints == {'test.example.com': '00:FF'}
 
     def test_regenerate_certificate_raise(self):
         """It should raise PuppetHostsError if unable to find any of the fingerprint."""
-        message = PUPPET_GENERATE_CERTIFICATE.decode().replace(': 00:FF', '').encode()
+        message = PUPPET_GENERATE_CERTIFICATE_SUCCESS.decode().replace(': 00:FF', '').encode()
         results = [(NodeSet('test.example.com'), MsgTreeElem(message, parent=MsgTreeElem()))]
         self.mocked_remote_hosts.run_sync.side_effect = [iter(()), iter(results)]
 
         with pytest.raises(puppet.PuppetHostsError, match='Unable to find CSR fingerprints for all hosts'):
+            self.puppet_hosts.regenerate_certificate()
+
+    def test_regenerate_certificate_errors(self):
+        """It should raise PuppetHostsError and print the Puppet errors if unable to find any of the fingerprint."""
+        results = [(NodeSet('test.example.com'),
+                    MsgTreeElem(PUPPET_GENERATE_CERTIFICATE_FAILED, parent=MsgTreeElem()))]
+        self.mocked_remote_hosts.run_sync.side_effect = [iter(()), iter(results)]
+
+        with pytest.raises(puppet.PuppetHostsError,
+                           match=("test.example.com: Error: Could not request certificate: The certificate retrieved "
+                                  "from the master does not match the agent's private key.")):
             self.puppet_hosts.regenerate_certificate()
 
     def test_wait_since_ok(self):
