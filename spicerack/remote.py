@@ -206,7 +206,11 @@ class RemoteHosts:
             batch_sleep = None
 
         logger.info('Rebooting %d hosts in batches of %d with %.1fs of sleep in between: %s',
-                    len(self._hosts), batch_size, batch_sleep, self._hosts)
+                    len(self._hosts),
+                    batch_size,
+                    batch_sleep if batch_sleep is not None else 0.0,
+                    self._hosts)
+
         self.run_sync(transports.Command('reboot-host', timeout=30), batch_size=batch_size, batch_sleep=batch_sleep)
 
     @retry(tries=25, delay=timedelta(seconds=10), backoff_mode='linear',
