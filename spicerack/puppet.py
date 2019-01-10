@@ -159,9 +159,16 @@ class PuppetHosts(RemoteHostsAdapter):
         self._remote_hosts.run_sync('rm -rfv /var/lib/puppet/ssl')
 
         fingerprints = {}
+        errors = []
+        # Puppet exits with 1 when generating the CSR
+        command = Command('puppet agent --test --color=false', ok_codes=[1])
         logger.info('Generating a new Puppet certificate on %d hosts: %s', len(self), self)
-        for nodeset, output in self._remote_hosts.run_sync('puppet agent --test --color=false'):
+        for nodeset, output in self._remote_hosts.run_sync(command):
             for line in output.message().decode().splitlines():
+                if line.startswith('Error:'):
+                    errors.append((nodeset, line))
+                    continue
+
                 if 'Certificate Request fingerprint' not in line:
                     continue
 
@@ -174,7 +181,10 @@ class PuppetHosts(RemoteHostsAdapter):
                     fingerprints[host] = fingerprint
 
         if len(fingerprints) != len(self):
-            raise PuppetHostsError('Unable to find CSR fingerprints for all hosts')
+            formatted_errors = '\n'.join('{}: {}'.format(*error) for error in errors)
+            raise PuppetHostsError(
+                'Unable to find CSR fingerprints for all hosts, detected errors are:\n{errors}'.format(
+                    errors=formatted_errors))
 
         return fingerprints
 
