@@ -2,6 +2,14 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.13`_ (2019-01-14)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* remote: fix logging for ``reboot()``.
+
 `v0.0.12`_ (2019-01-10)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -214,3 +222,4 @@ New features
 .. _`v0.0.12`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.12
 
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
+.. _`v0.0.13`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.13
