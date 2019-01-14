@@ -74,7 +74,7 @@ setup(
     keywords=['wmf', 'automation', 'orchestration'],
     license='GPLv3+',
     long_description=LONG_DESCRIPTION,
-    name='wikimedia-spicerack',
+    name='wikimedia-spicerack',  # Must be the same used for __version__ in __init__.py
     packages=find_packages(exclude=['*.tests', '*.tests.*']),
     platforms=['GNU/Linux'],
     setup_requires=SETUP_REQUIRES,

@@ -24,7 +24,7 @@ from spicerack.remote import Remote
 
 
 try:
-    __version__ = get_distribution(__name__).version
+    __version__ = get_distribution('wikimedia-spicerack').version  # Must be the same used as 'name' in setup.py
     """:py:class:`str`: the version of the current Spicerack module."""
 except DistributionNotFound:  # pragma: no cover - this should never happen during tests
     pass  # package is not installed
