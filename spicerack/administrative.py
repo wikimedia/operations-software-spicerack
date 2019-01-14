@@ -20,6 +20,10 @@ class Reason:
             username (str): the username to mention in the reason as the author of the action.
             hostname (str): the hostname to mention in the reason as the host originating the action.
             task_id (str, optional): the task ID to mention in the reason.
+
+        Raises:
+            spicerack.administrative.ReasonError: if any parameter contains double quotes.
+
         """
         self._reason = reason
         self._username = username

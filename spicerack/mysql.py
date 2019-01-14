@@ -1,6 +1,7 @@
 """MySQL module.
 
-TODO: replace with a proper MySQL module that uses a Python MySQL client, preferably in a parallel way.
+Todo:
+    replace with a proper MySQL module that uses a Python MySQL client, preferably in a parallel way.
 """
 import logging
 
@@ -34,14 +35,14 @@ class MysqlRemoteHosts(RemoteHostsAdapter):
             query (str): the mysql query to be executed. Double quotes must be already escaped.
             database (str, optional): an optional MySQL database to connect to before executing the query.
             success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
-            batch_size (int, str, optional): the batch size for cumin, either as percentage (i.e. '25%')
-                or absolute number (i.e. 5).
+            batch_size (int, str, optional): the batch size for cumin, either as percentage (e.g. ``25%``) or absolute
+                number (e.g. ``5``).
             batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
             is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
                 command that doesn't modify the state.
 
         Returns:
-            generator: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+            generator: as returned by :py:meth:`cumin.transports.BaseWorker.get_results`.
 
         Raises:
             RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
@@ -58,7 +59,7 @@ class Mysql:
 
     heartbeat_query = ("SELECT ts FROM heartbeat.heartbeat WHERE datacenter = '{dc}' and shard = '{section}' "
                        "ORDER BY ts DESC LIMIT 1")
-    """Query pattern to check the heartbeat for a given datacenter and section."""
+    """str: Query pattern to check the heartbeat for a given datacenter and section."""
 
     def __init__(self, remote, dry_run=True):
         """Initialize the instance.
@@ -87,11 +88,11 @@ class Mysql:
 
         Arguments:
             datacenter (str, optional): the name of the datacenter to filter for, accepted values are those specified in
-                `spicerack.CORE_DATACENTERS`.
+                :py:data:`spicerack.constants.CORE_DATACENTERS`.
             replication_role (str, optional): the repication role to filter for, accepted values are those specified in
-                `spicerack.mysql.REPLICATION_ROLES`.
+                :py:data:`spicerack.mysql.REPLICATION_ROLES`.
             section (str, optional): a specific section to filter for, accepted values are those specified in
-                `spicerack.mysql.CORE_SECTIONS`.
+                :py:data:`spicerack.mysql.CORE_SECTIONS`.
 
         Raises:
             spicerack.mysql.MysqlError: on invalid data or unexpected matching hosts.
@@ -218,7 +219,9 @@ class Mysql:
             heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
 
         Returns:
-            dict: a dictionary with section (str): heartbeat (datetime.datetime) for each core section. For example:
+            dict: a dictionary with the section name :py:class:`str` as keys and their heartbeat
+            :py:class:`datetime.datetime` as values. For example::
+
                 {'s1': datetime.datetime(2018, 1, 2, 11, 22, 33, 123456)}
 
         Raises:
@@ -238,7 +241,8 @@ class Mysql:
         Arguments:
             datacenter (str): the name of the datacenter from where to get the heartbeat values.
             heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
-            heartbeats (dict): a dictionary with section (str): heartbeat (datetime.datetime) for each core section.
+            heartbeats (dict): a dictionary with the section name :py:class:`str` as keys and heartbeat
+                :py:class:`datetime.datetime` for each core section as values.
 
         Raises:
             spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.

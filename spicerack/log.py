@@ -59,7 +59,7 @@ class FilterOutCumin(logging.Filter):
 
         Returns:
             int: 0 if the record should be filtered out, non-zero if it should be included. According to Python's
-                logging interface, see: https://docs.python.org/3/library/logging.html#filter-objects
+            logging interface, see: https://docs.python.org/3/library/logging.html#filter-objects
 
         """
         if record.name == 'cumin' or record.name.startswith('cumin.'):

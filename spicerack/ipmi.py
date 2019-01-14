@@ -1,6 +1,7 @@
 """IPMI module.
 
-TODO: replace with pyghmi.
+Todo:
+    replace with pyghmi.
 """
 import logging
 import os
@@ -43,7 +44,7 @@ class Ipmi:
 
         Arguments:
             mgmt_hostname (str): the FQDN of the management interface of the host to target.
-            command_parts (list): a list with the IPMI command components to execute.
+            command_parts (list): a list of :py:class:`str` with the IPMI command components to execute.
             is_safe (bool, optional): if this is a safe command to run also in DRY RUN mode.
 
         Returns:

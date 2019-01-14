@@ -78,7 +78,7 @@ class Phabricator:
         """Add a comment on a Phabricator task.
 
         Arguments:
-            task_id (str): the Phabricator task ID (T12345) to be updated.
+            task_id (str): the Phabricator task ID (e.g. ``T12345``) to be updated.
             comment (str): the message to add to the task.
 
         Raises:

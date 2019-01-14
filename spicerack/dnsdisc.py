@@ -65,8 +65,12 @@ class Discovery:
         """Information about pooled state of services.
 
         Returns:
-            dict: a map of services, with values given by a list of datacenters
-                  where the service is pooled, i.e. {svc_foo: [dc1, dc2], svc_bar: [dc1]}
+            dict: a map of services, with values given by a list of datacenters where the service is pooled, i.e.::
+
+                {
+                    'svc_foo': ['dc1', 'dc2'],
+                    'svc_bar': ['dc1'],
+                }
 
         """
         services = defaultdict(list)
@@ -80,7 +84,8 @@ class Discovery:
     def resolve_address(self, name):
         """Resolve the IP of a given record.
 
-        TODO: move a more generalized version of this into a DNS resolver module.
+        Todo:
+            move a more generalized version of this into a DNS resolver module.
 
         Arguments:
             name (str): the DNS record to resolve.
@@ -170,7 +175,8 @@ class Discovery:
     def resolve(self, name=None):
         """Generator that yields the resolved records.
 
-        TODO: move a more generalized version of this into a DNS resolver module.
+        Todo:
+            move a more generalized version of this into a DNS resolver module.
 
         Arguments:
             name (str, optional): record name to use for the resolution instead of self.records.

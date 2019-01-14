@@ -56,7 +56,7 @@ Control commands:
 
 CLI arguments:
   It's possible to pass CLI parameters to cookbooks and group of cookbooks
-  when selecting them (i.e. cookbook_name -a param value1 value2).
+  when selecting them (e.g. cookbook_name -a param value1 value2).
   Passing arguments to cookbook groups propagate them also to their cookbooks
   and child cookbook groups.
   Passing arguments override any other argument that might have been passed
@@ -366,7 +366,7 @@ class Cookbook(BaseCookbooksItem):
 
         Returns:
             int: the return code to use for this cookbook, it should be zero on success, a positive integer smaller than
-                128 and not in the range 90-99 (reserved exit codes) in case of failure.
+            128 and not in the range 90-99 (reserved exit codes) in case of failure.
 
         """
         ret, args = self._parse_args()
@@ -384,7 +384,7 @@ class Cookbook(BaseCookbooksItem):
 
         Returns:
             int: the return code to use for this cookbook, it should be zero on success, a positive integer smaller than
-                128 and not in the range 90-99 (reserved exit codes) in case of failure.
+            128 and not in the range 90-99 (reserved exit codes) in case of failure.
 
         """
         log.log_task_start('Cookbook ' + self.path)
@@ -428,9 +428,9 @@ class Cookbook(BaseCookbooksItem):
 
         Returns:
             tuple: (int, argparse.Namespace) with the return code to use and the parsed arguments. If the return code is
-                different from -1 it means that the cookbook should not be executed either because the help message was
-                requested or the parse of the arguments failed or arguments were passed but the cookbook doesn't define
-                a argument_parser() function.
+            different from -1 it means that the cookbook should not be executed either because the help message was
+            requested or the parse of the arguments failed or arguments were passed but the cookbook doesn't define
+            a argument_parser() function.
 
         """
         ret = -1

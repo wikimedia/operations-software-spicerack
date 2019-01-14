@@ -49,11 +49,13 @@ def retry(func=None, tries=3, delay=timedelta(seconds=3), backoff_mode='exponent
             Must be a positive integer.
         delay (datetime.timedelta, optional): the initial delay for the first retry, used also as the base for the
             backoff algorithm.
-        backoff_mode (str, optional): the backoff mode to use for the delay, available values are:
+        backoff_mode (str, optional): the backoff mode to use for the delay, available values are::
+
             constant:    delay       => 3, 3,  3,  3,   3, ...;
             linear:      delay * N   => 3, 6,  9, 12,  15, ...; N in [1, tries]
             power:       delay * 2^N => 3, 6, 12, 24,  48, ...; N in [0, tries - 1]
             exponential: delay^N     => 3, 9, 27, 81, 243, ...; N in [1, tries], delay must be > 1.
+
         exceptions (type, tuple, optional): the decorated function call will be retried if it fails until it succeeds
             or `tries` attempts are reached. A retryable failure is defined as raising any of the exceptions listed.
 

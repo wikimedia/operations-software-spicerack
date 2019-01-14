@@ -386,12 +386,18 @@ class PuppetMaster:
         Returns:
             dict: as returned by the Puppet CA CLI with the render as JSON option set. As example::
 
-                {'dns_alt_names': ['DNS:service.example.com'],
-                 'fingerprint': '00:FF:...',
-                 'fingerprints': {
-                    'SHA1': '00:FF:...', 'SHA256': '00:FF:...', 'SHA512': '00:FF:...', 'default': '00:FF:...'},
-                 'name': 'host.example.com',
-                 'state': 'signed'}
+                {
+                    'dns_alt_names': ['DNS:service.example.com'],
+                    'fingerprint': '00:FF:...',
+                    'fingerprints': {
+                        'SHA1': '00:FF:...',
+                        'SHA256': '00:FF:...',
+                        'SHA512': '00:FF:...',
+                        'default': '00:FF:...',
+                    },
+                    'name': 'host.example.com',
+                    'state': 'signed',
+                }
 
         Raises:
             spicerack.puppet.PuppetMasterCheckError: if no certificate is found.

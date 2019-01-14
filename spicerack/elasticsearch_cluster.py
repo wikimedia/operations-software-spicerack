@@ -56,8 +56,8 @@ def create_elasticsearch_clusters(clustergroup, remote, dry_run=True):
         dry_run (bool, optional):  whether this is a DRY-RUN.
 
     Raises:
-        spicerack.elasticsearch_cluster.ElasticsearchClusterError:
-            Thrown when the requested cluster configuration is not found.
+        spicerack.elasticsearch_cluster.ElasticsearchClusterError: Thrown when the requested cluster configuration is
+            not found.
 
     Returns:
         spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
@@ -89,7 +89,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         self._dry_run = dry_run
 
     def get_remote_hosts(self):
-        """Returns elasticsearch remote hosts
+        """Returns elasticsearch remote hosts.
 
         Returns:
             spicerack.remote.RemoteHosts: RemoteHosts instance for this adapter.
@@ -98,27 +98,27 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         return self._remote_hosts
 
     def start_elasticsearch(self):
-        """Starts all elasticsearch instances"""
+        """Starts all elasticsearch instances."""
         logger.info('Starting all elasticsearch instances on %s', self)
         self._remote_hosts.run_sync('systemctl start "elasticsearch_*@*"')
 
     def stop_elasticsearch(self):
-        """Stops all elasticsearch instances"""
+        """Stops all elasticsearch instances."""
         logger.info('Stopping all elasticsearch instances on %s', self)
         self._remote_hosts.run_sync('systemctl stop "elasticsearch_*@*"')
 
     def restart_elasticsearch(self):
-        """Restarts all elasticsearch instances"""
+        """Restarts all elasticsearch instances."""
         logger.info('Restarting all elasticsearch instances on %s', self)
         self._remote_hosts.run_sync('systemctl restart "elasticsearch_*@*"')
 
     def depool_nodes(self):
-        """Depool the hosts"""
+        """Depool the hosts."""
         logger.info('Depooling %s', self)
         self._remote_hosts.run_sync('depool')
 
     def pool_nodes(self):
-        """Pool the hosts"""
+        """Pool the hosts."""
         logger.info('Pooling %s', self)
         self._remote_hosts.run_sync('pool')
 
@@ -151,8 +151,8 @@ class ElasticsearchClusters:
         """Initialize ElasticsearchClusters.
 
         Arguments:
-            clusters (list of spicerack.elasticsearch_cluster.ElasticsearchCluster): list of elasticsearch cluster.
-            remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+            clusters (list): list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
+            remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
         self._clusters = clusters
@@ -295,8 +295,9 @@ class ElasticsearchClusters:
             nodes (list): list containing dicts of elasticsearch nodes.
 
         Returns:
-            dict: dict object containing a normalized rows of elasticsearch nodes.
-                E.g {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
+            dict: dict object containing a normalized rows of elasticsearch nodes. For example::
+
+                {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
 
         """
         rows = defaultdict(list)
@@ -328,11 +329,11 @@ class ElasticsearchCluster:
 
         Arguments:
             elasticsearch (elasticsearch.Elasticsearch): elasticsearch instance.
-            remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+            remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional):  whether this is a DRY-RUN.
 
         Todo:
-            self._hostname class member will be replaced by the formatted message obtained via Reason,
+            ``self._hostname`` class member will be replaced by the formatted message obtained via Reason,
             this can't be done right now as it needs to be inline with what
             the MW maint script and the Icinga check do at the moment.
         """
@@ -363,7 +364,7 @@ class ElasticsearchCluster:
             node (str): the elasticsearch host.
 
         Returns:
-            bool: True if node is present and False if not present.
+            bool: :py:data:`True` if node is present and :py:data:`False` if not.
 
         """
         nodes_names = [ElasticsearchCluster.split_node_name(node['name'])['name'] for node in self.get_nodes().values()]
@@ -374,13 +375,13 @@ class ElasticsearchCluster:
 
     @staticmethod
     def split_node_name(node_name):
-        """Split node name into hostname and cluster group name
+        """Split node name into hostname and cluster group name.
 
         Arguments:
-            node_name (str): node name containing hostname and cluster name separated by '-'
+            node_name (str): node name containing hostname and cluster name separated by ``-``.
 
         Returns:
-            dict: dict containing the node name and the cluster name
+            dict: dictionary containing the node name and the cluster name.
 
         """
         node_name_and_group = {}
@@ -482,9 +483,11 @@ class ElasticsearchCluster:
             ) from e
 
     def flush_markers(self, timeout=timedelta(seconds=60)):
-        """Flush markers unsynced. flush + flush_synced is called here because from experience,
+        """Flush markers unsynced.
 
-            it result into less shards not syncing. This also makes recovery faster.
+        Note:
+            ``flush`` and ``flush_synced`` are called here because from experience, it results in fewer shards not
+            syncing. This also makes the recovery faster.
 
         Arguments:
             timeout (datetime.timedelta): timedelta object for elasticsearch request timeout.

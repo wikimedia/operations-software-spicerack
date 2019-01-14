@@ -42,11 +42,11 @@ class Spicerack:
         Arguments:
             verbose (bool, optional): whether to set the verbose mode.
             dry_run (bool, optional): whether this is a DRY-RUN.
-            cumin_config (str): the path to Cumin's configuration file.
+            cumin_config (str, optional): the path to Cumin's configuration file.
             conftool_config (str, optional): the path to Conftool's configuration file.
             conftool_schema (str, optional): the path to Conftool's schema file.
-            debmonitor_config (str): the path to Debmonitor's INI configuration file. It must have at least the
-                following schema::
+            debmonitor_config (str, optional): the path to Debmonitor's INI configuration file. It must have at least
+                the following schema::
 
                     [DEFAULT]
                     server=debmonitor.example.com
@@ -72,7 +72,7 @@ class Spicerack:
 
     @property
     def dry_run(self):
-        """Getter for the dry_run property.
+        """Getter for the ``dry_run`` property.
 
         Returns:
             bool: True if the DRY-RUN mode is set, False otherwise.
@@ -82,7 +82,7 @@ class Spicerack:
 
     @property
     def verbose(self):
-        """Getter for the dry_run property.
+        """Getter for the ``verbose`` property.
 
         Returns:
             bool: True if the verbose mode is set, False otherwise.
@@ -92,7 +92,7 @@ class Spicerack:
 
     @property
     def username(self):
-        """Getter for the username property.
+        """Getter for the current username.
 
         Returns:
             str: the name of the effective running user.
@@ -102,7 +102,7 @@ class Spicerack:
 
     @property
     def irc_logger(self):
-        """Getter for the irc_logger property.
+        """Getter for the ``irc_logger`` property.
 
         Returns:
             logging.Logger: the logger instance to write to IRC.
@@ -124,7 +124,7 @@ class Spicerack:
         """Get a Remote instance.
 
         Returns:
-            spicerack.remote.Remote: the pre-configured Remote instance.
+            spicerack.remote.Remote: the Remote instance.
 
         """
         return Remote(self._cumin_config, dry_run=self._dry_run)
@@ -133,7 +133,8 @@ class Spicerack:
         """Access a Conftool specific entity instance.
 
         Arguments:
-            entity_name (str): the name of a Conftool entity. Available values: node, service, discovery, mwconfig.
+            entity_name (str): the name of a Conftool entity. Possible values: ``node``, ``service``, ``discovery``,
+                ``mwconfig``.
 
         Returns:
             spicerack.confctl.ConftoolEntity: the confctl entity instance.
@@ -169,7 +170,7 @@ class Spicerack:
         """Get a MediaWiki instance.
 
         Returns:
-            spicerack.mediawiki.MediaWiki: the pre-configured MediaWiki instance.
+            spicerack.mediawiki.MediaWiki: the MediaWiki instance.
 
         """
         return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
@@ -178,7 +179,7 @@ class Spicerack:
         """Get a Mysql instance.
 
         Returns:
-            spicerack.mysql.Mysql: the pre-configured Mysql instance.
+            spicerack.mysql.Mysql: the Mysql instance.
 
         """
         return Mysql(self.remote(), dry_run=self._dry_run)
@@ -199,10 +200,10 @@ class Spicerack:
         """Get an ElasticsearchClusters instance.
 
         Arguments:
-            clustergroup (str): name of cluster group e.g search_eqiad
+            clustergroup (str): name of cluster group e.g ``search_eqiad``.
 
         Returns:
-            spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance
+            spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
 
         """
         return create_elasticsearch_clusters(clustergroup, self.remote(), dry_run=self._dry_run)
