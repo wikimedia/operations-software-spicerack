@@ -8,6 +8,19 @@ from spicerack.decorators import get_backoff_sleep, retry
 from spicerack.exceptions import SpicerackError
 
 
+class DryRunRetry:
+    """Test class to simulate any Spicerack class with a ``_dry_run`` property."""
+
+    def __init__(self, dry_run=True):
+        """Initialize the ``_dry_run`` property."""
+        self._dry_run = dry_run
+
+    @retry
+    def fail(self):
+        """A method that fail always to trigger the retry logic."""
+        raise SpicerackError('self._dry_run={d}'.format(d=self._dry_run))
+
+
 def _generate_mocked_function(calls):
     func = mock.Mock()
     func.side_effect = calls
@@ -28,6 +41,20 @@ def test_retry_pass_no_args(mocked_sleep, calls, sleep_calls):
     assert ret
     func.assert_has_calls([mock.call()] * len(calls))
     mocked_sleep.assert_has_calls([mock.call(i) for i in sleep_calls])
+
+
+@pytest.mark.parametrize('dry_run', (True, False))
+@mock.patch('spicerack.decorators.time.sleep', return_value=None)
+def test_retry_pass_no_args_dry_run(mocked_sleep, dry_run):
+    """Using @retry with no arguments should use the default values but set tries to 1 if in DRY-RUN."""
+    obj = DryRunRetry(dry_run=dry_run)
+    with pytest.raises(SpicerackError):
+        obj.fail()
+
+    sleep_call_count = 2
+    if dry_run:
+        sleep_call_count = 0
+    assert mocked_sleep.call_count == sleep_call_count
 
 
 @pytest.mark.parametrize('exc, calls, sleep_calls', (

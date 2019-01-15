@@ -38,6 +38,11 @@ def retry(func=None, tries=3, delay=timedelta(seconds=3), backoff_mode='exponent
         The decorated function or method must be idempotent to avoid unwanted side effects.
         It can be called with or without arguments, in the latter case all the default values will be used.
 
+    Note:
+        When the decorated function is an instance method of a class, the decorator is able to automatically detect if
+        there is a ``self._dry_run`` property in the instance or a ``self._remote_hosts._dry_run`` one and reduce the
+        ``tries`` attempts to ``1`` if it's a DRY-RUN to avoid unnecessary waits.
+
     Arguments:
         func (function, method): the decorated function.
         tries (int, optional): the number of times to try calling the decorated function or method before giving up.
@@ -69,15 +74,16 @@ def retry(func=None, tries=3, delay=timedelta(seconds=3), backoff_mode='exponent
         if tries < 1:
             raise ValueError('Tries must be a positive integer, got {tries}'.format(tries=tries))
 
+        effective_tries = _get_effective_tries(tries, args)
         attempt = 0
-        while attempt < tries - 1:
+        while attempt < effective_tries - 1:
             attempt += 1
             try:
                 return func(*args, **kwargs)  # Call the decorated function or method
             except exceptions as e:
                 sleep = get_backoff_sleep(backoff_mode, delay.total_seconds(), attempt)
                 logger.warning("Failed to call '%s.%s' [%d/%d, retrying in %.2fs]: %s",
-                               func.__module__, func.__name__, attempt, tries, sleep, e)
+                               func.__module__, func.__name__, attempt, effective_tries, sleep, e)
                 time.sleep(sleep)
 
         return func(*args, **kwargs)
@@ -109,3 +115,27 @@ def get_backoff_sleep(backoff_mode, base, index):
         raise ValueError('Invalid backoff_mode: {mode}'.format(mode=backoff_mode))
 
     return sleep
+
+
+def _get_effective_tries(tries, decorator_args):
+    """Try to detect if this is a DRY-RUN and reduce the number of tries to one in that case.
+
+    Arguments:
+        tries (int): the requested number of tries for the decorator.
+        decorator_args (tuple): tuple of positional arguments passed to the decorated function.
+
+    Returns:
+        int: the number of tries to use given the requested tries and the detection if this is a DRY-RUN or not.
+
+    """
+    effective_tries = tries
+    if not decorator_args:
+        logger.debug('Decorator called without args')
+        return effective_tries
+
+    obj = decorator_args[0]
+    if getattr(obj, '_dry_run', False) or getattr(getattr(obj, '_remote_hosts', False), '_dry_run', False):
+        logger.warning('Reduce tries from %d to 1 in DRY-RUN mode', tries)
+        effective_tries = 1
+
+    return effective_tries

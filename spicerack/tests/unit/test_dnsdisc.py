@@ -94,7 +94,7 @@ class TestDiscovery:
     def test_update_ttl_dry_run(self, mocked_sleep):
         """Calling update_ttl() in DRY-RUN mode should not raise when verifying the TTL."""
         self.discovery_dry_run.update_ttl(20)
-        assert mocked_sleep.called
+        assert not mocked_sleep.called
 
     @mock.patch('spicerack.decorators.time.sleep')
     def test_update_ttl_ko(self, mocked_sleep):
