@@ -13,7 +13,7 @@ import curator
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
 
 from spicerack.decorators import retry
-from spicerack.exceptions import SpicerackError
+from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import RemoteHostsAdapter
 
 
@@ -40,7 +40,11 @@ ELASTICSEARCH_CLUSTERS = {
 
 
 class ElasticsearchClusterError(SpicerackError):
-    """Exception class for errors of this module."""
+    """Custom Exception class for errors of this module."""
+
+
+class ElasticsearchClusterCheckError(SpicerackCheckError):
+    """Custom Exception class for check errors of this module."""
 
 
 def create_elasticsearch_clusters(clustergroup, remote, dry_run=True):
@@ -202,10 +206,10 @@ class ElasticsearchClusters:
         tries = max(floor(timeout / delay), 1)
         logger.info('waiting for clusters to be green')
 
-        @retry(tries=tries, delay=delay, backoff_mode='constant', exceptions=(TransportError,))
+        @retry(tries=tries, delay=delay, backoff_mode='constant', exceptions=(ElasticsearchClusterCheckError,))
         def inner_wait():
             for cluster in self._clusters:
-                cluster.is_green()
+                cluster.check_green()
 
         inner_wait()
 
@@ -421,10 +425,18 @@ class ElasticsearchCluster:
         else:
             cluster_routing.do_action()
 
-    def is_green(self):
-        """Cluster health status."""
-        self._elasticsearch.cluster.health(wait_for_status='green', params={'timeout': '1s'})
-        return True
+    def check_green(self):
+        """Cluster health status.
+
+        Raises:
+            spicerack.elasticsearch_cluster.ElasticsearchClusterCheckError:
+                This is raised when request times and cluster is not green.
+
+        """
+        try:
+            self._elasticsearch.cluster.health(wait_for_status='green', params={'timeout': '1s'})
+        except TransportError as e:
+            raise ElasticsearchClusterCheckError('Request timed out while waiting for green') from e
 
     @contextmanager
     def frozen_writes(self, reason):

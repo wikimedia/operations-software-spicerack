@@ -465,7 +465,7 @@ class TestElasticsearchClusters:
         self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError('test'))
         self.elasticsearch2.cluster.health = mock.Mock(side_effect=TransportError('test'))
         elasticsearchclusters = ec.ElasticsearchClusters(self.clusters, None)
-        with pytest.raises(TransportError):
+        with pytest.raises(ec.ElasticsearchClusterCheckError):
             elasticsearchclusters.wait_for_green(timedelta(seconds=20))
             assert mocked_sleep.called
             assert self.elasticsearch1.cluster.health.call_count == 2
