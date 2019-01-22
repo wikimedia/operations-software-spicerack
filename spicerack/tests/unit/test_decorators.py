@@ -7,8 +7,6 @@ import pytest
 from spicerack.decorators import get_backoff_sleep, retry
 from spicerack.exceptions import SpicerackError
 
-from spicerack.tests import caplog_not_available
-
 
 def _generate_mocked_function(calls):
     func = mock.Mock()
@@ -17,65 +15,54 @@ def _generate_mocked_function(calls):
     return func
 
 
-@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
-@pytest.mark.parametrize('calls, messages', (
+@pytest.mark.parametrize('calls, sleep_calls', (
     ([True], []),
-    ([SpicerackError('error1'), True], ["Failed to call 'unittest.mock.mocked' [1/3, retrying in 3.00s]: error1"]),
-    ([SpicerackError('error1'), SpicerackError('error2'), True],
-     ["Failed to call 'unittest.mock.mocked' [1/3, retrying in 3.00s]: error1",
-      "Failed to call 'unittest.mock.mocked' [2/3, retrying in 9.00s]: error2"]),
+    ([SpicerackError('error1'), True], [3.0]),
+    ([SpicerackError('error1'), SpicerackError('error2'), True], [3.0, 9.0]),
 ))
 @mock.patch('spicerack.decorators.time.sleep', return_value=None)
-def test_retry_pass_no_args(mocked_sleep, calls, messages, caplog):
+def test_retry_pass_no_args(mocked_sleep, calls, sleep_calls):
     """Using @retry with no arguments should use the default values."""
     func = _generate_mocked_function(calls)
     ret = retry(func)()
-    print(mocked_sleep.mock_calls)
     assert ret
-    for message in messages:
-        assert message in caplog.text
     func.assert_has_calls([mock.call()] * len(calls))
+    mocked_sleep.assert_has_calls([mock.call(i) for i in sleep_calls])
 
 
-@pytest.mark.parametrize('exc, calls', (
-    (SpicerackError, [SpicerackError('error')] * 3),
-    (Exception, [Exception('error')]),
+@pytest.mark.parametrize('exc, calls, sleep_calls', (
+    (SpicerackError, [SpicerackError('error')] * 3, [3.0, 9.0]),
+    (Exception, [Exception('error')], []),
 ))
 @mock.patch('spicerack.decorators.time.sleep', return_value=None)
-def test_retry_fail_no_args(mocked_sleep, exc, calls):
+def test_retry_fail_no_args(mocked_sleep, exc, calls, sleep_calls):
     """Using @retry with no arguments should raise the exception raised by the decorated function if not cathced."""
     func = _generate_mocked_function(calls)
     with pytest.raises(exc, match='error'):
         retry(func)()
 
-    print(mocked_sleep.mock_calls)
     func.assert_has_calls([mock.call()] * len(calls))
+    mocked_sleep.assert_has_calls([mock.call(i) for i in sleep_calls])
 
 
-@pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
-@pytest.mark.parametrize('calls, messages, kwargs', (
+@pytest.mark.parametrize('calls, sleep_calls, kwargs', (
     ([True], [], {'delay': timedelta(seconds=11), 'tries': 1}),
-    ([Exception('error1'), True],
-     ["Failed to call 'unittest.mock.mocked' [1/2, retrying in 5.55s]: error1"],
+    ([Exception('error1'), True], [5.55],
      {'delay': timedelta(seconds=5, milliseconds=550), 'tries': 2, 'exceptions': Exception}),
-    ([SpicerackError('error1'), True],
-     ["Failed to call 'unittest.mock.mocked' [1/2, retrying in 8.88s]: error1"],
+    ([SpicerackError('error1'), True], [8.88],
      {'backoff_mode': 'exponential', 'delay': timedelta(milliseconds=8880), 'tries': 2}),
-    ([SpicerackError('error1'), True],
-     ["Failed to call 'unittest.mock.mocked' [1/2, retrying in 0.90s]: error1"],
+    ([SpicerackError('error1'), True], [0.90],
      {'backoff_mode': 'power', 'delay': timedelta(milliseconds=900), 'tries': 2}),
 ))
 @mock.patch('spicerack.decorators.time.sleep', return_value=None)
-def test_retry_pass_args(mocked_sleep, calls, messages, kwargs, caplog):
+def test_retry_pass_args(mocked_sleep, calls, sleep_calls, kwargs):
     """Using @retry with arguments should use the soecified values."""
     func = _generate_mocked_function(calls)
     ret = retry(**kwargs)(func)()
 
-    print(mocked_sleep.mock_calls)
     assert ret
-    for message in messages:
-        assert message in caplog.text
     func.assert_has_calls([mock.call()] * len(calls))
+    mocked_sleep.assert_has_calls([mock.call(i) for i in sleep_calls])
 
 
 @pytest.mark.parametrize('exc, kwargs', (
@@ -90,8 +77,8 @@ def test_retry_fail_args(mocked_sleep, exc, kwargs):
     with pytest.raises(exc, match='error'):
         retry(**kwargs)(func)()
 
-    print(mocked_sleep.mock_calls)
     func.assert_called_once_with()
+    assert not mocked_sleep.called
 
 
 @pytest.mark.parametrize('kwargs, message', (
