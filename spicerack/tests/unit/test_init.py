@@ -58,15 +58,19 @@ def test_spicerack(mocked_remote_query, monkeypatch):
 def test_spicerack_icinga(mocked_remote_query, mocked_resolver, mocked_hostname, monkeypatch):
     """An instance of Spicerack should allow to get an Icinga instance."""
     monkeypatch.setenv('SUDO_USER', 'user1')
+    icinga_server = mock.MagicMock(spec_set=RemoteHosts)
+    icinga_server.hosts = 'icinga-server.example.com'
+    mocked_remote_query.return_value = icinga_server
+
     dns_response = MockedDnsAnswer(ttl=600, rrset=[
         MockedDnsTarget(target=MockedTarget('icinga-server.example.com.'))])
     mocked_resolver.return_value.query.return_value = dns_response
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
+    assert spicerack.icinga_master_host.hosts == 'icinga-server.example.com'
     assert isinstance(spicerack.icinga(), Icinga)
     mocked_hostname.assert_called_once_with()
-    assert mocked_remote_query.called
 
 
 @mock.patch('spicerack.puppet.get_puppet_ca_hostname', return_value='puppetmaster.example.com')

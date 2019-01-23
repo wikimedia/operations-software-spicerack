@@ -110,6 +110,16 @@ class Spicerack:
         """
         return self._irc_logger
 
+    @property
+    def icinga_master_host(self):
+        """Getter for the ``icinga_master_host`` property.
+
+        Returns:
+            spicerack.remote.RemoteHosts: the instance to execute commands on the Icinga master host.
+
+        """
+        return self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
+
     def remote(self):
         """Get a Remote instance.
 
@@ -218,8 +228,7 @@ class Spicerack:
             spicerack.icinga.Icinga: Icinga instance.
 
         """
-        icinga_host = self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
-        return Icinga(icinga_host)
+        return Icinga(self.icinga_master_host)
 
     def puppet(self, remote_hosts):  # pylint: disable=no-self-use
         """Get a PuppetHosts instance for the given remote hosts.
