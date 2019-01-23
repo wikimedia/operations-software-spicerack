@@ -46,7 +46,7 @@ class Debmonitor:
             return
 
         url = '{base}/hosts/{host}'.format(base=self._base_url, host=hostname)
-        response = requests.delete(url, cert=(self._cert, self._key))
+        response = requests.delete(url, cert=(self._cert, self._key), timeout=3)
 
         if response.status_code == requests.codes['no_content']:
             logger.info('Removed host %s from Debmonitor', hostname)
