@@ -145,14 +145,14 @@ class Spicerack:
 
         return self._confctl.entity(entity_name)
 
-    def dns(self):
+    def dns(self):  # pylint: disable=no-self-use
         """Get a Dns instance.
 
         Returns:
             spicerack.dns.Dns: a Dns instance that will use the operating system default namserver(s).
 
         """
-        return Dns(dry_run=self._dry_run)
+        return Dns()
 
     def discovery(self, *records):
         """Get a Discovery instance.

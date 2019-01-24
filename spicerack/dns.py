@@ -22,14 +22,12 @@ class DnsNotFound(DnsError):
 class Dns:
     """Class to interact with the DNS."""
 
-    def __init__(self, *, nameserver_address=None, dry_run=True):
+    def __init__(self, *, nameserver_address=None):
         """Initialize the instance.
 
         Arguments:
             nameserver_address (str, optional): the nameserver address to use, if not set uses the OS configuration.
-            dry_run (bool, optional): whether this is a DRY-RUN.
         """
-        self._dry_run = dry_run
         if nameserver_address:
             self._resolver = dns.resolver.Resolver(configure=False)
             self._resolver.nameservers = [nameserver_address]
