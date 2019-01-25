@@ -16,6 +16,7 @@ from spicerack.elasticsearch_cluster import create_elasticsearch_clusters
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
+from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.phabricator import create_phabricator
@@ -296,3 +297,12 @@ class Spicerack:
         """
         options = load_ini_config(self._debmonitor_config).defaults()
         return Debmonitor(options['server'], options['cert'], options['key'], dry_run=self._dry_run)
+
+    def management(self):
+        """Get a Management instance to interact with the management interfaces.
+
+        Returns:
+            spicerack.management.Management: the instance.
+
+        """
+        return Management(self.dns())
