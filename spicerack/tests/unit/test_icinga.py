@@ -50,6 +50,20 @@ class TestIcinga:
         assert self.icinga.command_file == command_file
         assert not self.mocked_icinga_host.called
 
+    @mock.patch('spicerack.icinga.time.time', return_value=1514764800)
+    def test_hosts_downtimed(self, mocked_time):
+        """It should downtime the hosts on Icinga, yield and delete the downtime once done."""
+        hosts = ['host1']
+        call = 'icinga-downtime -h "host1" -d 14400 -r {reason}'.format(reason=self.reason.quoted())
+
+        with self.icinga.hosts_downtimed(hosts, self.reason):
+            self.mocked_icinga_host.run_sync.assert_called_once_with(call)
+            self.mocked_icinga_host.run_sync.reset_mock()
+
+        self.mocked_icinga_host.run_sync.assert_has_calls([
+            mock.call('echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1" > /var/lib/icinga/rw/icinga.cmd')])
+        assert mocked_time.called
+
     @pytest.mark.parametrize('hosts', (
         ['host1'],
         ['host1', 'host2'],
