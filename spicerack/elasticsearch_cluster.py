@@ -100,17 +100,17 @@ class ElasticsearchHosts(RemoteHostsAdapter):
     def start_elasticsearch(self):
         """Starts all elasticsearch instances."""
         logger.info('Starting all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl start "elasticsearch_*@*"')
+        self._remote_hosts.run_sync('systemctl start "elasticsearch_*@*" --all')
 
     def stop_elasticsearch(self):
         """Stops all elasticsearch instances."""
         logger.info('Stopping all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl stop "elasticsearch_*@*"')
+        self._remote_hosts.run_sync('systemctl stop "elasticsearch_*@*" --all')
 
     def restart_elasticsearch(self):
         """Restarts all elasticsearch instances."""
         logger.info('Restarting all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl restart "elasticsearch_*@*"')
+        self._remote_hosts.run_sync('systemctl restart "elasticsearch_*@*" --all')
 
     def depool_nodes(self):
         """Depool the hosts."""
@@ -224,6 +224,9 @@ class ElasticsearchClusters:
             spicerack.elasticsearch_cluster.ElasticsearchHosts: next eligible nodes for ElasticsearchHosts.
 
         """
+        if size < 1:
+            raise ElasticsearchClusterCheckError("Size of next nodes must be at least 1")
+
         nodes_group = self._get_nodes_group()
         nodes_to_process = [node for node in nodes_group.values()
                             if not ElasticsearchClusters._node_has_been_restarted(node, started_before)]
@@ -464,7 +467,7 @@ class ElasticsearchCluster:
             return
         try:
             self._elasticsearch.index(index=self._freeze_writes_index, doc_type=self._freeze_writes_doc_type,
-                                      doc_id='freeze-everything', body=doc)
+                                      id='freeze-everything', body=doc)
         except TransportError as e:
             raise ElasticsearchClusterError(
                 'Encountered error while creating document to freeze cluster writes'
@@ -476,7 +479,7 @@ class ElasticsearchCluster:
         if self._dry_run:
             return
         try:
-            self._elasticsearch.delete(index=self._freeze_writes_index, doc_id='freeze-everything')
+            self._elasticsearch.delete(index=self._freeze_writes_index, id='freeze-everything')
         except TransportError as e:
             raise ElasticsearchClusterError(
                 'Encountered error while deleting document to unfreeze cluster writes'
