@@ -337,6 +337,12 @@ class TestPuppetMaster:
         with pytest.raises(puppet.PuppetMasterError, match='The master_host instance must target only one host, got 2'):
             puppet.PuppetMaster(self.mocked_master_host)
 
+    def test_delete(self):
+        """It should delete the host from Puppet master and PuppetDB."""
+        self.puppet_master.delete('test.example.com')
+        self.mocked_master_host.run_sync.assert_called_once_with(
+            'puppet node clean test.example.com', 'puppet node deactivate test.example.com')
+
     def test_destroy(self):
         """It should delete the certificate of the host in the Puppet CA."""
         self.puppet_master.destroy('test.example.com')

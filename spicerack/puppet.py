@@ -295,6 +295,19 @@ class PuppetMaster:
 
         self._master_host = master_host
 
+    def delete(self, hostname):
+        """Remove the host from the Puppet master and PuppetDB.
+
+        Clean up signed certs, cached facts, node objects, and reports in the Puppet master, deactivate it in PuppetDB.
+        Doesn't raise exception if the host was already removed.
+
+        Arguments:
+            hostname (str): the FQDN of the host for which to remove the certificate.
+        """
+        commands = ['puppet node {action} {host}'.format(action=action, host=hostname)
+                    for action in ('clean', 'deactivate')]
+        self._master_host.run_sync(*commands)
+
     def destroy(self, hostname):
         """Remove the certificate for the given hostname.
 
