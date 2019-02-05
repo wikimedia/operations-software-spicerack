@@ -52,14 +52,21 @@ class Reason:
             str: the generated string representation of all the instance attributes.
 
         """
-        parts = [
-            self._reason,
-            '{user}@{host}'.format(user=self._username, host=self._hostname),
-        ]
+        parts = [self._reason, self.owner]
         if self._task_id is not None:
             parts.append(self._task_id)
 
         return ' - '.join(parts)
+
+    @property
+    def owner(self):
+        """Getter for the owner property.
+
+        Returns:
+            str: the origin (user@host) of the currently running code.
+
+        """
+        return '{user}@{host}'.format(user=self._username, host=self._hostname)
 
     def quoted(self):
         """Quoted string representation of the instance, including all attributes.
