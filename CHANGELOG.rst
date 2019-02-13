@@ -2,6 +2,54 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.14`_ (2019-02-13)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* icinga: add context manager for downtimed hosts:
+
+  * Add a context manager to allow to execute other commands while the hosts are downtimed, removing the downtime at the end.
+
+* management: add management module:
+
+  * Add a management module with a ``Management`` class to interact with the management console names.
+  * For now just add a ``get_fqdn()`` method to automatically calculate the management FQDN for a given hostname.
+
+* puppet: add ``check_enabled()`` and ``check_disabled()`` methods.
+* decorators: make ``retry()`` DRY-RUN aware:
+
+  * When running in DRY-RUN mode no real changes are done and usually the ``@retry`` decorated methods are checking
+    for some action to be propagated or completed. Hence when in DRY-RUN mode they tend to fail and retry until the
+    *tries* attempts are exhausted, adding unnecessary time to the DRY-RUN.
+  * With this patch the ``retry()`` decorator is able to automagically detect if it's a DRY-RUN mode when called by
+    any instance method that has a ``self._dry_run`` property or, in the special case of ``RemoteHostsAdapter``
+    derived instances, it has a ``self._remote_hosts._dry_run`` property.
+
+* puppet: add ``delete()`` method to remove a host from PuppetDB and clean up everything on the Puppet master.
+* spicerack: expose the ``icinga_master_host`` property.
+* administrative: add ``owner`` getter to Reason class:
+
+  * Add a public getter for the owner part of a reason, that retuns in a standard format the user running the code and the host where it's running.
+
+Minor improvements
+""""""""""""""""""
+
+* decorators: improve tests.
+* documentation: fine-tune generated documentation.
+
+Bug Fixes
+"""""""""
+
+* dns: remove unused ``dry_run`` argument.
+* Add missing timeout to requests calls.
+* dns: fix logging message.
+* elasticsearch_cluster: change ``is_green()`` implementation.
+* elasticsearch_cluster: fix issues found during live tests.
+* spicerack: fix ``__version__``.
+* ipmi: fix typos in docstrings.
+
 `v0.0.13`_ (2019-01-14)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -223,3 +271,4 @@ New features
 
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`v0.0.13`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.13
+.. _`v0.0.14`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.14

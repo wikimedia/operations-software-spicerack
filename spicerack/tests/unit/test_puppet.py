@@ -116,6 +116,54 @@ class TestPuppetHosts:
         self.mocked_remote_hosts.run_sync.assert_called_once_with(
             'enable-puppet {reason}'.format(reason=REASON.quoted()))
 
+    def test_check_enabled_ok(self):
+        """It should check that all hosts have Puppet enabled."""
+        host1 = NodeSet('test1.example.com')
+        host2 = NodeSet('test2.example.com')
+        results = [
+            (host1, MsgTreeElem(b'0', parent=MsgTreeElem())),
+            (host2, MsgTreeElem(b'0', parent=MsgTreeElem()))
+        ]
+        self.mocked_remote_hosts.run_sync.return_value = iter(results)
+        self.puppet_hosts.check_enabled()
+
+    def test_check_enabled_raise(self):
+        """It should raise PuppetHostsCheckError if Puppet is disabled on some hosts."""
+        host1 = NodeSet('test1.example.com')
+        host2 = NodeSet('test2.example.com')
+        results = [
+            (host1, MsgTreeElem(b'0', parent=MsgTreeElem())),
+            (host2, MsgTreeElem(b'1', parent=MsgTreeElem()))
+        ]
+        self.mocked_remote_hosts.run_sync.return_value = iter(results)
+        with pytest.raises(puppet.PuppetHostsCheckError,
+                           match='Puppet is not enabled on those hosts: test2.example.com'):
+            self.puppet_hosts.check_enabled()
+
+    def test_check_disabled_ok(self):
+        """It should check that all hosts have Puppet disabled."""
+        host1 = NodeSet('test1.example.com')
+        host2 = NodeSet('test2.example.com')
+        results = [
+            (host1, MsgTreeElem(b'1', parent=MsgTreeElem())),
+            (host2, MsgTreeElem(b'1', parent=MsgTreeElem()))
+        ]
+        self.mocked_remote_hosts.run_sync.return_value = iter(results)
+        self.puppet_hosts.check_disabled()
+
+    def test_check_disabled_raise(self):
+        """It should raise PuppetHostsCheckError if Puppet is disabled on some hosts."""
+        host1 = NodeSet('test1.example.com')
+        host2 = NodeSet('test2.example.com')
+        results = [
+            (host1, MsgTreeElem(b'1', parent=MsgTreeElem())),
+            (host2, MsgTreeElem(b'0', parent=MsgTreeElem()))
+        ]
+        self.mocked_remote_hosts.run_sync.return_value = iter(results)
+        with pytest.raises(puppet.PuppetHostsCheckError,
+                           match='Puppet is not disabled on those hosts: test2.example.com'):
+            self.puppet_hosts.check_disabled()
+
     @pytest.mark.parametrize('kwargs, expected', (
         ({}, ''),
         ({'enable_reason': REASON}, '--enable ' + REASON.quoted()),
@@ -288,6 +336,12 @@ class TestPuppetMaster:
         self.mocked_master_host.__len__.return_value = 2
         with pytest.raises(puppet.PuppetMasterError, match='The master_host instance must target only one host, got 2'):
             puppet.PuppetMaster(self.mocked_master_host)
+
+    def test_delete(self):
+        """It should delete the host from Puppet master and PuppetDB."""
+        self.puppet_master.delete('test.example.com')
+        self.mocked_master_host.run_sync.assert_called_once_with(
+            'puppet node clean test.example.com', 'puppet node deactivate test.example.com')
 
     def test_destroy(self):
         """It should delete the certificate of the host in the Puppet CA."""

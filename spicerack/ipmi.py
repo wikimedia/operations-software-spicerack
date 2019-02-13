@@ -1,6 +1,7 @@
 """IPMI module.
 
-TODO: replace with pyghmi.
+Todo:
+    replace with pyghmi.
 """
 import logging
 import os
@@ -39,11 +40,11 @@ class Ipmi:
         self._dry_run = dry_run
 
     def command(self, mgmt_hostname, command_parts, is_safe=False):  # pylint: disable=no-self-use
-        """Run an ipmitool command for a remote managment console hostname.
+        """Run an ipmitool command for a remote management console hostname.
 
         Arguments:
             mgmt_hostname (str): the FQDN of the management interface of the host to target.
-            command_parts (list): a list with the IPMI command components to execute.
+            command_parts (list): a list of :py:class:`str` with the IPMI command components to execute.
             is_safe (bool, optional): if this is a safe command to run also in DRY RUN mode.
 
         Returns:
@@ -70,7 +71,7 @@ class Ipmi:
         return output
 
     def check_connection(self, mgmt_hostname):
-        """Ensure that remote IPMI is working for the managment console hostname.
+        """Ensure that remote IPMI is working for the management console hostname.
 
         Arguments:
             mgmt_hostname (str): the FQDN of the management interface of the host to target.

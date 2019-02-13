@@ -5,7 +5,6 @@ Spicerack Python API autodoc.
 
 .. automodule:: spicerack
   :no-inherited-members:
-  :special-members: __init__,__new__
 
 .. autodata:: __version__
 
@@ -17,7 +16,6 @@ Spicerack Python API autodoc.
    spicerack.confctl
    spicerack.config
    spicerack.constants
-   spicerack.cookbook
    spicerack.debmonitor
    spicerack.decorators
    spicerack.dns
@@ -27,10 +25,12 @@ Spicerack Python API autodoc.
    spicerack.icinga
    spicerack.interactive
    spicerack.ipmi
-   spicerack.log
    spicerack.mediawiki
    spicerack.mysql
    spicerack.phabricator
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote
+
+.. The spicerack.cookbook and spicerack.log module are explicitely excluded from the public documentation as they
+   should not be used directly by the cookbooks.

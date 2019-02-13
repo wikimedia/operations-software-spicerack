@@ -135,7 +135,7 @@ class RedisInstance:
         """Getter to check if the current instance is a master.
 
         Returns:
-            bool: True if the instance is a master, False otherwise.
+            bool: :py:data:`True` if the instance is a master, :py:data:`False` otherwise.
 
         """
         return self._client.info('replication')['role'] == 'master'
@@ -146,7 +146,7 @@ class RedisInstance:
 
         Returns:
             tuple: a 2-element tuple with (host/IP, port) of the master instance. If there is no master configured
-                (None, None) is returned.
+            (None, None) is returned.
 
         """
         data = self._client.info('replication')
@@ -173,7 +173,7 @@ class RedisInstance:
         """Start the replica from the given master instance.
 
         Arguments:
-            spicerack.redis_cluster.RedisInstance: the master instance.
+            master (spicerack.redis_cluster.RedisInstance): the master instance.
         """
         self._client.slaveof(master.host, master.port)
 

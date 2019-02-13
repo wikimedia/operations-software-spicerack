@@ -45,7 +45,7 @@ def test_start_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.start_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('systemctl start "elasticsearch_*@*"')
+    mocked_remote_hosts.run_sync.assert_called_with('systemctl start "elasticsearch_*@*" --all')
 
 
 def test_stop_elasticsearch():
@@ -54,7 +54,7 @@ def test_stop_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.stop_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('systemctl stop "elasticsearch_*@*"')
+    mocked_remote_hosts.run_sync.assert_called_with('systemctl stop "elasticsearch_*@*" --all')
 
 
 def test_restart_elasticsearch():
@@ -63,7 +63,7 @@ def test_restart_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.restart_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('systemctl restart "elasticsearch_*@*"')
+    mocked_remote_hosts.run_sync.assert_called_with('systemctl restart "elasticsearch_*@*" --all')
 
 
 def test_depool_nodes():
@@ -465,7 +465,7 @@ class TestElasticsearchClusters:
         self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError('test'))
         self.elasticsearch2.cluster.health = mock.Mock(side_effect=TransportError('test'))
         elasticsearchclusters = ec.ElasticsearchClusters(self.clusters, None)
-        with pytest.raises(TransportError):
+        with pytest.raises(ec.ElasticsearchClusterCheckError):
             elasticsearchclusters.wait_for_green(timedelta(seconds=20))
             assert mocked_sleep.called
             assert self.elasticsearch1.cluster.health.call_count == 2
@@ -498,6 +498,13 @@ class TestElasticsearchClusters:
         nodes_not_restarted = nodes_not_restarted.split(',')
         nodes_not_restarted.sort()
         assert nodes_not_restarted == ['el1*', 'el2*', 'el3*', 'el4*']
+
+    def test_get_next_clusters_nodes_raises_error_when_size_is_less_than_one(self):
+        """Test that next nodes belong in the same row on each cluster."""
+        since = datetime.utcfromtimestamp(20 / 1000)
+        elasticsearchclusters = ec.ElasticsearchClusters(self.clusters, None, dry_run=False)
+        with pytest.raises(ec.SpicerackCheckError):
+            elasticsearchclusters.get_next_clusters_nodes(since, 0)
 
     def test_get_next_nodes_returns_less_nodes_than_specified(self):
         """Test that the nodes returned is less than specified based on if they have been restarted for each clusters"""

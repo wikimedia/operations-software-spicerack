@@ -29,6 +29,12 @@ def test_reason_init_double_quotes_in_params(failing_param_name, args, kwargs):
         administrative.Reason(*args, **kwargs)
 
 
+def test_reason_owner():
+    """It should return the owner part."""
+    reason = administrative.Reason('Reason message', 'user1', 'host1')
+    assert reason.owner == 'user1@host1'
+
+
 def test_reason_quoted():
     """It should return the double quoted string representation of the instance."""
     reason = administrative.Reason('Reason message', 'user1', 'host1')

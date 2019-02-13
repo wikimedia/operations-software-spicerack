@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from subprocess import CalledProcessError, check_output  # nosec
 
+from cumin import NodeSet
 from cumin.transports import Command
 
 from spicerack.decorators import retry
@@ -13,6 +14,7 @@ from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import RemoteExecutionError, RemoteHostsAdapter
 
 
+PUPPET_COMMON_SCRIPT = '/usr/local/share/bash/puppet-common.sh'
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -96,13 +98,37 @@ class PuppetHosts(RemoteHostsAdapter):
         logger.info('Enabling Puppet with reason %s on %d hosts: %s', reason.quoted(), len(self), self)
         self._remote_hosts.run_sync('enable-puppet {reason}'.format(reason=reason.quoted()))
 
+    def check_enabled(self):
+        """Check if Puppet is enabled on all hosts.
+
+        Raises:
+            spicerack.puppet.PuppetHostsCheckError: if Puppet is disabled on some hosts.
+
+        """
+        disabled = self._get_disabled()[True]
+        if disabled:
+            raise PuppetHostsCheckError(
+                'Puppet is not enabled on those hosts: {hosts}'.format(hosts=disabled))
+
+    def check_disabled(self):
+        """Check if Puppet is disabled on all hosts.
+
+        Raises:
+            spicerack.puppet.PuppetHostsCheckError: if Puppet is enabled on some hosts.
+
+        """
+        enabled = self._get_disabled()[False]
+        if enabled:
+            raise PuppetHostsCheckError(
+                'Puppet is not disabled on those hosts: {hosts}'.format(hosts=enabled))
+
     def run(self, timeout=300, enable_reason=None, quiet=False,  # pylint: disable=too-many-arguments
             failed_only=False, force=False, attempts=0, batch_size=10):
         """Run Puppet.
 
         Arguments:
             timeout (int, optional): the timeout in seconds to set in Cumin for the execution of the command.
-            enable_reason (spicerack.administrative.Reason, optional): the reason to use to contestually re-enable
+            enable_reason (spicerack.administrative.Reason, optional): the reason to use to contextually re-enable
                 Puppet if it was disabled.
             quiet (bool, optional): suppress Puppet output if True.
             failed_only (bool, optional): run Puppet only if the last run failed.
@@ -204,8 +230,8 @@ class PuppetHosts(RemoteHostsAdapter):
 
         """
         remaining_nodes = self._remote_hosts.hosts
-        command = ("source /usr/local/share/bash/puppet-common.sh && last_run_success && "
-                   "awk /last_run/'{ print $2 }' \"${PUPPET_SUMMARY}\"")
+        command = ("source {file} && last_run_success && "
+                   "awk /last_run/'{{ print $2 }}' \"${{PUPPET_SUMMARY}}\"").format(file=PUPPET_COMMON_SCRIPT)
 
         logger.info('Polling the completion of a successful Puppet run')
         try:
@@ -225,6 +251,25 @@ class PuppetHosts(RemoteHostsAdapter):
                 'Unable to get successful Puppet run from: {nodes}'.format(nodes=remaining_nodes))
 
         logger.info('Successful Puppet run found')
+
+    def _get_disabled(self):
+        """Check if Puppet is disabled on the hosts.
+
+        Returns:
+            dict: a dict with :py:class:`bool` keys for Puppet disabled or not and hosts
+            :py:class:`ClusterShell.NodeSet.NodeSet` as values.
+
+        """
+        results = self._remote_hosts.run_sync(
+            'source {file} && test -f "${{PUPPET_DISABLEDLOCK}}" && echo "1" || echo "0"'.format(
+                file=PUPPET_COMMON_SCRIPT), is_safe=True)
+
+        disabled = {True: NodeSet(), False: NodeSet()}
+        for nodeset, output in results:
+            result = bool(int(output.message().decode().strip()))
+            disabled[result] |= nodeset
+
+        return disabled
 
 
 class PuppetMaster:
@@ -249,6 +294,19 @@ class PuppetMaster:
                 num=len(master_host), hosts=master_host))
 
         self._master_host = master_host
+
+    def delete(self, hostname):
+        """Remove the host from the Puppet master and PuppetDB.
+
+        Clean up signed certs, cached facts, node objects, and reports in the Puppet master, deactivate it in PuppetDB.
+        Doesn't raise exception if the host was already removed.
+
+        Arguments:
+            hostname (str): the FQDN of the host for which to remove the certificate.
+        """
+        commands = ['puppet node {action} {host}'.format(action=action, host=hostname)
+                    for action in ('clean', 'deactivate')]
+        self._master_host.run_sync(*commands)
 
     def destroy(self, hostname):
         """Remove the certificate for the given hostname.
@@ -341,12 +399,18 @@ class PuppetMaster:
         Returns:
             dict: as returned by the Puppet CA CLI with the render as JSON option set. As example::
 
-                {'dns_alt_names': ['DNS:service.example.com'],
-                 'fingerprint': '00:FF:...',
-                 'fingerprints': {
-                    'SHA1': '00:FF:...', 'SHA256': '00:FF:...', 'SHA512': '00:FF:...', 'default': '00:FF:...'},
-                 'name': 'host.example.com',
-                 'state': 'signed'}
+                {
+                    'dns_alt_names': ['DNS:service.example.com'],
+                    'fingerprint': '00:FF:...',
+                    'fingerprints': {
+                        'SHA1': '00:FF:...',
+                        'SHA256': '00:FF:...',
+                        'SHA512': '00:FF:...',
+                        'default': '00:FF:...',
+                    },
+                    'name': 'host.example.com',
+                    'state': 'signed',
+                }
 
         Raises:
             spicerack.puppet.PuppetMasterCheckError: if no certificate is found.

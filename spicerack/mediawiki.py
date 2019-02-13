@@ -81,7 +81,7 @@ class MediaWiki:
         url = MediaWiki._siteinfo_url.format(dc=datacenter)
         headers = {'X-Forwarded-Proto': 'https', 'Host': 'en.wikipedia.org'}
 
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=3)
         response.raise_for_status()
 
         return response.json()

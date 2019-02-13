@@ -2,6 +2,7 @@
 import logging
 import time
 
+from contextlib import contextmanager
 from datetime import timedelta
 
 from spicerack.exceptions import SpicerackError
@@ -59,11 +60,26 @@ class Icinga:
         self._command_file = command_file
         return self._command_file
 
+    @contextmanager
+    def hosts_downtimed(self, hosts, reason, *, duration=timedelta(hours=4)):
+        """Context manager to perform actions while the hosts are downtimed on Icinga.
+
+        Arguments:
+            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to downtime.
+            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
+            duration (datetime.timedelta, optional): the length of the downtime period.
+        """
+        self.downtime_hosts(hosts, reason, duration=duration)
+        try:
+            yield
+        finally:
+            self.remove_downtime(hosts)
+
     def downtime_hosts(self, hosts, reason, *, duration=timedelta(hours=4)):
         """Downtime hosts on the Icinga server for the given time with a message.
 
         Arguments:
-            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to downtime.
+            hosts (list, ClusterShell.NodeSet.NodeSet): an iterable with the list of hostnames to downtime.
             reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
             duration (datetime.timedelta, optional): the length of the downtime period.
         """
@@ -85,7 +101,8 @@ class Icinga:
         """Remove a downtime from a set of hosts.
 
         Arguments:
-            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+            hosts (list, ClusterShell.NodeSet.NodeSet): an iterable with the list of hostnames to iterate the command
+                for.
         """
         self.host_command('DEL_DOWNTIME_BY_HOST_NAME', hosts)
 
@@ -94,7 +111,8 @@ class Icinga:
 
         Arguments:
             command (str): the Icinga command to execute.
-            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+            hosts (list, ClusterShell.NodeSet.NodeSet): an iterable with the list of hostnames to iterate the command
+                for.
             *args: optional positional arguments to pass to the command.
 
         See Also:

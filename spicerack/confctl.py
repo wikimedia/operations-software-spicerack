@@ -16,7 +16,7 @@ class ConfctlError(SpicerackError):
 
 
 class Confctl:
-    """Conftl class to abstract conftool operations."""
+    """Confctl class to abstract conftool operations."""
 
     def __init__(self, config='/etc/conftool/config.yaml', schema='/etc/conftool/schema.yaml', dry_run=True):
         """Initialize the instance.
@@ -33,7 +33,7 @@ class Confctl:
     def entity(self, entity_name):
         """Get the Conftool specific entity class.
 
-        Argumetns:
+        Arguments:
             entity_name (str): the name of the entiryself.
 
         Returns:

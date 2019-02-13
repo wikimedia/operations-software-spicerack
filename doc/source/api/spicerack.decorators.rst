@@ -2,4 +2,4 @@ decorators
 ==========
 
 .. automodule:: spicerack.decorators
-   :special-members: __init__
+   :exclude-members: ensure_wrap, get_backoff_sleep

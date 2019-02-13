@@ -13,7 +13,7 @@ import curator
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
 
 from spicerack.decorators import retry
-from spicerack.exceptions import SpicerackError
+from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import RemoteHostsAdapter
 
 
@@ -40,7 +40,11 @@ ELASTICSEARCH_CLUSTERS = {
 
 
 class ElasticsearchClusterError(SpicerackError):
-    """Exception class for errors of this module."""
+    """Custom Exception class for errors of this module."""
+
+
+class ElasticsearchClusterCheckError(SpicerackCheckError):
+    """Custom Exception class for check errors of this module."""
 
 
 def create_elasticsearch_clusters(clustergroup, remote, dry_run=True):
@@ -52,8 +56,8 @@ def create_elasticsearch_clusters(clustergroup, remote, dry_run=True):
         dry_run (bool, optional):  whether this is a DRY-RUN.
 
     Raises:
-        spicerack.elasticsearch_cluster.ElasticsearchClusterError:
-            Thrown when the requested cluster configuration is not found.
+        spicerack.elasticsearch_cluster.ElasticsearchClusterError: Thrown when the requested cluster configuration is
+            not found.
 
     Returns:
         spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
@@ -85,7 +89,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         self._dry_run = dry_run
 
     def get_remote_hosts(self):
-        """Returns elasticsearch remote hosts
+        """Returns elasticsearch remote hosts.
 
         Returns:
             spicerack.remote.RemoteHosts: RemoteHosts instance for this adapter.
@@ -94,27 +98,27 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         return self._remote_hosts
 
     def start_elasticsearch(self):
-        """Starts all elasticsearch instances"""
+        """Starts all elasticsearch instances."""
         logger.info('Starting all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl start "elasticsearch_*@*"')
+        self._remote_hosts.run_sync('systemctl start "elasticsearch_*@*" --all')
 
     def stop_elasticsearch(self):
-        """Stops all elasticsearch instances"""
+        """Stops all elasticsearch instances."""
         logger.info('Stopping all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl stop "elasticsearch_*@*"')
+        self._remote_hosts.run_sync('systemctl stop "elasticsearch_*@*" --all')
 
     def restart_elasticsearch(self):
-        """Restarts all elasticsearch instances"""
+        """Restarts all elasticsearch instances."""
         logger.info('Restarting all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl restart "elasticsearch_*@*"')
+        self._remote_hosts.run_sync('systemctl restart "elasticsearch_*@*" --all')
 
     def depool_nodes(self):
-        """Depool the hosts"""
+        """Depool the hosts."""
         logger.info('Depooling %s', self)
         self._remote_hosts.run_sync('depool')
 
     def pool_nodes(self):
-        """Pool the hosts"""
+        """Pool the hosts."""
         logger.info('Pooling %s', self)
         self._remote_hosts.run_sync('pool')
 
@@ -147,8 +151,8 @@ class ElasticsearchClusters:
         """Initialize ElasticsearchClusters.
 
         Arguments:
-            clusters (list of spicerack.elasticsearch_cluster.ElasticsearchCluster): list of elasticsearch cluster.
-            remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+            clusters (list): list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
+            remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
         self._clusters = clusters
@@ -202,10 +206,10 @@ class ElasticsearchClusters:
         tries = max(floor(timeout / delay), 1)
         logger.info('waiting for clusters to be green')
 
-        @retry(tries=tries, delay=delay, backoff_mode='constant', exceptions=(TransportError,))
+        @retry(tries=tries, delay=delay, backoff_mode='constant', exceptions=(ElasticsearchClusterCheckError,))
         def inner_wait():
             for cluster in self._clusters:
-                cluster.is_green()
+                cluster.check_green()
 
         inner_wait()
 
@@ -220,6 +224,9 @@ class ElasticsearchClusters:
             spicerack.elasticsearch_cluster.ElasticsearchHosts: next eligible nodes for ElasticsearchHosts.
 
         """
+        if size < 1:
+            raise ElasticsearchClusterCheckError("Size of next nodes must be at least 1")
+
         nodes_group = self._get_nodes_group()
         nodes_to_process = [node for node in nodes_group.values()
                             if not ElasticsearchClusters._node_has_been_restarted(node, started_before)]
@@ -291,8 +298,9 @@ class ElasticsearchClusters:
             nodes (list): list containing dicts of elasticsearch nodes.
 
         Returns:
-            dict: dict object containing a normalized rows of elasticsearch nodes.
-                E.g {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
+            dict: dict object containing a normalized rows of elasticsearch nodes. For example::
+
+                {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
 
         """
         rows = defaultdict(list)
@@ -324,11 +332,11 @@ class ElasticsearchCluster:
 
         Arguments:
             elasticsearch (elasticsearch.Elasticsearch): elasticsearch instance.
-            remote (spicerack.remote.Remote): the Remote instance, pre-initialized.
+            remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional):  whether this is a DRY-RUN.
 
         Todo:
-            self._hostname class member will be replaced by the formatted message obtained via Reason,
+            ``self._hostname`` class member will be replaced by the formatted message obtained via Reason,
             this can't be done right now as it needs to be inline with what
             the MW maint script and the Icinga check do at the moment.
         """
@@ -359,7 +367,7 @@ class ElasticsearchCluster:
             node (str): the elasticsearch host.
 
         Returns:
-            bool: True if node is present and False if not present.
+            bool: :py:data:`True` if node is present and :py:data:`False` if not.
 
         """
         nodes_names = [ElasticsearchCluster.split_node_name(node['name'])['name'] for node in self.get_nodes().values()]
@@ -370,13 +378,13 @@ class ElasticsearchCluster:
 
     @staticmethod
     def split_node_name(node_name):
-        """Split node name into hostname and cluster group name
+        """Split node name into hostname and cluster group name.
 
         Arguments:
-            node_name (str): node name containing hostname and cluster name separated by '-'
+            node_name (str): node name containing hostname and cluster name separated by ``-``.
 
         Returns:
-            dict: dict containing the node name and the cluster name
+            dict: dictionary containing the node name and the cluster name.
 
         """
         node_name_and_group = {}
@@ -421,10 +429,18 @@ class ElasticsearchCluster:
         else:
             cluster_routing.do_action()
 
-    def is_green(self):
-        """Cluster health status."""
-        self._elasticsearch.cluster.health(wait_for_status='green', params={'timeout': '1s'})
-        return True
+    def check_green(self):
+        """Cluster health status.
+
+        Raises:
+            spicerack.elasticsearch_cluster.ElasticsearchClusterCheckError:
+                This is raised when request times and cluster is not green.
+
+        """
+        try:
+            self._elasticsearch.cluster.health(wait_for_status='green', params={'timeout': '1s'})
+        except TransportError as e:
+            raise ElasticsearchClusterCheckError('Request timed out while waiting for green') from e
 
     @contextmanager
     def frozen_writes(self, reason):
@@ -451,7 +467,7 @@ class ElasticsearchCluster:
             return
         try:
             self._elasticsearch.index(index=self._freeze_writes_index, doc_type=self._freeze_writes_doc_type,
-                                      doc_id='freeze-everything', body=doc)
+                                      id='freeze-everything', body=doc)
         except TransportError as e:
             raise ElasticsearchClusterError(
                 'Encountered error while creating document to freeze cluster writes'
@@ -463,16 +479,18 @@ class ElasticsearchCluster:
         if self._dry_run:
             return
         try:
-            self._elasticsearch.delete(index=self._freeze_writes_index, doc_id='freeze-everything')
+            self._elasticsearch.delete(index=self._freeze_writes_index, id='freeze-everything')
         except TransportError as e:
             raise ElasticsearchClusterError(
                 'Encountered error while deleting document to unfreeze cluster writes'
             ) from e
 
     def flush_markers(self, timeout=timedelta(seconds=60)):
-        """Flush markers unsynced. flush + flush_synced is called here because from experience,
+        """Flush markers unsynced.
 
-            it result into less shards not syncing. This also makes recovery faster.
+        Note:
+            ``flush`` and ``flush_synced`` are called here because from experience, it results in fewer shards not
+            syncing. This also makes the recovery faster.
 
         Arguments:
             timeout (datetime.timedelta): timedelta object for elasticsearch request timeout.

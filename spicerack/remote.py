@@ -109,7 +109,7 @@ class RemoteHosts:
 
         Arguments:
             config (cumin.Config): the configuration for Cumin.
-            hosts (cumin.NodeSet): the hosts to target for the remote execution.
+            hosts (ClusterShell.NodeSet.NodeSet): the hosts to target for the remote execution.
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         Raises:
@@ -128,7 +128,7 @@ class RemoteHosts:
         """Getter for the hosts property.
 
         Returns:
-            cumin.NodeSet: a copy of the targeted hosts.
+            ClusterShell.NodeSet.NodeSet: a copy of the targeted hosts.
 
         """
         return self._hosts.copy()
@@ -157,8 +157,8 @@ class RemoteHosts:
         Arguments:
             *commands (str, cumin.transports.Command): arbitrary number of commands to execute on the target hosts.
             success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
-            batch_size (int, str, optional): the batch size for cumin, either as percentage (i.e. '25%')
-                or absolute number (i.e. 5).
+            batch_size (int, str, optional): the batch size for cumin, either as percentage (e.g. ``25%``)
+                or absolute number (e.g. ``5``).
             batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
             is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
                 command that doesn't modify the state.
@@ -179,8 +179,8 @@ class RemoteHosts:
         Arguments:
             *commands (str, cumin.transports.Command): arbitrary number of commands to execute on the target hosts.
             success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
-            batch_size (int, str, optional): the batch size for cumin, either as percentage (i.e. '25%')
-                or absolute number (i.e. 5).
+            batch_size (int, str, optional): the batch size for cumin, either as percentage (e.g. ``25%``)
+                or absolute number (e.g. ``5``).
             batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
             is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
                 command that doesn't modify the state.
@@ -244,15 +244,22 @@ class RemoteHosts:
         """Get current uptime.
 
         Returns:
-            list: a list of 2-element tuples with hosts NodeSet as first item and float uptime as second item.
+            list: a list of 2-element :py:class:`tuple` instances with hosts :py:class:`ClusterShell.NodeSet.NodeSet`
+            as first item and :py:class:`float` uptime as second item.
 
         """
         results = self.run_sync(transports.Command('cat /proc/uptime', timeout=10), is_safe=True)
-        # Callback to extract the uptime from /proc/uptime (i.e. 12345.67 123456789.00).
+        # Callback to extract the uptime from /proc/uptime (i.e. getting 12345.67 from '12345.67 123456789.00').
         return RemoteHosts.results_to_list(results, callback=lambda output: float(output.split()[0]))
 
     def init_system(self):
-        """Detect the init system."""
+        """Detect the init system.
+
+        Returns:
+            list: a list of 2-element tuples with hosts :py:class:`ClusterShell.NodeSet.NodeSet` as first item and the
+            init system :py:class:`str` as second.
+
+        """
         results = self.run_sync(transports.Command('ps --no-headers -o comm 1', timeout=10), is_safe=True)
         return RemoteHosts.results_to_list(results)
 
@@ -260,7 +267,8 @@ class RemoteHosts:
     def results_to_list(results, callback=None):
         """Extract execution results into a list converting them with an optional callback.
 
-        TODO: move it directly into Cumin.
+        Todo:
+            move it directly into Cumin.
 
         Arguments:
             results (generator): generator returned by run_sync() and run_async() to iterate over the results.
@@ -269,8 +277,8 @@ class RemoteHosts:
                 extracted value. The return type can be chosen freely.
 
         Returns:
-            list: a list of 2-element tuples with hosts NodeSet as first item and and extracted outputs as second.
-                This is because NodeSet are not hashable.
+            list: a list of 2-element tuples with hosts :py:class:`ClusterShell.NodeSet.NodeSet` as first item and the
+            extracted outputs :py:class:`str` as second. This is because NodeSet are not hashable.
 
         Raises:
             spicerack.remote.RemoteError: if unable to run the callback.
@@ -299,14 +307,14 @@ class RemoteHosts:
                 of cumin.transports.Command instances.
             mode (str, optional): the Cumin's mode of execution. Accepted values: sync, async.
             success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
-            batch_size (int, str, optional): the batch size for cumin, either as percentage (i.e. '25%')
-                or absolute number (i.e. 5).
+            batch_size (int, str, optional): the batch size for cumin, either as percentage (e.g. ``25%``) or absolute
+                number (e.g. ``5``).
             batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
             is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
                 command that doesn't modify the state.
 
         Returns:
-            generator: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+            generator: as returned by :py:meth:`cumin.transports.BaseWorker.get_results` to iterate over the results.
 
         Raises:
             RemoteExecutionError: if the Cumin execution returns a non-zero exit code.

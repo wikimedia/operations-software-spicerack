@@ -40,7 +40,7 @@ def get_username():
     """Detect and return the name of the effective running user even if run as root.
 
     Returns:
-        str: the name of the effective running user or '-' if unable to detect it.
+        str: the name of the effective running user or ``-`` if unable to detect it.
 
     """
     user = os.getenv('USER')

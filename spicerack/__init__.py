@@ -16,6 +16,7 @@ from spicerack.elasticsearch_cluster import create_elasticsearch_clusters
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
+from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.phabricator import create_phabricator
@@ -24,7 +25,7 @@ from spicerack.remote import Remote
 
 
 try:
-    __version__ = get_distribution(__name__).version
+    __version__ = get_distribution('wikimedia-spicerack').version  # Must be the same used as 'name' in setup.py
     """:py:class:`str`: the version of the current Spicerack module."""
 except DistributionNotFound:  # pragma: no cover - this should never happen during tests
     pass  # package is not installed
@@ -42,11 +43,11 @@ class Spicerack:
         Arguments:
             verbose (bool, optional): whether to set the verbose mode.
             dry_run (bool, optional): whether this is a DRY-RUN.
-            cumin_config (str): the path to Cumin's configuration file.
+            cumin_config (str, optional): the path to Cumin's configuration file.
             conftool_config (str, optional): the path to Conftool's configuration file.
             conftool_schema (str, optional): the path to Conftool's schema file.
-            debmonitor_config (str): the path to Debmonitor's INI configuration file. It must have at least the
-                following schema::
+            debmonitor_config (str, optional): the path to Debmonitor's INI configuration file. It must have at least
+                the following schema::
 
                     [DEFAULT]
                     server=debmonitor.example.com
@@ -72,7 +73,7 @@ class Spicerack:
 
     @property
     def dry_run(self):
-        """Getter for the dry_run property.
+        """Getter for the ``dry_run`` property.
 
         Returns:
             bool: True if the DRY-RUN mode is set, False otherwise.
@@ -82,7 +83,7 @@ class Spicerack:
 
     @property
     def verbose(self):
-        """Getter for the dry_run property.
+        """Getter for the ``verbose`` property.
 
         Returns:
             bool: True if the verbose mode is set, False otherwise.
@@ -92,7 +93,7 @@ class Spicerack:
 
     @property
     def username(self):
-        """Getter for the username property.
+        """Getter for the current username.
 
         Returns:
             str: the name of the effective running user.
@@ -102,7 +103,7 @@ class Spicerack:
 
     @property
     def irc_logger(self):
-        """Getter for the irc_logger property.
+        """Getter for the ``irc_logger`` property.
 
         Returns:
             logging.Logger: the logger instance to write to IRC.
@@ -110,11 +111,21 @@ class Spicerack:
         """
         return self._irc_logger
 
+    @property
+    def icinga_master_host(self):
+        """Getter for the ``icinga_master_host`` property.
+
+        Returns:
+            spicerack.remote.RemoteHosts: the instance to execute commands on the Icinga master host.
+
+        """
+        return self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
+
     def remote(self):
         """Get a Remote instance.
 
         Returns:
-            spicerack.remote.Remote: the pre-configured Remote instance.
+            spicerack.remote.Remote: the Remote instance.
 
         """
         return Remote(self._cumin_config, dry_run=self._dry_run)
@@ -123,7 +134,8 @@ class Spicerack:
         """Access a Conftool specific entity instance.
 
         Arguments:
-            entity_name (str): the name of a Conftool entity. Available values: node, service, discovery, mwconfig.
+            entity_name (str): the name of a Conftool entity. Possible values: ``node``, ``service``, ``discovery``,
+                ``mwconfig``.
 
         Returns:
             spicerack.confctl.ConftoolEntity: the confctl entity instance.
@@ -134,14 +146,14 @@ class Spicerack:
 
         return self._confctl.entity(entity_name)
 
-    def dns(self):
+    def dns(self):  # pylint: disable=no-self-use
         """Get a Dns instance.
 
         Returns:
             spicerack.dns.Dns: a Dns instance that will use the operating system default namserver(s).
 
         """
-        return Dns(dry_run=self._dry_run)
+        return Dns()
 
     def discovery(self, *records):
         """Get a Discovery instance.
@@ -159,7 +171,7 @@ class Spicerack:
         """Get a MediaWiki instance.
 
         Returns:
-            spicerack.mediawiki.MediaWiki: the pre-configured MediaWiki instance.
+            spicerack.mediawiki.MediaWiki: the MediaWiki instance.
 
         """
         return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
@@ -168,7 +180,7 @@ class Spicerack:
         """Get a Mysql instance.
 
         Returns:
-            spicerack.mysql.Mysql: the pre-configured Mysql instance.
+            spicerack.mysql.Mysql: the Mysql instance.
 
         """
         return Mysql(self.remote(), dry_run=self._dry_run)
@@ -189,10 +201,10 @@ class Spicerack:
         """Get an ElasticsearchClusters instance.
 
         Arguments:
-            clustergroup (str): name of cluster group e.g search_eqiad
+            clustergroup (str): name of cluster group e.g ``search_eqiad``.
 
         Returns:
-            spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance
+            spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
 
         """
         return create_elasticsearch_clusters(clustergroup, self.remote(), dry_run=self._dry_run)
@@ -218,8 +230,7 @@ class Spicerack:
             spicerack.icinga.Icinga: Icinga instance.
 
         """
-        icinga_host = self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
-        return Icinga(icinga_host)
+        return Icinga(self.icinga_master_host)
 
     def puppet(self, remote_hosts):  # pylint: disable=no-self-use
         """Get a PuppetHosts instance for the given remote hosts.
@@ -286,3 +297,12 @@ class Spicerack:
         """
         options = load_ini_config(self._debmonitor_config).defaults()
         return Debmonitor(options['server'], options['cert'], options['key'], dry_run=self._dry_run)
+
+    def management(self):
+        """Get a Management instance to interact with the management interfaces.
+
+        Returns:
+            spicerack.management.Management: the instance.
+
+        """
+        return Management(self.dns())
