@@ -2,6 +2,14 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.15`_ (2019-02-14)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* elasticsearch: add doc type to delete query.
+
 `v0.0.14`_ (2019-02-13)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -272,3 +280,4 @@ New features
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`v0.0.13`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.13
 .. _`v0.0.14`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.14
+.. _`v0.0.15`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.15
