@@ -479,7 +479,8 @@ class ElasticsearchCluster:
         if self._dry_run:
             return
         try:
-            self._elasticsearch.delete(index=self._freeze_writes_index, id='freeze-everything')
+            self._elasticsearch.delete(index=self._freeze_writes_index, doc_type=self._freeze_writes_doc_type,
+                                       id='freeze-everything')
         except TransportError as e:
             raise ElasticsearchClusterError(
                 'Encountered error while deleting document to unfreeze cluster writes'
