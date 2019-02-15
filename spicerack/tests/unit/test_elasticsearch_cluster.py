@@ -165,7 +165,7 @@ def test_elasticsearch_call_not_made_when_wait_for_elasticsearch_up_in_dry_run()
 
 
 @mock.patch('spicerack.decorators.time.sleep', return_value=None)
-def test_elasticsearch_call_is_retried_when_wait_for_elasticsearch_up_fails(mocked_sleep):
+def test_elasticsearch_call_is_retried_when_wait_for_elasticsearch_up_is_not_up(mocked_sleep):
     """Test that elasticsearch instance is called more than once when node is not found in cluster."""
     remote = mock.Mock(spec_set=Remote)
     elastic_alpha = Elasticsearch('localhost:9200')
@@ -198,6 +198,26 @@ def test_elasticsearch_call_is_retried_when_wait_for_elasticsearch_up_fails(mock
          ]
          }
     ]
+
+    elastic_hosts = ec.ElasticsearchHosts(remote, next_nodes, dry_run=False)
+    with pytest.raises(ec.ElasticsearchClusterCheckError):
+        elastic_hosts.wait_for_elasticsearch_up(timedelta(seconds=20))
+        assert mocked_sleep.called
+    assert elastic_alpha.nodes.info.call_count == 4
+
+
+@mock.patch('spicerack.decorators.time.sleep', return_value=None)
+def test_elasticsearch_call_is_retried_when_wait_for_elasticsearch_up_cannot_be_reached(mocked_sleep):
+    """Test that elasticsearch instance is called more than once when the cluster cannot be reached."""
+    remote = mock.Mock(spec_set=Remote)
+    elastic_alpha = Elasticsearch('localhost:9200')
+    elastic_alpha.nodes.info = mock.Mock(side_effect=TransportError)
+    elastic_alpha_cluster = ec.ElasticsearchCluster(elastic_alpha, None, dry_run=False)
+
+    next_nodes = [{
+        'name': 'el5',
+        'clusters_instances': [elastic_alpha_cluster]
+    }]
 
     elastic_hosts = ec.ElasticsearchHosts(remote, next_nodes, dry_run=False)
     with pytest.raises(ec.ElasticsearchClusterError):
