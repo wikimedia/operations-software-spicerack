@@ -2,6 +2,15 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.16`_ (2019-02-18)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* elasticsearch: retry on TransportError while waiting for node to be up
+* Change !log formatting to match Stashbot expectations.
+
 `v0.0.15`_ (2019-02-14)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -281,3 +290,4 @@ New features
 .. _`v0.0.13`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.13
 .. _`v0.0.14`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.14
 .. _`v0.0.15`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.15
+.. _`v0.0.16`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.16

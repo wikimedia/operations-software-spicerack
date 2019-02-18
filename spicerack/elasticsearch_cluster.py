@@ -76,16 +76,16 @@ def create_elasticsearch_clusters(clustergroup, remote, dry_run=True):
 class ElasticsearchHosts(RemoteHostsAdapter):
     """Remotehosts Adapter for managing elasticsearch nodes."""
 
-    def __init__(self, remote_host, next_nodes, dry_run=True):
+    def __init__(self, remote_hosts, nodes, dry_run=True):
         """After calling the super's constructor, initialize other instance variables.
 
         Arguments:
-            remote_host (spicerack.remote.RemoteHosts): the instance with the target hosts.
-            next_nodes (list): list of dicts containing clusters hosts belong to.
+            remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
+            nodes (list): list of dicts containing clusters hosts belong to.
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
-        super().__init__(remote_host)
-        self._next_nodes = next_nodes
+        super().__init__(remote_hosts)
+        self._nodes = nodes
         self._dry_run = dry_run
 
     def get_remote_hosts(self):
@@ -133,12 +133,16 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
         logger.info('waiting for elasticsearch instances to come up on %s', self)
 
-        @retry(tries=tries, delay=delay, backoff_mode='constant', exceptions=(ElasticsearchClusterError, ))
+        @retry(tries=tries, delay=delay, backoff_mode='constant',
+               exceptions=(ElasticsearchClusterError, ElasticsearchClusterCheckError))
         def inner_wait():
-            for node in self._next_nodes:
+            for node in self._nodes:
                 for cluster_instance in node['clusters_instances']:
-                    if not cluster_instance.is_node_in_cluster_nodes(node['name']):
-                        raise ElasticsearchClusterError("Elasticsearch is not up yet")
+                    try:
+                        if not cluster_instance.is_node_in_cluster_nodes(node['name']):
+                            raise ElasticsearchClusterCheckError('Elasticsearch is not up yet')
+                    except TransportError as e:
+                        raise ElasticsearchClusterError('Could not connect to the cluster') from e
 
         if not self._dry_run:
             inner_wait()

@@ -32,7 +32,10 @@ class IRCSocketHandler(logging.Handler):
 
         See https://docs.python.org/3/library/logging.html#handler-objects
         """
-        message = '!log {msg} ({user}@{host})'.format(
+        # Stashbot expects !log messages relayed by logmsgbot to have the
+        # format: "!log <nick> <msg>". The <nick> is parsed out and used as
+        # the label of who actually made the SAL entry.
+        message = '!log {user}@{host} {msg}'.format(
             msg=record.getMessage(), user=self.username, host=socket.gethostname())
         sock = None
 
