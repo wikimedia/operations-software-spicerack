@@ -61,18 +61,23 @@ class Icinga:
         return self._command_file
 
     @contextmanager
-    def hosts_downtimed(self, hosts, reason, *, duration=timedelta(hours=4)):
+    def hosts_downtimed(self, hosts, reason, *, duration=timedelta(hours=4), remove_on_error=False):
         """Context manager to perform actions while the hosts are downtimed on Icinga.
 
         Arguments:
             hosts (list, cumin.NodeSet): an iterable with the list of hostnames to downtime.
             reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
             duration (datetime.timedelta, optional): the length of the downtime period.
+            remove_on_error: should the downtime be removed even if an exception was raised.
         """
         self.downtime_hosts(hosts, reason, duration=duration)
         try:
             yield
-        finally:
+        except BaseException:
+            if remove_on_error:
+                self.remove_downtime(hosts)
+            raise
+        else:
             self.remove_downtime(hosts)
 
     def downtime_hosts(self, hosts, reason, *, duration=timedelta(hours=4)):

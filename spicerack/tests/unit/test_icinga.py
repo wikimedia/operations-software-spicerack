@@ -64,6 +64,30 @@ class TestIcinga:
             mock.call('echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1" > /var/lib/icinga/rw/icinga.cmd')])
         assert mocked_time.called
 
+    def test_downtime_is_kept_when_exception_is_raised(self):
+        """Downtime should not be removed if an exception is raised."""
+        hosts = ['host1']
+        call = 'icinga-downtime -h "host1" -d 14400 -r {reason}'.format(reason=self.reason.quoted())
+
+        with pytest.raises(ValueError):
+            with self.icinga.hosts_downtimed(hosts, self.reason):
+                self.mocked_icinga_host.run_sync.assert_called_once_with(call)
+                self.mocked_icinga_host.run_sync.reset_mock()
+                raise ValueError()
+        assert not self.mocked_icinga_host.run_sync.called
+
+    def test_downtime_is_removed_when_exception_is_raised(self):
+        """Downtime should not be removed if an exception is raised."""
+        hosts = ['host1']
+        call = 'icinga-downtime -h "host1" -d 14400 -r {reason}'.format(reason=self.reason.quoted())
+
+        with pytest.raises(ValueError):
+            with self.icinga.hosts_downtimed(hosts, self.reason, remove_on_error=True):
+                self.mocked_icinga_host.run_sync.assert_called_once_with(call)
+                self.mocked_icinga_host.run_sync.reset_mock()
+                raise ValueError()
+        assert self.mocked_icinga_host.run_sync.called
+
     @pytest.mark.parametrize('hosts', (
         ['host1'],
         ['host1', 'host2'],
