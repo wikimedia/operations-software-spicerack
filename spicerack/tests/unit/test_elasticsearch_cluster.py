@@ -235,6 +235,13 @@ def test_cluster_settings_are_unchanged_when_stopped_replication_is_dry_run():
         assert not elasticsearch.cluster.put_settings.called
 
 
+def test_split_node_names():
+    """split_node_name() support cluster names containing '-'"""
+    node_name, cluster_name = ec.ElasticsearchCluster.split_node_name('node1-cluster-name')
+    assert node_name == 'node1'
+    assert cluster_name == 'cluster-name'
+
+
 class TestElasticsearchClusters:
     """Test class for Elasticsearch Clusters"""
 

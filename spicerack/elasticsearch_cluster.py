@@ -272,9 +272,7 @@ class ElasticsearchClusters:
             cluster_node (dict): the specific cluster node to add to nodes_group.
             cluster (spicerack.elasticsearch_cluster.ElasticsearchCluster): ElasticsearchCluster for cluster node
         """
-        node_name_and_group = ElasticsearchCluster.split_node_name(cluster_node['name'])
-        node_name = node_name_and_group['name']
-        cluster_group_name = node_name_and_group['cluster_group']
+        node_name, cluster_group_name = ElasticsearchCluster.split_node_name(cluster_node['name'])
 
         if node_name not in nodes_group.keys():
             nodes_group[node_name] = {
@@ -375,7 +373,7 @@ class ElasticsearchCluster:
             bool: :py:data:`True` if node is present and :py:data:`False` if not.
 
         """
-        nodes_names = [ElasticsearchCluster.split_node_name(node['name'])['name'] for node in self.get_nodes().values()]
+        nodes_names = [ElasticsearchCluster.split_node_name(node['name'])[0] for node in self.get_nodes().values()]
         if node in nodes_names:
             return True
 
@@ -389,14 +387,10 @@ class ElasticsearchCluster:
             node_name (str): node name containing hostname and cluster name separated by ``-``.
 
         Returns:
-            dict: dictionary containing the node name and the cluster name.
+            (str, str): tuple containing the node name and the cluster name.
 
         """
-        node_name_and_group = {}
-        splitted_names = node_name.split('-')
-        node_name_and_group['name'] = splitted_names[0]
-        node_name_and_group['cluster_group'] = splitted_names[1]
-        return node_name_and_group
+        return node_name.split('-', 1)
 
     @contextmanager
     def stopped_replication(self):
