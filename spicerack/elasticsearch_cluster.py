@@ -100,18 +100,19 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
     def start_elasticsearch(self):
         """Starts all elasticsearch instances."""
-        logger.info('Starting all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl start "elasticsearch_*@*" --all')
+        self._systemctl_for_each_instance('start')
 
     def stop_elasticsearch(self):
         """Stops all elasticsearch instances."""
-        logger.info('Stopping all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl stop "elasticsearch_*@*" --all')
+        self._systemctl_for_each_instance('stop')
 
     def restart_elasticsearch(self):
         """Restarts all elasticsearch instances."""
-        logger.info('Restarting all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl restart "elasticsearch_*@*" --all')
+        self._systemctl_for_each_instance('restart')
+
+    def _systemctl_for_each_instance(self, action):
+        logger.info('%s all elasticsearch instances on %s', action, self)
+        self._remote_hosts.run_sync('cat /etc/elasticsearch/instances | xarg systemctl {action}'.format(action=action))
 
     def depool_nodes(self):
         """Depool the hosts."""
