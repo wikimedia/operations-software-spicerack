@@ -11,6 +11,7 @@ from socket import gethostname
 import curator
 
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
+from urllib3.exceptions import HTTPError
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
@@ -141,7 +142,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
                     try:
                         if not cluster_instance.is_node_in_cluster_nodes(node['name']):
                             raise ElasticsearchClusterCheckError('Elasticsearch is not up yet')
-                    except TransportError as e:
+                    except (TransportError, HTTPError) as e:
                         raise ElasticsearchClusterError('Could not connect to the cluster') from e
 
         if not self._dry_run:
@@ -443,8 +444,8 @@ class ElasticsearchCluster:
         """
         try:
             self._elasticsearch.cluster.health(wait_for_status='green', params={'timeout': '1s'})
-        except TransportError as e:
-            raise ElasticsearchClusterCheckError('Request timed out while waiting for green') from e
+        except (TransportError, HTTPError) as e:
+            raise ElasticsearchClusterCheckError('Error while waiting for green') from e
 
     @contextmanager
     def frozen_writes(self, reason):
