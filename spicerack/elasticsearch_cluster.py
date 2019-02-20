@@ -230,7 +230,7 @@ class ElasticsearchClusters:
 
         """
         if size < 1:
-            raise ElasticsearchClusterCheckError("Size of next nodes must be at least 1")
+            raise ElasticsearchClusterError("Size of next nodes must be at least 1")
 
         nodes_group = self._get_nodes_group()
         nodes_to_process = [node for node in nodes_group.values()

@@ -530,7 +530,7 @@ class TestElasticsearchClusters:
         """Test that next nodes belong in the same row on each cluster."""
         since = datetime.utcfromtimestamp(20 / 1000)
         elasticsearchclusters = ec.ElasticsearchClusters(self.clusters, None, dry_run=False)
-        with pytest.raises(ec.SpicerackCheckError):
+        with pytest.raises(ec.ElasticsearchClusterError):
             elasticsearchclusters.get_next_clusters_nodes(since, 0)
 
     def test_get_next_nodes_returns_less_nodes_than_specified(self):
