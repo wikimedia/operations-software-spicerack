@@ -2,6 +2,21 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.17`_ (2019-02-20)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: add ``remove_on_error`` parameter to the ``hosts_downtimed()`` context manager to decide wether to remove
+  the downtime or not on error.
+
+Bug Fixes
+"""""""""
+
+* elasticsearch: raise logging level to ERROR for elasticsearch
+* elasticsearch: retry on all urllib3 exceptions
+
 `v0.0.16`_ (2019-02-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -291,3 +306,4 @@ New features
 .. _`v0.0.14`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.14
 .. _`v0.0.15`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.15
 .. _`v0.0.16`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.16
+.. _`v0.0.17`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.17
