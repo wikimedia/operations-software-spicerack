@@ -2,6 +2,14 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.18`_ (2019-02-20)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* elasticsearch: access production clusters over HTTPS.
+
 `v0.0.17`_ (2019-02-20)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -307,3 +315,4 @@ New features
 .. _`v0.0.15`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.15
 .. _`v0.0.16`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.16
 .. _`v0.0.17`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.17
+.. _`v0.0.18`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.18

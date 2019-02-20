@@ -22,14 +22,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 ELASTICSEARCH_CLUSTERS = {
     'search': {
         'search_eqiad': {
-            'production-search-eqiad': 'search.svc.eqiad.wmnet:9200',
-            'production-search-omega-eqiad': 'search.svc.eqiad.wmnet:9400',
-            'production-search-psi-eqiad': 'search.svc.eqiad.wmnet:9600',
+            'production-search-eqiad': 'https://search.svc.eqiad.wmnet:9243',
+            'production-search-omega-eqiad': 'https://search.svc.eqiad.wmnet:9443',
+            'production-search-psi-eqiad': 'https://search.svc.eqiad.wmnet:9643',
         },
         'search_codfw': {
-            'production-search-codfw': 'search.svc.codfw.wmnet:9200',
-            'production-search-omega-codfw': 'search.svc.codfw.wmnet:9400',
-            'production-search-psi-codfw': 'search.svc.codfw.wmnet:9600',
+            'production-search-codfw': 'https://search.svc.codfw.wmnet:9243',
+            'production-search-omega-codfw': 'https://search.svc.codfw.wmnet:9443',
+            'production-search-psi-codfw': 'https://search.svc.codfw.wmnet:9643',
         },
         'relforge': {
             'relforge-eqiad': 'relforge1002.eqiad.wmnet:9200',
