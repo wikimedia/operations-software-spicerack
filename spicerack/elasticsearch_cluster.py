@@ -112,7 +112,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
     def _systemctl_for_each_instance(self, action):
         logger.info('%s all elasticsearch instances on %s', action, self)
-        self._remote_hosts.run_sync('cat /etc/elasticsearch/instances | xarg systemctl {action}'.format(action=action))
+        self._remote_hosts.run_sync('cat /etc/elasticsearch/instances | xargs systemctl {action}'.format(action=action))
 
     def depool_nodes(self):
         """Depool the hosts."""

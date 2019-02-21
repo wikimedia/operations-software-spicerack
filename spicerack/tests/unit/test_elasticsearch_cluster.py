@@ -45,7 +45,7 @@ def test_start_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.start_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xarg systemctl start')
+    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xargs systemctl start')
 
 
 def test_stop_elasticsearch():
@@ -54,7 +54,7 @@ def test_stop_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.stop_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xarg systemctl stop')
+    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xargs systemctl stop')
 
 
 def test_restart_elasticsearch():
@@ -63,7 +63,7 @@ def test_restart_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.restart_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xarg systemctl restart')
+    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xargs systemctl restart')
 
 
 def test_depool_nodes():
