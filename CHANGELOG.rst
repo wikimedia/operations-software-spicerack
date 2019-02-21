@@ -2,6 +2,21 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.19`_ (2019-02-21)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* elasticsearch: support cluster names which have ``-`` in them.
+* elasticsearch: ``get_next_clusters_nodes()`` raises ``ElasticsearchClusterError``.
+* elasticsearch: systemctl iterates explicitly on elasticsearch instances.
+
+Miscellanea
+"""""""""""
+
+* setup.py: add ``long_description_content_type``.
+
 `v0.0.18`_ (2019-02-20)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -316,3 +331,4 @@ New features
 .. _`v0.0.16`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.16
 .. _`v0.0.17`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.17
 .. _`v0.0.18`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.18
+.. _`v0.0.19`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.19
