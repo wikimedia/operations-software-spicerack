@@ -9,6 +9,7 @@ import pytest
 from spicerack import ipmi
 
 
+IPMITOOL_BASE = ['ipmitool', '-I', 'lanplus', '-H', 'test-mgmt.example.com', '-U', 'root', '-E']
 BOOTPARAMS_OUTPUT = """
 Boot parameter version: 1
 Boot parameter 5 is valid/unlocked
@@ -22,6 +23,24 @@ Boot parameter data: {bootparams}
    - BIOS verbosity : Console redirection occurs per BIOS configuration setting (default)
    - BIOS Mux Control Override : BIOS uses recommended setting of the mux at the end of POST
 Invalid line
+"""
+USERLIST_OUTPUT = """ID  Name             Callin  Link Auth  IPMI Msg   Channel Priv Limit
+1                    true    false      false      NO ACCESS
+2   root             true    true       true       ADMINISTRATOR
+3                    true    false      false      NO ACCESS
+4                    true    false      false      NO ACCESS
+5                    true    false      false      NO ACCESS
+6                    true    false      false      NO ACCESS
+7                    true    false      false      NO ACCESS
+8                    true    false      false      NO ACCESS
+9   user_number_9    true    false      false      NO ACCESS
+10                   true    false      false      NO ACCESS
+11                   true    false      false      NO ACCESS
+12                   true    false      false      NO ACCESS
+13                   true    false      false      NO ACCESS
+14                   true    false      false      NO ACCESS
+15                   true    false      false      NO ACCESS
+16                   true    false      false      NO ACCESS
 """
 
 
@@ -43,8 +62,7 @@ class TestIpmi:
     def test_command_ok(self, mocked_check_output):
         """It should execute the IPMI command as expected."""
         assert self.ipmi.command('test-mgmt.example.com', ['test_command']) == 'test'
-        mocked_check_output.assert_called_once_with(
-            ['ipmitool', '-I', 'lanplus', '-H', 'test-mgmt.example.com', '-U', 'root', '-E', 'test_command'])
+        mocked_check_output.assert_called_once_with(IPMITOOL_BASE + ['test_command'])
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_command_dry_run_ok(self, mocked_check_output):
@@ -63,9 +81,7 @@ class TestIpmi:
     def test_check_connection_ok(self, mocked_check_output):
         """It should check that the connection to the remote IPMI works running a simple command."""
         self.ipmi_dry_run.check_connection('test-mgmt.example.com')
-        mocked_check_output.assert_called_once_with(
-            ['ipmitool', '-I', 'lanplus', '-H', 'test-mgmt.example.com', '-U', 'root', '-E',
-             'chassis', 'power', 'status'])
+        mocked_check_output.assert_called_once_with(IPMITOOL_BASE + ['chassis', 'power', 'status'])
 
     @mock.patch('spicerack.ipmi.check_output', return_value=b'failed')
     def test_check_connection_raise(self, mocked_check_output):
@@ -80,9 +96,7 @@ class TestIpmi:
         """It should check that the BIOS boot parameters are normal."""
         mocked_check_output.return_value = BOOTPARAMS_OUTPUT.format(bootparams='0000000000', pxe='No override').encode()
         self.ipmi.check_bootparams('test-mgmt.example.com')
-        mocked_check_output.assert_called_once_with(
-            ['ipmitool', '-I', 'lanplus', '-H', 'test-mgmt.example.com', '-U', 'root', '-E',
-             'chassis', 'bootparam', 'get', '5'])
+        mocked_check_output.assert_called_once_with(IPMITOOL_BASE + ['chassis', 'bootparam', 'get', '5'])
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_check_bootparams_wrong_value(self, mocked_check_output):
@@ -120,10 +134,8 @@ class TestIpmi:
 
         assert not mocked_sleep.called
         mocked_check_output.assert_has_calls([
-            mock.call(['ipmitool', '-I', 'lanplus', '-H', 'test-mgmt.example.com', '-U', 'root', '-E',
-                       'chassis', 'bootdev', 'pxe']),
-            mock.call(['ipmitool', '-I', 'lanplus', '-H', 'test-mgmt.example.com', '-U', 'root', '-E',
-                       'chassis', 'bootparam', 'get', '5'])])
+            mock.call(IPMITOOL_BASE + ['chassis', 'bootdev', 'pxe']),
+            mock.call(IPMITOOL_BASE + ['chassis', 'bootparam', 'get', '5'])])
 
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     @mock.patch('spicerack.ipmi.check_output')
@@ -136,3 +148,95 @@ class TestIpmi:
             BOOTPARAMS_OUTPUT.format(bootparams='0004000000', pxe='Force PXE').encode()]
         self.ipmi.force_pxe('test-mgmt.example.com')
         assert mocked_sleep.called
+
+    @mock.patch('spicerack.ipmi.check_output')
+    def test_reset_password_16(self, mocked_check_output):
+        """It should reset the users password and store the password as 16 bytes"""
+        mocked_check_output.side_effect = [
+            USERLIST_OUTPUT.encode(),
+            b'Set User Password command successful (user 2)\n',
+            b'Chassis Power is on']
+        self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 16)
+        mocked_check_output.assert_has_calls([
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1']),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 16, '16']),
+            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'])])
+
+    @mock.patch('spicerack.ipmi.check_output')
+    def test_reset_password_20(self, mocked_check_output):
+        """It should reset the users password and store the password as 20 bytes"""
+        mocked_check_output.side_effect = [
+            USERLIST_OUTPUT.encode(),
+            b'Set User Password command successful (user 2)\n',
+            b'Chassis Power is on']
+        self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 17)
+        mocked_check_output.assert_has_calls([
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1']),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 17, '20']),
+            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'])])
+
+    @mock.patch('spicerack.ipmi.check_output')
+    def test_reset_password_not_root(self, mocked_check_output):
+        """It should reset the users password"""
+        mocked_check_output.side_effect = [
+            USERLIST_OUTPUT.encode(),
+            b'Set User Password command successful (user 9)\n']
+        self.ipmi.reset_password('test-mgmt.example.com', 'user_number_9', 'a' * 16)
+        mocked_check_output.assert_has_calls([
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1']),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '9', 'a' * 16, '16'])])
+
+    @mock.patch('spicerack.ipmi.check_output')
+    def test_reset_password_dryrun(self, mocked_check_output):
+        """It should not reset the users password"""
+        mocked_check_output.return_value = USERLIST_OUTPUT.encode()
+        self.ipmi_dry_run.reset_password('test-mgmt.example.com', 'root', 'a' * 16)
+        mocked_check_output.called_once_with(IPMITOOL_BASE + ['user', 'list', '1'])
+
+    @mock.patch('spicerack.ipmi.check_output')
+    def test_reset_password_fail_command(self, mocked_check_output):
+        """It should fail the password reset command"""
+        mocked_check_output.side_effect = [
+            USERLIST_OUTPUT.encode(),
+            b'Fail password reset\n']
+        with pytest.raises(ipmi.IpmiError, match="Password reset failed for username: user_number_9"):
+            self.ipmi.reset_password('test-mgmt.example.com', 'user_number_9', 'a' * 16)
+        mocked_check_output.assert_has_calls([
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1']),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '9', 'a' * 16, '16'])])
+
+    @mock.patch('spicerack.ipmi.check_output')
+    def test_reset_password_connection_test(self, mocked_check_output):
+        """It should fail the check connection command"""
+        mocked_check_output.side_effect = [
+            USERLIST_OUTPUT.encode(),
+            b'Set User Password command successful (user 2)\n',
+            b'Failed connection test']
+        with pytest.raises(ipmi.IpmiError, match="Password reset failed for username: root"):
+            self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 16)
+        mocked_check_output.assert_has_calls([
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1']),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 16, '16']),
+            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'])])
+
+    @mock.patch('spicerack.ipmi.check_output')
+    def test_reset_nonexistent_username(self, mocked_check_output):
+        """It should raise IpmiError as the username will not be found"""
+        with pytest.raises(ipmi.IpmiError, match="Unable to find ID for username: nonexistent"):
+            self.ipmi.reset_password('test-mgmt.example.com', 'nonexistent', 'a' * 16)
+        mocked_check_output.assert_called_once_with(IPMITOOL_BASE + ['user', 'list', '1'])
+
+    def test_reset_password_bad_username(self):
+        """It should raise IpmiError is username is empty"""
+        with pytest.raises(ipmi.IpmiError, match="Username can not be an empty string"):
+            self.ipmi.reset_password('test-mgmt.example.com', '', 'a' * 16)
+
+    def test_reset_password_short_password(self):
+        """It should raise IpmiError as password is less then 16 bytes"""
+        with pytest.raises(ipmi.IpmiError, match="New passwords must be 16 bytes minimum"):
+            self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 15)
+
+    def test_reset_password_long_password(self):
+        """It should raise IpmiError as password is larger then 20 bytes"""
+        with pytest.raises(ipmi.IpmiError, match="New passwords is greater the IPMI 20 byte limit"):
+            self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 21)

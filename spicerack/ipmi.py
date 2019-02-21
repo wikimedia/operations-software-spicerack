@@ -13,6 +13,8 @@ from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 
+IPMI_PASSWORD_MAX_LEN = 20
+IPMI_PASSWORD_MIN_LEN = 16
 IPMI_SAFE_BOOT_PARAMS = ('0000000000', '8000020000')  # No or unimportant overrides.
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -143,3 +145,74 @@ class Ipmi:
                 label=param_label, output=bootparams))
 
         return value
+
+    def reset_password(self, mgmt_hostname, username, password):
+        """Reset the given usernames password to the one provided
+
+        Arguments:
+            mgmt_hostname (str): the FQDN of the management interface of the host to target.
+            username (str): The username who's password will be reset must not be empty
+            password (str): The new password must have length between {min_len} and {max_len} bytes
+
+        Raises:
+            spicerack.ipmi.IpmiError: if unable reset password or arguments invalid
+
+        """.format(min_len=IPMI_PASSWORD_MIN_LEN, max_len=IPMI_PASSWORD_MAX_LEN)
+        # ipmitool stores passwords in either 16 or 20 byte strings
+        # can't find much documentation on this
+        if len(password) > IPMI_PASSWORD_MAX_LEN:
+            raise IpmiError('New passwords is greater the IPMI {max_len} byte limit'.format(
+                max_len=IPMI_PASSWORD_MAX_LEN))
+        elif len(password) > IPMI_PASSWORD_MIN_LEN:
+            password_store_size = str(IPMI_PASSWORD_MAX_LEN)
+        elif len(password) == IPMI_PASSWORD_MIN_LEN:
+            password_store_size = str(IPMI_PASSWORD_MIN_LEN)
+        else:
+            raise IpmiError('New passwords must be {min_len} bytes minimum'.format(
+                min_len=IPMI_PASSWORD_MIN_LEN))
+
+        if not username:
+            raise IpmiError('Username can not be an empty string')
+
+        user_id = self._get_user_id(mgmt_hostname, username)
+        success = 'Set User Password command successful (user {user_id})\n'.format(
+            user_id=user_id)
+        result = self.command(
+            mgmt_hostname,
+            ['user', 'set', 'password', user_id, password, password_store_size])
+        if self._dry_run:
+            return
+        if result != success:
+            raise IpmiError('Password reset failed for username: {username}'.format(
+                username=username))
+        elif username == 'root':
+            current_password = os.environ['IPMITOOL_PASSWORD']
+            os.environ['IPMITOOL_PASSWORD'] = password
+            try:
+                self.check_connection(mgmt_hostname)
+            except IpmiError as e:
+                os.environ['IPMITOOL_PASSWORD'] = current_password
+                raise IpmiError('Password reset failed for username: root') from e
+
+    def _get_user_id(self, mgmt_hostname, username):
+        """Get the user ID associated with a given username
+
+        Arguments:
+            mgmt_hostname (str): the FQDN of the management interface of the host to target.
+            username (str): The username to search for
+
+        Raises:
+            spicerack.ipmi.IpmiError: if unable to find the given username.
+
+        Returns:
+            str: the user ID associated with the username
+
+        """
+        userlist = self.command(mgmt_hostname, ['user', 'list', '1'], is_safe=True)
+        for line in userlist.splitlines():
+            words = line.split()
+            if words[0] == 'ID':
+                continue
+            if words[1] == username:
+                return words[0]
+        raise IpmiError("Unable to find ID for username: {username}".format(username=username))
