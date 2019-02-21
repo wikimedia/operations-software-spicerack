@@ -45,7 +45,7 @@ def test_start_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.start_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('systemctl start "elasticsearch_*@*" --all')
+    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xarg systemctl start')
 
 
 def test_stop_elasticsearch():
@@ -54,7 +54,7 @@ def test_stop_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.stop_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('systemctl stop "elasticsearch_*@*" --all')
+    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xarg systemctl stop')
 
 
 def test_restart_elasticsearch():
@@ -63,7 +63,7 @@ def test_restart_elasticsearch():
     mocked_remote_hosts.run_sync = mock.Mock(return_value=iter(()))
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     elastic_hosts.restart_elasticsearch()
-    mocked_remote_hosts.run_sync.assert_called_with('systemctl restart "elasticsearch_*@*" --all')
+    mocked_remote_hosts.run_sync.assert_called_with('cat /etc/elasticsearch/instances | xarg systemctl restart')
 
 
 def test_depool_nodes():
@@ -233,6 +233,13 @@ def test_cluster_settings_are_unchanged_when_stopped_replication_is_dry_run():
     elasticsearchcluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=True)
     with elasticsearchcluster.stopped_replication():
         assert not elasticsearch.cluster.put_settings.called
+
+
+def test_split_node_names():
+    """split_node_name() support cluster names containing '-'"""
+    node_name, cluster_name = ec.ElasticsearchCluster.split_node_name('node1-cluster-name')
+    assert node_name == 'node1'
+    assert cluster_name == 'cluster-name'
 
 
 class TestElasticsearchClusters:
@@ -523,7 +530,7 @@ class TestElasticsearchClusters:
         """Test that next nodes belong in the same row on each cluster."""
         since = datetime.utcfromtimestamp(20 / 1000)
         elasticsearchclusters = ec.ElasticsearchClusters(self.clusters, None, dry_run=False)
-        with pytest.raises(ec.SpicerackCheckError):
+        with pytest.raises(ec.ElasticsearchClusterError):
             elasticsearchclusters.get_next_clusters_nodes(since, 0)
 
     def test_get_next_nodes_returns_less_nodes_than_specified(self):

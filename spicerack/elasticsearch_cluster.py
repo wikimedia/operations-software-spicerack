@@ -100,18 +100,19 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
     def start_elasticsearch(self):
         """Starts all elasticsearch instances."""
-        logger.info('Starting all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl start "elasticsearch_*@*" --all')
+        self._systemctl_for_each_instance('start')
 
     def stop_elasticsearch(self):
         """Stops all elasticsearch instances."""
-        logger.info('Stopping all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl stop "elasticsearch_*@*" --all')
+        self._systemctl_for_each_instance('stop')
 
     def restart_elasticsearch(self):
         """Restarts all elasticsearch instances."""
-        logger.info('Restarting all elasticsearch instances on %s', self)
-        self._remote_hosts.run_sync('systemctl restart "elasticsearch_*@*" --all')
+        self._systemctl_for_each_instance('restart')
+
+    def _systemctl_for_each_instance(self, action):
+        logger.info('%s all elasticsearch instances on %s', action, self)
+        self._remote_hosts.run_sync('cat /etc/elasticsearch/instances | xarg systemctl {action}'.format(action=action))
 
     def depool_nodes(self):
         """Depool the hosts."""
@@ -230,7 +231,7 @@ class ElasticsearchClusters:
 
         """
         if size < 1:
-            raise ElasticsearchClusterCheckError("Size of next nodes must be at least 1")
+            raise ElasticsearchClusterError("Size of next nodes must be at least 1")
 
         nodes_group = self._get_nodes_group()
         nodes_to_process = [node for node in nodes_group.values()
@@ -272,9 +273,7 @@ class ElasticsearchClusters:
             cluster_node (dict): the specific cluster node to add to nodes_group.
             cluster (spicerack.elasticsearch_cluster.ElasticsearchCluster): ElasticsearchCluster for cluster node
         """
-        node_name_and_group = ElasticsearchCluster.split_node_name(cluster_node['name'])
-        node_name = node_name_and_group['name']
-        cluster_group_name = node_name_and_group['cluster_group']
+        node_name, cluster_group_name = ElasticsearchCluster.split_node_name(cluster_node['name'])
 
         if node_name not in nodes_group.keys():
             nodes_group[node_name] = {
@@ -375,7 +374,7 @@ class ElasticsearchCluster:
             bool: :py:data:`True` if node is present and :py:data:`False` if not.
 
         """
-        nodes_names = [ElasticsearchCluster.split_node_name(node['name'])['name'] for node in self.get_nodes().values()]
+        nodes_names = [ElasticsearchCluster.split_node_name(node['name'])[0] for node in self.get_nodes().values()]
         if node in nodes_names:
             return True
 
@@ -389,14 +388,10 @@ class ElasticsearchCluster:
             node_name (str): node name containing hostname and cluster name separated by ``-``.
 
         Returns:
-            dict: dictionary containing the node name and the cluster name.
+            (str, str): tuple containing the node name and the cluster name.
 
         """
-        node_name_and_group = {}
-        splitted_names = node_name.split('-')
-        node_name_and_group['name'] = splitted_names[0]
-        node_name_and_group['cluster_group'] = splitted_names[1]
-        return node_name_and_group
+        return node_name.split('-', 1)
 
     @contextmanager
     def stopped_replication(self):
