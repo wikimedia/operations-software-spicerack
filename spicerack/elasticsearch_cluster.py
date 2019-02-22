@@ -222,6 +222,10 @@ class ElasticsearchClusters:
     def get_next_clusters_nodes(self, started_before, size=1):
         """Get next set of cluster nodes for cookbook operations like upgrade, rolling restart etc.
 
+        Nodes are selected from the row with the least restarted nodes. This ensure that a row is fully upgraded
+        before moving to the next row. Since shards cannot move to a node with an older version of elasticsearch,
+        this should help to keep all shards allocated at all time.
+
         Arguments:
             started_before (datetime.datetime): the time against after which we check if the node has been restarted.
             size (int, optional): size of nodes not restarted in a row.
@@ -239,7 +243,7 @@ class ElasticsearchClusters:
         if not nodes_to_process:
             return None
         rows = ElasticsearchClusters._to_rows(nodes_to_process)
-        sorted_rows = sorted(rows.values(), key=len, reverse=True)
+        sorted_rows = sorted(rows.values(), key=len)
         next_nodes = sorted_rows[0][:size]
         node_names = ','.join([node['name'] + '*' for node in next_nodes])
         return ElasticsearchHosts(self._remote.query(node_names), next_nodes, dry_run=self._dry_run)

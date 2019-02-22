@@ -563,8 +563,8 @@ class TestElasticsearchClusters:
         nodes_not_restarted.sort()
         assert nodes_not_restarted == ['el6*', 'el7*']
 
-    def test_get_next_nodes_most_not_restarted(self):
-        """Test to get rows that have the most not restarted nodes first on each cluster."""
+    def test_get_next_nodes_least_not_restarted(self):
+        """Test to get rows that have the least not restarted nodes first on each cluster."""
         remote = mock.Mock(spec_set=Remote)
         since = datetime.utcfromtimestamp(20 / 1000)
         cluster1_nodes = {
@@ -588,10 +588,14 @@ class TestElasticsearchClusters:
         self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
         elasticsearchclusters = ec.ElasticsearchClusters(self.clusters, remote, dry_run=False)
         elasticsearchclusters.get_next_clusters_nodes(since, 4)
-        nodes_not_restarted = remote.query.call_args[0][0]
-        nodes_not_restarted = nodes_not_restarted.split(',')
-        nodes_not_restarted.sort()
-        assert nodes_not_restarted == ['el5*', 'el6*']
+        # FIXME: We assert on the nodes that were queried via cumin and not on the return value of
+        #  get_next_clusters_nodes(). This is a simplification to avoid mocking yet another return value.
+        #  It is also a code smell. There is a refactoring waiting to happen to reduce / isolate the complexity
+        #  of get_next_clusters_nodes().
+        nodes_queried = remote.query.call_args[0][0]
+        nodes_queried = nodes_queried.split(',')
+        nodes_queried.sort()
+        assert nodes_queried == ['el9*']
 
     def test_get_next_nodes_no_rows(self):
         """Test that all nodes have been restarted on all clusters."""
