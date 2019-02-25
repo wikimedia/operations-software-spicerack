@@ -51,7 +51,7 @@ class Debmonitor:
         if response.status_code == requests.codes['no_content']:
             logger.info('Removed host %s from Debmonitor', hostname)
         elif response.status_code == requests.codes['not_found']:
-            logger.info('Host %s already missing on Debmonitor')
+            logger.info('Host %s already missing on Debmonitor', hostname)
         else:
             raise DebmonitorError('Unable to remove host {host} from Debmonitor, got: {code} {msg}'.format(
                 host=hostname, code=response.status_code, msg=response.reason))
