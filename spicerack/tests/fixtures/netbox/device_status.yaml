@@ -1,0 +1,15 @@
+device:status:
+- label: Offline
+  value: 0
+- label: Active
+  value: 1
+- label: Planned
+  value: 2
+- label: Staged
+  value: 3
+- label: Failed
+  value: 4
+- label: Inventory
+  value: 5
+- label: Decommissioning
+  value: 6

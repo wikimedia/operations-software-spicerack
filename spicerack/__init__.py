@@ -22,6 +22,7 @@ from spicerack.log import irc_logger
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
+from spicerack.netbox import Netbox
 from spicerack.phabricator import create_phabricator, Phabricator
 from spicerack.prometheus import Prometheus
 from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
@@ -340,3 +341,13 @@ class Spicerack:
         configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, 'ganeti', 'config.yaml'))
 
         return Ganeti(configuration['username'], configuration['password'], configuration['timeout'])
+
+    def netbox(self) -> Netbox:
+        """Get a Netbox instance to interact with Netbox's API.
+
+        Returns:
+            spicerack.netbox.Netbox: the instance
+
+        """
+        config = load_yaml_config(os.path.join(self._spicerack_config_dir, 'netbox', 'config.yaml'))
+        return Netbox(config['api_url'], config['api_token'], dry_run=self._dry_run)

@@ -29,6 +29,7 @@ Spicerack Python API autodoc.
    spicerack.management
    spicerack.mediawiki
    spicerack.mysql
+   spicerack.netbox
    spicerack.phabricator
    spicerack.prometheus
    spicerack.puppet
