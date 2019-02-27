@@ -6,7 +6,6 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from socket import gethostname
 
 import curator
 
@@ -342,16 +341,10 @@ class ElasticsearchCluster:
             elasticsearch (elasticsearch.Elasticsearch): elasticsearch instance.
             remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional):  whether this is a DRY-RUN.
-
-        Todo:
-            ``self._hostname`` class member will be replaced by the formatted message obtained via Reason,
-            this can't be done right now as it needs to be inline with what
-            the MW maint script and the Icinga check do at the moment.
         """
         self._elasticsearch = elasticsearch
         self._remote = remote
         self._dry_run = dry_run
-        self._hostname = gethostname()
         self._freeze_writes_index = 'mw_cirrus_metastore'
         self._freeze_writes_doc_type = 'mw_cirrus_metastore'
 
@@ -465,7 +458,7 @@ class ElasticsearchCluster:
         Arguments:
             reason (spicerack.administrative.Reason): Reason for freezing writes.
         """
-        doc = {'host': self._hostname, 'timestamp': datetime.utcnow().timestamp(), 'reason': str(reason)}
+        doc = {'host': reason.hostname, 'timestamp': datetime.utcnow().timestamp(), 'reason': str(reason)}
         logger.info('Freezing all indices in %s', self)
         if self._dry_run:
             return
