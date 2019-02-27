@@ -35,6 +35,12 @@ def test_reason_owner():
     assert reason.owner == 'user1@host1'
 
 
+def test_reason_hostname():
+    """It should return the hostname."""
+    reason = administrative.Reason('Reason message', 'user1', 'host1')
+    assert reason.hostname == 'host1'
+
+
 def test_reason_quoted():
     """It should return the double quoted string representation of the instance."""
     reason = administrative.Reason('Reason message', 'user1', 'host1')
