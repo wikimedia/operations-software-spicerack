@@ -2,8 +2,38 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.20`_ (2019-03-06)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* ipmi: add password reset functionality
+
+Minor improvements
+""""""""""""""""""
+
+* elasticsearch: upgrade rows one after the other
+* remote: suppress Cumin's output. As a workaround for a regression in colorama for stretch
+* Expose hostname from Reason.
+* elasticsearch: use the admin Reason to get current hostname
+
+Bug Fixes
+"""""""""
+
+* debmonitor: fix missing variable for logging line
+* elasticsearch: fix typo (xarg instead of xargs)
+* doc: fix reStructuredText formatting
+
+Miscellanea
+"""""""""""
+
+* Drop support for Python 3.4
+* Add support for Python 3.7
+* tests: refactor tox environments
+
 `v0.0.19`_ (2019-02-21)
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Bug Fixes
 """""""""
@@ -332,3 +362,4 @@ New features
 .. _`v0.0.17`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.17
 .. _`v0.0.18`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.18
 .. _`v0.0.19`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.19
+.. _`v0.0.20`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.20

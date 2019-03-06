@@ -1,5 +1,6 @@
 """Remote module to execute commands on hosts via Cumin."""
 import logging
+import os
 
 from datetime import datetime, timedelta
 
@@ -338,7 +339,18 @@ class RemoteHosts:
         if self._dry_run and not is_safe:
             return iter(())  # Empty generator
 
-        ret = worker.execute()
+        # Temporary workaround until Cumin has full support to suppress output (T212783)
+        # and the Colorama issue that slows down the process is fixed (T217038)
+        stdout = transports.clustershell.sys.stdout
+        stderr = transports.clustershell.sys.stderr
+        try:
+            with open(os.devnull, 'w') as discard_output:
+                transports.clustershell.sys.stdout = discard_output
+                transports.clustershell.sys.stderr = discard_output
+                ret = worker.execute()
+        finally:
+            transports.clustershell.sys.stdout = stdout
+            transports.clustershell.sys.stderr = stderr
 
         if ret != 0 and not self._dry_run:
             raise RemoteExecutionError(ret, 'Cumin execution failed')

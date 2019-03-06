@@ -68,6 +68,16 @@ class Reason:
         """
         return '{user}@{host}'.format(user=self._username, host=self._hostname)
 
+    @property
+    def hostname(self):
+        """Getter for the hostname property.
+
+        Returns:
+            str: the hostname on which the code is running.
+
+        """
+        return self._hostname
+
     def quoted(self):
         """Quoted string representation of the instance, including all attributes.
 

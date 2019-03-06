@@ -6,7 +6,6 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from socket import gethostname
 
 import curator
 
@@ -112,7 +111,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
     def _systemctl_for_each_instance(self, action):
         logger.info('%s all elasticsearch instances on %s', action, self)
-        self._remote_hosts.run_sync('cat /etc/elasticsearch/instances | xarg systemctl {action}'.format(action=action))
+        self._remote_hosts.run_sync('cat /etc/elasticsearch/instances | xargs systemctl {action}'.format(action=action))
 
     def depool_nodes(self):
         """Depool the hosts."""
@@ -222,6 +221,10 @@ class ElasticsearchClusters:
     def get_next_clusters_nodes(self, started_before, size=1):
         """Get next set of cluster nodes for cookbook operations like upgrade, rolling restart etc.
 
+        Nodes are selected from the row with the least restarted nodes. This ensure that a row is fully upgraded
+        before moving to the next row. Since shards cannot move to a node with an older version of elasticsearch,
+        this should help to keep all shards allocated at all time.
+
         Arguments:
             started_before (datetime.datetime): the time against after which we check if the node has been restarted.
             size (int, optional): size of nodes not restarted in a row.
@@ -239,7 +242,7 @@ class ElasticsearchClusters:
         if not nodes_to_process:
             return None
         rows = ElasticsearchClusters._to_rows(nodes_to_process)
-        sorted_rows = sorted(rows.values(), key=len, reverse=True)
+        sorted_rows = sorted(rows.values(), key=len)
         next_nodes = sorted_rows[0][:size]
         node_names = ','.join([node['name'] + '*' for node in next_nodes])
         return ElasticsearchHosts(self._remote.query(node_names), next_nodes, dry_run=self._dry_run)
@@ -338,16 +341,10 @@ class ElasticsearchCluster:
             elasticsearch (elasticsearch.Elasticsearch): elasticsearch instance.
             remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional):  whether this is a DRY-RUN.
-
-        Todo:
-            ``self._hostname`` class member will be replaced by the formatted message obtained via Reason,
-            this can't be done right now as it needs to be inline with what
-            the MW maint script and the Icinga check do at the moment.
         """
         self._elasticsearch = elasticsearch
         self._remote = remote
         self._dry_run = dry_run
-        self._hostname = gethostname()
         self._freeze_writes_index = 'mw_cirrus_metastore'
         self._freeze_writes_doc_type = 'mw_cirrus_metastore'
 
@@ -461,7 +458,7 @@ class ElasticsearchCluster:
         Arguments:
             reason (spicerack.administrative.Reason): Reason for freezing writes.
         """
-        doc = {'host': self._hostname, 'timestamp': datetime.utcnow().timestamp(), 'reason': str(reason)}
+        doc = {'host': reason.hostname, 'timestamp': datetime.utcnow().timestamp(), 'reason': str(reason)}
         logger.info('Freezing all indices in %s', self)
         if self._dry_run:
             return
