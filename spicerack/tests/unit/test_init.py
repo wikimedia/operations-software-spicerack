@@ -17,6 +17,7 @@ from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.phabricator import Phabricator
+from spicerack.prometheus import Prometheus
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 
@@ -49,6 +50,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.admin_reason('Reason message', task_id='T12345'), Reason)
     assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), puppet.PuppetHosts)
     assert isinstance(spicerack.phabricator(get_fixture_path('phabricator', 'valid.conf')), Phabricator)
+    assert isinstance(spicerack.prometheus(), Prometheus)
     assert isinstance(spicerack.debmonitor(), Debmonitor)
     assert isinstance(spicerack.management(), Management)
     assert isinstance(spicerack.ganeti(), Ganeti)

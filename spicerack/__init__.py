@@ -24,6 +24,7 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.phabricator import create_phabricator, Phabricator
 from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
+from spicerack.prometheus import Prometheus
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 
@@ -294,6 +295,15 @@ class Spicerack:
         # Allow to specify the configuration file as opposed to other methods so that different clients can use
         # different Phabricator BOT accounts, potentially with different permissions.
         return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)
+
+    def prometheus(self) -> Prometheus:  # pylint: disable=no-self-use
+        """Get an Prometheus instance.
+
+        Returns:
+            spicerack.prometheus.Prometheus: Prometheus instance.
+
+        """
+        return Prometheus()
 
     def debmonitor(self) -> Debmonitor:
         """Get a Debmonitor instance to interact with a Debmonitor website.
