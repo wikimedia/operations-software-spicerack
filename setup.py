@@ -17,8 +17,6 @@ INSTALL_REQUIRES = [
     'pyyaml>=3.11',
     'redis>=2.10.0',
     'requests>=2.11.1',
-    # Temporary fix as pip is trying to install the latest 1.24 that is not compatible with requests and botocore
-    'urllib3<1.24',
 ]
 
 # Extra dependencies
