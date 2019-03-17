@@ -7,6 +7,7 @@ import shlex
 import sys
 
 from abc import abstractmethod
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 from spicerack import log, Spicerack
 from spicerack.config import load_yaml_config
@@ -74,17 +75,36 @@ class CookbookError(SpicerackError):
     """Custom exception class for errors of this module."""
 
 
+class CookbooksModuleInterface:
+    """Module interface to be used as type hint for the imported cookbooks."""
+
+    __title__ = ''
+    """str: the cookbook static title. Used if get_title() is not defined."""
+
+    @staticmethod
+    def argument_parser() -> argparse.ArgumentParser:
+        """Optional module function to define if the cookbook should accept command line arguments."""
+
+    @staticmethod
+    def get_title(args: List[str]) -> str:
+        """Optional module function to dynamically generate the cookbook's title. Has precedence over __title__."""
+
+    @staticmethod
+    def run(args: Optional[argparse.Namespace], spicerack: Spicerack) -> Optional[int]:
+        """Mandatory module function that every cookbook must define with the cookbook's body."""
+
+
 class Cookbooks:
     """Collect and represent available cookbooks."""
 
     cookbooks_module_prefix = 'cookbooks'
 
-    def __init__(self, base_dir, args, spicerack, path_filter=None):
+    def __init__(self, base_dir: str, args: List[str], spicerack: Spicerack, path_filter: Optional[str] = None) -> None:
         """Initialize the Cookbook class and collect CookbooksMenu and Cookbook items.
 
         Arguments:
             base_dir (str): the base directory from where to start looking for cookbooks.
-            args (list, tuple): the list of arguments to pass to the collected items.
+            args (list): the list of arguments to pass to the collected items.
             spicerack (spicerack.Spicerack): the initialized instance of the library.
             path_filter (str, optional): an optional relative module path to filter for. If set, only cookbooks that
                 are part of this subtree will be collected.
@@ -92,15 +112,15 @@ class Cookbooks:
         self.base_dir = os.path.join(base_dir, self.cookbooks_module_prefix)
         self.args = args
         self.spicerack = spicerack
-        if path_filter is not None:
-            self.path_filter = '.'.join((self.cookbooks_module_prefix, path_filter))
-        else:
+        if path_filter is None:
             self.path_filter = path_filter
+        else:
+            self.path_filter = '.'.join((self.cookbooks_module_prefix, path_filter))
 
         self.menu = CookbooksMenu(self.cookbooks_module_prefix, self.args, self.spicerack)
         self._collect()
 
-    def get_item(self, path):
+    def get_item(self, path: str) -> Optional[Union['CookbooksMenu', 'Cookbook']]:
         """Retrieve the item for a given path.
 
         Arguments:
@@ -125,7 +145,7 @@ class Cookbooks:
 
         return item
 
-    def _create_menu_for_path(self, path):
+    def _create_menu_for_path(self, path: str) -> 'CookbooksMenu':
         """Create the menu for a given path, including intermediate levels, if missing. Return the existing one if any.
 
         Arguments:
@@ -152,7 +172,7 @@ class Cookbooks:
 
         return item
 
-    def _submenu_add_parent(self, module_name, path):
+    def _submenu_add_parent(self, module_name: str, path: str) -> bool:
         """Determine if the submenu item to be appended should have a link to the parent menu or not.
 
         When collecting the cookbooks and creating the CookbooksMenu instances, the relation to the parent menu should
@@ -176,7 +196,7 @@ class Cookbooks:
         return path.startswith(self.path_filter) and len(path) > len(self.path_filter)
 
     @staticmethod
-    def _filter_dirnames_and_filenames(dirnames, filenames):
+    def _filter_dirnames_and_filenames(dirnames: List[str], filenames: List[str]) -> Tuple[List, List]:
         """Filter the dirnames and filenames in place (required by os.walk()) to select only Python modules.
 
         Arguments:
@@ -198,7 +218,7 @@ class Cookbooks:
 
         return dirnames, filenames
 
-    def _collect(self):
+    def _collect(self) -> None:
         """Collect available cookbooks starting from a base path."""
         for dirpath, dirnames, filenames in os.walk(self.base_dir):
             dirnames, filenames = Cookbooks._filter_dirnames_and_filenames(dirnames, filenames)
@@ -228,7 +248,7 @@ class Cookbooks:
             for filename in filenames:
                 self._collect_filename(filename, prefix, menu)
 
-    def _collect_filename(self, filename, prefix, menu):
+    def _collect_filename(self, filename: str, prefix: str, menu: 'CookbooksMenu') -> None:
         """Iterate the filenames in the current directory as reported by os.walk() and add them to the tree.
 
         Arguments:
@@ -255,12 +275,12 @@ class BaseCookbooksItem:
 
     fallback_title = '-'
 
-    def __init__(self, module_name, args, spicerack):
+    def __init__(self, module_name: str, args: List[str], spicerack: Spicerack) -> None:
         """Base cookbooks's item constructor.
 
         Arguments:
             module_name (str): the Python module to load.
-            args (list, tuple): the command line arguments to pass to the item.
+            args (list): the command line arguments to pass to the item.
             spicerack (spicerack.Spicerack): the initialized instance of the library.
         """
         if '.' in module_name:
@@ -276,11 +296,11 @@ class BaseCookbooksItem:
         self.title = self._get_title()
 
     @abstractmethod
-    def run(self):
+    def run(self) -> int:
         """Excecute the item."""
 
     @property
-    def verbose_title(self):
+    def verbose_title(self) -> str:
         """Getter for the verbose_title property, uses the module name if there is no title.
 
         Returns:
@@ -292,7 +312,7 @@ class BaseCookbooksItem:
 
         return self.name
 
-    def _get_title(self):
+    def _get_title(self) -> str:
         """Calculate the title of the instance item.
 
         Returns:
@@ -311,12 +331,12 @@ class BaseCookbooksItem:
         return title
 
     @staticmethod
-    def _get_line_prefix(level, cont_levels, is_final):
+    def _get_line_prefix(level: int, cont_levels: List[bool], is_final: bool) -> str:
         """Return the line prefix for the given level in the tree.
 
         Arguments:
             level (int): how many levels the item is nested in the tree.
-            cont_levels (list, tuple): an iterable of size levels with booleans that indicate for each level if the
+            cont_levels (list): a list of size levels with booleans that indicate for each level if the
                 continuation prefix (True) or an empty prefix (False) should be used.
             is_final (bool): whether the line is the final in its own group.
 
@@ -352,7 +372,7 @@ class Cookbook(BaseCookbooksItem):
     statuses = ('NOTRUN', 'PASS', 'FAIL', 'ERROR')  # Status labels
     not_run, success, failed, error = statuses  # Valid statuses variables
 
-    def __init__(self, module_name, args, spicerack):
+    def __init__(self, module_name: str, args: List[str], spicerack: Spicerack) -> None:
         """Override parent constructor to add menu-specific initialization.
 
         :Parameters:
@@ -361,7 +381,7 @@ class Cookbook(BaseCookbooksItem):
         super().__init__(module_name, args, spicerack)
         self.status = Cookbook.not_run
 
-    def run(self):
+    def run(self) -> int:
         """Run the cookbook, calling both its `argument_parser` and `run` functions.
 
         Returns:
@@ -375,7 +395,7 @@ class Cookbook(BaseCookbooksItem):
 
         return self._run(args)
 
-    def _run(self, args):
+    def _run(self, args: Optional[argparse.Namespace]) -> int:
         """Run the cookbook's `run()` function.
 
         Arguments:
@@ -423,7 +443,7 @@ class Cookbook(BaseCookbooksItem):
 
         return ret
 
-    def _parse_args(self):
+    def _parse_args(self) -> Tuple[int, Optional[argparse.Namespace]]:
         """Get the argument parser from the cookbook, if it exists, and parse the arguments.
 
         Returns:
@@ -470,18 +490,18 @@ class CookbooksMenu(BaseCookbooksItem):
     help_message = COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=Cookbook.statuses)
     """str: the generic CookbooksMenu help message."""
 
-    def __init__(self, module_name, args, spicerack):
+    def __init__(self, module_name: str, args: List[str], spicerack: Spicerack) -> None:
         """Override parent constructor to add menu-specific initialization.
 
         :Parameters:
             according to spicerack.cookbook.BaseCookbooksItem.
         """
         super().__init__(module_name, args, spicerack)
-        self.parent = None
-        self.items = {}
+        self.parent = None  # type: Optional[CookbooksMenu]
+        self.items = {}  # type: ignore
 
     @property
-    def status(self):
+    def status(self) -> str:
         """Getter for the menu status, returns a string representation of the status of its tasks.
 
         Returns:
@@ -496,7 +516,7 @@ class CookbooksMenu(BaseCookbooksItem):
 
         return message
 
-    def append(self, item, add_parent=True):
+    def append(self, item: Union['CookbooksMenu', Cookbook], add_parent: bool = True) -> None:
         """Append an item to this menu.
 
         Arguments:
@@ -508,8 +528,13 @@ class CookbooksMenu(BaseCookbooksItem):
 
         self.items[item.name] = item
 
-    def run(self):
-        """Execute the menu in an interactive way (infinite loop)."""
+    def run(self) -> int:
+        """Execute the menu in an interactive way (infinite loop).
+
+        Returns:
+            int: being an interactive menu it always returns 0.
+
+        """
         try:
             while True:
                 self.run_once()
@@ -518,7 +543,7 @@ class CookbooksMenu(BaseCookbooksItem):
 
         return 0
 
-    def show(self):
+    def show(self) -> None:
         """Print the menu to stdout."""
         for name in sorted(self.items.keys()):
             item = self.items[name]
@@ -531,7 +556,7 @@ class CookbooksMenu(BaseCookbooksItem):
 
         print('{answer} - Help'.format(answer=CookbooksMenu.help_answer))
 
-    def calculate_status(self):
+    def calculate_status(self) -> Tuple[int, int]:
         """Calculate the status of a menu, checking the status of all it's tasks recursively.
 
         Returns:
@@ -554,7 +579,7 @@ class CookbooksMenu(BaseCookbooksItem):
 
         return completed, total
 
-    def get_tree(self):
+    def get_tree(self) -> str:
         """Return the tree representation of the menu as string.
 
         Returns:
@@ -567,12 +592,12 @@ class CookbooksMenu(BaseCookbooksItem):
 
         return '{title}\n{lines}\n'.format(title=Cookbooks.cookbooks_module_prefix, lines='\n'.join(lines))
 
-    def get_menu_tree(self, level, cont_levels):
+    def get_menu_tree(self, level: int, cont_levels: List[bool]) -> List[str]:
         """Calculate the tree lines for a given menu.
 
         Arguments:
             level (int): how many levels the item is nested in the tree.
-            cont_levels (list, tuple): an iterable of size levels with booleans that indicate for each level if the
+            cont_levels (list): a list of size levels with booleans that indicate for each level if the
                 continuation prefix (True) or an empty prefix (False) should be used.
 
         Returns:
@@ -597,7 +622,7 @@ class CookbooksMenu(BaseCookbooksItem):
 
         return lines
 
-    def run_once(self):
+    def run_once(self) -> None:
         """Run the menu in an interactive way.
 
         Returns:
@@ -639,12 +664,15 @@ class CookbooksMenu(BaseCookbooksItem):
         item.args = self._get_item_args(item, args)
         item.run()
 
-    def _get_item_args(self, item, args):
+    def _get_item_args(self, item: Type[BaseCookbooksItem], args: List[str]) -> List[str]:
         """Get the arguments to pass to the given item.
 
         Arguments:
-            item (spicerack.cookbook.Base): the item to pass the arguments to.
+            item (spicerack.cookbook.BaseCookbooksItem): the item to pass the arguments to.
             args (list): the arguments passed via interactive menu to this item.
+
+        Returns:
+            list: the arguments to pass to the item.
 
         """
         if args:  # Override the item arguments with the ones passed interactively, if any.
@@ -656,7 +684,7 @@ class CookbooksMenu(BaseCookbooksItem):
         return item.args
 
 
-def argument_parser():
+def argument_parser() -> argparse.ArgumentParser:
     """Get the CLI argument parser.
 
     If the COOKBOOK is passed as a path, it will be converted to a Python module syntax.
@@ -686,14 +714,14 @@ def argument_parser():
     return parser
 
 
-def cookbook_path_type(path):
+def cookbook_path_type(path: str) -> str:
     """Convert a COOKBOOK path to module syntax, if it's in path syntax.
 
     Arguments:
-        path (str, None): the path to be converted.
+        path (str): the path to be converted.
 
     Returns:
-        str, None: the converted path in module syntax or None if None was passed.
+        str: the converted path in module syntax.
 
     """
     cookbook_path, ext = os.path.splitext(path)
@@ -703,23 +731,26 @@ def cookbook_path_type(path):
     return path
 
 
-def import_module(module_name):
+def import_module(module_name: str) -> CookbooksModuleInterface:
     """Import a Python module.
 
     Arguments:
         module_name (str): the name of the module to load.
+
+    Returns:
+        types.ModuleType: the loaded module, that must respect the CookbooksModuleInterface.
 
     Raises:
         spicerack.cookbook.CookbookError: on failure to load the module.
 
     """
     try:
-        return importlib.import_module(module_name)
+        return importlib.import_module(module_name)  # type: ignore
     except Exception as e:  # pylint: disable=broad-except
         raise CookbookError('Failed to import module {name}: {msg}'.format(name=module_name, msg=e)) from e
 
 
-def execute_cookbook(config, args, cookbooks):
+def execute_cookbook(config: Dict[str, str], args: argparse.Namespace, cookbooks: Cookbooks) -> int:
     """Execute a single cookbook with its parameters.
 
     Arguments:
@@ -744,13 +775,13 @@ def execute_cookbook(config, args, cookbooks):
     cookbook_path, cookbook_name = os.path.split(cookbook.path.replace('.', os.sep))
     base_path = os.path.join(config['logs_base_dir'], cookbook_path)
     log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.username, dry_run=args.dry_run,
-                      host=config.get('tcpircbot_host', None), port=config.get('tcpircbot_port', 0))
+                      host=config.get('tcpircbot_host', None), port=int(config.get('tcpircbot_port', 0)))
 
     logger.debug('Executing cookbook %s with args: %s', args.cookbook, args.cookbook_args)
     return cookbook.run()
 
 
-def main(argv=None):
+def main(argv: Optional[List[str]] = None) -> int:
     """Entry point, run the tool.
 
     Arguments:

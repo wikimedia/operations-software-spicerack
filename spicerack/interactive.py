@@ -10,7 +10,7 @@ from spicerack.exceptions import SpicerackError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def ask_confirmation(message):
+def ask_confirmation(message: str) -> None:
     """Ask the use for confirmation in interactive mode.
 
     Arguments:
@@ -36,7 +36,7 @@ def ask_confirmation(message):
         raise SpicerackError('Too many invalid confirmation answers')
 
 
-def get_username():
+def get_username() -> str:
     """Detect and return the name of the effective running user even if run as root.
 
     Returns:
@@ -55,7 +55,7 @@ def get_username():
     return '-'
 
 
-def ensure_shell_is_durable():
+def ensure_shell_is_durable() -> None:
     """Ensure it is running either in non-interactive mode or in a screen/tmux session, raise otherwise.
 
     Raises:
@@ -69,7 +69,7 @@ def ensure_shell_is_durable():
         raise SpicerackError('Must be run in non-interactive mode or inside a screen or tmux.')
 
 
-def get_management_password():
+def get_management_password() -> str:
     """Get the management password either from the environment or asking for it.
 
     Returns:

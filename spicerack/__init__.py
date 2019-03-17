@@ -1,27 +1,30 @@
 """Spicerack package."""
 import os
 
+from logging import Logger
 from socket import gethostname
+from typing import Optional
 
 from pkg_resources import DistributionNotFound, get_distribution
 
-from spicerack import interactive, puppet
+from spicerack import interactive
 from spicerack.administrative import Reason
-from spicerack.confctl import Confctl
+from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.config import load_ini_config
 from spicerack.debmonitor import Debmonitor
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
-from spicerack.elasticsearch_cluster import create_elasticsearch_clusters
+from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, ElasticsearchClusters
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
-from spicerack.phabricator import create_phabricator
+from spicerack.phabricator import create_phabricator, Phabricator
+from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
 from spicerack.redis_cluster import RedisCluster
-from spicerack.remote import Remote
+from spicerack.remote import Remote, RemoteHosts
 
 
 try:
@@ -34,10 +37,16 @@ except DistributionNotFound:  # pragma: no cover - this should never happen duri
 class Spicerack:
     """Spicerack service locator."""
 
-    def __init__(self, *, verbose=False, dry_run=True, cumin_config='/etc/cumin/config.yaml',
-                 conftool_config='/etc/conftool/config.yaml', conftool_schema='/etc/conftool/schema.yaml',
-                 debmonitor_config='/etc/debmonitor.conf',
-                 spicerack_config_dir='/etc/spicerack'):
+    def __init__(
+        self, *,
+        verbose: bool = False,
+        dry_run: bool = True,
+        cumin_config: str = '/etc/cumin/config.yaml',
+        conftool_config: str = '/etc/conftool/config.yaml',
+        conftool_schema: str = '/etc/conftool/schema.yaml',
+        debmonitor_config: str = '/etc/debmonitor.conf',
+        spicerack_config_dir: str = '/etc/spicerack'
+    ) -> None:
         """Initialize the service locator for the Spicerack library.
 
         Arguments:
@@ -69,10 +78,10 @@ class Spicerack:
         self._username = interactive.get_username()
         self._current_hostname = gethostname()
         self._irc_logger = irc_logger
-        self._confctl = None
+        self._confctl = None  # type: Optional[Confctl]
 
     @property
-    def dry_run(self):
+    def dry_run(self) -> bool:
         """Getter for the ``dry_run`` property.
 
         Returns:
@@ -82,7 +91,7 @@ class Spicerack:
         return self._dry_run
 
     @property
-    def verbose(self):
+    def verbose(self) -> bool:
         """Getter for the ``verbose`` property.
 
         Returns:
@@ -92,7 +101,7 @@ class Spicerack:
         return self._verbose
 
     @property
-    def username(self):
+    def username(self) -> str:
         """Getter for the current username.
 
         Returns:
@@ -102,7 +111,7 @@ class Spicerack:
         return self._username
 
     @property
-    def irc_logger(self):
+    def irc_logger(self) -> Logger:
         """Getter for the ``irc_logger`` property.
 
         Returns:
@@ -112,7 +121,7 @@ class Spicerack:
         return self._irc_logger
 
     @property
-    def icinga_master_host(self):
+    def icinga_master_host(self) -> RemoteHosts:
         """Getter for the ``icinga_master_host`` property.
 
         Returns:
@@ -121,7 +130,7 @@ class Spicerack:
         """
         return self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
 
-    def remote(self):
+    def remote(self) -> Remote:
         """Get a Remote instance.
 
         Returns:
@@ -130,7 +139,7 @@ class Spicerack:
         """
         return Remote(self._cumin_config, dry_run=self._dry_run)
 
-    def confctl(self, entity_name):
+    def confctl(self, entity_name: str) -> ConftoolEntity:
         """Access a Conftool specific entity instance.
 
         Arguments:
@@ -146,7 +155,7 @@ class Spicerack:
 
         return self._confctl.entity(entity_name)
 
-    def dns(self):  # pylint: disable=no-self-use
+    def dns(self) -> Dns:  # pylint: disable=no-self-use
         """Get a Dns instance.
 
         Returns:
@@ -155,7 +164,7 @@ class Spicerack:
         """
         return Dns()
 
-    def discovery(self, *records):
+    def discovery(self, *records: str) -> Discovery:
         """Get a Discovery instance.
 
         Arguments:
@@ -165,9 +174,9 @@ class Spicerack:
             spicerack.dnsdisc.Discovery: the pre-configured Discovery instance for the given records.
 
         """
-        return Discovery(self.confctl('discovery'), self.remote(), records, dry_run=self._dry_run)
+        return Discovery(self.confctl('discovery'), self.remote(), list(records), dry_run=self._dry_run)
 
-    def mediawiki(self):
+    def mediawiki(self) -> MediaWiki:
         """Get a MediaWiki instance.
 
         Returns:
@@ -176,7 +185,7 @@ class Spicerack:
         """
         return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
 
-    def mysql(self):
+    def mysql(self) -> Mysql:
         """Get a Mysql instance.
 
         Returns:
@@ -185,7 +194,7 @@ class Spicerack:
         """
         return Mysql(self.remote(), dry_run=self._dry_run)
 
-    def redis_cluster(self, cluster):
+    def redis_cluster(self, cluster: str) -> RedisCluster:
         """Get a RedisCluster instance.
 
         Arguments:
@@ -197,7 +206,7 @@ class Spicerack:
         """
         return RedisCluster(cluster, os.path.join(self._spicerack_config_dir, 'redis_cluster'), dry_run=self._dry_run)
 
-    def elasticsearch_clusters(self, clustergroup):
+    def elasticsearch_clusters(self, clustergroup: str) -> ElasticsearchClusters:
         """Get an ElasticsearchClusters instance.
 
         Arguments:
@@ -209,7 +218,7 @@ class Spicerack:
         """
         return create_elasticsearch_clusters(clustergroup, self.remote(), dry_run=self._dry_run)
 
-    def admin_reason(self, reason, task_id=None):
+    def admin_reason(self, reason: str, task_id: Optional[str] = None) -> Reason:
         """Get an administrative Reason instance.
 
         Arguments:
@@ -223,7 +232,7 @@ class Spicerack:
         """
         return Reason(reason, self._username, self._current_hostname, task_id=task_id)
 
-    def icinga(self):
+    def icinga(self) -> Icinga:
         """Get an Icinga instance.
 
         Returns:
@@ -232,7 +241,7 @@ class Spicerack:
         """
         return Icinga(self.icinga_master_host)
 
-    def puppet(self, remote_hosts):  # pylint: disable=no-self-use
+    def puppet(self, remote_hosts: RemoteHosts) -> PuppetHosts:  # pylint: disable=no-self-use
         """Get a PuppetHosts instance for the given remote hosts.
 
         Arguments:
@@ -242,18 +251,18 @@ class Spicerack:
             spicerack.puppet.PuppetHosts: the instance to manage Puppet on the target hosts.
 
         """
-        return puppet.PuppetHosts(remote_hosts)
+        return PuppetHosts(remote_hosts)
 
-    def puppet_master(self):
+    def puppet_master(self) -> PuppetMaster:
         """Get a PuppetMaster instance to manage hosts and certificates from a Puppet master.
 
         Returns:
             spicerack.puppet.PuppetMaster: the instance to manage Puppet hosts and certificates.
 
         """
-        return puppet.PuppetMaster(self.remote().query(puppet.get_puppet_ca_hostname()))
+        return PuppetMaster(self.remote().query(get_puppet_ca_hostname()))
 
-    def ipmi(self):
+    def ipmi(self) -> Ipmi:
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
 
         Returns:
@@ -262,7 +271,7 @@ class Spicerack:
         """
         return Ipmi(interactive.get_management_password(), dry_run=self._dry_run)
 
-    def phabricator(self, bot_config_file, section='phabricator_bot'):
+    def phabricator(self, bot_config_file: str, section: str = 'phabricator_bot') -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.
 
         Arguments:
@@ -285,7 +294,7 @@ class Spicerack:
         # different Phabricator BOT accounts, potentially with different permissions.
         return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)
 
-    def debmonitor(self):
+    def debmonitor(self) -> Debmonitor:
         """Get a Debmonitor instance to interact with a Debmonitor website.
 
         Returns:
@@ -298,7 +307,7 @@ class Spicerack:
         options = load_ini_config(self._debmonitor_config).defaults()
         return Debmonitor(options['server'], options['cert'], options['key'], dry_run=self._dry_run)
 
-    def management(self):
+    def management(self) -> Management:
         """Get a Management instance to interact with the management interfaces.
 
         Returns:

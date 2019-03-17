@@ -1,6 +1,8 @@
 """Config module."""
-import configparser
 import logging
+
+from configparser import ConfigParser
+from typing import Dict
 
 import yaml
 
@@ -10,7 +12,7 @@ from spicerack.exceptions import SpicerackError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def load_yaml_config(config_file, raises=True):
+def load_yaml_config(config_file: str, raises: bool = True) -> Dict:
     """Parse a YAML config file and return it, optionally not failing on error.
 
     Arguments:
@@ -24,7 +26,7 @@ def load_yaml_config(config_file, raises=True):
         SpicerackError: if unable to load the configuration and ``raises`` is ``True``.
 
     """
-    config = {}
+    config = {}  # type: ignore
     try:
         with open(config_file, 'r') as fh:
             config = yaml.safe_load(fh)
@@ -42,7 +44,7 @@ def load_yaml_config(config_file, raises=True):
     return config
 
 
-def load_ini_config(config_file):
+def load_ini_config(config_file: str) -> ConfigParser:
     """Parse an INI config file and return it.
 
     Arguments:
@@ -52,7 +54,7 @@ def load_ini_config(config_file):
         configparser.ConfigParser: the parsed config.
 
     """
-    config = configparser.ConfigParser()
+    config = ConfigParser()
     config.read(config_file)
 
     return config

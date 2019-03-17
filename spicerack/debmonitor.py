@@ -16,7 +16,7 @@ class DebmonitorError(SpicerackError):
 class Debmonitor:
     """Class to interact with a Debmonitor website."""
 
-    def __init__(self, host, cert, key, dry_run=True):
+    def __init__(self, host: str, cert: str, key: str, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -30,7 +30,7 @@ class Debmonitor:
         self._key = key
         self._dry_run = dry_run
 
-    def host_delete(self, hostname):
+    def host_delete(self, hostname: str) -> None:
         """Remove a host and all its packages from Debmonitor.
 
         Arguments:

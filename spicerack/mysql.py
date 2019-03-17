@@ -6,11 +6,15 @@ Todo:
 import logging
 
 from datetime import datetime
+from typing import Dict, Iterator, Optional, Tuple, Union
+
+from ClusterShell.MsgTree import MsgTreeElem
+from cumin import NodeSet
 
 from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
-from spicerack.remote import RemoteHostsAdapter
+from spicerack.remote import Remote, RemoteHostsAdapter
 
 
 REPLICATION_ROLES = ('master', 'slave', 'standalone')
@@ -27,8 +31,15 @@ class MysqlError(SpicerackError):
 class MysqlRemoteHosts(RemoteHostsAdapter):
     """Custom RemoteHosts class to execute MySQL queries."""
 
-    def run_query(self, query, database='', success_threshold=1.0,  # pylint: disable=too-many-arguments
-                  batch_size=None, batch_sleep=None, is_safe=False):
+    def run_query(  # pylint: disable=too-many-arguments
+        self,
+        query: str,
+        database: str = '',
+        success_threshold: float = 1.0,
+        batch_size: Optional[Union[int, str]] = None,
+        batch_sleep: Optional[float] = None,
+        is_safe: bool = False
+    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Execute the query via Remote.
 
         Arguments:
@@ -61,7 +72,7 @@ class Mysql:
                        "ORDER BY ts DESC LIMIT 1")
     """str: Query pattern to check the heartbeat for a given datacenter and section."""
 
-    def __init__(self, remote, dry_run=True):
+    def __init__(self, remote: Remote, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -71,7 +82,7 @@ class Mysql:
         self._remote = remote
         self._dry_run = dry_run
 
-    def get_dbs(self, query):
+    def get_dbs(self, query: str) -> MysqlRemoteHosts:
         """Get a MysqlRemoteHosts instance for the matching hosts.
 
         Arguments:
@@ -83,7 +94,12 @@ class Mysql:
         """
         return MysqlRemoteHosts(self._remote.query(query))
 
-    def get_core_dbs(self, *, datacenter=None, section=None, replication_role=None):
+    def get_core_dbs(
+        self, *,
+        datacenter: Optional[str] = None,
+        section: Optional[str] = None,
+        replication_role: Optional[str] = None
+    ) -> MysqlRemoteHosts:
         """Find the core databases matching the parameters.
 
         Arguments:
@@ -138,7 +154,7 @@ class Mysql:
 
         return mysql_hosts
 
-    def set_core_masters_readonly(self, datacenter):
+    def set_core_masters_readonly(self, datacenter: str) -> None:
         """Set the core masters in read-only.
 
         Arguments:
@@ -154,7 +170,7 @@ class Mysql:
         target.run_query('SET GLOBAL read_only=1')
         self.verify_core_masters_readonly(datacenter, True)
 
-    def set_core_masters_readwrite(self, datacenter):
+    def set_core_masters_readwrite(self, datacenter: str) -> None:
         """Set the core masters in read-write.
 
         Arguments:
@@ -170,7 +186,7 @@ class Mysql:
         target.run_query('SET GLOBAL read_only=0')
         self.verify_core_masters_readonly(datacenter, False)
 
-    def verify_core_masters_readonly(self, datacenter, is_read_only):
+    def verify_core_masters_readonly(self, datacenter: str, is_read_only: bool) -> None:
         """Verify that the core masters are in read-only or read-write mode.
 
         Arguments:
@@ -196,7 +212,7 @@ class Mysql:
             raise MysqlError('Verification failed that core DB masters in {dc} have read-only={ro}'.format(
                 dc=datacenter, ro=is_read_only))
 
-    def check_core_masters_in_sync(self, dc_from, dc_to):
+    def check_core_masters_in_sync(self, dc_from: str, dc_to: str) -> None:
         """Check that all core masters in dc_to are in sync with the core masters in dc_from.
 
         Arguments:
@@ -211,7 +227,7 @@ class Mysql:
         heartbeats = self.get_core_masters_heartbeats(dc_from, dc_from)
         self.check_core_masters_heartbeats(dc_to, dc_from, heartbeats)
 
-    def get_core_masters_heartbeats(self, datacenter, heartbeat_dc):
+    def get_core_masters_heartbeats(self, datacenter: str, heartbeat_dc: str) -> Dict[str, datetime]:
         """Get the current heartbeat values from core DB masters in DC for a given heartbeat DC.
 
         Arguments:
@@ -235,7 +251,12 @@ class Mysql:
 
         return heartbeats
 
-    def check_core_masters_heartbeats(self, datacenter, heartbeat_dc, heartbeats):
+    def check_core_masters_heartbeats(
+        self,
+        datacenter: str,
+        heartbeat_dc: str,
+        heartbeats: Dict[str, datetime]
+    ) -> None:
         """Check the current heartbeat values in the core DB masters in DC are in sync with the provided heartbeats.
 
         Arguments:
@@ -252,7 +273,13 @@ class Mysql:
             self._check_core_master_in_sync(datacenter, heartbeat_dc, section, heartbeat)
 
     @retry(exceptions=(MysqlError,))
-    def _check_core_master_in_sync(self, datacenter, heartbeat_dc, section, parent_heartbeat):
+    def _check_core_master_in_sync(
+        self,
+        datacenter: str,
+        heartbeat_dc: str,
+        section: str,
+        parent_heartbeat: datetime
+    ) -> None:
         """Check and retry that the heartbeat value in a core DB master in DC is in sync with the provided heartbeat.
 
         Arguments:
@@ -281,7 +308,7 @@ class Mysql:
                                                         master_hb=parent_heartbeat, delta=delta))
 
     @staticmethod
-    def _get_heartbeat(mysql_hosts, section, heartbeat_dc):
+    def _get_heartbeat(mysql_hosts: MysqlRemoteHosts, section: str, heartbeat_dc: str) -> datetime:
         """Get the heartbeat from the remote host for a given DC.
 
         Arguments:

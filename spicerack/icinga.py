@@ -4,8 +4,13 @@ import time
 
 from contextlib import contextmanager
 from datetime import timedelta
+from typing import Iterator, Sequence, Union
 
+from cumin import NodeSet
+
+from spicerack.administrative import Reason
 from spicerack.exceptions import SpicerackError
+from spicerack.remote import RemoteHosts
 
 
 DOWNTIME_COMMAND = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
@@ -21,7 +26,7 @@ class IcingaError(SpicerackError):
 class Icinga:
     """Class to interact with the Icinga server."""
 
-    def __init__(self, icinga_host, *, config_file='/etc/icinga/icinga.cfg'):
+    def __init__(self, icinga_host: RemoteHosts, *, config_file: str = '/etc/icinga/icinga.cfg') -> None:
         """Initialize the instance.
 
         Arguments:
@@ -32,7 +37,7 @@ class Icinga:
         self._command_file = None
 
     @property
-    def command_file(self):
+    def command_file(self) -> str:
         """Getter for the command_file property.
 
         Returns:
@@ -58,10 +63,17 @@ class Icinga:
             raise IcingaError('Unable to read command_file configuration') from e
 
         self._command_file = command_file
-        return self._command_file
+        return self._command_file  # type: ignore
 
     @contextmanager
-    def hosts_downtimed(self, hosts, reason, *, duration=timedelta(hours=4), remove_on_error=False):
+    def hosts_downtimed(
+        self,
+        hosts: Sequence[Union[str, NodeSet]],
+        reason: Reason,
+        *,
+        duration: timedelta = timedelta(hours=4),
+        remove_on_error: bool = False
+    ) -> Iterator[None]:
         """Context manager to perform actions while the hosts are downtimed on Icinga.
 
         Arguments:
@@ -69,6 +81,11 @@ class Icinga:
             reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
             duration (datetime.timedelta, optional): the length of the downtime period.
             remove_on_error: should the downtime be removed even if an exception was raised.
+
+        Yields:
+            None: it just yields control to the caller once Icinga has been downtimed and deletes the downtime once
+            getting back the control.
+
         """
         self.downtime_hosts(hosts, reason, duration=duration)
         try:
@@ -80,11 +97,17 @@ class Icinga:
         else:
             self.remove_downtime(hosts)
 
-    def downtime_hosts(self, hosts, reason, *, duration=timedelta(hours=4)):
+    def downtime_hosts(
+        self,
+        hosts: Union[Sequence[str], NodeSet],
+        reason: Reason,
+        *,
+        duration: timedelta = timedelta(hours=4)
+    ) -> None:
         """Downtime hosts on the Icinga server for the given time with a message.
 
         Arguments:
-            hosts (list, ClusterShell.NodeSet.NodeSet): an iterable with the list of hostnames to downtime.
+            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to downtime.
             reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
             duration (datetime.timedelta, optional): the length of the downtime period.
         """
@@ -102,23 +125,21 @@ class Icinga:
         logger.info('Scheduling downtime on Icinga server %s for hosts: %s', self._icinga_host, hosts)
         self._icinga_host.run_sync(*commands)
 
-    def remove_downtime(self, hosts):
+    def remove_downtime(self, hosts: Union[Sequence[str], NodeSet]) -> None:
         """Remove a downtime from a set of hosts.
 
         Arguments:
-            hosts (list, ClusterShell.NodeSet.NodeSet): an iterable with the list of hostnames to iterate the command
-                for.
+            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
         """
         self.host_command('DEL_DOWNTIME_BY_HOST_NAME', hosts)
 
-    def host_command(self, command, hosts, *args):
+    def host_command(self, command: str, hosts: Union[Sequence[str], NodeSet], *args: str) -> None:
         """Execute a host-specific Icinga command on the Icinga server for a set of hosts.
 
         Arguments:
             command (str): the Icinga command to execute.
-            hosts (list, ClusterShell.NodeSet.NodeSet): an iterable with the list of hostnames to iterate the command
-                for.
-            *args: optional positional arguments to pass to the command.
+            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+            *args (str): optional positional arguments to pass to the command.
 
         See Also:
             https://icinga.com/docs/icinga1/latest/en/extcommands2.html
@@ -127,11 +148,11 @@ class Icinga:
         commands = [self._get_command_string(command, host.split('.')[0], *args) for host in hosts]
         self._icinga_host.run_sync(*commands)
 
-    def _get_command_string(self, *args):
+    def _get_command_string(self, *args: str) -> str:
         """Get the Icinga command to execute given the current arguments.
 
         Arguments:
-            *args: positional arguments to use to compose the Icinga command string.
+            *args (str): positional arguments to use to compose the Icinga command string.
 
         Returns:
             str: the command line to execute on the Icinga host.

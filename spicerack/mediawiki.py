@@ -1,14 +1,17 @@
 """MediaWiki module."""
 import logging
 
+from typing import Any, Dict, Tuple
+
 import requests
 
 from cumin.transports import Command
 
+from spicerack.confctl import ConftoolEntity
 from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
-from spicerack.remote import RemoteExecutionError
+from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -28,7 +31,7 @@ class MediaWiki:
     _list_cronjobs_command = '"$(crontab -u www-data -l | sed -r \'/^(#|$)/d\')"'
     _siteinfo_url = 'http://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2'
 
-    def __init__(self, conftool, remote, user, dry_run=True):
+    def __init__(self, conftool: ConftoolEntity, remote: Remote, user: str, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -42,7 +45,7 @@ class MediaWiki:
         self._user = user
         self._dry_run = dry_run
 
-    def check_config_line(self, filename, expected):
+    def check_config_line(self, filename: str, expected: str) -> bool:
         """Check that a MediaWiki configuration file contains some value.
 
         Arguments:
@@ -65,7 +68,7 @@ class MediaWiki:
         return found
 
     @staticmethod
-    def get_siteinfo(datacenter):
+    def get_siteinfo(datacenter: str) -> Dict:
         """Get the JSON paylod for siteinfo from a random host in a given datacenter.
 
         Arguments:
@@ -87,7 +90,7 @@ class MediaWiki:
         return response.json()
 
     @staticmethod
-    def check_siteinfo(datacenter, checks, samples=1):
+    def check_siteinfo(datacenter: str, checks: Dict[Tuple[str, ...], Any], samples: int = 1) -> None:
         """Check that a specific value in siteinfo matches the expected ones, on multiple hosts.
 
         Arguments:
@@ -109,7 +112,7 @@ class MediaWiki:
             logger.debug('Checking siteinfo %d/%d', i, samples)
             MediaWiki._check_siteinfo(datacenter, checks)
 
-    def scap_sync_config_file(self, filename, message):
+    def scap_sync_config_file(self, filename: str, message: str) -> None:
         """Execute scap sync-file to deploy a specific configuration file of wmf-config.
 
         Arguments:
@@ -126,7 +129,7 @@ class MediaWiki:
             user=self._user, filename=filename, message=message)
         self._remote.query(query).run_sync(command)
 
-    def set_readonly(self, datacenter, message):
+    def set_readonly(self, datacenter: str, message: str) -> None:
         """Set the Conftool readonly variable for MediaWiki config in a specific datacenter.
 
         Arguments:
@@ -143,7 +146,7 @@ class MediaWiki:
             ('query', 'general', 'readonly'): True,
             ('query', 'general', 'readonlyreason'): message}, samples=10)
 
-    def set_readwrite(self, datacenter):
+    def set_readwrite(self, datacenter: str) -> None:
         """Set the Conftool readonly variable for MediaWiki config to False to make it read-write.
 
         Arguments:
@@ -157,7 +160,7 @@ class MediaWiki:
         self._conftool.set_and_verify('val', False, scope=datacenter, name='ReadOnly')
         self._check_siteinfo_dry_run_aware(datacenter, {('query', 'general', 'readonly'):  False}, samples=10)
 
-    def set_master_datacenter(self, datacenter):
+    def set_master_datacenter(self, datacenter: str) -> None:
         """Set the MediaWiki config master datacenter variable in Conftool.
 
         Arguments:
@@ -172,7 +175,7 @@ class MediaWiki:
             self._check_siteinfo_dry_run_aware(dc, {
                 ('query', 'general', 'wmf-config', 'wmfMasterDatacenter'): datacenter}, samples=10)
 
-    def get_maintenance_host(self, datacenter):
+    def get_maintenance_host(self, datacenter: str) -> RemoteHosts:
         """Get an instance to execute commands on the maintenance hosts in a given datacenter.
 
         Arguments:
@@ -184,7 +187,7 @@ class MediaWiki:
         """
         return self._remote.query('P{O:mediawiki::maintenance} and A:' + datacenter)
 
-    def check_cronjobs_enabled(self, datacenter):
+    def check_cronjobs_enabled(self, datacenter: str) -> None:
         """Check that MediaWiki cronjobs are set in the given DC.
 
         Arguments:
@@ -196,7 +199,7 @@ class MediaWiki:
         """
         self.get_maintenance_host(datacenter).run_sync('test ' + MediaWiki._list_cronjobs_command, is_safe=True)
 
-    def check_cronjobs_disabled(self, datacenter):
+    def check_cronjobs_disabled(self, datacenter: str) -> None:
         """Check that MediaWiki cronjobs are not set in the given DC.
 
         Arguments:
@@ -208,7 +211,7 @@ class MediaWiki:
         """
         self.get_maintenance_host(datacenter).run_sync('test -z ' + MediaWiki._list_cronjobs_command, is_safe=True)
 
-    def stop_cronjobs(self, datacenter):
+    def stop_cronjobs(self, datacenter: str) -> None:
         """Remove and ensure MediaWiki cronjobs are not present in the given DC.
 
         Arguments:
@@ -251,7 +254,7 @@ class MediaWiki:
 
     @staticmethod
     @retry(tries=5, backoff_mode='constant', exceptions=(MediaWikiError, MediaWikiCheckError))
-    def _check_siteinfo(datacenter, checks):
+    def _check_siteinfo(datacenter: str, checks: Dict[Tuple[str], Any]) -> None:
         """Check that a specific value in siteinfo matches the expected ones, retrying if doesn't match.
 
         Arguments:
@@ -284,7 +287,12 @@ class MediaWiki:
                 raise MediaWikiCheckError("Expected '{expected}', got '{value}' for path: {path}".format(
                     expected=expected, value=value, path=path))
 
-    def _check_siteinfo_dry_run_aware(self, datacenter, checks, samples=1):
+    def _check_siteinfo_dry_run_aware(
+        self,
+        datacenter: str,
+        checks: Dict[Tuple[str, ...], Any],
+        samples: int = 1
+    ) -> None:
         """Dry-run mode aware check_siteinfo. See check_siteinfo() documentation for more details.
 
         Arguments:

@@ -3,7 +3,7 @@ import logging
 import re
 
 from spicerack.constants import ALL_DATACENTERS, INTERNAL_TLD, MANAGEMENT_SUBDOMAIN
-from spicerack.dns import DnsError
+from spicerack.dns import Dns, DnsError
 from spicerack.exceptions import SpicerackError
 
 
@@ -18,7 +18,7 @@ class ManagementError(SpicerackError):
 class Management:
     """Class to interact with management FQDNs."""
 
-    def __init__(self, dns):
+    def __init__(self, dns: Dns) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -26,7 +26,7 @@ class Management:
         """
         self._dns = dns
 
-    def get_fqdn(self, hostname):
+    def get_fqdn(self, hostname: str) -> str:
         """Get the FQDN of the management interface.
 
         Arguments:
@@ -48,7 +48,7 @@ class Management:
         logger.debug('Management FQDN for %s is %s', hostname, mgmt)
         return mgmt
 
-    def _is_valid_fqdn(self, fqdn):
+    def _is_valid_fqdn(self, fqdn: str) -> bool:
         """Check if the calculated management FQDN exists in the local DNS.
 
         Arguments:
@@ -64,7 +64,7 @@ class Management:
         except DnsError:
             return False
 
-    def _internal_mgmt_fqdn(self, hostname):
+    def _internal_mgmt_fqdn(self, hostname: str) -> str:
         """Generate the management FQDN for the given internal hostname.
 
         Arguments:
@@ -85,7 +85,7 @@ class Management:
 
         return mgmt
 
-    def _external_mgmt_fqdn(self, hostname):
+    def _external_mgmt_fqdn(self, hostname: str) -> str:
         """Generate the management FQDN for the given external hostname.
 
         Arguments:
@@ -104,7 +104,7 @@ class Management:
             # Detection of the datacenter from the hostname
             datacenters = [ALL_DATACENTERS[int(hostname_search.groupdict()['dc_id']) - 1]]
         else:
-            datacenters = ALL_DATACENTERS
+            datacenters = list(ALL_DATACENTERS)
 
         # Search the matching management valid hostname in all datacenters
         for dc in datacenters:

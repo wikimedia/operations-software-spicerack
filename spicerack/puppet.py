@@ -5,20 +5,22 @@ import logging
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from subprocess import CalledProcessError, check_output  # nosec
+from typing import Dict, Iterator, List, Optional, Union
 
 from cumin import NodeSet
 from cumin.transports import Command
 
+from spicerack.administrative import Reason
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
-from spicerack.remote import RemoteExecutionError, RemoteHostsAdapter
+from spicerack.remote import RemoteExecutionError, RemoteHosts, RemoteHostsAdapter
 
 
 PUPPET_COMMON_SCRIPT = '/usr/local/share/bash/puppet-common.sh'
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def get_puppet_ca_hostname():
+def get_puppet_ca_hostname() -> str:
     """Return the FQDN of the current Puppet CA server.
 
     Raises:
@@ -61,7 +63,7 @@ class PuppetHosts(RemoteHostsAdapter):
     """Class to manage Puppet on the target hosts."""
 
     @contextmanager
-    def disabled(self, reason):
+    def disabled(self, reason: Reason) -> Iterator[None]:
         """Context manager to perform actions while puppet is disabled.
 
         Arguments:
@@ -74,7 +76,7 @@ class PuppetHosts(RemoteHostsAdapter):
         finally:
             self.enable(reason)
 
-    def disable(self, reason):
+    def disable(self, reason: Reason) -> None:
         """Disable puppet with a specific reason.
 
         If Puppet was already disabled on a host with a different reason, the reason will not be overriden, allowing to
@@ -86,7 +88,7 @@ class PuppetHosts(RemoteHostsAdapter):
         logger.info('Disabling Puppet with reason %s on %d hosts: %s', reason.quoted(), len(self), self)
         self._remote_hosts.run_sync('disable-puppet {reason}'.format(reason=reason.quoted()))
 
-    def enable(self, reason):
+    def enable(self, reason: Reason) -> None:
         """Enable Puppet with a specific reason, it must be the same used to disable it.
 
         Puppet will be re-enabled only if it was disable with the same reason. If it was disable with a different reason
@@ -98,7 +100,7 @@ class PuppetHosts(RemoteHostsAdapter):
         logger.info('Enabling Puppet with reason %s on %d hosts: %s', reason.quoted(), len(self), self)
         self._remote_hosts.run_sync('enable-puppet {reason}'.format(reason=reason.quoted()))
 
-    def check_enabled(self):
+    def check_enabled(self) -> None:
         """Check if Puppet is enabled on all hosts.
 
         Raises:
@@ -110,7 +112,7 @@ class PuppetHosts(RemoteHostsAdapter):
             raise PuppetHostsCheckError(
                 'Puppet is not enabled on those hosts: {hosts}'.format(hosts=disabled))
 
-    def check_disabled(self):
+    def check_disabled(self) -> None:
         """Check if Puppet is disabled on all hosts.
 
         Raises:
@@ -122,8 +124,16 @@ class PuppetHosts(RemoteHostsAdapter):
             raise PuppetHostsCheckError(
                 'Puppet is not disabled on those hosts: {hosts}'.format(hosts=enabled))
 
-    def run(self, timeout=300, enable_reason=None, quiet=False,  # pylint: disable=too-many-arguments
-            failed_only=False, force=False, attempts=0, batch_size=10):
+    def run(  # pylint: disable=too-many-arguments
+        self,
+        timeout: int = 300,
+        enable_reason: Optional[Reason] = None,
+        quiet: bool = False,
+        failed_only: bool = False,
+        force: bool = False,
+        attempts: int = 0,
+        batch_size: int = 10
+    ) -> None:
         """Run Puppet.
 
         Arguments:
@@ -138,7 +148,7 @@ class PuppetHosts(RemoteHostsAdapter):
             batch_size (int, optional): how many concurrent Puppet runs to perform. The default value is tailored to
                 not overload the Puppet masters.
         """
-        args = []
+        args = []  # type: ignore
         if enable_reason is not None:
             args += ['--enable', enable_reason.quoted()]
         if quiet:
@@ -155,13 +165,13 @@ class PuppetHosts(RemoteHostsAdapter):
         logger.info('Running Puppet with args %s on %d hosts: %s', args_string, len(self), self)
         self._remote_hosts.run_sync(Command(command, timeout=timeout), batch_size=batch_size)
 
-    def first_run(self, has_systemd=True):
+    def first_run(self, has_systemd: bool = True) -> None:
         """Perform the first Puppet run on a clean host without using custom wrappers.
 
         Arguments:
             has_systemd (bool, optional): if the host has systemd as init system.
         """
-        commands = []
+        commands = []  # type: ignore
         if has_systemd:
             commands += ['systemctl stop puppet.service', 'systemctl reset-failed puppet.service || true']
 
@@ -174,7 +184,7 @@ class PuppetHosts(RemoteHostsAdapter):
         self._remote_hosts.run_sync(*commands)
         logger.info('First Puppet run completed')
 
-    def regenerate_certificate(self):
+    def regenerate_certificate(self) -> Dict[str, str]:
         """Delete the local Puppet certificate and generate a new CSR.
 
         Returns:
@@ -214,12 +224,12 @@ class PuppetHosts(RemoteHostsAdapter):
 
         return fingerprints
 
-    def wait(self):
+    def wait(self) -> None:
         """Wait until the next successful Puppet run is completed."""
         self.wait_since(datetime.utcnow())
 
     @retry(tries=60, delay=timedelta(seconds=30), backoff_mode='linear', exceptions=(PuppetHostsCheckError,))
-    def wait_since(self, start):
+    def wait_since(self, start: datetime) -> None:
         """Wait until a successful Puppet run is completed after the start time.
 
         Arguments:
@@ -252,7 +262,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
         logger.info('Successful Puppet run found')
 
-    def _get_disabled(self):
+    def _get_disabled(self) -> Dict[bool, NodeSet]:
         """Check if Puppet is disabled on the hosts.
 
         Returns:
@@ -278,7 +288,7 @@ class PuppetMaster:
     PUPPET_CERT_STATE_REQUESTED = 'requested'
     PUPPET_CERT_STATE_SIGNED = 'signed'
 
-    def __init__(self, master_host):
+    def __init__(self, master_host: RemoteHosts) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -295,7 +305,7 @@ class PuppetMaster:
 
         self._master_host = master_host
 
-    def delete(self, hostname):
+    def delete(self, hostname: str) -> None:
         """Remove the host from the Puppet master and PuppetDB.
 
         Clean up signed certs, cached facts, node objects, and reports in the Puppet master, deactivate it in PuppetDB.
@@ -308,7 +318,7 @@ class PuppetMaster:
                     for action in ('clean', 'deactivate')]
         self._master_host.run_sync(*commands)
 
-    def destroy(self, hostname):
+    def destroy(self, hostname: str) -> None:
         """Remove the certificate for the given hostname.
 
         If there is no certificate to remove it doesn't raise exception as the Puppet CA just outputs
@@ -319,7 +329,7 @@ class PuppetMaster:
         """
         self._master_host.run_sync('puppet ca destroy {host}'.format(host=hostname))
 
-    def verify(self, hostname):
+    def verify(self, hostname: str) -> None:
         """Verify that there is a valid certificate signed by the Puppet CA for the given hostname.
 
         Arguments:
@@ -331,11 +341,12 @@ class PuppetMaster:
         """
         response = self._run_json_command('puppet ca --render-as json verify {host}'.format(host=hostname))
 
-        if not response['valid']:
+        if not response['valid']:  # type: ignore
             raise PuppetMasterError(
-                'Invalid certificate for {host}: {error}'.format(host=hostname, error=response['error']))
+                'Invalid certificate for {host}: {error}'.format(
+                    host=hostname, error=response['error']))  # type: ignore
 
-    def sign(self, hostname, fingerprint, allow_alt_names=False):
+    def sign(self, hostname: str, fingerprint: str, allow_alt_names: bool = False) -> None:
         """Sign a CSR on the Puppet CA for the given host checking its fingerprint.
 
         Arguments:
@@ -375,7 +386,7 @@ class PuppetMaster:
                 host=hostname, state=cert['state']))
 
     @retry(tries=10, delay=timedelta(seconds=5), backoff_mode='power', exceptions=(PuppetMasterCheckError,))
-    def wait_for_csr(self, hostname):
+    def wait_for_csr(self, hostname: str) -> None:
         """Poll until a CSR appears for the given hostname or the timeout is reached.
 
         Arguments:
@@ -390,7 +401,7 @@ class PuppetMaster:
         if state != PuppetMaster.PUPPET_CERT_STATE_REQUESTED:
             raise PuppetMasterError('Expected certificate in requested state, got: {state}'.format(state=state))
 
-    def get_certificate_metadata(self, hostname):
+    def get_certificate_metadata(self, hostname: str) -> Dict:
         """Return the metadata of the certificate of the given hostname in the Puppet CA.
 
         Arguments:
@@ -432,7 +443,7 @@ class PuppetMaster:
 
         return metadata
 
-    def _run_json_command(self, command):
+    def _run_json_command(self, command: str) -> Union[Dict, List]:
         """Execute and parse a Puppet CLI command that output JSON format.
 
         The commands run are assumed to be safe as the JSON format is useful for read-only operations only.

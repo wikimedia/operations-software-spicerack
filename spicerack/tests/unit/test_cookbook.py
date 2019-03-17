@@ -8,7 +8,7 @@ import pytest
 
 from spicerack import cookbook, Spicerack
 
-from spicerack.tests import SPICERACK_TEST_PARAMS
+from spicerack.tests import caplog_not_available, SPICERACK_TEST_PARAMS
 
 
 COOKBOOKS_BASE_PATH = 'spicerack/tests/fixtures/cookbook'
@@ -180,6 +180,7 @@ class TestCookbooks:
         cookbooks = cookbook.Cookbooks(os.path.join(COOKBOOKS_BASE_PATH, 'non_existent'), [], self.spicerack)
         assert cookbooks.menu.get_tree() == ''
 
+    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
     @pytest.mark.parametrize('module, err_messages, absent_err_messages, code, args', (
         ('cookbook', ['START - Cookbook cookbook', 'END (PASS) - Cookbook cookbook (exit_code=0)'], [], 0, []),
         ('cookbook', [], ['START - Cookbook', 'END ('], cookbook.COOKBOOK_NO_PARSER_WITH_ARGS_RETCODE, ['arg1']),
@@ -187,8 +188,6 @@ class TestCookbooks:
         ('group3.non_zero_exit', ['END (FAIL) - Cookbook group3.non_zero_exit (exit_code=1)'], [], 1, []),
         ('group3.non_existent', ['Unable to find cookbook'], [], cookbook.COOKBOOK_NOT_FOUND_RETCODE, []),
         ('group3.argparse', [], ['START - Cookbook', 'END ('], 0, ['-h']),
-        ('group3.argparse', ['Argparse: error: unrecognized arguments'], ['START - Cookbook', 'END ('],
-         2, ['--invalid']),
         ('group3.invalid_syntax', ['invalid syntax (invalid_syntax.py, line 7)'], [],
          cookbook.COOKBOOK_NOT_FOUND_RETCODE, []),
         ('group3.keyboard_interrupt', ['Ctrl+c pressed'], [], cookbook.COOKBOOK_INTERRUPTED_RETCODE, []),
@@ -201,19 +200,32 @@ class TestCookbooks:
         ('group3.raise_system_exit_9', ['SystemExit(9) raised'], [], 9, []),
         ('group3.raise_system_exit_str', ["SystemExit('message') raised"], [], cookbook.COOKBOOK_EXCEPTION_RETCODE, []),
     ))  # pylint: disable=too-many-arguments
-    def test_main_execute_cookbook(self, tmpdir, capsys, module, err_messages, absent_err_messages, code, args):
+    def test_main_execute_cookbook(self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args):
         """Calling execute_cookbook() should intercept any exception raised."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
         with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main([module] + args)
 
-        _, err = capsys.readouterr()
         assert ret == code
         for message in err_messages:
-            assert message in err
+            assert message in caplog.text
         for message in absent_err_messages:
-            assert message not in err
+            assert message not in caplog.text
+
+    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
+    def test_main_execute_cookbook_invalid_args(self, tmpdir, capsys, caplog):
+        """Calling a cookbook with the wrong args should let argparse print its message."""
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
+            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+                ret = cookbook.main(['group3.argparse', '--invalid'])
+
+        assert ret == 2
+        _, err = capsys.readouterr()
+        assert 'Argparse: error: unrecognized arguments' in err
+        for message in ('START - Cookbook', 'END ('):
+            assert message not in caplog.text
 
     def test_main_execute_dry_run(self, capsys, tmpdir):
         """Calling main() with a cookbook and dry_run mode should execute it and set the dry run mode."""
@@ -226,21 +238,22 @@ class TestCookbooks:
         _, err = capsys.readouterr()
         assert 'DRY-RUN' in err
 
-    def test_main_list(self, tmpdir, capsys):
+    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
+    def test_main_list(self, tmpdir, capsys, caplog):
         """Calling main() with the -l/--list option should print the available cookbooks."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
         with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main(['-l'])
 
-        out, err = capsys.readouterr()
+        out, _ = capsys.readouterr()
 
         assert ret == 0
         assert out == LIST_COOKBOOKS_ALL
         lines = ['Failed to import module cookbooks.group3.invalid_syntax: invalid syntax (invalid_syntax.py, line 7)',
                  'Failed to import module cookbooks.group3.invalid_subgroup: invalid syntax (__init__.py, line 2)']
         for line in lines:
-            assert line in err
+            assert line in caplog.text
 
     def test_cookbooks_menu_status(self, monkeypatch):
         """Calling status on a CookbooksMenu should show the completed and total tasks."""

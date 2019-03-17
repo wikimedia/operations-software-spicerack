@@ -77,7 +77,7 @@ def mocked_dns_query(qname, record_type):
 class TestDns:
     """Dns class tests."""
 
-    @mock.patch('spicerack.dns.dns.resolver.Resolver')
+    @mock.patch('spicerack.dns.resolver.Resolver')
     def setup_method(self, _, mocked_resolver):
         """Initialize the test environment for Dns."""
         # pylint: disable=attribute-defined-outside-init
@@ -89,7 +89,7 @@ class TestDns:
         """The dns.resolver.Resolver should have been called without parameters."""
         self.mocked_resolver.assert_called_once_with()
 
-    @mock.patch('spicerack.dns.dns.resolver.Resolver')
+    @mock.patch('spicerack.dns.resolver.Resolver')
     def test_init_with_nameserver(self, mocked_resolver):
         """When passing a nameserver address, this should be set in the dns Resolver too."""
         Dns(nameserver_address='127.0.0.1')
