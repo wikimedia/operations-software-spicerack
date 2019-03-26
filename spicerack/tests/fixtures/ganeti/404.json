@@ -1,0 +1,5 @@
+{
+   "code" : 404,
+   "explain" : "Nothing matches the given URI",
+   "message" : "Not Found"
+}

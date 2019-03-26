@@ -9,6 +9,7 @@ from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
+from spicerack.ganeti import Ganeti
 from spicerack.icinga import Icinga
 from spicerack.ipmi import Ipmi
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
@@ -50,7 +51,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.phabricator(get_fixture_path('phabricator', 'valid.conf')), Phabricator)
     assert isinstance(spicerack.debmonitor(), Debmonitor)
     assert isinstance(spicerack.management(), Management)
-
+    assert isinstance(spicerack.ganeti(), Ganeti)
     assert mocked_remote_query.called
 
 

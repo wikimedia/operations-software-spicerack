@@ -1,0 +1,310 @@
+{
+   "software_version" : "2.15.2",
+   "install_image" : "",
+   "enabled_disk_templates" : [
+      "drbd",
+      "plain"
+   ],
+   "gluster_storage_dir" : "/var/run/ganeti/gluster",
+   "ipolicy" : {
+      "disk-templates" : [
+         "drbd",
+         "plain"
+      ],
+      "std" : {
+         "memory-size" : 128,
+         "cpu-count" : 1,
+         "nic-count" : 1,
+         "disk-size" : 1024,
+         "disk-count" : 1,
+         "spindle-use" : 1
+      },
+      "vcpu-ratio" : 4,
+      "minmax" : [
+         {
+            "min" : {
+               "spindle-use" : 1,
+               "disk-count" : 1,
+               "nic-count" : 1,
+               "disk-size" : 1024,
+               "memory-size" : 128,
+               "cpu-count" : 1
+            },
+            "max" : {
+               "nic-count" : 8,
+               "disk-size" : 1048576,
+               "disk-count" : 16,
+               "spindle-use" : 12,
+               "memory-size" : 55000,
+               "cpu-count" : 16
+            }
+         }
+      ],
+      "spindle-ratio" : 32
+   },
+   "diskparams" : {
+      "blockdev" : {},
+      "rbd" : {
+         "access" : "kernelspace",
+         "pool" : "rbd"
+      },
+      "sharedfile" : {},
+      "gluster" : {
+         "host" : "127.0.0.1",
+         "access" : "kernelspace",
+         "volume" : "gv0",
+         "port" : 24007
+      },
+      "file" : {},
+      "diskless" : {},
+      "ext" : {
+         "access" : "kernelspace"
+      },
+      "plain" : {
+         "stripes" : 1
+      },
+      "drbd" : {
+         "protocol" : "C",
+         "data-stripes" : 1,
+         "dynamic-resync" : false,
+         "c-delay-target" : 1,
+         "c-fill-target" : 0,
+         "meta-barriers" : false,
+         "disk-custom" : "",
+         "c-plan-ahead" : 20,
+         "net-custom" : "",
+         "c-max-rate" : 61440,
+         "c-min-rate" : 4096,
+         "meta-stripes" : 1,
+         "resync-rate" : 61440,
+         "metavg" : "ganeti",
+         "disk-barriers" : "n"
+      }
+   },
+   "file_storage_dir" : "/srv/ganeti/file-storage",
+   "ctime" : 1429109613.97519,
+   "name" : "ganeti01.example.com",
+   "enabled_user_shutdown" : false,
+   "mac_prefix" : "aa:00:00",
+   "protocol_version" : 2150000,
+   "enabled_data_collectors" : {
+      "diskstats" : true,
+      "cpu-avg-load" : true,
+      "drbd" : true,
+      "xen-cpu-avg-load" : true,
+      "lv" : true,
+      "inst-status-xen" : true
+   },
+   "uuid" : "a2b833e4-aeff-42b1-b838-2e16e169050a",
+   "vcs_version" : "(ganeti) version 2.15",
+   "ssh_key_bits" : 2048,
+   "max_running_jobs" : 20,
+   "tags" : [
+      "htools:iextags:service"
+   ],
+   "mtime" : 1545208000.0000,
+   "default_iallocator" : "hail",
+   "modify_ssh_setup" : false,
+   "blacklisted_os" : [],
+   "export_version" : 0,
+   "vg_name" : "ganeti",
+   "nicparams" : {
+      "default" : {
+         "link" : "private",
+         "vlan" : "",
+         "mode" : "bridged"
+      }
+   },
+   "drbd_usermode_helper" : "/bin/true",
+   "compression_tools" : [
+      "gzip",
+      "gzip-fast",
+      "gzip-slow"
+   ],
+   "drbd_helper" : "/bin/true",
+   "enabled_hypervisors" : [
+      "kvm"
+   ],
+   "data_collector_interval" : {
+      "inst-status-xen" : 5000000,
+      "lv" : 5000000,
+      "xen-cpu-avg-load" : 5000000,
+      "drbd" : 5000000,
+      "cpu-avg-load" : 5000000,
+      "diskstats" : 5000000
+   },
+   "max_tracked_jobs" : 25,
+   "config_version" : 2150000,
+   "master_netmask" : 32,
+   "ssh_key_type" : "rsa",
+   "default_hypervisor" : "kvm",
+   "default_iallocator_params" : {},
+   "osparams" : {},
+   "ndparams" : {
+      "oob_program" : "",
+      "ovs_name" : "switch1",
+      "ssh_port" : 22,
+      "exclusive_storage" : false,
+      "cpu_speed" : 1,
+      "spindle_count" : 1,
+      "ovs" : false,
+      "ovs_link" : ""
+   },
+   "shared_file_storage_dir" : "/srv/ganeti/shared-file-storage",
+   "instance_communication_network" : "",
+   "uid_pool" : [],
+   "hidden_os" : [],
+   "zeroing_image" : "",
+   "maintain_node_health" : false,
+   "os_hvp" : {},
+   "reserved_lvs" : [],
+   "prealloc_wipe_disks" : false,
+   "primary_ip_version" : 4,
+   "volume_group_name" : "ganeti",
+   "use_external_mip_script" : false,
+   "master" : "ganeti2175.example.com",
+   "beparams" : {
+      "default" : {
+         "vcpus" : 1,
+         "maxmem" : 1024,
+         "auto_balance" : true,
+         "always_failover" : false,
+         "minmem" : 1024,
+         "spindle_use" : 1
+      }
+   },
+   "os_api_version" : 20,
+   "hvparams" : {
+      "xen-hvm" : {
+         "vnc_bind_address" : "0.0.0.0",
+         "xen_cmd" : "xm",
+         "pci_pass" : "",
+         "vif_script" : "",
+         "soundhw" : "",
+         "cpu_weight" : 256,
+         "viridian" : false,
+         "boot_order" : "cd",
+         "cdrom_image_path" : "",
+         "nic_type" : "rtl8139",
+         "migration_port" : 8002,
+         "cpu_mask" : "all",
+         "blockdev_prefix" : "hd",
+         "device_model" : "/usr/lib/xen/bin/qemu-dm",
+         "vif_type" : "ioemu",
+         "disk_type" : "paravirtual",
+         "pae" : true,
+         "reboot_behavior" : "reboot",
+         "cpu_cap" : 0,
+         "acpi" : true,
+         "vnc_password_file" : "/etc/ganeti/vnc-cluster-password",
+         "kernel_path" : "/usr/lib/xen/boot/hvmloader",
+         "cpuid" : "",
+         "migration_mode" : "non-live",
+         "use_localtime" : false
+      },
+      "xen-pvm" : {
+         "cpu_cap" : 0,
+         "reboot_behavior" : "reboot",
+         "kernel_path" : "/boot/vmlinuz-3-xenU",
+         "cpuid" : "",
+         "bootloader_path" : "",
+         "migration_mode" : "live",
+         "kernel_args" : "ro",
+         "initrd_path" : "",
+         "root_path" : "/dev/xvda1",
+         "migration_port" : 8002,
+         "cpu_mask" : "all",
+         "blockdev_prefix" : "sd",
+         "soundhw" : "",
+         "bootloader_args" : "",
+         "cpu_weight" : 256,
+         "use_bootloader" : false,
+         "xen_cmd" : "xm",
+         "vif_script" : ""
+      },
+      "kvm" : {
+         "cpu_type" : "IvyBridge,+pcid,+invpcid,-kvm_steal_time,+spec-ctrl,+ssbd",
+         "kvm_flag" : "enabled",
+         "vnc_x509_path" : "",
+         "floppy_image_path" : "",
+         "soundhw" : "",
+         "kvm_extra" : "",
+         "boot_order" : "disk",
+         "user_shutdown" : false,
+         "vnc_bind_address" : "0.0.0.0",
+         "cpu_sockets" : 0,
+         "migration_bandwidth" : 64,
+         "acpi" : true,
+         "cdrom2_image_path" : "",
+         "vnc_password_file" : "",
+         "vnc_x509_verify" : false,
+         "migration_mode" : "live",
+         "spice_jpeg_wan_compression" : "",
+         "kernel_args" : "ro",
+         "use_localtime" : false,
+         "disk_cache" : "none",
+         "initrd_path" : "",
+         "disk_aio" : "native",
+         "cdrom_disk_type" : "",
+         "spice_use_vdagent" : true,
+         "migration_port" : 8102,
+         "spice_password_file" : "",
+         "cpu_mask" : "all",
+         "vnc_tls" : false,
+         "disk_type" : "paravirtual",
+         "cpu_threads" : 0,
+         "spice_bind" : "",
+         "vga" : "",
+         "vhost_net" : false,
+         "spice_ip_version" : 0,
+         "security_domain" : "",
+         "mem_path" : "",
+         "cdrom_image_path" : "",
+         "vnet_hdr" : true,
+         "spice_zlib_glz_wan_compression" : "",
+         "usb_devices" : "",
+         "kvm_path" : "/usr/bin/qemu-system-x86_64",
+         "migration_downtime" : 30,
+         "migration_caps" : "",
+         "spice_image_compression" : "",
+         "serial_speed" : 115200,
+         "virtio_net_queues" : 1,
+         "spice_playback_compression" : true,
+         "reboot_behavior" : "reboot",
+         "usb_mouse" : "",
+         "kernel_path" : "",
+         "keymap" : "",
+         "security_model" : "none",
+         "serial_console" : true,
+         "spice_use_tls" : false,
+         "cpu_cores" : 0,
+         "nic_type" : "paravirtual",
+         "use_chroot" : false,
+         "root_path" : "/dev/vda1",
+         "spice_streaming_video" : "",
+         "machine_version" : "",
+         "spice_tls_ciphers" : "HIGH:-DES:-3DES:-EXPORT:-ADH"
+      },
+      "chroot" : {
+         "init_script" : "/ganeti-chroot"
+      },
+      "fake" : {
+         "migration_mode" : "live"
+      },
+      "lxc" : {
+         "devices" : "c 1:3 rw,c 1:5 rw,c 1:7 rw,c 1:8 rw,c 1:9 rw,c 1:10 rw,c 5:0 rw,c 5:1 rw,c 5:2 rw,c 136:* rw",
+         "drop_capabilities" : "mac_override,sys_boot,sys_module,sys_time,sys_admin",
+         "extra_config" : "",
+         "extra_cgroups" : "",
+         "cpu_mask" : "",
+         "num_ttys" : 6,
+         "startup_timeout" : 30
+      }
+   },
+   "architecture" : [
+      "64bits",
+      "x86_64"
+   ],
+   "candidate_pool_size" : 3,
+   "master_netdev" : "private"
+}

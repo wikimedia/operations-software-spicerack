@@ -10,11 +10,12 @@ from pkg_resources import DistributionNotFound, get_distribution
 from spicerack import interactive
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
-from spicerack.config import load_ini_config
+from spicerack.config import load_ini_config, load_yaml_config
 from spicerack.debmonitor import Debmonitor
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, ElasticsearchClusters
+from spicerack.ganeti import Ganeti
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
@@ -315,3 +316,17 @@ class Spicerack:
 
         """
         return Management(self.dns())
+
+    def ganeti(self) -> Ganeti:
+        """Get an instance to interact with Ganeti.
+
+        Returns:
+            spicerack.ganeti.Ganeti: the instance
+
+        Raises:
+            KeyError: If the configuration file does not contain the correct keys.
+
+        """
+        configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, 'ganeti', 'config.yaml'))
+
+        return Ganeti(configuration['username'], configuration['password'])
