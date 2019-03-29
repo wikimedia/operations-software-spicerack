@@ -462,7 +462,15 @@ class ElasticsearchCluster:
         try:
             yield
         finally:
-            self._unfreeze_writes()
+            try:
+                self._unfreeze_writes()
+            except ElasticsearchClusterError as e:
+                # Unfreeze failed, we can try to freeze and unfreeze again,
+                # which might work. If it throws an exception again, we won't
+                # try a third time and let that new exception bubble up.
+                logger.warning('Could not unfreeze writes, trying to freeze and unfreeze again: %s', e)
+                self._freeze_writes(reason)
+                self._unfreeze_writes()
 
     def _freeze_writes(self, reason: Reason) -> None:
         """Stop writes to all elasticsearch indices.
