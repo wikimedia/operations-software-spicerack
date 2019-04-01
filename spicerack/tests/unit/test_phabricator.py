@@ -34,7 +34,7 @@ def test_init_client_raise(mocked_phabricator):
 
     # Values from the phabricator/valid.conf fixture
     mocked_phabricator.assert_called_once_with(  # nosec
-        host='https://phabricator.example.org/api/', username='phab-bot', token='api-12345')
+        host='https://phabricator.example.com/api/', username='phab-bot', token='api-12345')
 
 
 class TestPhabricator:

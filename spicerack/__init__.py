@@ -279,7 +279,7 @@ class Spicerack:
                 structure::
 
                     [section_name]
-                    host = https://phabricator.example.org/api/
+                    host = https://phabricator.example.com/api/
                     username = phab-bot
                     token = api-12345
 
