@@ -1,5 +1,6 @@
 """ElasticsearchCluster module test."""
 from datetime import datetime, timedelta
+from typing import Dict
 from unittest import mock
 
 import pytest
@@ -503,19 +504,13 @@ class TestElasticsearchClusters:
         remote = mock.Mock(spec_set=Remote)
         since = datetime.utcfromtimestamp(20 / 1000)
         cluster1_nodes = {
-            'ELASTIC1':
-                {'name': 'el1-alpha', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 10}},
-            'ELASTIC2':
-                {'name': 'el2-alpha', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 10}},
-            'ELASTIC3':
-                {'name': 'el3-alpha', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 30}},
+            'x1': json_node('elastic1001.example.com', 'alpha', 'row1', 10),
+            'x2': json_node('elastic1002.example.com', 'alpha', 'row1', 10),
+            'x3': json_node('elastic1003.example.com', 'alpha', 'row1', 30),
         }
-
         cluster2_nodes = {
-            'ELASTIC4':
-                {'name': 'el3-gamma', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 10}},
-            'ELASTIC5':
-                {'name': 'el4-gamma', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 10}},
+            'x4': json_node('elastic1003.example.com', 'gamma', 'row1', 10),
+            'x5': json_node('elastic1004.example.com', 'gamma', 'row1', 10),
         }
         self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
         self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
@@ -524,7 +519,12 @@ class TestElasticsearchClusters:
         nodes_not_restarted = remote.query.call_args[0][0]
         nodes_not_restarted = nodes_not_restarted.split(',')
         nodes_not_restarted.sort()
-        assert nodes_not_restarted == ['el1*', 'el2*', 'el3*', 'el4*']
+        assert nodes_not_restarted == [
+            'elastic1001*',
+            'elastic1002*',
+            'elastic1003*',
+            'elastic1004*',
+        ]
 
     def test_get_next_clusters_nodes_raises_error_when_size_is_less_than_one(self):
         """Test that next nodes belong in the same row on each cluster."""
@@ -538,21 +538,16 @@ class TestElasticsearchClusters:
         remote = mock.Mock(spec_set=Remote)
         since = datetime.utcfromtimestamp(20 / 1000)
         cluster1_nodes = {
-            'ELASTIC3':
-                {'name': 'el3-alpha', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 30}},
-            'ELASTIC4':
-                {'name': 'el5-alpha', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 30}},
-            'ELASTIC5':
-                {'name': 'el6-alpha', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 10}},
+            'x3': json_node('elastic1003.example.com', 'alpha', 'row1', 30),
+            'x5': json_node('elastic1005.example.com', 'alpha', 'row2', 30),
+            'x6': json_node('elastic1006.example.com', 'alpha', 'row2', 10),
         }
 
         cluster2_nodes = {
-            'ELASTIC6':
-                {'name': 'el3-beta', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 30}},
-            'ELASTIC7':
-                {'name': 'el5-beta', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 30}},
-            'ELASTIC8':
-                {'name': 'el7-beta', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 10}},
+            'x6': json_node('elastic1003.example.com', 'beta', 'row1', 30),
+            'x7': json_node('elastic1005.example.com', 'beta', 'row2', 30),
+            'x8': json_node('elastic1007.example.com', 'beta', 'row2', 10),
+
         }
         self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
         self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
@@ -561,28 +556,21 @@ class TestElasticsearchClusters:
         nodes_not_restarted = remote.query.call_args[0][0]
         nodes_not_restarted = nodes_not_restarted.split(',')
         nodes_not_restarted.sort()
-        assert nodes_not_restarted == ['el6*', 'el7*']
+        assert nodes_not_restarted == ['elastic1006*', 'elastic1007*']
 
     def test_get_next_nodes_least_not_restarted(self):
         """Test to get rows that have the least not restarted nodes first on each cluster."""
         remote = mock.Mock(spec_set=Remote)
         since = datetime.utcfromtimestamp(20 / 1000)
         cluster1_nodes = {
-            'ELASTIC4':
-                {'name': 'el5-alpha', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 10}},
-            'ELASTIC5':
-                {'name': 'el6-alpha', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 10}},
-            'ELASTIC6':
-                {'name': 'el7-alpha', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 30}},
+            'x4': json_node('elastic1005.example.com', 'alpha', 'row2', 10),
+            'x5': json_node('elastic1006.example.com', 'alpha', 'row2', 10),
+            'x6': json_node('elastic1007.example.com', 'alpha', 'row2', 30),
         }
-
         cluster2_nodes = {
-            'ELASTIC7':
-                {'name': 'el9-beta', 'attributes': {'row': 'row3'}, 'jvm': {'start_time_in_millis': 10}},
-            'ELASTIC8':
-                {'name': 'el8-beta', 'attributes': {'row': 'row3'}, 'jvm': {'start_time_in_millis': 50}},
-            'ELASTIC9':
-                {'name': 'el10-beta', 'attributes': {'row': 'row3'}, 'jvm': {'start_time_in_millis': 30}},
+            'x7': json_node('elastic1009.example.com', 'beta', 'row3', 10),
+            'x8': json_node('elastic1008.example.com', 'beta', 'row3', 50),
+            'x9': json_node('elastic1010.example.com', 'beta', 'row3', 30),
         }
         self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
         self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
@@ -595,27 +583,20 @@ class TestElasticsearchClusters:
         nodes_queried = remote.query.call_args[0][0]
         nodes_queried = nodes_queried.split(',')
         nodes_queried.sort()
-        assert nodes_queried == ['el9*']
+        assert nodes_queried == ['elastic1009*']
 
     def test_get_next_nodes_no_rows(self):
         """Test that all nodes have been restarted on all clusters."""
         since = datetime.utcfromtimestamp(20 / 1000)
         cluster1_nodes = {
-            'ELASTIC3':
-                {'name': 'el3-gamma', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 30}},
-            'ELASTIC4':
-                {'name': 'el5-gamma', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 87}},
-            'ELASTIC5':
-                {'name': 'el6-gamma', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 77}},
+            'x3': json_node('elastic1003.example.com', 'gamma', 'row1', 30),
+            'x4': json_node('elastic1005.example.com', 'gamma', 'row2', 87),
+            'x5': json_node('elastic1006.example.com', 'gamma', 'row2', 77),
         }
-
         cluster2_nodes = {
-            'ELASTIC3':
-                {'name': 'el4-alpha', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 40}},
-            'ELASTIC4':
-                {'name': 'el5-gamma', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 89}},
-            'ELASTIC5':
-                {'name': 'el6-alpha', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 79}},
+            'x3': json_node('elastic1004.example.com', 'alpha', 'row1', 40),
+            'x4': json_node('elastic1005.example.com', 'gamma', 'row2', 89),
+            'x5': json_node('elastic1016.example.com', 'alpha', 'row2', 79),
         }
         self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
         self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
@@ -627,19 +608,35 @@ class TestElasticsearchClusters:
         """Test that error is raised when clusters instances of the same node belong to different rows"""
         since = datetime.utcfromtimestamp(20 / 1000)
         cluster1_nodes = {
-            'ELASTIC3':
-                {'name': 'el3-gamma', 'attributes': {'row': 'row1'}, 'jvm': {'start_time_in_millis': 10}},
-            'ELASTIC4':
-                {'name': 'el5-gamma', 'attributes': {'row': 'row2'}, 'jvm': {'start_time_in_millis': 87}},
+            'x3': json_node('elastic1003.example.com', 'gamma', 'row1', 10),
+            'x4': json_node('elastic1005.example.com', 'gamma', 'row2', 87),
         }
 
         cluster2_nodes = {
-            'ELASTIC3':
-                {'name': 'el3-alpha', 'attributes': {'row': 'row6'}, 'jvm': {'start_time_in_millis': 10}},
-
+            'x3': json_node('elastic1003.example.com', 'alpha', 'row6', 10),
         }
         self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
         self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
         elasticsearchclusters = ec.ElasticsearchClusters(self.clusters, None)
         with pytest.raises(ec.ElasticsearchClusterError):
             elasticsearchclusters.get_next_clusters_nodes(since, 2)
+
+
+def json_node(fqdn: str, cluster_name: str = 'alpha-cluster', row: str = 'row1', start_time: int = 10) -> Dict:
+    """Used to mock the elasticsearch node API."""
+    hostname = fqdn.split('.', 1)[0]
+    node_name = '{hostname}-{cluster_name}'.format(hostname=hostname, cluster_name=cluster_name)
+    return {
+        'name': node_name,
+        'attributes': {
+            'row': row,
+            'hostname': hostname,
+            'fqdn': fqdn,
+        },
+        'settings': {
+            'cluster': {
+                'name': cluster_name,
+            }
+        },
+        'jvm': {'start_time_in_millis': start_time}
+    }
