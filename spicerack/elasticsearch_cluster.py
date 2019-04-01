@@ -6,7 +6,7 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import Any, Dict, Iterator, List, Optional, Sequence
+from typing import Dict, Iterable, Iterator, List, Optional, Sequence
 
 import curator
 
@@ -249,68 +249,35 @@ class ElasticsearchClusters:
             raise ElasticsearchClusterError("Size of next nodes must be at least 1")
 
         nodes_group = self._get_nodes_group()
-        nodes_to_process = [node for node in nodes_group.values()
-                            if not ElasticsearchClusters._node_has_been_restarted(node, started_before)]
+        nodes_to_process = [node for node in nodes_group if not node.restarted_since(started_before)]
         if not nodes_to_process:
             return None
         rows = ElasticsearchClusters._to_rows(nodes_to_process)
         sorted_rows = sorted(rows.values(), key=len)
         next_nodes = sorted_rows[0][:size]
-        node_names = ','.join([node['name'] + '*' for node in next_nodes])
+        node_names = ','.join([node.fqdn for node in next_nodes])
         return ElasticsearchHosts(self._remote.query(node_names), next_nodes, dry_run=self._dry_run)
 
-    def _get_nodes_group(self) -> Dict[str, Dict[str, Any]]:
+    def _get_nodes_group(self) -> Iterable['NodesGroup']:
         """Create nodes_group for each nodes.
 
         Returns:
-            dict: merged clusters nodes. e.g::
-
-                {'el5':
-                    {'name': 'el5', 'clusters': ['alpha', 'beta],
-                    'clusters_instances': [spicerack.elasticsearch_cluster.ElasticsearchCluster],
-                        'row': 'row2', 'oldest_start_time': 10
-                    }
-                }
+            dict: merged clusters nodes.
 
         """
         nodes_group = {}  # type: ignore
         for cluster in self._clusters:
-            for cluster_node in cluster.get_nodes().values():
-                ElasticsearchClusters._append_to_nodegroup(nodes_group, cluster_node, cluster)
-        return nodes_group
+            for json_node in cluster.get_nodes().values():
+                node_name = json_node['attributes']['hostname']
+
+                if node_name not in nodes_group.keys():
+                    nodes_group[node_name] = NodesGroup(json_node, cluster)
+                else:
+                    nodes_group[node_name].accumulate(json_node, cluster)
+        return nodes_group.values()
 
     @staticmethod
-    def _append_to_nodegroup(nodes_group: Dict, cluster_node: Dict, cluster: 'ElasticsearchCluster') -> None:
-        """Merge node of different clusters.
-
-        Arguments:
-            nodes_group (dict): contains group of nodes that have been merged from different clusters.
-            cluster_node (dict): the specific cluster node to add to nodes_group.
-            cluster (spicerack.elasticsearch_cluster.ElasticsearchCluster): ElasticsearchCluster for cluster node
-        """
-        node_name, cluster_group_name = ElasticsearchCluster.split_node_name(cluster_node['name'])
-
-        if node_name not in nodes_group.keys():
-            nodes_group[node_name] = {
-                'name': node_name,
-                'clusters': [cluster_group_name],
-                'clusters_instances': [cluster],
-                'row': cluster_node['attributes']['row'],
-                'oldest_start_time': cluster_node['jvm']['start_time_in_millis']
-            }
-        else:
-            if cluster_group_name not in nodes_group[node_name]['clusters']:
-                nodes_group[node_name]['clusters'].append(cluster_group_name)
-                nodes_group[node_name]['clusters_instances'].append(cluster)
-
-            if nodes_group[node_name]['row'] != cluster_node['attributes']['row']:
-                raise ElasticsearchClusterError('The same nodes of different clusters must be in the same row')
-
-            nodes_group[node_name]['oldest_start_time'] = min(nodes_group[node_name]['oldest_start_time'],
-                                                              cluster_node['jvm']['start_time_in_millis'])
-
-    @staticmethod
-    def _to_rows(nodes: Sequence[Dict]) -> defaultdict:
+    def _to_rows(nodes: Sequence['NodesGroup']) -> defaultdict:
         """Arrange nodes in rows, so each node belongs in their respective row.
 
         Arguments:
@@ -324,23 +291,8 @@ class ElasticsearchClusters:
         """
         rows = defaultdict(list)  # type: ignore
         for node in nodes:
-            rows[node['row']].append(node)
+            rows[node.row].append(node)
         return rows
-
-    @staticmethod
-    def _node_has_been_restarted(node: Dict, since: datetime) -> bool:
-        """Check if node has been restarted.
-
-        Arguments:
-            node (dict): elasticsearch node.
-            since (datetime.datetime): the time against after which we check if the node has been restarted.
-
-        Returns:
-            bool: True if the node has been restarted after since, false otherwise.
-
-        """
-        start_time = datetime.utcfromtimestamp(node['oldest_start_time'] / 1000)
-        return start_time > since
 
 
 class ElasticsearchCluster:
@@ -575,3 +527,81 @@ class ElasticsearchCluster:
                 logger.info('Could not reallocate shard [%s:%s] on %s', shard['index'], shard['shard'], node)
         else:
             logger.warning('Could not reallocate shard [%s:%s] on any node', shard['index'], shard['shard'])
+
+
+class NodesGroup:
+    """Internal class, used for parsing responses from the elasticsearch node API.
+
+    Since the same server can host multiple elasticsearch instances, this class can consolidate those multiple
+    instances in a single object.
+    """
+
+    def __init__(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
+        """Instantiate a new node.
+
+        Arguments:
+            json_node (dict): a single node, as returned from the elasticsearch API.
+            cluster (spicerack.elasticsearch_cluster.ElasticsearchCluster): an elasticsearch instance
+
+        """
+        self._hostname = json_node['attributes']['hostname']
+        self._fqdn = json_node['attributes']['fqdn']
+        self._clusters_names = [json_node['settings']['cluster']['name']]
+        self._clusters_instances = [cluster]
+        self._row = json_node['attributes']['row']
+        self._oldest_start_time = datetime.utcfromtimestamp(json_node['jvm']['start_time_in_millis'] / 1000)
+
+    def accumulate(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
+        """Accumulate information from other elasticsearch instances running on the same server.
+
+        Arguments:
+            json_node (dict): a single node, as returned from the elasticsearch API.
+            cluster (elasticsearch.Elasticsearch): an elasticsearch instance
+
+        """
+        if self._fqdn != json_node['attributes']['fqdn']:
+            # should never happen
+            raise AssertionError(
+                'Invalid data, two instances on the same node with different fqdns [{fqdn1}/{fqdn2}]'.format(
+                    fqdn1=self._fqdn,
+                    fqdn2=json_node['attributes']['fqdn']
+                )
+            )
+        cluster_name = json_node['settings']['cluster']['name']
+        if cluster_name not in self._clusters_names:
+            self._clusters_names.append(cluster_name)
+        if cluster not in self._clusters_instances:
+            self._clusters_instances.append(cluster)
+        if self._row != json_node['attributes']['row']:
+            # should never happen
+            raise AssertionError(
+                'Invalid data, two instances on the same node with different rows {host}:[{row1}/{row2}]'.format(
+                    host=self._hostname,
+                    row1=self._row,
+                    row2=json_node['attributes']['row']
+                )
+            )
+        start_time = datetime.utcfromtimestamp(json_node['jvm']['start_time_in_millis'] / 1000)
+        self._oldest_start_time = min(self._oldest_start_time, start_time)
+
+    @property
+    def row(self) -> str:
+        """Datacenter row."""
+        return self._row
+
+    @property
+    def fqdn(self) -> str:
+        """Fully Qualified Domain Name."""
+        return self._fqdn
+
+    def restarted_since(self, since: datetime) -> bool:
+        """Check if node has been restarted.
+
+        Arguments:
+            since (datetime.datetime): the time against after which we check if the node has been restarted.
+
+        Returns:
+            bool: True if the node has been restarted after since, false otherwise.
+
+        """
+        return self._oldest_start_time > since

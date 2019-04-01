@@ -10,6 +10,7 @@ from elasticsearch import Elasticsearch, ConflictError, RequestError, TransportE
 
 from spicerack import elasticsearch_cluster as ec
 from spicerack.administrative import Reason
+from spicerack.elasticsearch_cluster import NodesGroup
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import elasticsearch_too_old
 
@@ -499,127 +500,140 @@ class TestElasticsearchClusters:
             assert self.elasticsearch1.cluster.health.call_count == 2
             assert self.elasticsearch2.cluster.health.call_count == 2
 
-    def test_get_next_clusters_nodes(self):
-        """Test that next nodes belong in the same row on each cluster."""
-        remote = mock.Mock(spec_set=Remote)
-        since = datetime.utcfromtimestamp(20 / 1000)
-        cluster1_nodes = {
+
+def test_get_next_clusters_nodes():
+    """Test that next nodes belong in the same row on each cluster."""
+    remote = mock.Mock(spec_set=Remote)
+    since = datetime.utcfromtimestamp(20 / 1000)
+    elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info([
+        {
             'x1': json_node('elastic1001.example.com', 'alpha', 'row1', 10),
             'x2': json_node('elastic1002.example.com', 'alpha', 'row1', 10),
             'x3': json_node('elastic1003.example.com', 'alpha', 'row1', 30),
-        }
-        cluster2_nodes = {
-            'x4': json_node('elastic1003.example.com', 'gamma', 'row1', 10),
-            'x5': json_node('elastic1004.example.com', 'gamma', 'row1', 10),
-        }
-        self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
-        self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
-        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, remote, dry_run=False)
-        elasticsearch_clusters.get_next_clusters_nodes(since, 4)
-        nodes_not_restarted = remote.query.call_args[0][0]
-        nodes_not_restarted = nodes_not_restarted.split(',')
-        nodes_not_restarted.sort()
-        assert nodes_not_restarted == [
-            'elastic1001*',
-            'elastic1002*',
-            'elastic1003*',
-            'elastic1004*',
-        ]
+        }, {
+            'y3': json_node('elastic1003.example.com', 'gamma', 'row1', 10),
+            'y4': json_node('elastic1004.example.com', 'gamma', 'row1', 10),
+        }]),
+        remote)
+    elasticsearch_clusters.get_next_clusters_nodes(since, 4)
+    nodes_not_restarted = remote.query.call_args[0][0]
+    nodes_not_restarted = nodes_not_restarted.split(',')
+    nodes_not_restarted.sort()
+    assert nodes_not_restarted == [
+        'elastic1001.example.com',
+        'elastic1002.example.com',
+        'elastic1003.example.com',
+        'elastic1004.example.com',
+    ]
 
-    def test_get_next_clusters_nodes_raises_error_when_size_is_less_than_one(self):
-        """Test that next nodes belong in the same row on each cluster."""
-        since = datetime.utcfromtimestamp(20 / 1000)
-        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, None, dry_run=False)
-        with pytest.raises(ec.ElasticsearchClusterError):
-            elasticsearch_clusters.get_next_clusters_nodes(since, 0)
 
-    def test_get_next_nodes_returns_less_nodes_than_specified(self):
-        """Test that the nodes returned is less than specified based on if they have been restarted for each clusters"""
-        remote = mock.Mock(spec_set=Remote)
-        since = datetime.utcfromtimestamp(20 / 1000)
-        cluster1_nodes = {
-            'x3': json_node('elastic1003.example.com', 'alpha', 'row1', 30),
-            'x5': json_node('elastic1005.example.com', 'alpha', 'row2', 30),
-            'x6': json_node('elastic1006.example.com', 'alpha', 'row2', 10),
-        }
+def test_get_next_clusters_nodes_raises_error_when_size_is_less_than_one():
+    """Test that next nodes belong in the same row on each cluster."""
+    since = datetime.utcfromtimestamp(20 / 1000)
+    elasticsearch_clusters = ec.ElasticsearchClusters(None, None)
+    with pytest.raises(ec.ElasticsearchClusterError):
+        elasticsearch_clusters.get_next_clusters_nodes(since, 0)
 
-        cluster2_nodes = {
-            'x6': json_node('elastic1003.example.com', 'beta', 'row1', 30),
-            'x7': json_node('elastic1005.example.com', 'beta', 'row2', 30),
-            'x8': json_node('elastic1007.example.com', 'beta', 'row2', 10),
 
-        }
-        self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
-        self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
-        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, remote, dry_run=False)
-        elasticsearch_clusters.get_next_clusters_nodes(since, 4)
-        nodes_not_restarted = remote.query.call_args[0][0]
-        nodes_not_restarted = nodes_not_restarted.split(',')
-        nodes_not_restarted.sort()
-        assert nodes_not_restarted == ['elastic1006*', 'elastic1007*']
+def test_get_next_nodes_returns_less_nodes_than_specified():
+    """Test that the nodes returned is less than specified based on if they have been restarted for each clusters"""
+    remote = mock.Mock(spec_set=Remote)
+    since = datetime.utcfromtimestamp(20 / 1000)
+    elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info([
+        {
+            'x1': json_node('elastic1001.example.com', start_time=10),
+            'x2': json_node('elastic1002.example.com', start_time=10),
+            'x3': json_node('elastic1003.example.com', start_time=30),
+        }]),
+        remote)
+    elasticsearch_clusters.get_next_clusters_nodes(since, 4)
+    nodes_not_restarted = remote.query.call_args[0][0]
+    nodes_not_restarted = nodes_not_restarted.split(',')
+    nodes_not_restarted.sort()
+    assert nodes_not_restarted == ['elastic1001.example.com', 'elastic1002.example.com']
 
-    def test_get_next_nodes_least_not_restarted(self):
-        """Test to get rows that have the least not restarted nodes first on each cluster."""
-        remote = mock.Mock(spec_set=Remote)
-        since = datetime.utcfromtimestamp(20 / 1000)
-        cluster1_nodes = {
+
+def test_get_next_nodes_least_not_restarted():
+    """Test to get rows that have the least not restarted nodes first on each cluster."""
+    remote = mock.Mock(spec_set=Remote)
+    since = datetime.utcfromtimestamp(20 / 1000)
+    elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info([
+        {
             'x4': json_node('elastic1005.example.com', 'alpha', 'row2', 10),
             'x5': json_node('elastic1006.example.com', 'alpha', 'row2', 10),
             'x6': json_node('elastic1007.example.com', 'alpha', 'row2', 30),
-        }
-        cluster2_nodes = {
+        }, {
             'x7': json_node('elastic1009.example.com', 'beta', 'row3', 10),
             'x8': json_node('elastic1008.example.com', 'beta', 'row3', 50),
             'x9': json_node('elastic1010.example.com', 'beta', 'row3', 30),
-        }
-        self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
-        self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
-        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, remote, dry_run=False)
-        elasticsearch_clusters.get_next_clusters_nodes(since, 4)
-        # FIXME: We assert on the nodes that were queried via cumin and not on the return value of
-        #  get_next_clusters_nodes(). This is a simplification to avoid mocking yet another return value.
-        #  It is also a code smell. There is a refactoring waiting to happen to reduce / isolate the complexity
-        #  of get_next_clusters_nodes().
-        nodes_queried = remote.query.call_args[0][0]
-        nodes_queried = nodes_queried.split(',')
-        nodes_queried.sort()
-        assert nodes_queried == ['elastic1009*']
+        }]),
+        remote)
+    elasticsearch_clusters.get_next_clusters_nodes(since, 4)
+    # FIXME: We assert on the nodes that were queried via cumin and not on the return value of
+    #  get_next_clusters_nodes(). This is a simplification to avoid mocking yet another return value.
+    #  It is also a code smell. There is a refactoring waiting to happen to reduce / isolate the complexity
+    #  of get_next_clusters_nodes().
+    nodes_queried = remote.query.call_args[0][0]
+    nodes_queried = nodes_queried.split(',')
+    nodes_queried.sort()
+    assert nodes_queried == ['elastic1009.example.com']
 
-    def test_get_next_nodes_no_rows(self):
-        """Test that all nodes have been restarted on all clusters."""
-        since = datetime.utcfromtimestamp(20 / 1000)
-        cluster1_nodes = {
+
+def test_get_next_nodes_no_rows():
+    """Test that all nodes have been restarted on all clusters."""
+    since = datetime.utcfromtimestamp(20 / 1000)
+    elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info([
+        {
             'x3': json_node('elastic1003.example.com', 'gamma', 'row1', 30),
             'x4': json_node('elastic1005.example.com', 'gamma', 'row2', 87),
             'x5': json_node('elastic1006.example.com', 'gamma', 'row2', 77),
-        }
-        cluster2_nodes = {
+        }, {
             'x3': json_node('elastic1004.example.com', 'alpha', 'row1', 40),
             'x4': json_node('elastic1005.example.com', 'gamma', 'row2', 89),
             'x5': json_node('elastic1016.example.com', 'alpha', 'row2', 79),
-        }
-        self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
-        self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
-        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, None)
-        result = elasticsearch_clusters.get_next_clusters_nodes(since, 2)
-        assert result is None
+        }]),
+        None)
+    result = elasticsearch_clusters.get_next_clusters_nodes(since, 2)
+    assert result is None
 
-    def test_get_next_nodes_fails_when_rows_are_not_same(self):
-        """Test that error is raised when clusters instances of the same node belong to different rows"""
-        since = datetime.utcfromtimestamp(20 / 1000)
-        cluster1_nodes = {
+
+def test_get_next_nodes_fails_when_rows_are_not_same():
+    """Test that error is raised when clusters instances of the same node belong to different rows"""
+    since = datetime.utcfromtimestamp(20 / 1000)
+    elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info([
+        {
             'x3': json_node('elastic1003.example.com', 'gamma', 'row1', 10),
             'x4': json_node('elastic1005.example.com', 'gamma', 'row2', 87),
-        }
-
-        cluster2_nodes = {
+        }, {
             'x3': json_node('elastic1003.example.com', 'alpha', 'row6', 10),
-        }
-        self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': cluster1_nodes})
-        self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': cluster2_nodes})
-        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, None)
-        with pytest.raises(ec.ElasticsearchClusterError):
-            elasticsearch_clusters.get_next_clusters_nodes(since, 2)
+        }]),
+        None)
+    with pytest.raises(AssertionError):
+        elasticsearch_clusters.get_next_clusters_nodes(since, 2)
+
+
+def test_nodes_group_aggregates_same_clusters():
+    """Same cluster aggregated multiple times is ignored"""
+    node1 = json_node('elastic1001.example.com', 'alpha', row='row1')
+    node2 = json_node('elastic1001.example.com', 'alpha', row='row1')
+    cluster = mock.Mock()
+    group = NodesGroup(node1, cluster)
+    group.accumulate(node2, cluster)
+
+    # whitebox testing here (NodesGroup should be refactored for better coherence)
+    assert len(group._clusters_names) == 1      # pylint: disable=protected-access
+    assert len(group._clusters_instances) == 1  # pylint: disable=protected-access
+
+
+def test_nodes_group_fail_to_accumulate_with_different_fqdn():
+    """Aggregation should only works if used on the same node."""
+    node1 = json_node('elastic1001.example.com')
+    node2 = json_node('elastic1002.example.com')
+    cluster = mock.Mock()
+    group = NodesGroup(node1, cluster)
+
+    with pytest.raises(AssertionError):
+        group.accumulate(node2, cluster)
 
 
 def json_node(fqdn: str, cluster_name: str = 'alpha-cluster', row: str = 'row1', start_time: int = 10) -> Dict:
@@ -640,3 +654,16 @@ def json_node(fqdn: str, cluster_name: str = 'alpha-cluster', row: str = 'row1',
         },
         'jvm': {'start_time_in_millis': start_time}
     }
+
+
+def mock_node_info(values):
+    """Creates a list of ElasticsearchCluster which will return the given node info."""
+    clusters = []
+    port = 9200
+    for nodes in values:
+        elasticsearch = Elasticsearch('localhost:{port}'.format(port=port))
+        port += 1
+        cluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=False)
+        elasticsearch.nodes.info = mock.Mock(return_value={'nodes': nodes})
+        clusters.append(cluster)
+    return clusters
