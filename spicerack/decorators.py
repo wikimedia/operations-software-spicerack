@@ -4,6 +4,7 @@ import time
 
 from datetime import timedelta
 from functools import wraps
+from typing import Any, Callable, Optional, Tuple, Type, Union
 
 from spicerack.exceptions import SpicerackError
 
@@ -11,7 +12,7 @@ from spicerack.exceptions import SpicerackError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def ensure_wrap(func):
+def ensure_wrap(func: Callable) -> Callable:
     """Decorator to wrap other decorators to allow to call them both with and without arguments.
 
     Arguments:
@@ -19,7 +20,7 @@ def ensure_wrap(func):
             that is also a callable is not supported.
     """
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Callable:
         """Decorator wrapper."""
         if len(args) == 1 and not kwargs and callable(args[0]):  # Called without arguments
             return func(args[0])
@@ -28,10 +29,16 @@ def ensure_wrap(func):
 
     return wrapper
 
-
-# TODO: 'func=None' is a workaround for https://github.com/PyCQA/pylint/issues/259, restore it to 'func, *' once fixed.
+# TODO: 'func=None' is a workaround for https://github.com/PyCQA/pylint/issues/259, restore it to 'func, *' once fixed
+# and remove the type: ignore comments.
 @ensure_wrap
-def retry(func=None, tries=3, delay=timedelta(seconds=3), backoff_mode='exponential', exceptions=(SpicerackError,)):
+def retry(
+    func: Optional[Callable] = None,
+    tries: int = 3,
+    delay: timedelta = timedelta(seconds=3),
+    backoff_mode: str = 'exponential',
+    exceptions: Tuple[Type[Exception], ...] = (SpicerackError,)
+) -> Callable:
     """Decorator to retry a function or method if it raises certain exceptions with customizable backoff.
 
     Note:
@@ -63,8 +70,8 @@ def retry(func=None, tries=3, delay=timedelta(seconds=3), backoff_mode='exponent
         function: the decorated function.
 
     """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
+    @wraps(func)  # type: ignore
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         """Decorator."""
         if backoff_mode not in ('constant', 'linear', 'power', 'exponential'):
             raise ValueError('Invalid backoff_mode: {mode}'.format(mode=backoff_mode))
@@ -81,19 +88,20 @@ def retry(func=None, tries=3, delay=timedelta(seconds=3), backoff_mode='exponent
         while attempt < effective_tries - 1:
             attempt += 1
             try:
-                return func(*args, **kwargs)  # Call the decorated function or method
+                # Call the decorated function or method
+                return func(*args, **kwargs)  # type: ignore
             except exceptions as e:
                 sleep = get_backoff_sleep(backoff_mode, delay.total_seconds(), attempt)
                 logger.warning("Failed to call '%s.%s' [%d/%d, retrying in %.2fs]: %s",
-                               func.__module__, func.__name__, attempt, effective_tries, sleep, e)
+                               func.__module__, func.__name__, attempt, effective_tries, sleep, e)  # type: ignore
                 time.sleep(sleep)
 
-        return func(*args, **kwargs)
+        return func(*args, **kwargs)  # type: ignore
 
     return wrapper
 
 
-def get_backoff_sleep(backoff_mode, base, index):
+def get_backoff_sleep(backoff_mode: str, base: Union[int, float], index: int) -> Union[int, float]:
     """Calculate the amount of sleep for this attempt.
 
     Arguments:
@@ -119,7 +127,7 @@ def get_backoff_sleep(backoff_mode, base, index):
     return sleep
 
 
-def _get_effective_tries(tries, decorator_args):
+def _get_effective_tries(tries: int, decorator_args: Tuple) -> int:
     """Try to detect if this is a DRY-RUN and reduce the number of tries to one in that case.
 
     Arguments:

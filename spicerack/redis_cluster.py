@@ -3,11 +3,13 @@ import logging
 import os
 
 from collections import defaultdict
+from typing import Any, Tuple, Union
 
 from redis import StrictRedis
 
 from spicerack.config import load_yaml_config
 from spicerack.exceptions import SpicerackError
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -19,7 +21,7 @@ class RedisClusterError(SpicerackError):
 class RedisCluster:
     """Class to manage a Redis Cluster."""
 
-    def __init__(self, cluster, config_dir, *, dry_run=True):
+    def __init__(self, cluster: str, config_dir: str, *, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -28,7 +30,7 @@ class RedisCluster:
             dry_run (bool, optional): whether this is a DRY-RUN.
         """
         self._dry_run = dry_run
-        self._shards = defaultdict(dict)
+        self._shards = defaultdict(dict)  # type: ignore
         config = load_yaml_config(os.path.join(config_dir, cluster + '.yaml'))
 
         for datacenter, shards in config['shards'].items():
@@ -36,7 +38,7 @@ class RedisCluster:
                 self._shards[datacenter][shard] = RedisInstance(
                     host=data['host'], port=data['port'], password=config['password'], decode_responses=True)
 
-    def start_replica(self, datacenter, master_datacenter):
+    def start_replica(self, datacenter: str, master_datacenter: str) -> None:
         """Start the cluster replica in a datacenter from a master datacenter.
 
         Arguments:
@@ -54,7 +56,7 @@ class RedisCluster:
         for shard, instance in sorted(self._shards[datacenter].items()):
             self._start_instance_replica(instance, self._shards[master_datacenter][shard])
 
-    def stop_replica(self, datacenter):
+    def stop_replica(self, datacenter: str) -> None:
         """Stop the cluster replica in a datacenter.
 
         Arguments:
@@ -67,7 +69,7 @@ class RedisCluster:
         for instance in self._shards[datacenter].values():
             self._stop_instance_replica(instance)
 
-    def _start_instance_replica(self, instance, master):
+    def _start_instance_replica(self, instance: 'RedisInstance', master: 'RedisInstance') -> None:
         """Start the replica in a specific instance from a master instance.
 
         Arguments:
@@ -92,7 +94,7 @@ class RedisCluster:
             raise RedisClusterError('Replica on {instance} is not correctly configured: {parent}'.format(
                 instance=instance, parent=instance.master_info))
 
-    def _stop_instance_replica(self, instance):
+    def _stop_instance_replica(self, instance: 'RedisInstance') -> None:
         """Stop the replica in a specific instance.
 
         Arguments:
@@ -120,7 +122,7 @@ class RedisCluster:
 class RedisInstance:
     """Class to manage a Redis instance, a simple wrapper around `redis.StrictRedis`."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -131,7 +133,7 @@ class RedisInstance:
         self._client = StrictRedis(**kwargs)
 
     @property
-    def is_master(self):
+    def is_master(self) -> bool:
         """Getter to check if the current instance is a master.
 
         Returns:
@@ -141,7 +143,7 @@ class RedisInstance:
         return self._client.info('replication')['role'] == 'master'
 
     @property
-    def master_info(self):
+    def master_info(self) -> Union[Tuple[None, None], Tuple[str, int]]:
         """Getter to know the master of this instance.
 
         Returns:
@@ -156,20 +158,20 @@ class RedisInstance:
             return (None, None)
 
     @property
-    def info(self):
+    def info(self) -> Tuple[str, int]:
         """Getter to know the detail of this instance.
 
         Returns:
             tuple: a 2-element tuple with (host/IP, port) of the instance.
 
         """
-        return self.host, self.port
+        return self.host, self.port  # type: ignore
 
-    def stop_replica(self):
+    def stop_replica(self) -> None:
         """Stop the replica on the instance."""
         self._client.slaveof()
 
-    def start_replica(self, master):
+    def start_replica(self, master: 'RedisInstance') -> None:
         """Start the replica from the given master instance.
 
         Arguments:
@@ -177,7 +179,7 @@ class RedisInstance:
         """
         self._client.slaveof(master.host, master.port)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """String representation of the instance.
 
         Returns:

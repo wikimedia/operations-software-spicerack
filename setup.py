@@ -17,8 +17,6 @@ INSTALL_REQUIRES = [
     'pyyaml>=3.11',
     'redis>=2.10.0',
     'requests>=2.11.1',
-    # Temporary fix as pip is trying to install the latest 1.24 that is not compatible with requests and botocore
-    'urllib3<1.24',
 ]
 
 # Extra dependencies
@@ -27,6 +25,7 @@ EXTRAS_REQUIRE = {
     'tests': [
         'bandit>=1.1.0',
         'flake8>=3.2.1',
+        'mypy>=0.470',
         'prospector[with_everything]>=0.12.4',
         'pytest-cov>=1.8.0',
         'pytest-xdist>=1.15.0',

@@ -6,10 +6,15 @@ import phabricator
 
 from spicerack.exceptions import SpicerackError
 
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def create_phabricator(bot_config_file, section='phabricator_bot', dry_run=True):
+def create_phabricator(
+    bot_config_file: str,
+    section: str = 'phabricator_bot',
+    dry_run: bool = True
+) -> phabricator.Phabricator:
     """Initialize the Phabricator client from the bot config file.
 
     Arguments:
@@ -17,7 +22,7 @@ def create_phabricator(bot_config_file, section='phabricator_bot', dry_run=True)
             structure::
 
                 [section_name]
-                host = https://phabricator.example.org/api/
+                host = https://phabricator.example.com/api/
                 username = phab-bot
                 token = api-12345
 
@@ -64,7 +69,7 @@ class PhabricatorError(SpicerackError):
 class Phabricator:
     """Class to interact with a Phabricator website."""
 
-    def __init__(self, phabricator_client, dry_run=True):
+    def __init__(self, phabricator_client: phabricator.Phabricator, dry_run: bool = True) -> None:
         """Initialize the Phabricator client from the bot config file.
 
         Arguments:
@@ -74,7 +79,7 @@ class Phabricator:
         self._client = phabricator_client
         self._dry_run = dry_run
 
-    def task_comment(self, task_id, comment):
+    def task_comment(self, task_id: str, comment: str) -> None:
         """Add a comment on a Phabricator task.
 
         Arguments:

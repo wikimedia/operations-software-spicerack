@@ -1,4 +1,6 @@
 """Administrative module."""
+from typing import Optional
+
 from spicerack.exceptions import SpicerackError
 
 
@@ -9,7 +11,7 @@ class ReasonError(SpicerackError):
 class Reason:
     """Class to manage the reason for administrative actions."""
 
-    def __init__(self, reason, username, hostname, *, task_id=None):
+    def __init__(self, reason: str, username: str, hostname: str, *, task_id: Optional[str] = None) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -30,7 +32,7 @@ class Reason:
         self._hostname = hostname
         self._task_id = task_id
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: str) -> None:
         """Set an instance attribute with validation.
 
         Parameters:
@@ -45,7 +47,7 @@ class Reason:
 
         super().__setattr__(name, value)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """String representation of the instance, including all attributes.
 
         Returns:
@@ -59,7 +61,7 @@ class Reason:
         return ' - '.join(parts)
 
     @property
-    def owner(self):
+    def owner(self) -> str:
         """Getter for the owner property.
 
         Returns:
@@ -69,7 +71,7 @@ class Reason:
         return '{user}@{host}'.format(user=self._username, host=self._hostname)
 
     @property
-    def hostname(self):
+    def hostname(self) -> str:
         """Getter for the hostname property.
 
         Returns:
@@ -78,7 +80,7 @@ class Reason:
         """
         return self._hostname
 
-    def quoted(self):
+    def quoted(self) -> str:
         """Quoted string representation of the instance, including all attributes.
 
         Returns:

@@ -6,15 +6,17 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
+from typing import Dict, Iterable, Iterator, List, Optional, Sequence
 
 import curator
 
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
 from urllib3.exceptions import HTTPError
 
+from spicerack.administrative import Reason
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
-from spicerack.remote import RemoteHostsAdapter
+from spicerack.remote import Remote, RemoteHosts, RemoteHostsAdapter
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -47,7 +49,7 @@ class ElasticsearchClusterCheckError(SpicerackCheckError):
     """Custom Exception class for check errors of this module."""
 
 
-def create_elasticsearch_clusters(clustergroup, remote, dry_run=True):
+def create_elasticsearch_clusters(clustergroup: str, remote: Remote, dry_run: bool = True) -> 'ElasticsearchClusters':
     """Create ElasticsearchClusters instance.
 
     Arguments:
@@ -76,7 +78,7 @@ def create_elasticsearch_clusters(clustergroup, remote, dry_run=True):
 class ElasticsearchHosts(RemoteHostsAdapter):
     """Remotehosts Adapter for managing elasticsearch nodes."""
 
-    def __init__(self, remote_hosts, nodes, dry_run=True):
+    def __init__(self, remote_hosts: RemoteHosts, nodes: Sequence[Dict], dry_run: bool = True) -> None:
         """After calling the super's constructor, initialize other instance variables.
 
         Arguments:
@@ -88,7 +90,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         self._nodes = nodes
         self._dry_run = dry_run
 
-    def get_remote_hosts(self):
+    def get_remote_hosts(self) -> RemoteHosts:
         """Returns elasticsearch remote hosts.
 
         Returns:
@@ -97,33 +99,33 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         """
         return self._remote_hosts
 
-    def start_elasticsearch(self):
+    def start_elasticsearch(self) -> None:
         """Starts all elasticsearch instances."""
         self._systemctl_for_each_instance('start')
 
-    def stop_elasticsearch(self):
+    def stop_elasticsearch(self) -> None:
         """Stops all elasticsearch instances."""
         self._systemctl_for_each_instance('stop')
 
-    def restart_elasticsearch(self):
+    def restart_elasticsearch(self) -> None:
         """Restarts all elasticsearch instances."""
         self._systemctl_for_each_instance('restart')
 
-    def _systemctl_for_each_instance(self, action):
+    def _systemctl_for_each_instance(self, action: str) -> None:
         logger.info('%s all elasticsearch instances on %s', action, self)
         self._remote_hosts.run_sync('cat /etc/elasticsearch/instances | xargs systemctl {action}'.format(action=action))
 
-    def depool_nodes(self):
+    def depool_nodes(self) -> None:
         """Depool the hosts."""
         logger.info('Depooling %s', self)
         self._remote_hosts.run_sync('depool')
 
-    def pool_nodes(self):
+    def pool_nodes(self) -> None:
         """Pool the hosts."""
         logger.info('Pooling %s', self)
         self._remote_hosts.run_sync('pool')
 
-    def wait_for_elasticsearch_up(self, timeout=timedelta(minutes=15)):
+    def wait_for_elasticsearch_up(self, timeout: timedelta = timedelta(minutes=15)) -> None:
         """Check if elasticsearch instances on each node are up.
 
         Arguments:
@@ -136,7 +138,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
         @retry(tries=tries, delay=delay, backoff_mode='constant',
                exceptions=(ElasticsearchClusterError, ElasticsearchClusterCheckError))
-        def inner_wait():
+        def inner_wait() -> None:
             for node in self._nodes:
                 for cluster_instance in node['clusters_instances']:
                     try:
@@ -152,7 +154,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 class ElasticsearchClusters:
     """Class to manage elasticsearch clusters."""
 
-    def __init__(self, clusters, remote, dry_run=True):
+    def __init__(self, clusters: Sequence['ElasticsearchCluster'], remote: Remote, dry_run: bool = True) -> None:
         """Initialize ElasticsearchClusters.
 
         Arguments:
@@ -164,11 +166,11 @@ class ElasticsearchClusters:
         self._remote = remote
         self._dry_run = dry_run
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Class string method."""
         return str(self._clusters)
 
-    def flush_markers(self, timeout=timedelta(seconds=60)):
+    def flush_markers(self, timeout: timedelta = timedelta(seconds=60)) -> None:
         """Flush markers on all clusters.
 
         Arguments:
@@ -177,30 +179,39 @@ class ElasticsearchClusters:
         for cluster in self._clusters:
             cluster.flush_markers(timeout)
 
-    def force_allocation_of_all_unassigned_shards(self):
+    def force_allocation_of_all_unassigned_shards(self) -> None:
         """Force allocation of unassigned shards on all clusters."""
         for cluster in self._clusters:
             cluster.force_allocation_of_all_unassigned_shards()
 
     @contextmanager
-    def frozen_writes(self, reason):
+    def frozen_writes(self, reason: Reason) -> Iterator[List[None]]:
         """Freeze all writes to the clusters and then perform operations before unfreezing writes.
 
         Arguments:
             reason (spicerack.administrative.Reason): Reason for freezing writes.
+
+        Yields:
+            list: a side-effect list of :py:data:`None`, as a result of the stack of context managers.
+
         """
         logger.info('Freezing writes on %s', self)
         with ExitStack() as stack:
             yield [stack.enter_context(cluster.frozen_writes(reason)) for cluster in self._clusters]
 
     @contextmanager
-    def stopped_replication(self):
-        """Stops replication for all clusters."""
+    def stopped_replication(self) -> Iterator[List[None]]:
+        """Stops replication for all clusters.
+
+        Yields:
+            list: a side-effect list of :py:data:`None`, as a result of the stack of context managers.
+
+        """
         logger.info('stopping replication on %s', self)
         with ExitStack() as stack:
             yield [stack.enter_context(cluster.stopped_replication()) for cluster in self._clusters]
 
-    def wait_for_green(self, timeout=timedelta(hours=1)):
+    def wait_for_green(self, timeout: timedelta = timedelta(hours=1)) -> None:
         """Wait for green on all clusters.
 
         Arguments:
@@ -212,13 +223,13 @@ class ElasticsearchClusters:
         logger.info('waiting for clusters to be green')
 
         @retry(tries=tries, delay=delay, backoff_mode='constant', exceptions=(ElasticsearchClusterCheckError,))
-        def inner_wait():
+        def inner_wait() -> None:
             for cluster in self._clusters:
                 cluster.check_green()
 
         inner_wait()
 
-    def get_next_clusters_nodes(self, started_before, size=1):
+    def get_next_clusters_nodes(self, started_before: datetime, size: int = 1) -> Optional[ElasticsearchHosts]:
         """Get next set of cluster nodes for cookbook operations like upgrade, rolling restart etc.
 
         Nodes are selected from the row with the least restarted nodes. This ensure that a row is fully upgraded
@@ -230,75 +241,43 @@ class ElasticsearchClusters:
             size (int, optional): size of nodes not restarted in a row.
 
         Returns:
-            spicerack.elasticsearch_cluster.ElasticsearchHosts: next eligible nodes for ElasticsearchHosts.
+            spicerack.elasticsearch_cluster.ElasticsearchHosts: next eligible nodes for ElasticsearchHosts or
+                :py:data:`None` when all nodes have been processed.
 
         """
         if size < 1:
             raise ElasticsearchClusterError("Size of next nodes must be at least 1")
 
         nodes_group = self._get_nodes_group()
-        nodes_to_process = [node for node in nodes_group.values()
-                            if not ElasticsearchClusters._node_has_been_restarted(node, started_before)]
+        nodes_to_process = [node for node in nodes_group if not node.restarted_since(started_before)]
         if not nodes_to_process:
             return None
         rows = ElasticsearchClusters._to_rows(nodes_to_process)
         sorted_rows = sorted(rows.values(), key=len)
         next_nodes = sorted_rows[0][:size]
-        node_names = ','.join([node['name'] + '*' for node in next_nodes])
+        node_names = ','.join([node.fqdn for node in next_nodes])
         return ElasticsearchHosts(self._remote.query(node_names), next_nodes, dry_run=self._dry_run)
 
-    def _get_nodes_group(self):
+    def _get_nodes_group(self) -> Iterable['NodesGroup']:
         """Create nodes_group for each nodes.
 
         Returns:
-            dict: merged clusters nodes. e.g::
-
-                {'el5':
-                    {'name': 'el5', 'clusters': ['alpha', 'beta],
-                    'clusters_instances': [spicerack.elasticsearch_cluster.ElasticsearchCluster],
-                        'row': 'row2', 'oldest_start_time': 10
-                    }
-                }
+            dict: merged clusters nodes.
 
         """
-        nodes_group = {}
+        nodes_group = {}  # type: ignore
         for cluster in self._clusters:
-            for cluster_node in cluster.get_nodes().values():
-                ElasticsearchClusters._append_to_nodegroup(nodes_group, cluster_node, cluster)
-        return nodes_group
+            for json_node in cluster.get_nodes().values():
+                node_name = json_node['attributes']['hostname']
+
+                if node_name not in nodes_group.keys():
+                    nodes_group[node_name] = NodesGroup(json_node, cluster)
+                else:
+                    nodes_group[node_name].accumulate(json_node, cluster)
+        return nodes_group.values()
 
     @staticmethod
-    def _append_to_nodegroup(nodes_group, cluster_node, cluster):
-        """Merge node of different clusters.
-
-        Arguments:
-            nodes_group (dict): contains group of nodes that have been merged from different clusters.
-            cluster_node (dict): the specific cluster node to add to nodes_group.
-            cluster (spicerack.elasticsearch_cluster.ElasticsearchCluster): ElasticsearchCluster for cluster node
-        """
-        node_name, cluster_group_name = ElasticsearchCluster.split_node_name(cluster_node['name'])
-
-        if node_name not in nodes_group.keys():
-            nodes_group[node_name] = {
-                'name': node_name,
-                'clusters': [cluster_group_name],
-                'clusters_instances': [cluster],
-                'row': cluster_node['attributes']['row'],
-                'oldest_start_time': cluster_node['jvm']['start_time_in_millis']
-            }
-        else:
-            if cluster_group_name not in nodes_group[node_name]['clusters']:
-                nodes_group[node_name]['clusters'].append(cluster_group_name)
-                nodes_group[node_name]['clusters_instances'].append(cluster)
-
-            if nodes_group[node_name]['row'] != cluster_node['attributes']['row']:
-                raise ElasticsearchClusterError('The same nodes of different clusters must be in the same row')
-
-            nodes_group[node_name]['oldest_start_time'] = min(nodes_group[node_name]['oldest_start_time'],
-                                                              cluster_node['jvm']['start_time_in_millis'])
-
-    @staticmethod
-    def _to_rows(nodes):
+    def _to_rows(nodes: Sequence['NodesGroup']) -> defaultdict:
         """Arrange nodes in rows, so each node belongs in their respective row.
 
         Arguments:
@@ -310,31 +289,16 @@ class ElasticsearchClusters:
                 {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
 
         """
-        rows = defaultdict(list)
+        rows = defaultdict(list)  # type: ignore
         for node in nodes:
-            rows[node['row']].append(node)
+            rows[node.row].append(node)
         return rows
-
-    @staticmethod
-    def _node_has_been_restarted(node, since):
-        """Check if node has been restarted.
-
-        Arguments:
-            node (dict): elasticsearch node.
-            since (datetime.datetime): the time against after which we check if the node has been restarted.
-
-        Returns:
-            bool: True if the node has been restarted after since, false otherwise.
-
-        """
-        start_time = datetime.utcfromtimestamp(node['oldest_start_time'] / 1000)
-        return start_time > since
 
 
 class ElasticsearchCluster:
     """Class to manage elasticsearch cluster."""
 
-    def __init__(self, elasticsearch, remote, dry_run=True):
+    def __init__(self, elasticsearch: Elasticsearch, remote: Remote, dry_run: bool = True) -> None:
         """Initialize ElasticsearchCluster
 
         Arguments:
@@ -348,11 +312,11 @@ class ElasticsearchCluster:
         self._freeze_writes_index = 'mw_cirrus_metastore'
         self._freeze_writes_doc_type = 'mw_cirrus_metastore'
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Class string method"""
         return str(self._elasticsearch)
 
-    def get_nodes(self):
+    def get_nodes(self) -> Dict:
         """Get all Elasticsearch Nodes.
 
         Returns:
@@ -361,7 +325,7 @@ class ElasticsearchCluster:
         """
         return self._elasticsearch.nodes.info()['nodes']
 
-    def is_node_in_cluster_nodes(self, node):
+    def is_node_in_cluster_nodes(self, node: str) -> bool:
         """Checks if node is in a list of elasticsearch cluster nodes.
 
         Arguments:
@@ -378,20 +342,20 @@ class ElasticsearchCluster:
         return False
 
     @staticmethod
-    def split_node_name(node_name):
+    def split_node_name(node_name: str) -> List[str]:
         """Split node name into hostname and cluster group name.
 
         Arguments:
             node_name (str): node name containing hostname and cluster name separated by ``-``.
 
         Returns:
-            (str, str): tuple containing the node name and the cluster name.
+            list: 2-element list containing the node name and the cluster name.
 
         """
         return node_name.split('-', 1)
 
     @contextmanager
-    def stopped_replication(self):
+    def stopped_replication(self) -> Iterator[None]:
         """Context manager to perform actions while the cluster replication is stopped."""
         self._stop_replication()
         try:
@@ -399,7 +363,7 @@ class ElasticsearchCluster:
         finally:
             self._start_replication()
 
-    def _stop_replication(self):
+    def _stop_replication(self) -> None:
         """Stops cluster replication."""
         logger.info('stop replication - %s', self)
         self._do_cluster_routing(
@@ -407,7 +371,7 @@ class ElasticsearchCluster:
                                    value='primaries', wait_for_completion=False)
         )
 
-    def _start_replication(self):
+    def _start_replication(self) -> None:
         """Starts cluster replication."""
         logger.info('start replication - %s', self)
         self._do_cluster_routing(
@@ -415,7 +379,7 @@ class ElasticsearchCluster:
                                    value='all', wait_for_completion=False)
         )
 
-    def _do_cluster_routing(self, cluster_routing):
+    def _do_cluster_routing(self, cluster_routing: curator.ClusterRouting) -> None:
         """Performs cluster routing of shards.
 
         Arguments:
@@ -426,7 +390,7 @@ class ElasticsearchCluster:
         else:
             cluster_routing.do_action()
 
-    def check_green(self):
+    def check_green(self) -> None:
         """Cluster health status.
 
         Raises:
@@ -440,7 +404,7 @@ class ElasticsearchCluster:
             raise ElasticsearchClusterCheckError('Error while waiting for green') from e
 
     @contextmanager
-    def frozen_writes(self, reason):
+    def frozen_writes(self, reason: Reason) -> Iterator[None]:
         """Stop writes to all elasticsearch indices and enable them on exit.
 
         Arguments:
@@ -450,9 +414,17 @@ class ElasticsearchCluster:
         try:
             yield
         finally:
-            self._unfreeze_writes()
+            try:
+                self._unfreeze_writes()
+            except ElasticsearchClusterError as e:
+                # Unfreeze failed, we can try to freeze and unfreeze again,
+                # which might work. If it throws an exception again, we won't
+                # try a third time and let that new exception bubble up.
+                logger.warning('Could not unfreeze writes, trying to freeze and unfreeze again: %s', e)
+                self._freeze_writes(reason)
+                self._unfreeze_writes()
 
-    def _freeze_writes(self, reason):
+    def _freeze_writes(self, reason: Reason) -> None:
         """Stop writes to all elasticsearch indices.
 
         Arguments:
@@ -470,7 +442,7 @@ class ElasticsearchCluster:
                 'Encountered error while creating document to freeze cluster writes'
             ) from e
 
-    def _unfreeze_writes(self):
+    def _unfreeze_writes(self) -> None:
         """Enable writes on all elasticsearch indices"""
         logger.info('Unfreezing all indices in %s', self)
         if self._dry_run:
@@ -483,7 +455,7 @@ class ElasticsearchCluster:
                 'Encountered error while deleting document to unfreeze cluster writes'
             ) from e
 
-    def flush_markers(self, timeout=timedelta(seconds=60)):
+    def flush_markers(self, timeout: timedelta = timedelta(seconds=60)) -> None:
         """Flush markers unsynced.
 
         Note:
@@ -504,14 +476,14 @@ class ElasticsearchCluster:
         except ConflictError:
             logger.warning('Not all shards were synced flushed on %s.', self)
 
-    def force_allocation_of_all_unassigned_shards(self):
+    def force_allocation_of_all_unassigned_shards(self) -> None:
         """Manual allocation of unassigned shards."""
         cluster_nodes_names = [node['name'] for node in self.get_nodes().values()]
         unassigned_shards = self._get_unassigned_shards()
         for unassigned_shard in unassigned_shards:
             self._force_allocation_of_shard(unassigned_shard, cluster_nodes_names)
 
-    def _get_unassigned_shards(self):
+    def _get_unassigned_shards(self) -> List[Dict]:
         """Fetch unassigned shards.
 
         Returns:
@@ -521,7 +493,7 @@ class ElasticsearchCluster:
         shards = self._elasticsearch.cat.shards(format='json', h='index,shard,state')
         return [s for s in shards if s['state'] == 'UNASSIGNED']
 
-    def _force_allocation_of_shard(self, shard, nodes):
+    def _force_allocation_of_shard(self, shard: Dict, nodes: List[str]) -> None:
         """Force allocation of shard.
 
         Arguments:
@@ -555,3 +527,81 @@ class ElasticsearchCluster:
                 logger.info('Could not reallocate shard [%s:%s] on %s', shard['index'], shard['shard'], node)
         else:
             logger.warning('Could not reallocate shard [%s:%s] on any node', shard['index'], shard['shard'])
+
+
+class NodesGroup:
+    """Internal class, used for parsing responses from the elasticsearch node API.
+
+    Since the same server can host multiple elasticsearch instances, this class can consolidate those multiple
+    instances in a single object.
+    """
+
+    def __init__(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
+        """Instantiate a new node.
+
+        Arguments:
+            json_node (dict): a single node, as returned from the elasticsearch API.
+            cluster (spicerack.elasticsearch_cluster.ElasticsearchCluster): an elasticsearch instance
+
+        """
+        self._hostname = json_node['attributes']['hostname']
+        self._fqdn = json_node['attributes']['fqdn']
+        self._clusters_names = [json_node['settings']['cluster']['name']]
+        self._clusters_instances = [cluster]
+        self._row = json_node['attributes']['row']
+        self._oldest_start_time = datetime.utcfromtimestamp(json_node['jvm']['start_time_in_millis'] / 1000)
+
+    def accumulate(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
+        """Accumulate information from other elasticsearch instances running on the same server.
+
+        Arguments:
+            json_node (dict): a single node, as returned from the elasticsearch API.
+            cluster (elasticsearch.Elasticsearch): an elasticsearch instance
+
+        """
+        if self._fqdn != json_node['attributes']['fqdn']:
+            # should never happen
+            raise AssertionError(
+                'Invalid data, two instances on the same node with different fqdns [{fqdn1}/{fqdn2}]'.format(
+                    fqdn1=self._fqdn,
+                    fqdn2=json_node['attributes']['fqdn']
+                )
+            )
+        cluster_name = json_node['settings']['cluster']['name']
+        if cluster_name not in self._clusters_names:
+            self._clusters_names.append(cluster_name)
+        if cluster not in self._clusters_instances:
+            self._clusters_instances.append(cluster)
+        if self._row != json_node['attributes']['row']:
+            # should never happen
+            raise AssertionError(
+                'Invalid data, two instances on the same node with different rows {host}:[{row1}/{row2}]'.format(
+                    host=self._hostname,
+                    row1=self._row,
+                    row2=json_node['attributes']['row']
+                )
+            )
+        start_time = datetime.utcfromtimestamp(json_node['jvm']['start_time_in_millis'] / 1000)
+        self._oldest_start_time = min(self._oldest_start_time, start_time)
+
+    @property
+    def row(self) -> str:
+        """Datacenter row."""
+        return self._row
+
+    @property
+    def fqdn(self) -> str:
+        """Fully Qualified Domain Name."""
+        return self._fqdn
+
+    def restarted_since(self, since: datetime) -> bool:
+        """Check if node has been restarted.
+
+        Arguments:
+            since (datetime.datetime): the time against after which we check if the node has been restarted.
+
+        Returns:
+            bool: True if the node has been restarted after since, false otherwise.
+
+        """
+        return self._oldest_start_time > since

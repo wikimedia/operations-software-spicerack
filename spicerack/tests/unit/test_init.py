@@ -55,7 +55,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
 
 
 @mock.patch('spicerack.gethostname', return_value='test.example.com')
-@mock.patch('spicerack.dns.dns.resolver.Resolver', autospec=True)
+@mock.patch('spicerack.dns.resolver.Resolver', autospec=True)
 @mock.patch('spicerack.remote.Remote.query', autospec=True)
 def test_spicerack_icinga(mocked_remote_query, mocked_resolver, mocked_hostname, monkeypatch):
     """An instance of Spicerack should allow to get an Icinga instance."""
@@ -75,7 +75,7 @@ def test_spicerack_icinga(mocked_remote_query, mocked_resolver, mocked_hostname,
     mocked_hostname.assert_called_once_with()
 
 
-@mock.patch('spicerack.puppet.get_puppet_ca_hostname', return_value='puppetmaster.example.com')
+@mock.patch('spicerack.get_puppet_ca_hostname', return_value='puppetmaster.example.com')
 @mock.patch('spicerack.remote.Remote.query', autospec=True)
 def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostname):
     """An instance of Spicerack should allow to get a PuppetMaster instance."""

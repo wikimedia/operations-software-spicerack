@@ -2,6 +2,8 @@
 import logging
 import re
 
+from typing import Dict, Iterator, Union
+
 from conftool import configuration, kvobject, loader
 from conftool.drivers import BackendError
 
@@ -18,7 +20,12 @@ class ConfctlError(SpicerackError):
 class Confctl:
     """Confctl class to abstract conftool operations."""
 
-    def __init__(self, config='/etc/conftool/config.yaml', schema='/etc/conftool/schema.yaml', dry_run=True):
+    def __init__(
+        self,
+        config: str = '/etc/conftool/config.yaml',
+        schema: str = '/etc/conftool/schema.yaml',
+        dry_run: bool = True
+    ) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -30,7 +37,7 @@ class Confctl:
         self._schema = loader.Schema.from_file(schema)
         kvobject.KVObject.setup(configuration.get(config))
 
-    def entity(self, entity_name):
+    def entity(self, entity_name: str) -> 'ConftoolEntity':
         """Get the Conftool specific entity class.
 
         Arguments:
@@ -46,7 +53,7 @@ class Confctl:
 class ConftoolEntity:
     """ConftoolEntity class to perform operations on a specific Conftool entity."""
 
-    def __init__(self, entity, dry_run=True):
+    def __init__(self, entity: kvobject.Entity, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -56,7 +63,7 @@ class ConftoolEntity:
         self._entity = entity
         self._dry_run = dry_run
 
-    def _select(self, tags):
+    def _select(self, tags: Dict[str, str]) -> Iterator[kvobject.Entity]:
         """Generator that yields the selected objects based on the provided tags.
 
         Arguments:
@@ -80,7 +87,7 @@ class ConftoolEntity:
         if obj is None:
             raise ConfctlError('No match found')
 
-    def update(self, changed, **tags):
+    def update(self, changed: Dict[str, Union[bool, str, int, float]], **tags: str) -> None:
         """Updates the value of conftool objects corresponding to the selection done with tags.
 
         Arguments:
@@ -112,7 +119,7 @@ class ConftoolEntity:
             except Exception as e:
                 raise ConfctlError('Generic error in conftool') from e
 
-    def get(self, **tags):
+    def get(self, **tags: str) -> Iterator[kvobject.Entity]:
         """Generator that yields conftool objects corresponding to the selection.
 
         Arguments:
@@ -126,7 +133,7 @@ class ConftoolEntity:
             logger.debug('Selected conftool object: %s', obj)
             yield obj
 
-    def set_and_verify(self, key, value, **tags):
+    def set_and_verify(self, key: str, value: Union[bool, str, int, float], **tags: str) -> None:
         """Set and verify a single Conftool value.
 
         Arguments:

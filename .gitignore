@@ -3,6 +3,7 @@
 /.coverage
 /.eggs/
 /.idea/
+/.mypy_cache/
 /.pytest_cache/
 /.tox/
 /.venv/
@@ -11,4 +12,5 @@
 /logs/
 /*.egg-info/
 __pycache__/
+/monkeytype.sqlite3
 *.pyc

@@ -3,9 +3,12 @@ import logging
 import os
 
 from datetime import datetime, timedelta
+from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
 
-from cumin import Config, CuminError, query, transport, transports
+from ClusterShell.MsgTree import MsgTreeElem
+from cumin import Config, CuminError, NodeSet, query, transport, transports
 from cumin.cli import target_batch_size
+from cumin.transports import Command
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
@@ -25,7 +28,7 @@ class RemoteCheckError(SpicerackCheckError):
 class RemoteExecutionError(RemoteError):
     """Custom exception class for remote execution errors."""
 
-    def __init__(self, retcode, message):
+    def __init__(self, retcode: int, message: str) -> None:
         """Override parent constructor to add the return code attribute."""
         super().__init__('{msg} (exit_code={ret})'.format(msg=message, ret=retcode))
         self.retcode = retcode
@@ -40,7 +43,7 @@ class RemoteHostsAdapter:
     RemoteHosts instances should be orchestrated, it's ok to not extend this class and create a standalone one.
     """
 
-    def __init__(self, remote_hosts):
+    def __init__(self, remote_hosts: 'RemoteHosts') -> None:
         """Initialize the instance.
 
         Arguments:
@@ -48,7 +51,7 @@ class RemoteHostsAdapter:
         """
         self._remote_hosts = remote_hosts
 
-    def __str__(self):
+    def __str__(self) -> str:
         """String representation of the instance.
 
         Returns:
@@ -57,7 +60,7 @@ class RemoteHostsAdapter:
         """
         return str(self._remote_hosts)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Length of the instance.
 
         Returns:
@@ -70,7 +73,7 @@ class RemoteHostsAdapter:
 class Remote:
     """Remote class to interact with Cumin."""
 
-    def __init__(self, config, dry_run=True):
+    def __init__(self, config: str, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -80,7 +83,7 @@ class Remote:
         self._config = Config(config)
         self._dry_run = dry_run
 
-    def query(self, query_string):
+    def query(self, query_string: str) -> 'RemoteHosts':
         """Execute a Cumin query and return the matching hosts.
 
         Arguments:
@@ -105,7 +108,7 @@ class RemoteHosts:
     `spicerack.remote.Remote.query`.
     """
 
-    def __init__(self, config, hosts, dry_run=True):
+    def __init__(self, config: Config, hosts: NodeSet, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -125,7 +128,7 @@ class RemoteHosts:
         self._dry_run = dry_run
 
     @property
-    def hosts(self):
+    def hosts(self) -> NodeSet:
         """Getter for the hosts property.
 
         Returns:
@@ -134,7 +137,7 @@ class RemoteHosts:
         """
         return self._hosts.copy()
 
-    def __str__(self):
+    def __str__(self) -> str:
         """String representation of the instance.
 
         Returns:
@@ -143,7 +146,7 @@ class RemoteHosts:
         """
         return str(self._hosts)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Length of the instance.
 
         Returns:
@@ -152,7 +155,14 @@ class RemoteHosts:
         """
         return len(self._hosts)
 
-    def run_async(self, *commands, success_threshold=1.0, batch_size=None, batch_sleep=None, is_safe=False):
+    def run_async(
+        self,
+        *commands: Union[str, Command],
+        success_threshold: float = 1.0,
+        batch_size: Optional[Union[int, str]] = None,
+        batch_sleep: Optional[float] = None,
+        is_safe: bool = False
+    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Execute commands on hosts matching a query via Cumin in async mode.
 
         Arguments:
@@ -174,7 +184,14 @@ class RemoteHosts:
         return self._execute(list(commands), mode='async', success_threshold=success_threshold, batch_size=batch_size,
                              batch_sleep=batch_sleep, is_safe=is_safe)
 
-    def run_sync(self, *commands, success_threshold=1.0, batch_size=None, batch_sleep=None, is_safe=False):
+    def run_sync(
+        self,
+        *commands: Union[str, Command],
+        success_threshold: float = 1.0,
+        batch_size: Optional[Union[int, str]] = None,
+        batch_sleep: Optional[float] = None,
+        is_safe: bool = False
+    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Execute commands on hosts matching a query via Cumin in sync mode.
 
         Arguments:
@@ -196,7 +213,7 @@ class RemoteHosts:
         return self._execute(list(commands), mode='sync', success_threshold=success_threshold, batch_size=batch_size,
                              batch_sleep=batch_sleep, is_safe=is_safe)
 
-    def reboot(self, batch_size=1, batch_sleep=180.0):
+    def reboot(self, batch_size: int = 1, batch_sleep: Optional[float] = 180.0) -> None:
         """Reboot hosts.
 
         Arguments:
@@ -216,7 +233,7 @@ class RemoteHosts:
 
     @retry(tries=25, delay=timedelta(seconds=10), backoff_mode='linear',
            exceptions=(RemoteExecutionError, RemoteCheckError))
-    def wait_reboot_since(self, since):
+    def wait_reboot_since(self, since: datetime) -> None:
         """Poll the host until is reachable and has an uptime lower than the provided datetime.
 
         Arguments:
@@ -241,7 +258,7 @@ class RemoteHosts:
 
         logger.info('Found reboot since %s for hosts %s', since, self._hosts)
 
-    def uptime(self):
+    def uptime(self) -> List[Tuple[NodeSet, float]]:
         """Get current uptime.
 
         Returns:
@@ -253,7 +270,7 @@ class RemoteHosts:
         # Callback to extract the uptime from /proc/uptime (i.e. getting 12345.67 from '12345.67 123456789.00').
         return RemoteHosts.results_to_list(results, callback=lambda output: float(output.split()[0]))
 
-    def init_system(self):
+    def init_system(self) -> List[Tuple[NodeSet, str]]:
         """Detect the init system.
 
         Returns:
@@ -265,7 +282,10 @@ class RemoteHosts:
         return RemoteHosts.results_to_list(results)
 
     @staticmethod
-    def results_to_list(results, callback=None):
+    def results_to_list(
+        results: Iterator[Tuple[NodeSet, MsgTreeElem]],
+        callback: Optional[Callable] = None
+    ) -> List[Tuple[NodeSet, Any]]:
         """Extract execution results into a list converting them with an optional callback.
 
         Todo:
@@ -299,8 +319,15 @@ class RemoteHosts:
 
         return extracted
 
-    def _execute(self, commands, mode='sync', success_threshold=1.0,  # pylint: disable=too-many-arguments
-                 batch_size=None, batch_sleep=None, is_safe=False):
+    def _execute(  # pylint: disable=too-many-arguments
+        self,
+        commands: Sequence[Union[str, Command]],
+        mode: str = 'sync',
+        success_threshold: float = 1.0,
+        batch_size: Optional[Union[int, str]] = None,
+        batch_sleep: Optional[float] = None,
+        is_safe: bool = False
+    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Lower level Cumin's execution of commands on the target nodes.
 
         Arguments:

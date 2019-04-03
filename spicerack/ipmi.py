@@ -8,6 +8,7 @@ import os
 
 from datetime import timedelta
 from subprocess import CalledProcessError, check_output  # nosec
+from typing import List
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
@@ -30,7 +31,7 @@ class IpmiCheckError(SpicerackCheckError):
 class Ipmi:
     """Class to manage remote IPMI via ipmitool."""
 
-    def __init__(self, password, dry_run=True):
+    def __init__(self, password: str, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -41,7 +42,12 @@ class Ipmi:
         os.environ['IPMITOOL_PASSWORD'] = password
         self._dry_run = dry_run
 
-    def command(self, mgmt_hostname, command_parts, is_safe=False):  # pylint: disable=no-self-use
+    def command(  # pylint: disable=no-self-use
+        self,
+        mgmt_hostname: str,
+        command_parts: List[str],
+        is_safe: bool = False
+    ) -> str:
         """Run an ipmitool command for a remote management console hostname.
 
         Arguments:
@@ -72,7 +78,7 @@ class Ipmi:
 
         return output
 
-    def check_connection(self, mgmt_hostname):
+    def check_connection(self, mgmt_hostname: str) -> None:
         """Ensure that remote IPMI is working for the management console hostname.
 
         Arguments:
@@ -86,7 +92,7 @@ class Ipmi:
         if not status.startswith('Chassis Power is'):
             raise IpmiError('Unexpected chassis status: {status}'.format(status=status))
 
-    def check_bootparams(self, mgmt_hostname):
+    def check_bootparams(self, mgmt_hostname: str) -> None:
         """Check if the BIOS boot parameters are back to normal values.
 
         Arguments:
@@ -102,7 +108,7 @@ class Ipmi:
                 accepted=IPMI_SAFE_BOOT_PARAMS, param=param))
 
     @retry(tries=3, delay=timedelta(seconds=20), backoff_mode='linear', exceptions=(IpmiCheckError,))
-    def force_pxe(self, mgmt_hostname):
+    def force_pxe(self, mgmt_hostname: str) -> None:
         """Force PXE for the next boot and verify that the setting was applied.
 
         Arguments:
@@ -117,7 +123,7 @@ class Ipmi:
         if boot_device != 'Force PXE':
             raise IpmiCheckError('Unable to verify that Force PXE is set. The host might reboot in the current OS')
 
-    def _get_boot_parameter(self, mgmt_hostname, param_label):
+    def _get_boot_parameter(self, mgmt_hostname: str, param_label: str) -> str:
         """Get a specific boot parameter of the host.
 
         Arguments:
@@ -146,7 +152,7 @@ class Ipmi:
 
         return value
 
-    def reset_password(self, mgmt_hostname, username, password):
+    def reset_password(self, mgmt_hostname: str, username: str, password: str) -> None:
         """Reset the given usernames password to the one provided
 
         Arguments:
@@ -194,7 +200,7 @@ class Ipmi:
                 os.environ['IPMITOOL_PASSWORD'] = current_password
                 raise IpmiError('Password reset failed for username: root') from e
 
-    def _get_user_id(self, mgmt_hostname, username):
+    def _get_user_id(self, mgmt_hostname: str, username: str) -> str:
         """Get the user ID associated with a given username
 
         Arguments:

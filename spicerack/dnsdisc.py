@@ -2,12 +2,17 @@
 import logging
 
 from collections import defaultdict
+from typing import Iterator, List, Optional
 
 from dns import resolver
 from dns.exception import DNSException
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
+
+
+from spicerack.confctl import ConftoolEntity
+from spicerack.remote import Remote
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -24,7 +29,7 @@ class DiscoveryCheckError(SpicerackCheckError):
 class Discovery:
     """Class to manage Confctl discovery objects."""
 
-    def __init__(self, conftool, remote, records, dry_run=True):
+    def __init__(self, conftool: ConftoolEntity, remote: Remote, records: List[str], dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -42,7 +47,7 @@ class Discovery:
         self._records = records
         self._dry_run = dry_run
 
-        self._resolvers = {}
+        self._resolvers = {}  # type: ignore
         for nameserver in self._remote.query('A:dns-auth').hosts:
             self._resolvers[nameserver] = resolver.Resolver()
             try:
@@ -51,7 +56,7 @@ class Discovery:
                 raise DiscoveryError('Unable to resolve {name}'.format(name=nameserver)) from e
 
     @property
-    def _conftool_selector(self):
+    def _conftool_selector(self) -> str:
         """Generate the Conftool selector for the records.
 
         Returns:
@@ -61,7 +66,7 @@ class Discovery:
         return '({regexp})'.format(regexp='|'.join(self._records))
 
     @property
-    def active_datacenters(self):
+    def active_datacenters(self) -> defaultdict:
         """Information about pooled state of services.
 
         Returns:
@@ -73,7 +78,7 @@ class Discovery:
                 }
 
         """
-        services = defaultdict(list)
+        services = defaultdict(list)  # type: ignore
         for obj in self._conftool.get(dnsdisc=self._conftool_selector):
             if obj.pooled:
                 service = obj.tags['dnsdisc']
@@ -81,7 +86,7 @@ class Discovery:
 
         return services
 
-    def resolve_address(self, name):
+    def resolve_address(self, name: str) -> str:
         """Resolve the IP of a given record.
 
         Todo:
@@ -102,7 +107,7 @@ class Discovery:
         except DNSException as e:
             raise DiscoveryError('Unable to resolve {name}'.format(name=name)) from e
 
-    def update_ttl(self, ttl):
+    def update_ttl(self, ttl: int) -> None:
         """Update the TTL for all registered records.
 
         Arguments:
@@ -122,7 +127,7 @@ class Discovery:
                 raise
 
     @retry(backoff_mode='linear', exceptions=(DiscoveryCheckError,))
-    def check_ttl(self, ttl):
+    def check_ttl(self, ttl: int) -> None:
         """Check the TTL for all records.
 
         Arguments:
@@ -140,7 +145,7 @@ class Discovery:
                     expected=ttl, ttl=record.ttl, record=record[0].address))
 
     @retry(backoff_mode='linear', exceptions=(DiscoveryError,))
-    def check_record(self, name, expected_name):
+    def check_record(self, name: str, expected_name: str) -> None:
         """Check that a Discovery record resolves on all authoritative resolvers to the correct IP.
 
         The IP to use for the comparison it obtained resolving the expected_name record.
@@ -172,7 +177,7 @@ class Discovery:
         if failed:
             raise DiscoveryError('Failed to check record {name}'.format(name=name))
 
-    def resolve(self, name=None):
+    def resolve(self, name: Optional[str] = None) -> Iterator[resolver.Answer]:
         """Generator that yields the resolved records.
 
         Todo:
@@ -205,7 +210,7 @@ class Discovery:
                 logger.debug('[%s] %s -> %s TTL %d', nameserver, record, answer[0].address, answer.ttl)
                 yield answer
 
-    def pool(self, datacenter):
+    def pool(self, datacenter: str) -> None:
         """Set the records as pooled in the given datacenter.
 
         Arguments:
@@ -214,7 +219,7 @@ class Discovery:
         # DRY-RUN handled by confctl
         self._conftool.set_and_verify('pooled', True, dnsdisc=self._conftool_selector, name=datacenter)
 
-    def depool(self, datacenter):
+    def depool(self, datacenter: str) -> None:
         """Set the records as depooled in the given datacenter.
 
         Arguments:
@@ -224,7 +229,7 @@ class Discovery:
         # DRY-RUN handled by confctl
         self._conftool.set_and_verify('pooled', False, dnsdisc=self._conftool_selector, name=datacenter)
 
-    def check_if_depoolable(self, datacenter):
+    def check_if_depoolable(self, datacenter: str) -> None:
         """Determine if a datacenter can be depooled for all records.
 
         Arguments:

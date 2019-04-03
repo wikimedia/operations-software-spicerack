@@ -2,6 +2,29 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.21`_ (2019-04-03)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* elasticsearch: Retrieve hostname and fqdn from node attributes
+* elasticsearch: make unfreezing writes more robust (`T219640`_)
+* elasticsearch: cleanup test by introducing a method to mock API calls
+* elasticsearch: rename elasticsearchclusters to elasticsearch_clusters
+
+Bug Fixes
+"""""""""
+
+* tox: fix typo in environment name
+
+Miscellanea
+"""""""""""
+
+* Add Python type hints and mypy check, not for variables and properties as we're still supporting Python 3.5
+* setup.py: revert commit 3d7ab9b that forced the ``urllib3`` version installed as it's not needed anymore
+* tests/docs: unify usage of ``example.com`` domain
+
 `v0.0.20`_ (2019-03-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -341,6 +364,9 @@ New features
 * Initial version.
 
 
+.. _`T213296`: https://phabricator.wikimedia.org/T213296
+.. _`T219640`: https://phabricator.wikimedia.org/T213296
+
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
 .. _`v0.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.3
@@ -353,8 +379,6 @@ New features
 .. _`v0.0.10`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.10
 .. _`v0.0.11`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.11
 .. _`v0.0.12`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.12
-
-.. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`v0.0.13`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.13
 .. _`v0.0.14`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.14
 .. _`v0.0.15`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.15
@@ -363,3 +387,4 @@ New features
 .. _`v0.0.18`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.18
 .. _`v0.0.19`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.19
 .. _`v0.0.20`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.20
+.. _`v0.0.21`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.21
