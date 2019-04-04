@@ -2,6 +2,15 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.22`_ (2019-04-04)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+elasticsearch: use NodesGroup instead of free form JSON
+
+
 `v0.0.21`_ (2019-04-03)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -388,3 +397,4 @@ New features
 .. _`v0.0.19`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.19
 .. _`v0.0.20`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.20
 .. _`v0.0.21`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.21
+.. _`v0.0.22`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.22
