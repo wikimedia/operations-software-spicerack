@@ -86,146 +86,62 @@ def test_pool_nodes():
     mocked_remote_hosts.run_sync.assert_called_with('pool')
 
 
-def test_elasticsearch_call_when_wait_for_elasticsearch_up():
+def test_wait_for_elasticsearch_up_delegates_to_all_nodes_groups():
     """Test that elasticsearch instance is called when wait for instance to come up."""
-    remote = mock.Mock(spec_set=Remote)
-    elastic_alpha = Elasticsearch('localhost:9200')
-    elastic_alpha.nodes.info = mock.Mock(return_value={
-        'nodes': {
-            'ELASTIC4': {'name': 'el5-alpha'}, 'ELASTIC5': {'name': 'el6-alpha'}
-        }
-    })
-    elastic_alpha_cluster = ec.ElasticsearchCluster(elastic_alpha, None, dry_run=False)
+    node_group1 = mock.Mock(spec_set=NodesGroup)
+    node_group1.check_all_nodes_up = mock.Mock()
+    node_group2 = mock.Mock(spec_set=NodesGroup)
+    node_group2.check_all_nodes_up = mock.Mock()
+    remote_hosts = mock.Mock(spec_set=RemoteHosts)
 
-    elastic_beta = Elasticsearch('localhost:9201')
-    elastic_beta.nodes.info = mock.Mock(return_value={
-        'nodes': {
-            'ELASTIC4': {'name': 'el5-beta'}, 'ELASTIC5': {'name': 'el6-beta'}
-        }
-    })
-    elastic_beta_cluster = ec.ElasticsearchCluster(elastic_beta, None, dry_run=False)
+    hosts = ec.ElasticsearchHosts(remote_hosts, [node_group1, node_group2], dry_run=False)
+    hosts.wait_for_elasticsearch_up()
 
-    next_nodes = [
-        {'name': 'el5',
-            'clusters_instances': [
-                elastic_alpha_cluster,
-                elastic_beta_cluster,
-            ]
-         },
-        {'name': 'el6',
-            'clusters_instances': [
-                elastic_alpha_cluster,
-                elastic_beta_cluster,
-            ]
-         }
-    ]
-
-    elastic_hosts = ec.ElasticsearchHosts(remote, next_nodes, dry_run=False)
-    elastic_hosts.wait_for_elasticsearch_up()
-    assert elastic_alpha.nodes.info.called
-    assert elastic_beta.nodes.info.called
+    assert node_group1.check_all_nodes_up.called
+    assert node_group2.check_all_nodes_up.called
 
 
-def test_elasticsearch_call_not_made_when_wait_for_elasticsearch_up_in_dry_run():
-    """Test that elasticsearch instance is not called in dry run mode."""
-    remote = mock.Mock(spec_set=Remote)
-    elastic_alpha = Elasticsearch('localhost:9200')
-    elastic_alpha.nodes.info = mock.Mock(return_value={
-        'nodes': {
-            'ELASTIC4': {'name': 'el5-alpha'}, 'ELASTIC5': {'name': 'el6-alpha'}
-        }
-    })
-    elastic_alpha_cluster = ec.ElasticsearchCluster(elastic_alpha, None, dry_run=False)
+def test_wait_for_elasticsearch_does_no_check_when_in_dry_run():
+    """In dry run we expect to always return that all nodes are up."""
+    node_group = mock.Mock(spec_set=NodesGroup)
+    node_group.check_all_nodes_up = mock.Mock()
+    remote_hosts = mock.Mock(spec_set=RemoteHosts)
 
-    elastic_beta = Elasticsearch('localhost:9201')
-    elastic_beta.nodes.info = mock.Mock(return_value={
-        'nodes': {
-            'ELASTIC4': {'name': 'el5-beta'}, 'ELASTIC5': {'name': 'el6-beta'}
-        }
-    })
-    elastic_beta_cluster = ec.ElasticsearchCluster(elastic_beta, None, dry_run=False)
+    hosts = ec.ElasticsearchHosts(remote_hosts, [node_group], dry_run=True)
+    hosts.wait_for_elasticsearch_up()
 
-    next_nodes = [
-        {'name': 'el5',
-         'clusters_instances': [
-             elastic_alpha_cluster,
-             elastic_beta_cluster,
-         ]
-         },
-        {'name': 'el6',
-         'clusters_instances': [
-             elastic_alpha_cluster,
-             elastic_beta_cluster,
-         ]
-         }
-    ]
-
-    elastic_hosts = ec.ElasticsearchHosts(remote, next_nodes, dry_run=True)
-    elastic_hosts.wait_for_elasticsearch_up()
-    assert not elastic_alpha.nodes.info.called
-    assert not elastic_beta.nodes.info.called
+    assert not node_group.check_all_nodes_up.called
 
 
 @mock.patch('spicerack.decorators.time.sleep', return_value=None)
-def test_elasticsearch_call_is_retried_when_wait_for_elasticsearch_up_is_not_up(mocked_sleep):
-    """Test that elasticsearch instance is called more than once when node is not found in cluster."""
-    remote = mock.Mock(spec_set=Remote)
-    elastic_alpha = Elasticsearch('localhost:9200')
-    elastic_alpha.nodes.info = mock.Mock(return_value={
-        'nodes': {
-            'ELASTIC4': {'name': 'el7-alpha'}, 'ELASTIC5': {'name': 'el8-alpha'}
-        }
-    })
-    elastic_alpha_cluster = ec.ElasticsearchCluster(elastic_alpha, None, dry_run=False)
+def test_wait_for_elasticsearch_up_fails_if_one_node_is_down(mocked_sleep):
+    """Test that elasticsearch instance is called when wait for instance to come up."""
+    node_group1 = mock.Mock(spec_set=NodesGroup)
+    node_group1.check_all_nodes_up = mock.Mock()
+    node_group2 = mock.Mock(spec_set=NodesGroup)
+    node_group2.check_all_nodes_up = mock.Mock(side_effect=ec.ElasticsearchClusterCheckError())
+    remote_hosts = mock.Mock(spec_set=RemoteHosts)
 
-    elastic_beta = Elasticsearch('localhost:9201')
-    elastic_beta.nodes.info = mock.Mock(return_value={
-        'nodes': {
-            'ELASTIC4': {'name': 'el5-beta'}, 'ELASTIC5': {'name': 'el6-beta'}
-        }
-    })
-    elastic_beta_cluster = ec.ElasticsearchCluster(elastic_beta, None, dry_run=False)
+    hosts = ec.ElasticsearchHosts(remote_hosts, [node_group1, node_group2], dry_run=False)
 
-    next_nodes = [
-        {'name': 'el5',
-         'clusters_instances': [
-             elastic_alpha_cluster,
-             elastic_beta_cluster,
-         ]
-         },
-        {'name': 'el6',
-         'clusters_instances': [
-             elastic_alpha_cluster,
-             elastic_beta_cluster,
-         ]
-         }
-    ]
-
-    elastic_hosts = ec.ElasticsearchHosts(remote, next_nodes, dry_run=False)
     with pytest.raises(ec.ElasticsearchClusterCheckError):
-        elastic_hosts.wait_for_elasticsearch_up(timedelta(seconds=20))
-        assert mocked_sleep.called
-    assert elastic_alpha.nodes.info.call_count == 4
+        hosts.wait_for_elasticsearch_up(timedelta(minutes=1))
+    assert mocked_sleep.called
 
 
 @mock.patch('spicerack.decorators.time.sleep', return_value=None)
-def test_elasticsearch_call_is_retried_when_wait_for_elasticsearch_up_cannot_be_reached(mocked_sleep):
-    """Test that elasticsearch instance is called more than once when the cluster cannot be reached."""
-    remote = mock.Mock(spec_set=Remote)
-    elastic_alpha = Elasticsearch('localhost:9200')
-    elastic_alpha.nodes.info = mock.Mock(side_effect=TransportError)
-    elastic_alpha_cluster = ec.ElasticsearchCluster(elastic_alpha, None, dry_run=False)
+def test_wait_for_elasticsearch_up_retries_on_failures(mocked_sleep):
+    """Test that elasticsearch instance is called when wait for instance to come up."""
+    node_group = mock.Mock(spec_set=NodesGroup)
+    node_group.check_all_nodes_up = mock.Mock(side_effect=ec.ElasticsearchClusterCheckError())
+    remote_hosts = mock.Mock(spec_set=RemoteHosts)
 
-    next_nodes = [{
-        'name': 'el5',
-        'clusters_instances': [elastic_alpha_cluster]
-    }]
+    hosts = ec.ElasticsearchHosts(remote_hosts, [node_group], dry_run=False)
 
-    elastic_hosts = ec.ElasticsearchHosts(remote, next_nodes, dry_run=False)
-    with pytest.raises(ec.ElasticsearchClusterError):
-        elastic_hosts.wait_for_elasticsearch_up(timedelta(seconds=20))
-        assert mocked_sleep.called
-    assert elastic_alpha.nodes.info.call_count == 4
+    with pytest.raises(ec.ElasticsearchClusterCheckError):
+        hosts.wait_for_elasticsearch_up(timedelta(minutes=1))
+    assert node_group.check_all_nodes_up.call_count == 12
+    assert mocked_sleep.called
 
 
 def test_cluster_settings_are_unchanged_when_stopped_replication_is_dry_run():
@@ -237,11 +153,15 @@ def test_cluster_settings_are_unchanged_when_stopped_replication_is_dry_run():
         assert not elasticsearch.cluster.put_settings.called
 
 
-def test_split_node_names():
-    """split_node_name() support cluster names containing '-'"""
-    node_name, cluster_name = ec.ElasticsearchCluster.split_node_name('node1-cluster-name')
-    assert node_name == 'node1'
-    assert cluster_name == 'cluster-name'
+def test_get_nodes_wraps_exceptions():
+    """Get nodes should wrap exceptions from elasticsearch client."""
+    elasticsearch = mock.Mock()
+    elasticsearch.nodes.info = mock.Mock(side_effect=TransportError())
+    remote = mock.Mock()
+
+    cluster = ec.ElasticsearchCluster(elasticsearch, remote)
+    with pytest.raises(ec.ElasticsearchClusterError):
+        cluster.get_nodes()
 
 
 class TestElasticsearchClusters:
@@ -620,9 +540,7 @@ def test_nodes_group_aggregates_same_clusters():
     group = NodesGroup(node1, cluster)
     group.accumulate(node2, cluster)
 
-    # whitebox testing here (NodesGroup should be refactored for better coherence)
-    assert len(group._clusters_names) == 1      # pylint: disable=protected-access
-    assert len(group._clusters_instances) == 1  # pylint: disable=protected-access
+    assert len(group.clusters_instances) == 1
 
 
 def test_nodes_group_fail_to_accumulate_with_different_fqdn():
@@ -634,6 +552,45 @@ def test_nodes_group_fail_to_accumulate_with_different_fqdn():
 
     with pytest.raises(AssertionError):
         group.accumulate(node2, cluster)
+
+
+def test_all_nodes_are_restarted():
+    """All nodes are deemed restarted if they are all listed as cluster nodes."""
+    node1 = json_node('elastic1001.example.com', cluster_name='alpha')
+    node2 = json_node('elastic1001.example.com', cluster_name='beta')
+    alpha, beta = mock_node_info([   # pylint: disable=unbalanced-tuple-unpacking
+        {'x1': node1},
+        {'y1': node2}
+    ])
+
+    group = NodesGroup(node1, alpha)
+    group.accumulate(node2, beta)
+
+    group.check_all_nodes_up()
+
+    # whitebox testing for convenience
+    # TODO: refactor mock_node_info() to expose the mock Elasticsearch instances
+    assert alpha._elasticsearch.nodes.info.called  # pylint: disable=protected-access
+    assert beta._elasticsearch.nodes.info.called   # pylint: disable=protected-access
+
+
+def test_node_not_restarted():
+    """Error is raised if a node is not listed as a member of the cluster."""
+    node1 = json_node('elastic1001.example.com', cluster_name='alpha')
+    node2 = json_node('elastic1001.example.com', cluster_name='beta')
+    alpha, beta = mock_node_info([   # pylint: disable=unbalanced-tuple-unpacking
+        {'x1': node1},
+        {'y1': node2}
+    ])
+
+    group = NodesGroup(node1, alpha)
+    group.accumulate(node2, beta)
+
+    # remove elastic1001 from alpha cluster
+    alpha._elasticsearch.nodes.info = mock.Mock(return_value={'nodes': {}})  # pylint: disable=protected-access
+
+    with pytest.raises(ec.ElasticsearchClusterCheckError):
+        group.check_all_nodes_up()
 
 
 def json_node(fqdn: str, cluster_name: str = 'alpha-cluster', row: str = 'row1', start_time: int = 10) -> Dict:
@@ -663,7 +620,7 @@ def mock_node_info(values):
     for nodes in values:
         elasticsearch = Elasticsearch('localhost:{port}'.format(port=port))
         port += 1
-        cluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=False)
         elasticsearch.nodes.info = mock.Mock(return_value={'nodes': nodes})
+        cluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=False)
         clusters.append(cluster)
     return clusters

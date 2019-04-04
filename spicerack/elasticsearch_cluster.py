@@ -78,7 +78,7 @@ def create_elasticsearch_clusters(clustergroup: str, remote: Remote, dry_run: bo
 class ElasticsearchHosts(RemoteHostsAdapter):
     """Remotehosts Adapter for managing elasticsearch nodes."""
 
-    def __init__(self, remote_hosts: RemoteHosts, nodes: Sequence[Dict], dry_run: bool = True) -> None:
+    def __init__(self, remote_hosts: RemoteHosts, nodes: Sequence['NodesGroup'], dry_run: bool = True) -> None:
         """After calling the super's constructor, initialize other instance variables.
 
         Arguments:
@@ -140,12 +140,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
                exceptions=(ElasticsearchClusterError, ElasticsearchClusterCheckError))
         def inner_wait() -> None:
             for node in self._nodes:
-                for cluster_instance in node['clusters_instances']:
-                    try:
-                        if not cluster_instance.is_node_in_cluster_nodes(node['name']):
-                            raise ElasticsearchClusterCheckError('Elasticsearch is not up yet')
-                    except (TransportError, HTTPError) as e:
-                        raise ElasticsearchClusterError('Could not connect to the cluster') from e
+                node.check_all_nodes_up()
 
         if not self._dry_run:
             inner_wait()
@@ -277,7 +272,7 @@ class ElasticsearchClusters:
         return nodes_group.values()
 
     @staticmethod
-    def _to_rows(nodes: Sequence['NodesGroup']) -> defaultdict:
+    def _to_rows(nodes: Sequence['NodesGroup']) -> Dict[str, Sequence['NodesGroup']]:
         """Arrange nodes in rows, so each node belongs in their respective row.
 
         Arguments:
@@ -323,7 +318,10 @@ class ElasticsearchCluster:
             dict: dictionary of elasticsearch nodes in the cluster.
 
         """
-        return self._elasticsearch.nodes.info()['nodes']
+        try:
+            return self._elasticsearch.nodes.info()['nodes']
+        except (TransportError, HTTPError) as e:
+            raise ElasticsearchClusterError('Could not connect to the cluster') from e
 
     def is_node_in_cluster_nodes(self, node: str) -> bool:
         """Checks if node is in a list of elasticsearch cluster nodes.
@@ -335,24 +333,11 @@ class ElasticsearchCluster:
             bool: :py:data:`True` if node is present and :py:data:`False` if not.
 
         """
-        nodes_names = [ElasticsearchCluster.split_node_name(node['name'])[0] for node in self.get_nodes().values()]
+        nodes_names = [node['attributes']['hostname'] for node in self.get_nodes().values()]
         if node in nodes_names:
             return True
 
         return False
-
-    @staticmethod
-    def split_node_name(node_name: str) -> List[str]:
-        """Split node name into hostname and cluster group name.
-
-        Arguments:
-            node_name (str): node name containing hostname and cluster name separated by ``-``.
-
-        Returns:
-            list: 2-element list containing the node name and the cluster name.
-
-        """
-        return node_name.split('-', 1)
 
     @contextmanager
     def stopped_replication(self) -> Iterator[None]:
@@ -594,6 +579,11 @@ class NodesGroup:
         """Fully Qualified Domain Name."""
         return self._fqdn
 
+    @property
+    def clusters_instances(self) -> Sequence[ElasticsearchCluster]:
+        """Cluster instances running on this node group."""
+        return self._clusters_instances
+
     def restarted_since(self, since: datetime) -> bool:
         """Check if node has been restarted.
 
@@ -605,3 +595,14 @@ class NodesGroup:
 
         """
         return self._oldest_start_time > since
+
+    def check_all_nodes_up(self) -> None:
+        """Check that all the nodes on this hosts are up and have joined their respective clusters.
+
+        Raises:
+            spicerack.elasticsearch_cluster.ElasticsearchClusterCheckError: if not all nodes have joined.
+
+        """
+        for cluster_instance in self._clusters_instances:
+            if not cluster_instance.is_node_in_cluster_nodes(self._hostname):
+                raise ElasticsearchClusterCheckError('Elasticsearch is not up yet')
