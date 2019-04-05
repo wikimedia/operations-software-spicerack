@@ -495,7 +495,7 @@ class ElasticsearchCluster:
         shuffle(nodes)
         for node in nodes:
             try:
-                logger.info('Trying to allocate [%s:%s] on [%s]', shard['index'], shard['shard'], node)
+                logger.debug('Trying to allocate [%s:%s] on [%s]', shard['index'], shard['shard'], node)
                 self._elasticsearch.cluster.reroute(retry_failed=True, body={
                     'commands': [{
                         'allocate_replica': {
@@ -505,11 +505,11 @@ class ElasticsearchCluster:
                     }]
                 })
                 # successful allocation, we can exit
-                logger.info('allocation successful')
+                logger.info('Successfully allocated shard [%s:%s] on [%s]', shard['index'], shard['shard'], node)
                 break
             except RequestError:
                 # error allocating shard, let's try the next node
-                logger.info('Could not reallocate shard [%s:%s] on %s', shard['index'], shard['shard'], node)
+                logger.debug('Could not reallocate shard [%s:%s] on [%s]', shard['index'], shard['shard'], node)
         else:
             logger.warning('Could not reallocate shard [%s:%s] on any node', shard['index'], shard['shard'])
 
