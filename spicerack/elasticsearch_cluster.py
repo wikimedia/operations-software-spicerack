@@ -289,6 +289,15 @@ class ElasticsearchClusters:
             rows[node.row].append(node)
         return rows
 
+    def reset_indices_to_read_write(self) -> None:
+        """Reset all readonly indices to read/write.
+
+        In some cases (running low on disk space), indices are switched to
+        readonly. This method will update all readonly indices to read/write.
+        """
+        for cluster in self._clusters:
+            cluster.reset_indices_to_read_write()
+
 
 class ElasticsearchCluster:
     """Class to manage elasticsearch cluster."""
@@ -512,6 +521,19 @@ class ElasticsearchCluster:
                 logger.debug('Could not reallocate shard [%s:%s] on [%s]', shard['index'], shard['shard'], node)
         else:
             logger.warning('Could not reallocate shard [%s:%s] on any node', shard['index'], shard['shard'])
+
+    def reset_indices_to_read_write(self) -> None:
+        """Reset all readonly indices to read/write.
+
+        In some cases (running low on disk space), indices are switched to
+        readonly. This method will update all readonly indices to read/write.
+        """
+        try:
+            self._elasticsearch.indices.put_settings(
+                body={'index.blocks.read_only_allow_delete': None},
+                index='_all')
+        except (RequestError, TransportError, HTTPError) as e:
+            raise ElasticsearchClusterError('Could not reset read only status') from e
 
 
 class NodesGroup:

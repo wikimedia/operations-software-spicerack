@@ -420,6 +420,28 @@ class TestElasticsearchClusters:
             assert self.elasticsearch1.cluster.health.call_count == 2
             assert self.elasticsearch2.cluster.health.call_count == 2
 
+    def test_reset_read_only_is_sent_to_all_clusters(self):
+        """Reset read only status should be sent to all clusters."""
+        # This should really be an integration test but too much work to set up.
+        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, None)
+        for client in [self.elasticsearch1, self.elasticsearch2]:
+            client.indices.put_settings = mock.Mock()
+
+        elasticsearch_clusters.reset_indices_to_read_write()
+
+        for client in [self.elasticsearch1, self.elasticsearch2]:
+            assert client.indices.put_settings.called
+
+    def test_reset_read_only_wraps_exceptions(self):
+        """Exceptions from underlying elasticsearch client should be wrapped."""
+        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, None)
+        for client in [self.elasticsearch1, self.elasticsearch2]:
+            client.indices.put_settings = mock.Mock(side_effect=TransportError('test'))
+
+        with pytest.raises(ec.ElasticsearchClusterError):
+            elasticsearch_clusters.reset_indices_to_read_write()
+            assert not self.elasticsearch2.indices.put_settings.called
+
 
 def test_get_next_clusters_nodes():
     """Test that next nodes belong in the same row on each cluster."""
