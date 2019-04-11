@@ -9,7 +9,6 @@ from cumin import Config, NodeSet
 from cumin.transports import clustershell, Target
 
 from spicerack import remote
-
 from spicerack.tests import get_fixture_path
 
 

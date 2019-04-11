@@ -3,9 +3,9 @@ import logging
 
 from typing import List, Optional, Union
 
-from dns import reversename, resolver, rrset
-from dns.name import Name
+from dns import resolver, reversename, rrset
 from dns.exception import DNSException
+from dns.name import Name
 
 from spicerack.exceptions import SpicerackError
 

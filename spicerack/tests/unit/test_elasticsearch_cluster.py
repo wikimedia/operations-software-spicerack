@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 
 from cumin import NodeSet
-from elasticsearch import Elasticsearch, ConflictError, RequestError, TransportError
+from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
 
 from spicerack import elasticsearch_cluster as ec
 from spicerack.administrative import Reason

@@ -4,8 +4,6 @@ from unittest import mock
 import pytest
 
 from spicerack.redis_cluster import RedisCluster, RedisClusterError
-
-
 from spicerack.tests import get_fixture_path
 
 

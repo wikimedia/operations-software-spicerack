@@ -23,8 +23,8 @@ from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.phabricator import create_phabricator, Phabricator
-from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
 from spicerack.prometheus import Prometheus
+from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 

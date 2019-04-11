@@ -3,9 +3,9 @@ from unittest import mock
 
 import pytest
 
-from spicerack.management import Management, ManagementError
 from spicerack.constants import ALL_DATACENTERS
 from spicerack.dns import Dns, DnsError
+from spicerack.management import Management, ManagementError
 
 
 class TestManagement:

@@ -6,7 +6,7 @@ import pytest
 import requests
 
 from spicerack.exceptions import SpicerackError
-from spicerack.ganeti import Ganeti, GanetiRAPI, GanetiError, CLUSTERS_AND_ROWS, CLUSTER_SVC_URL
+from spicerack.ganeti import CLUSTER_SVC_URL, CLUSTERS_AND_ROWS, Ganeti, GanetiError, GanetiRAPI
 from spicerack.tests import get_fixture_path, requests_mock_not_available
 
 

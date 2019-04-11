@@ -8,7 +8,6 @@ from unittest import mock
 import pytest
 
 from spicerack import log
-
 from spicerack.tests import caplog_not_available
 
 

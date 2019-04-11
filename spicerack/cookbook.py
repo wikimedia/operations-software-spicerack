@@ -234,8 +234,8 @@ class Cookbooks:
             if relpath != '.':
                 prefix = '.'.join((self.cookbooks_module_prefix, relpath.replace('/', '.')))
 
-            if (self.path_filter is not None and not prefix.startswith(self.path_filter) and
-                    sum('.'.join((prefix, filename)).startswith(self.path_filter) for filename in filenames) == 0):
+            if (self.path_filter is not None and not prefix.startswith(self.path_filter)
+                    and sum('.'.join((prefix, filename)).startswith(self.path_filter) for filename in filenames) == 0):
                 continue
 
             path = prefix.rstrip('.')

@@ -6,7 +6,6 @@ import pytest
 from conftool.tests.unit import MockBackend
 
 from spicerack import confctl
-
 from spicerack.tests import get_fixture_path
 
 

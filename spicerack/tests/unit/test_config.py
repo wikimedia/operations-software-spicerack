@@ -7,7 +7,7 @@ import pytest
 
 from spicerack.config import load_ini_config, load_yaml_config
 from spicerack.exceptions import SpicerackError
-from spicerack.tests import get_fixture_path, caplog_not_available
+from spicerack.tests import caplog_not_available, get_fixture_path
 
 
 def test_load_yaml_config_empty():
