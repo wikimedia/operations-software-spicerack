@@ -102,22 +102,7 @@ class ConftoolEntity:
 
         """
         logger.debug('Updating conftool matching tags: %s', tags)
-        if self._dry_run:
-            message_prefix = 'Skipping conftool update on dry-run mode'
-        else:
-            message_prefix = 'Updating conftool'
-
-        for obj in self._select(tags):
-            logger.debug('%s: %s -> %s', message_prefix, obj, changed)
-            if self._dry_run:
-                continue
-
-            try:
-                obj.update(changed)
-            except BackendError as e:
-                raise ConfctlError('Error writing to etcd') from e
-            except Exception as e:
-                raise ConfctlError('Generic error in conftool') from e
+        self.update_objects(changed, self._select(tags))
 
     def get(self, **tags: str) -> Iterator[kvobject.Entity]:
         """Generator that yields conftool objects corresponding to the selection.
@@ -153,3 +138,74 @@ class ConftoolEntity:
             if new != value and not self._dry_run:
                 raise ConfctlError("Conftool key {key} has value '{new}', expecting '{value}' for tags: {tags}".format(
                     key=key, new=new, value=value, tags=tags))
+
+    def filter_objects(
+            self,
+            filter_expr: Dict[str, Union[bool, str, int, float]],
+            **tags: str
+    ) -> Iterator[kvobject.Entity]:
+        """Filters objects coming from conftool based on values.
+
+        A generator will be returned which will contain only objects that match all filters.
+
+        Arguments:
+           filter_expr (dict): a set of desired field names and values.
+           **tags: arbitrary Conftool tags as keyword arguments.
+
+        Yields:
+            conftool.kvobject.Entity: the selected object.
+
+        Raises:
+            spicerack.confctl.ConfctlError: if no object corresponds to the tags
+
+        """
+        for obj in self._select(tags):
+            matching = True
+            for key, desired in filter_expr.items():
+                try:
+                    value = getattr(obj, key)
+                except AttributeError:
+                    raise ConfctlError('Could not find property "{k}" in object {o}'.format(k=key, o=obj.pprint()))
+                if value != desired:
+                    matching = False
+            if matching:
+                yield obj
+
+    def update_objects(
+            self,
+            changed: Dict[str, Union[bool, str, int, float]],
+            objects: Iterator[kvobject.Entity]
+
+    ) -> None:
+        """Updates the value of the provided conftool objects
+
+        Arguments:
+            changed (dict): the new values to set for the selected objects.
+            query (iterator(kvobject.Entity)): an iterator of conftool objects
+
+        Raises:
+            spicerack.confctl.ConfctlError: on etcd or Conftool errors.
+
+        Examples:
+            >>> inactive = confctl.filter_objects({'pooled': 'inactive'}, service='appservers-.*', name='eqiad')
+            >>> confctl.update_objects({'pooled': False}, inactive)
+
+        """
+        # TODO: make the api nicer by returning an EntitiesCollection from filter_objects so we can allow to write
+        # >>> inactive.update({'pooled': False})
+        if self._dry_run:
+            message_prefix = 'Skipping conftool update on dry-run mode'
+        else:
+            message_prefix = 'Updating conftool'
+
+        for obj in objects:
+            logger.debug('%s: %s -> %s', message_prefix, obj, changed)
+            if self._dry_run:
+                continue
+
+            try:
+                obj.update(changed)
+            except BackendError as e:
+                raise ConfctlError('Error writing to etcd') from e
+            except Exception as e:
+                raise ConfctlError('Generic error in conftool') from e
