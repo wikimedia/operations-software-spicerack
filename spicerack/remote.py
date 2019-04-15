@@ -1,6 +1,8 @@
 """Remote module to execute commands on hosts via Cumin."""
 import logging
+import math
 import os
+import time
 
 from datetime import datetime, timedelta
 from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
@@ -10,6 +12,7 @@ from cumin import Config, CuminError, NodeSet, query, transport, transports
 from cumin.cli import target_batch_size
 from cumin.transports import Command
 
+from spicerack.confctl import ConftoolEntity
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
@@ -32,6 +35,16 @@ class RemoteExecutionError(RemoteError):
         """Override parent constructor to add the return code attribute."""
         super().__init__('{msg} (exit_code={ret})'.format(msg=message, ret=retcode))
         self.retcode = retcode
+
+
+class RemoteClusterExecutionError(RemoteError):
+    """Custom exception class for collecting multiple execution errors on a cluster."""
+
+    def __init__(self, results: List[Tuple[NodeSet, MsgTreeElem]], failures: List[RemoteExecutionError]):
+        """Override the parent constructor to add failures and results as attributes."""
+        super().__init__("{n} hosts have failed execution".format(n=len(failures)))
+        self.failures = failures
+        self.results = results
 
 
 class RemoteHostsAdapter:
@@ -71,6 +84,214 @@ class RemoteHostsAdapter:
         return len(self._remote_hosts)
 
 
+class LBRemoteCluster(RemoteHostsAdapter):
+    """Class usable to operate on a cluster of servers with pooling/depooling logic in conftool."""
+
+    def __init__(self, config: Config, remote_hosts: 'RemoteHosts', conftool: ConftoolEntity) -> None:
+        """Initialize the instance.
+
+        Arguments:
+            config (spicerack.config.Config): cumin configuration.
+            remote_hosts (spicerack.remote.RemoteHosts): the instance to act on the remote hosts.
+            conftool (spicerack.confctl.ConftoolEntity): the conftool entity to operate on.
+
+        """
+        self._config = config
+        self._conftool = conftool
+        super().__init__(remote_hosts)
+
+    def run(
+            self,
+            *commands: Union[str, Command],
+            svc_to_depool: Optional[List[str]] = None,
+            batch_size: int = 1,
+            batch_sleep: Optional[float] = None,
+            is_safe: bool = False,
+            max_failed_batches: int = 0
+    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+        """Run commands while depooling servers in groups of batch_size.
+
+        For clusters behind a load balancer, we typically want to be able to
+        depool a server from a specific service, then run any number of commands
+        on it, and finally repool it.
+
+        We also want to ensure we can only have at max N hosts depooled at any
+        time. Given cumin doesn't have pre- and post- execution hooks, we break
+        the remote run in smaller groups and execute on one group at a time,
+        in parallel on all the servers.
+        Note this works a bit differently than how the cumin moving window works,
+        as here we'll have to wait for the execution on all servers in a group
+        before moving on to the next.
+
+        Arguments:
+            *commands (str, cumin.transports.Command): Arbitrary number of commands to execute.
+            svc_to_depool (list): A list of services (in conftool) to depool.
+            batch_size (int, optional): the batch size for cumin, as an integer. Defaults to 1.
+            batch_sleep (float, optional): the batch sleep in seconds to use before scheduling the next batch of hosts.
+            is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
+            max_failed_batches (int, optional): Maximum number of batches that can fail. Defaults to 0.
+
+        Returns:
+            list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError, spicerack.remote.RemoteClusterExecutionError: if the Cumin execution
+                returns a non-zero exit code.
+
+        """
+        n_hosts = len(self._remote_hosts)
+        # Ensure the batch size is smaller than the whole cluster. When acting on a cluster
+        # we should never act on all hosts in parallel.
+        # If that's needed, RemoteHosts can be used directly.
+        # TODO: the right thing to do would be to check that batch_size is smaller than
+        # (1 - depool_threshold) * pooled_hosts, but that would also need to know the current
+        # state of the cluster.
+        if batch_size <= 0 or batch_size >= n_hosts:
+            raise RemoteError('Values for batch_size must be 0 < x < {}, got {}'.format(n_hosts, batch_size))
+
+        # If no service needs depooling, the standard behavior of remote_hosts.run_async is used
+        # TODO: add the ability to select all services.
+        if svc_to_depool is None:
+            return list(
+                self._remote_hosts.run_async(
+                    *commands,
+                    success_threshold=(1.0 - (max_failed_batches * batch_size) / n_hosts),
+                    batch_size=batch_size,
+                    batch_sleep=batch_sleep,
+                    is_safe=is_safe
+                )
+            )
+
+        results = []
+        # Find how much we must split the pool up to achieve the desired batch size.
+        n_slices = math.ceil(n_hosts / batch_size)
+        # TODO: add better failure handling. Right now we just support counting batches with a failure, while we might
+        # want to support success_threshold.
+        failures = []
+        for nodeset in self._remote_hosts.hosts.split(n_slices):
+            remotes_slice = RemoteHosts(self._config, nodeset)
+            # Select the pooled servers for the selected services, from the group we're operating on now.
+            with self._conftool.change_and_revert(
+                    'pooled', 'yes', 'no',
+                    service='|'.join(svc_to_depool),
+                    name='|'.join(remotes_slice.hosts.striter())
+            ):
+                try:
+                    for result in remotes_slice.run_async(
+                            *commands, is_safe=is_safe,
+                            success_threshold=1.0):
+                        results.append(result)
+                except RemoteExecutionError as e:
+                    failures.append(e)
+                    # Break the execution loop if more than the maximum number of failures happened.
+                    if len(failures) > max_failed_batches:
+                        break
+            # TODO: skip sleep on the last run
+            if batch_sleep is not None:
+                time.sleep(batch_sleep)
+        if failures:
+            raise RemoteClusterExecutionError(results, failures)
+        return results
+
+    def restart_services(
+            self,
+            services: List[str],
+            svc_to_depool: List[str],
+            *,
+            batch_size: int = 1,
+            batch_sleep: Optional[float] = None
+    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+        """Restart services in batches, removing the host from all the affected services first.
+
+        Arguments:
+            services (list): A list of services to act upon
+            svc_to_depool (list): A list of services (in conftool) to depool.
+            batch_size (int): the batch size for cumin, as an integer. Defaults to 1
+            batch_sleep (float, optional): the batch sleep between groups of runs.
+
+        Returns:
+            list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError, spicerack.remote.RemoteClusterExecutionError: if the Cumin execution
+                returns a non-zero exit code.
+
+        """
+        return self._act_on_services(
+            services,
+            svc_to_depool,
+            'restart',
+            batch_size,
+            batch_sleep
+        )
+
+    def reload_services(
+            self,
+            services: List[str],
+            svc_to_depool: List[str],
+            *,
+            batch_size: int = 1,
+            batch_sleep: Optional[float] = None
+    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+        """Reload services in batches, removing the host from all the affected services first.
+
+        Arguments:
+            services (list): A list of services to act upon
+            svc_to_depool (list): A list of services (in conftool) to depool.
+            batch_size (int): the batch size for cumin, as an integer.Defaults to 1
+            batch_sleep (float, optional): the batch sleep between groups of runs.
+
+        Returns:
+            list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError, spicerack.remote.RemoteClusterExecutionError: if the Cumin execution
+                returns a non-zero exit code.
+
+        """
+        return self._act_on_services(
+            services,
+            svc_to_depool,
+            'reload',
+            batch_size,
+            batch_sleep
+        )
+
+    def _act_on_services(
+            self,
+            services: List[str],
+            svc_to_depool: List[str],
+            what: str,
+            batch_size: int,
+            batch_sleep: Optional[float] = None
+    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+        """Act on services in batches, depooling the servers first.
+
+        Arguments:
+            services (list): A list of services to act upon
+            svc_to_depool (list): A list of services (in conftool) to depool.
+            what (string): Action to perform. restart by default.
+            batch_size (int): the batch size for cumin, as an integer.
+            batch_sleep (float, optional): the batch sleep between groups of runs.
+
+        Returns:
+            list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError, spicerack.remote.RemoteClusterExecutionError: if the Cumin execution
+                returns a non-zero exit code.
+
+        """
+        commands = ['systemctl {w} "{s}"'.format(w=what, s=svc) for svc in services]
+        return self.run(
+            *commands,
+            svc_to_depool=svc_to_depool,
+            batch_size=batch_size,
+            batch_sleep=batch_sleep,
+            is_safe=False
+        )
+
+
 class Remote:
     """Remote class to interact with Cumin."""
 
@@ -101,6 +322,33 @@ class Remote:
             raise RemoteError('Failed to execute Cumin query') from e
 
         return RemoteHosts(self._config, hosts, dry_run=self._dry_run)
+
+    def query_confctl(self, conftool: ConftoolEntity, **tags: str) -> LBRemoteCluster:
+        """Execute a conftool node query and return the matching hosts.
+
+        Arguments:
+            conftool (spicerack.confctl.ConftoolEntity): the conftool instance for the node type objects.
+            tags: Conftool tags for node type objects as keyword arguments.
+
+        Returns:
+            spicerack.remote.LBRemoteHosts: LBRemoteHosts instance matching the given query
+
+        Raises:
+           spicerack.remote.RemoteError
+
+        """
+        # get the list of hosts from confctl
+        try:
+            hosts_conftool = [obj.name for obj in conftool.get(**tags)]
+            query_string = ','.join(hosts_conftool)
+        except SpicerackError as e:
+            raise RemoteError('Failed to execute the conftool query') from e
+
+        remote_hosts = self.query(query_string)
+        host_diff = set(hosts_conftool) - set(remote_hosts.hosts)
+        if host_diff:  # pragma: no cover | This should never happen with a direct backend.
+            logger.warning("Hosts present in conftool but not in puppet: %s", ",".join(host_diff))
+        return LBRemoteCluster(self._config, remote_hosts, conftool)
 
 
 class RemoteHosts:

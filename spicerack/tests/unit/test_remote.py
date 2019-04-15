@@ -8,7 +8,7 @@ from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, NodeSet
 from cumin.transports import clustershell, Target
 
-from spicerack import remote
+from spicerack import confctl, remote
 from spicerack.tests import get_fixture_path
 
 
@@ -58,6 +58,161 @@ class TestRemoteHostsAdapter:
         assert len(self.remote_hosts) == len(self.hosts)
 
 
+class TestLBRemoteCluster:
+    """Test class for the LBRemoteCluster class."""
+
+    def setup_method(self):
+        """Setup the test environment."""
+        # pylint: disable=attribute-defined-outside-init
+        config = get_fixture_path('remote', 'config.yaml')
+        self.hosts = NodeSet('host[1-10]')
+        # We want to mock out ConftoolEntity completely here. As far as we're concerned it's just an interface
+        self.conftool = mock.MagicMock(spec=confctl.ConftoolEntity)
+        self.remote_hosts = remote.RemoteHosts(config, self.hosts, dry_run=False)
+        self.remote_hosts.run_async = mock.MagicMock()
+        self.lbcluster = remote.LBRemoteCluster(config, self.remote_hosts, self.conftool)
+
+    @pytest.mark.parametrize('size', [0, 10])
+    def test_run_wrong_batch_size(self, size):
+        """Test run fails with a bad batch size."""
+        with pytest.raises(remote.RemoteError, match='Values for batch_size'):
+            self.lbcluster.run('some command', batch_size=size)
+
+    def test_run_no_depool(self):
+        """Test a run with no service to depool."""
+        self.lbcluster.run('some command', 'some_other cmd')
+        self.remote_hosts.run_async.assert_called_with(
+            'some command', 'some_other cmd',
+            success_threshold=1.0,
+            batch_size=1,
+            batch_sleep=None,
+            is_safe=False
+        )
+
+    def test_run_no_depool_failures(self):
+        """Test a run with no service to depool where we allow failures."""
+        self.lbcluster.run('some command', 'some_other cmd', max_failed_batches=1)
+        self.remote_hosts.run_async.assert_called_with(
+            'some command', 'some_other cmd',
+            success_threshold=0.9,
+            batch_size=1,
+            batch_sleep=None,
+            is_safe=False
+        )
+
+    @mock.patch('spicerack.remote.RemoteHosts.run_async')
+    def test_run_depool(self, run_async):
+        """Test a run with services to depool."""
+        self.conftool.change_and_revert = mock.MagicMock()
+        run_async.return_value = [(NodeSet('host1'), None), (NodeSet('host2'), None)]
+        res = self.lbcluster.run(
+            'test -d /tmp',
+            svc_to_depool=['service1', 'service2'],
+            batch_size=5,
+        )
+
+        # Run has been sliced in two
+        assert run_async.call_count == 2
+        assert res == [
+            (NodeSet('host1'), None), (NodeSet('host2'), None),
+            (NodeSet('host1'), None), (NodeSet('host2'), None)
+        ]
+        # The depool is called on subsequent groups of servers.
+        self.conftool.change_and_revert.assert_called_with(
+            'pooled',
+            'yes',
+            'no',
+            service='service1|service2',
+            name='host6|host7|host8|host9|host10'
+        )
+
+    @mock.patch('spicerack.remote.RemoteHosts.run_async')
+    def test_run_depool_failure(self, run_async):
+        """Test a run with services to depool where a failure is caused."""
+        # Case 1: run_async fails, no max_failed_batches
+        run_async.side_effect = [
+            [(NodeSet('host1'), None)],
+            remote.RemoteExecutionError(message='foobar!', retcode=10),
+            remote.RemoteExecutionError(message='barbaz!', retcode=10),
+        ]
+        with pytest.raises(remote.RemoteClusterExecutionError, match='1 hosts have failed execution') as err:
+            self.lbcluster.run(
+                'test -d /tmp',
+                svc_to_depool=['service1', 'service2'],
+                batch_size=3,
+            )
+            assert len(err.results) == 1
+            assert len(err.failures) == 1
+        # This time, we bailed out after the first failure
+        assert run_async.call_count == 2
+
+        run_async.side_effect = [
+            [(NodeSet('host1'), None)],
+            remote.RemoteExecutionError(message='foobar!', retcode=10),
+            remote.RemoteExecutionError(message='barbaz!', retcode=10),
+        ]
+        run_async.reset_mock()
+        with pytest.raises(remote.RemoteClusterExecutionError, match='2 hosts have failed execution') as err:
+            self.lbcluster.run(
+                'test -d /tmp',
+                svc_to_depool=['service1', 'service2'],
+                batch_size=3,
+                max_failed_batches=1
+            )
+            assert len(err.results) == 1
+            assert len(err.failures) == 2
+        # All batches have been run, as we could tolerate one error
+        assert run_async.call_count == 3
+
+    @mock.patch('spicerack.remote.RemoteHosts.run_async')
+    def test_run_depool_no_sleep(self, _):
+        """Test a run with services to depool where a failure is caused."""
+        with mock.patch('time.sleep') as ts:
+            self.lbcluster.run(
+                'test -d /tmp',
+                svc_to_depool=['service1', 'service2'],
+                batch_size=3,
+            )
+            assert ts.call_count == 0
+
+    @mock.patch('spicerack.remote.RemoteHosts.run_async')
+    def test_run_depool_sleep(self, _):
+        """Test a run where we have a batch sleep."""
+        with mock.patch('time.sleep') as ts:
+            self.lbcluster.run(
+                'test -d /tmp',
+                svc_to_depool=['service1', 'service2'],
+                batch_sleep=3,
+                batch_size=3
+            )
+            assert ts.call_count == 4
+
+    def test_reload_services(self):
+        """Test a service reload."""
+        self.lbcluster.run = mock.MagicMock(return_value='foobar')
+        assert self.lbcluster.reload_services(['svc'], ['lbl1', 'lbl2']) == 'foobar'
+        self.lbcluster.run.assert_called_with(
+            'systemctl reload "svc"',
+            svc_to_depool=['lbl1', 'lbl2'],
+            batch_size=1,
+            batch_sleep=None,
+            is_safe=False
+        )
+
+    def test_restart_services(self):
+        """Test a service restart."""
+        self.lbcluster.run = mock.MagicMock(return_value='foobar')
+        assert self.lbcluster.restart_services(['svc1', 'svc2'], ['lbl1', 'lbl2']) == 'foobar'
+        self.lbcluster.run.assert_called_with(
+            'systemctl restart "svc1"',
+            'systemctl restart "svc2"',
+            svc_to_depool=['lbl1', 'lbl2'],
+            batch_size=1,
+            batch_sleep=None,
+            is_safe=False
+        )
+
+
 class TestRemote:
     """Test class for the Remote class."""
 
@@ -81,6 +236,26 @@ class TestRemote:
         """Calling query() with an invalid query should raise RemoteError."""
         with pytest.raises(remote.RemoteError, match='Failed to execute Cumin query'):
             self.remote.query('or invalid')
+
+    def test_query_confctl_ok(self):
+        """Succesful query_confctl() should return the correct lbremotehosts instance."""
+        conftool = mock.MagicMock(spec=confctl.ConftoolEntity)
+        host1 = mock.MagicMock()
+        host1.name = 'host1'
+        host2 = mock.MagicMock()
+        host2.name = 'host2'
+        conftool.get.return_value = [host1, host2]
+        lbcluster = self.remote.query_confctl(conftool, dc='a', sometag='someval')
+        conftool.get.assert_called_with(dc='a', sometag='someval')
+        assert str(lbcluster) == 'host[1-2]'
+        assert isinstance(lbcluster, remote.LBRemoteCluster)
+
+    def test_query_confctl_error(self):
+        """Failing query_confctl() raises a RemoteError."""
+        conftool = mock.MagicMock(spec=confctl.ConftoolEntity)
+        conftool.get.side_effect = confctl.ConfctlError('test test!')
+        with pytest.raises(remote.RemoteError, match='Failed to execute the conftool query'):
+            self.remote.query_confctl(conftool, dc='a', sometag='someval')
 
 
 class TestRemoteHosts:
