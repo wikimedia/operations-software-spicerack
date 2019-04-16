@@ -2,7 +2,8 @@
 import logging
 import re
 
-from typing import Dict, Iterator, Union
+from contextlib import contextmanager
+from typing import Dict, Iterable, Iterator, Union
 
 from conftool import configuration, kvobject, loader
 from conftool.drivers import BackendError
@@ -174,7 +175,7 @@ class ConftoolEntity:
     def update_objects(
             self,
             changed: Dict[str, Union[bool, str, int, float]],
-            objects: Iterator[kvobject.Entity]
+            objects: Iterable[kvobject.Entity]
 
     ) -> None:
         """Updates the value of the provided conftool objects
@@ -209,3 +210,34 @@ class ConftoolEntity:
                 raise ConfctlError('Error writing to etcd') from e
             except Exception as e:
                 raise ConfctlError('Generic error in conftool') from e
+
+    @contextmanager
+    def change_and_revert(
+            self,
+            field: str,
+            original: Union[bool, str, int, float],
+            changed: Union[bool, str, int, float],
+            **tags: str
+    ) -> Iterator[Iterable[kvobject.Entity]]:
+        """Context manager to perform actions with a changed value in conftool.
+
+        This method will only act on objects that had the original value.
+
+        Warning:
+            If the code executed within the contextmanager raises an unhandled
+            exception, the original state of the objects will NOT be restored.
+
+        Arguments:
+            field (str): The field to change the value of
+            original (bool, str, int, float): original value
+            changed (bool, str, int, float): changed value
+            tags: Appropriate conftool tags for the chosen entity to select objects
+
+        Yields:
+            generator: conftool.kvObject.Entity the objects that were acted upon
+
+        """
+        objects = list(self.filter_objects({field: original}, **tags))
+        self.update_objects({field: changed}, objects)
+        yield objects
+        self.update_objects({field: original}, objects)

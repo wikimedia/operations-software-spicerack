@@ -143,3 +143,15 @@ class TestConfctl:
         """Under dry run, no update happens"""
         self.discovery_dry_run.update_objects({'pooled': False}, generated_entities)
         assert generated_entities[0].pooled is True
+
+    @pytest.mark.parametrize('generated_entities', [{'foo': {'pooled': True}, 'bar': {'pooled': False}}], indirect=True)
+    def test_change_and_revert(self, generated_entities):
+        """Test the contextmanager."""
+        self.entity.query.return_value = generated_entities
+        with self.discovery.change_and_revert(
+                'pooled', True, False, name='foo|bar') as pooled:
+            # Check that only foo is present in the returned list
+            assert len(pooled) == 1
+            assert pooled[0].name == 'foo'
+            assert pooled[0].pooled is False
+        assert pooled[0].pooled is True
