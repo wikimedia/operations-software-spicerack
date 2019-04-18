@@ -1,7 +1,6 @@
 """Prometheus module tests."""
 import pytest
 
-from spicerack.constants import ALL_DATACENTERS
 from spicerack.prometheus import Prometheus, PrometheusError
 from spicerack.tests import requests_mock_not_available
 
@@ -46,9 +45,8 @@ class TestPrometheus:
 
     def test_bad_site(self):
         """Test with a bad site parameter"""
-        msg = 'site (bad_site) must be one of spicerack.constants.ALL_DATACENTERS ({dcs})'.format(
-            dcs=', '.join(ALL_DATACENTERS))
-        with pytest.raises(PrometheusError, message=msg):
+        with pytest.raises(
+                PrometheusError, match=r'site \(bad_site\) must be one of spicerack.constants.ALL_DATACENTERS'):
             self.prometheus.query('query_string', 'bad_site')
 
     def test_query_ok(self, requests_mock):
@@ -67,7 +65,7 @@ class TestPrometheus:
             json=get_response_data('not_ok'),
             status_code=503
         )
-        with pytest.raises(PrometheusError, message='Unable to get metric: HTTP 503'):
+        with pytest.raises(PrometheusError, match='Unable to get metric: HTTP 503'):
             self.prometheus.query('query_string', 'eqiad')
 
     def test_query_error(self, requests_mock):
@@ -77,7 +75,7 @@ class TestPrometheus:
             json=get_response_data('error'),
             status_code=200
         )
-        with pytest.raises(PrometheusError, message='Unable to get metric: Foobar error'):
+        with pytest.raises(PrometheusError, match='Unable to get metric: Foobar error'):
             self.prometheus.query('query_string', 'eqiad')
 
     def test_query_empty_result(self, requests_mock):
