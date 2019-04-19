@@ -8,7 +8,6 @@ from cumin import Config, NodeSet
 
 from spicerack import mysql
 from spicerack.remote import Remote, RemoteHosts
-
 from spicerack.tests import caplog_not_available, get_fixture_path
 from spicerack.tests.unit.test_remote import mock_cumin
 

@@ -7,7 +7,6 @@ import pytest
 from dns.exception import DNSException
 
 from spicerack.dnsdisc import Discovery, DiscoveryCheckError, DiscoveryError
-
 from spicerack.tests import caplog_not_available
 
 

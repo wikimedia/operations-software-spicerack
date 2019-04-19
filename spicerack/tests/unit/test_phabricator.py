@@ -4,7 +4,6 @@ from unittest import mock
 import pytest
 
 from spicerack import phabricator
-
 from spicerack.tests import get_fixture_path
 
 

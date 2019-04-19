@@ -1,0 +1,144 @@
+{
+   "custom_nicparams" : [
+      {
+         "link" : "private"
+      }
+   ],
+   "oper_ram" : 8192,
+   "uuid" : "75703b6b-21de-4703-8b7a-9ba03fcdaafd",
+   "disk_template" : "drbd",
+   "nic.networks.names" : [
+      null
+   ],
+   "nic.networks" : [
+      null
+   ],
+   "status" : "running",
+   "network_port" : 25536,
+   "disk.uuids" : [
+      "29c868d7-9a11-486f-9e45-5b4a26990f41"
+   ],
+   "nic.modes" : [
+      "bridged"
+   ],
+   "custom_hvparams" : {
+      "boot_order" : "disk"
+   },
+   "custom_beparams" : {
+      "maxmem" : 8192,
+      "vcpus" : 4,
+      "minmem" : 8192
+   },
+   "disk.sizes" : [
+      51200,
+      153600
+   ],
+   "name" : "testhost.example.com",
+   "hvparams" : {
+      "security_domain" : "",
+      "vnc_bind_address" : "0.0.0.0",
+      "usb_devices" : "",
+      "spice_ip_version" : 0,
+      "nic_type" : "paravirtual",
+      "keymap" : "",
+      "mem_path" : "",
+      "vga" : "",
+      "spice_password_file" : "",
+      "reboot_behavior" : "reboot",
+      "vnc_tls" : false,
+      "vnc_x509_verify" : false,
+      "user_shutdown" : false,
+      "spice_streaming_video" : "",
+      "floppy_image_path" : "",
+      "cpu_type" : "IvyBridge,+pcid,+invpcid,-kvm_steal_time,+spec-ctrl,+ssbd",
+      "vnet_hdr" : true,
+      "virtio_net_queues" : 1,
+      "spice_tls_ciphers" : "HIGH:-DES:-3DES:-EXPORT:-ADH",
+      "kvm_flag" : "enabled",
+      "spice_use_tls" : false,
+      "spice_image_compression" : "",
+      "serial_speed" : 115200,
+      "vhost_net" : false,
+      "spice_bind" : "",
+      "use_localtime" : false,
+      "root_path" : "/dev/vda1",
+      "cpu_sockets" : 0,
+      "vnc_x509_path" : "",
+      "machine_version" : "",
+      "acpi" : true,
+      "spice_playback_compression" : true,
+      "use_chroot" : false,
+      "kvm_path" : "/usr/bin/qemu-system-x86_64",
+      "boot_order" : "disk",
+      "usb_mouse" : "",
+      "spice_use_vdagent" : true,
+      "spice_jpeg_wan_compression" : "",
+      "kvm_extra" : "",
+      "cdrom_image_path" : "",
+      "spice_zlib_glz_wan_compression" : "",
+      "security_model" : "none",
+      "initrd_path" : "",
+      "serial_console" : true,
+      "disk_type" : "paravirtual",
+      "cpu_mask" : "all",
+      "migration_caps" : "",
+      "migration_downtime" : 30,
+      "vnc_password_file" : "",
+      "kernel_args" : "ro",
+      "cdrom2_image_path" : "",
+      "kernel_path" : "",
+      "cpu_threads" : 0,
+      "cdrom_disk_type" : "",
+      "cpu_cores" : 0,
+      "disk_cache" : "none",
+      "soundhw" : "",
+      "disk_aio" : "native"
+   },
+   "disk.spindles" : [
+      null,
+      null
+   ],
+   "disk_usage" : 205056,
+   "oper_vcpus" : 4,
+   "snodes" : [
+      "ganeti3.example.com"
+   ],
+   "nic.links" : [
+      "private"
+   ],
+   "pnode" : "ganeti5.example.com",
+   "os" : "debootstrap+default",
+   "serial_no" : 13,
+   "mtime" : 1532038384.38383,
+   "nic.names" : [
+      null
+   ],
+   "admin_state" : "up",
+   "nic.uuids" : [
+      "cd1088e2-2569-4be3-8940-fd1c79c59519"
+   ],
+   "nic.macs" : [
+      "aa:00:a0:f3:33:fe"
+   ],
+    "ctime" : 1533384855.38333,
+   "nic.bridges" : [
+      "private"
+   ],
+   "nic.ips" : [
+      null
+   ],
+   "disk.names" : [
+      null
+   ],
+   "tags" : [],
+   "beparams" : {
+      "spindle_use" : 1,
+      "memory" : 8192,
+      "vcpus" : 4,
+      "minmem" : 8192,
+      "auto_balance" : true,
+      "always_failover" : false,
+      "maxmem" : 8192
+   },
+   "oper_state" : true
+}

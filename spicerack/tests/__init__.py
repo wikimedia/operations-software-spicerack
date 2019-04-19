@@ -1,9 +1,9 @@
 """Tests package for Spicerack."""
 import os
 
-from pkg_resources import get_distribution, parse_version
-
 import pytest
+
+from pkg_resources import get_distribution, parse_version
 
 
 TESTS_BASE_PATH = os.path.realpath(os.path.dirname(__file__))

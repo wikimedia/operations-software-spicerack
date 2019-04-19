@@ -3,7 +3,6 @@ import pytest
 import requests
 
 from spicerack import debmonitor
-
 from spicerack.tests import requests_mock_not_available
 
 

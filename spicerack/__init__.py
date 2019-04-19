@@ -10,11 +10,12 @@ from pkg_resources import DistributionNotFound, get_distribution
 from spicerack import interactive
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
-from spicerack.config import load_ini_config
+from spicerack.config import load_ini_config, load_yaml_config
 from spicerack.debmonitor import Debmonitor
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, ElasticsearchClusters
+from spicerack.ganeti import Ganeti
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
@@ -22,6 +23,7 @@ from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.phabricator import create_phabricator, Phabricator
+from spicerack.prometheus import Prometheus
 from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
@@ -294,6 +296,15 @@ class Spicerack:
         # different Phabricator BOT accounts, potentially with different permissions.
         return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)
 
+    def prometheus(self) -> Prometheus:  # pylint: disable=no-self-use
+        """Get an Prometheus instance.
+
+        Returns:
+            spicerack.prometheus.Prometheus: Prometheus instance.
+
+        """
+        return Prometheus()
+
     def debmonitor(self) -> Debmonitor:
         """Get a Debmonitor instance to interact with a Debmonitor website.
 
@@ -315,3 +326,17 @@ class Spicerack:
 
         """
         return Management(self.dns())
+
+    def ganeti(self) -> Ganeti:
+        """Get an instance to interact with Ganeti.
+
+        Returns:
+            spicerack.ganeti.Ganeti: the instance
+
+        Raises:
+            KeyError: If the configuration file does not contain the correct keys.
+
+        """
+        configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, 'ganeti', 'config.yaml'))
+
+        return Ganeti(configuration['username'], configuration['password'])

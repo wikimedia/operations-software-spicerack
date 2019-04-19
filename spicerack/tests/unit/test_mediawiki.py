@@ -8,7 +8,6 @@ import requests
 
 from spicerack.mediawiki import MediaWiki, MediaWikiCheckError, MediaWikiError
 from spicerack.remote import RemoteExecutionError
-
 from spicerack.tests import caplog_not_available, requests_mock_not_available
 
 

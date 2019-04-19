@@ -9,16 +9,17 @@ from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
+from spicerack.elasticsearch_cluster import ElasticsearchClusters
+from spicerack.ganeti import Ganeti
 from spicerack.icinga import Icinga
 from spicerack.ipmi import Ipmi
-from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.phabricator import Phabricator
+from spicerack.prometheus import Prometheus
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
-
 from spicerack.tests import get_fixture_path, SPICERACK_TEST_PARAMS
 from spicerack.tests.unit.test_dns import MockedDnsAnswer, MockedDnsTarget, MockedTarget
 
@@ -48,9 +49,10 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.admin_reason('Reason message', task_id='T12345'), Reason)
     assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), puppet.PuppetHosts)
     assert isinstance(spicerack.phabricator(get_fixture_path('phabricator', 'valid.conf')), Phabricator)
+    assert isinstance(spicerack.prometheus(), Prometheus)
     assert isinstance(spicerack.debmonitor(), Debmonitor)
     assert isinstance(spicerack.management(), Management)
-
+    assert isinstance(spicerack.ganeti(), Ganeti)
     assert mocked_remote_query.called
 
 

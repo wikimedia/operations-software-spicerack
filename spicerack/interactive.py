@@ -64,8 +64,8 @@ def ensure_shell_is_durable() -> None:
     """
     # STY is for screen, TMUX is for tmux. Not using `getenv('NAME') is not None` to check they are not empty.
     # TODO: verify if the check on TERM is redundant.
-    if (sys.stdout.isatty() and not os.getenv('STY', '') and not os.getenv('TMUX', '') and
-            'screen' not in os.getenv('TERM', '')):
+    if (sys.stdout.isatty() and not os.getenv('STY', '') and not os.getenv('TMUX', '')
+            and 'screen' not in os.getenv('TERM', '')):
         raise SpicerackError('Must be run in non-interactive mode or inside a screen or tmux.')
 
 

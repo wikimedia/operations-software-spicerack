@@ -7,7 +7,6 @@ from unittest import mock
 import pytest
 
 from spicerack import cookbook, Spicerack
-
 from spicerack.tests import caplog_not_available, SPICERACK_TEST_PARAMS
 
 
@@ -283,15 +282,16 @@ class TestCookbooks:
          COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN + COOKBOOKS_MENU_TTY.replace(
             '[0/3] group2', '[1/3] group2')),
         (True, ['group2', 'cookbook2 --argument value', 'b', 'q'],
-         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU +
-         COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('argument=None', "argument='value'") +
-         COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
+         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU
+         + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('argument=None', "argument='value'")
+         + COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
         (True, ['group2 -k', 'cookbook2', 'b', 'q'],
-         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU.replace('[]', "['-k']") +
-         COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('[]', "['-k']").replace('k=False', 'k=True') +
-         COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
-        (True, 'h', COOKBOOKS_MENU_TTY +
-         cookbook.COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=cookbook.Cookbook.statuses) + '\n' + COOKBOOKS_MENU_TTY),
+         COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU.replace('[]', "['-k']")
+         + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('[]', "['-k']").replace('k=False', 'k=True')
+         + COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
+        (True, 'h', COOKBOOKS_MENU_TTY
+         + cookbook.COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=cookbook.Cookbook.statuses) + '\n'
+         + COOKBOOKS_MENU_TTY),
     ))
     @mock.patch('spicerack.cookbook.sys.stdout.isatty')
     @mock.patch('builtins.input')    # pylint: disable=too-many-arguments

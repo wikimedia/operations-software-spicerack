@@ -7,11 +7,9 @@ from typing import Iterator, List, Optional
 from dns import resolver
 from dns.exception import DNSException
 
+from spicerack.confctl import ConftoolEntity
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
-
-
-from spicerack.confctl import ConftoolEntity
 from spicerack.remote import Remote
 
 
