@@ -16,7 +16,7 @@ import spicerack
 DOC_API_BASE_PATH = 'doc/source/api'
 DOC_API_INDEX_PATH = os.path.join(DOC_API_BASE_PATH, 'index.rst')
 API_INDEX_PREFIX = '   spicerack.'
-EXCLUDED_NAMES = ('_cookbook', '_log')
+EXCLUDED_NAMES = ('_cookbook', '_log', '_menu', '_module_api')
 
 
 def main(base_path):

@@ -1,4 +1,4 @@
-"""Group3 argparse."""
+"""Group3 argument_parser() raise SystemExit."""
 import argparse
 
 
@@ -7,7 +7,9 @@ __title__ = __doc__
 
 def argument_parser():
     """As required by spicerack._cookbook."""
-    return argparse.ArgumentParser('group3.argparse')
+    parser = argparse.ArgumentParser('group3.argument_parser_raise_system_exit')
+    parser.add_argument('required')
+    return parser
 
 
 def run(_args, _spicerack):

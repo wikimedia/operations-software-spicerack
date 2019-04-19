@@ -14,6 +14,7 @@ Spicerack Python API autodoc.
    spicerack.administrative
    spicerack.confctl
    spicerack.constants
+   spicerack.cookbook
    spicerack.debmonitor
    spicerack.decorators
    spicerack.dnsdisc
@@ -34,5 +35,5 @@ Spicerack Python API autodoc.
    spicerack.remote
    spicerack.typing
 
-.. The spicerack._cookbook and spicerack._log module are explicitely excluded from the public documentation as they
-   should not be used directly by the cookbooks.
+.. The private modules spicerack._* are explicitely excluded from the public documentation as they should not be used
+   directly by the cookbooks.

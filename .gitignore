@@ -1,6 +1,6 @@
 /build/
 /.cache/
-/.coverage
+/.coverage*
 /.eggs/
 /.idea/
 /.mypy_cache/

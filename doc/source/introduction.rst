@@ -21,56 +21,97 @@ Each cookbook filename must be a valid Python module name, hence all lowercase, 
 readability and that doesn't start with a number.
 
 Given that the cookbooks are imported dynamically, a broader set of characters like dashes and starting with a number
-are technically allowed.
+are technically allowed and the current standard at WMF is to name the cookbooks with dashes instead of underscores.
 
 Example of cookbooks tree::
 
     cookbooks
     |-- __init__.py
-    |-- top_level_cookbook.py
+    |-- top-level-cookbook.py
     |-- group1
     |   |-- __init__.py
-    |   `-- important_cookbook.py
+    |   `-- important-cookbook.py
     `-- group2
         |-- __init__.py
         `-- subgroup1
             |-- __init__.py
-            `-- some_task.py
+            `-- some-task.py
 
-API interface
-^^^^^^^^^^^^^
+API interfaces
+^^^^^^^^^^^^^^
 
-Each cookbook must define:
+Each cookbook must follow one of the two available API interfaces:
 
-* A title setting a string variable ``__title__`` at the module-level with the desired static value.
+* `Class interface`_ (preferred)
+* `Module interface`_
 
-* An optional ``argument_parser() -> argparse.ArgumentParser`` function that accepts no arguments and return the
-  :py:class:`argparse.ArgumentParser` instance to use to parse the arguments of the cookbook. This function is
-  optional, if not defined it means that the cookbook doesn't accept any argument. If a cookbook without that doesn't
-  define an ``argument_parser()`` function is called with CLI arguments it's considered an error.
+Class interface
+"""""""""""""""
 
-* A ``run(args, spicerack)`` function to actually execute the cookbook, that accept two arguments and returns an
-  :py:class:`int` or :py:data:`None`:
+A more integrated class-based API interface. Each cookbook must define two classes that extends
+:py:class:`spicerack.cookbook.CookbookBase` and :py:class:`spicerack.cookbook.CookbookRunnerBase` respectively,
+defining the required abstract methods and optionally overriding the default implementation of the concrete ones.
+The Spicerack framework will instantiate the class derived from ``CookbookBase`` passing to it an initialized
+:py:class:`spicerack.Spicerack` instance. Then it will call its ``argument_parser`` method to get the ``argparse``
+instance and with that parse the CLI arguments. After that it will call the ``get_runner`` method that must return
+an instance of a class derived from ``CookbookRunnerBase``. The ``runtime_description`` property will be used to
+customize the default ``START``/``STOP`` IRC messages. Up to this point any exception raised will be considered a
+pre-failure and make the cookbook fail before IRC-logging its start.
+Then the ``run`` method will be called to actually run the cookbook.
+The derived classes can have any name and multiple cookbooks in the same module are supported.
 
-  * Argument ``args (argparse.Namespace, None)``: the parsed CLI arguments according to the parser returned by the
-    ``argument_parser()`` function or :py:data:`None` if no CLI arguments were passed and the cookbook doesn't define
-    an ``argument_parser()`` function. Cookbooks are encouraged to define an ``argument_parser()`` function so that an
-    help message is automatically available with ``-h/--help`` and it can be shown both when running a cookbook
-    directly or in the interactive menu.
-  * Argument ``spicerack (spicerack.Spicerack)``: an instance of :py:class:`spicerack.Spicerack` initialized based on
-    the generic CLI arguments parsed to the ``cookbook`` entry point script. It allows to access all the libraries
-    available in the ``spicerack`` package.
-  * Return value (:py:class:`int`): it must be ``0`` or :py:data:`None` on success and a positive integer smaller than
-    ``128`` on failure. The exit codes ``90-99`` are reserved by the ``cookbook`` entry point script and should not be
-    used.
+Module interface
+""""""""""""""""
+
+A simple function-based API interface for the cookbooks in which each cookbook is a Python module that defines the
+following constants and functions.
+
+.. module:: cookbook-module
+
+.. attribute:: __title__
+
+   A module attribute that defines the cookbook title. It must be a single line string.
+
+   :type: str
+
+.. function:: argument_parser() -> argparse.ArgumentParser:
+
+   Optional module function to define if the cookbook should accept command line arguments.
+
+   If defined the returned argument parser will be used to parse the cookbook's arguments.
+
+   If not defined it means that the cookbook doesn't accept any argument and if called with arguments it's considered
+   an error.
+
+   Cookbooks are encouraged to define an ``argument_parser()`` function so that an help message is automatically
+   available with ``-h/--help`` and it can be shown both when running a cookbook directly or in the interactive menu.
+
+   :returns: the argument parser instance.
+   :rtype: argparse.ArgumentParser
+
+.. function:: run(args, spicerack)
+
+   Mandatory module function with the actual execution of the cookbook.
+
+   :param args: the parsed arguments that were parsed using the defined ``argument_parser()`` module function or
+        :py:data:`None` if the cookbook doesn't support any argument.
+   :type args: argparse.Namespace or None
+   :param spicerack: the Spicerack accessor instance with which the cookbook can access all the Spicerack capabilities.
+   :type spicerack: spicerack.Spicerack
+   :returns: the return code of the cookbook, it should be zero or :py:data:`None` on success, a positive integer
+        smaller than ``128`` and not in the range ``90-99`` (see :ref:`Reserved exit codes<reserved-codes>`) in case of
+        failure.
+   :rtype: int or None
 
 Logging
 ^^^^^^^
 
 The logging is already pre-setup by the ``cookbook`` entry point script that initialize the root logger, so that each
 cookbook can just initialize its own :py:mod:`logging` instance and log. A special logger to send notification to the
-``#wikimedia-operations`` IRC channel is also available through the ``spicerack`` argument passed to the cookbook's
-``run()`` function in its ``irc_logger`` property.
+``#wikimedia-operations`` IRC channel with the ``!log`` prefix is also available through the ``spicerack`` argument,
+passed to the cookbook's ``run()`` function for the module API or available in the cookbook class as ``self.spicerack``
+for the class API, in its ``irc_logger`` property. The ``irc_logger`` logs to both IRC and the nomal log outputs of
+Spicerack. If the dry-run mode is set it does not log to IRC.
 The log files can be found in `/var/log/spicerack/${PATH_OF_THE_COOKBOOK}` on the host where the cookbooks are run.
 All normal log messages are sent to two separate files, of which one always logs at ``DEBUG`` level even if
 ``-v/--verbose`` is not set.
@@ -102,8 +143,8 @@ Example of logging::
 Spicerack library
 ^^^^^^^^^^^^^^^^^
 
-All the available modules in the Spicerack package are exposed to the cookbooks through the ``spicerack`` argument to
-the ``run()`` function, that offers helper methods to obtain initialized instances of all the available libraries.
+All the available modules in the Spicerack package are exposed to the cookbooks through the ``spicerack`` instance
+injected in the cookbook. It offers helper methods to obtain initialized instances of all the available libraries.
 This instance exposes also some of the global CLI arguments parsed by the ``cookbook`` entry point script such as
 ``dry_run`` and ``verbose`` as getters. See :py:class:`spicerack.Spicerack` for more details.
 
@@ -111,4 +152,12 @@ Exception handling
 ^^^^^^^^^^^^^^^^^^
 
 In general each module in the :py:mod:`spicerack` package has its own exception class to raise specific errors, and
-all of them are derived from the base :py:class:`spicerack.exceptions.SpicerackError`.
+all of them are derived from the base class :py:class:`spicerack.exceptions.SpicerackError`.
+
+.. _reserved-codes:
+
+Reserved exit codes
+^^^^^^^^^^^^^^^^^^^
+
+Cookbook exit codes in the range ``90-99`` are reserved by Spicerack and must not be used by the cookbooks.
+The currently defined reserved exit codes are documented in the :py:mod:`spicerack.cookbook` module.
