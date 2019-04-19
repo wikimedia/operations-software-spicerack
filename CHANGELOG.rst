@@ -2,6 +2,39 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.23`_ (2019-04-19)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* Add basic Ganeti RAPI support
+* Add basic Prometheus support
+
+Minor improvements
+""""""""""""""""""
+
+* elasticsearch: add reset all indices to read/write capability (`T219799`_)
+
+Bug Fixes
+"""""""""
+
+* elasticsearch: logging during shard allocation was too verbose, some messages lowered to debug level
+
+Miscellanea
+"""""""""""
+
+* flake8: enforce import order and adopt ``W504``
+
+  * Add ``flake8-import-order`` to enforce the import order using the ``edited`` style that corresponds to our
+    styleguide, see: `mediawiki.org: Coding_conventions/Python`_
+  * Mark spicerack as local and do not specify any organization-specific packages to avoid to keep a manually curated
+    list of packages
+  * Fix all out of order imports
+  * For line breaks around binary operators, adopt ``W504`` (breaking before the operator) and ignore ``W503``, following PEP8 suggestion, see: `PEP0008#line_break_binary_operator`_
+  * Fix all line breaks around binary operators to follow ``W504``
+
+
 `v0.0.22`_ (2019-04-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -372,9 +405,12 @@ New features
 
 * Initial version.
 
+.. _`mediawiki.org: Coding_conventions/Python`: https://www.mediawiki.org/wiki/Manual:Coding_conventions/Python#Imports
+.. _`PEP0008#line_break_binary_operator`: https://www.python.org/dev/peps/pep-0008/#should-a-line-break-before-or-after-a-binary-operator
 
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`T219640`: https://phabricator.wikimedia.org/T213296
+.. _`T219799`: https://phabricator.wikimedia.org/T219799
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -398,3 +434,4 @@ New features
 .. _`v0.0.20`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.20
 .. _`v0.0.21`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.21
 .. _`v0.0.22`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.22
+.. _`v0.0.23`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.23
