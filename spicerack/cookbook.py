@@ -79,15 +79,11 @@ class CookbooksModuleInterface:
     """Module interface to be used as type hint for the imported cookbooks."""
 
     __title__ = ''
-    """str: the cookbook static title. Used if get_title() is not defined."""
+    """str: the cookbook static title."""
 
     @staticmethod
     def argument_parser() -> argparse.ArgumentParser:
         """Optional module function to define if the cookbook should accept command line arguments."""
-
-    @staticmethod
-    def get_title(args: List[str]) -> str:
-        """Optional module function to dynamically generate the cookbook's title. Has precedence over __title__."""
 
     @staticmethod
     def run(args: Optional[argparse.Namespace], spicerack: Spicerack) -> Optional[int]:
@@ -320,11 +316,8 @@ class BaseCookbooksItem:
 
         """
         try:
-            if hasattr(self.module, 'get_title'):
-                title = self.module.get_title(self.args)
-            else:
-                title = self.module.__title__
-        except Exception as e:  # pylint: disable=broad-except
+            title = self.module.__title__
+        except AttributeError as e:
             logger.debug('Unable to detect title for module %s: %s', self.path, e)
             title = self.fallback_title
 

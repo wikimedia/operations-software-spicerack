@@ -42,13 +42,7 @@ API interface
 
 Each cookbook must define:
 
-* A title in one of the two following ways:
-
-  * Setting a string variable ``__title__`` at the module-level with the desired static value.
-  * Defining a ``get_title(args)`` function in the module that accepts an argument that is the list of CLI arguments
-    specific to the cookbook and dynamically returns the string with the desired title.
-
-  In case both are present, ``get_title(args)`` will be called.
+* A title setting a string variable ``__title__`` at the module-level with the desired static value.
 
 * An optional ``argument_parser() -> argparse.ArgumentParser`` function that accepts no arguments and return the
   :py:class:`argparse.ArgumentParser` instance to use to parse the arguments of the cookbook. This function is
