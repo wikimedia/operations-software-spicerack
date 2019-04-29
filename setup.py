@@ -17,6 +17,8 @@ INSTALL_REQUIRES = [
     'pyyaml>=3.11',
     'redis>=2.10.0',
     'requests>=2.11.1',
+    # Temporary fix to avoid pip to install the latest version breaking install requirements of some dependency.
+    'urllib3>=1.21.1,<1.25',
 ]
 
 # Extra dependencies
