@@ -22,12 +22,15 @@ Spicerack Python API autodoc.
    spicerack.dnsdisc
    spicerack.elasticsearch_cluster
    spicerack.exceptions
+   spicerack.ganeti
    spicerack.icinga
    spicerack.interactive
    spicerack.ipmi
+   spicerack.management
    spicerack.mediawiki
    spicerack.mysql
    spicerack.phabricator
+   spicerack.prometheus
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote
