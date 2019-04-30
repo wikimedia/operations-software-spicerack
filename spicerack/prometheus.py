@@ -27,8 +27,7 @@ class Prometheus:
 
         Arguments
             query (str): a prometheus query
-            site (str): The site to use for queries.  Must be one of
-                        :py:const:`spicerack.constants.ALL_DATACENTERS`
+            site (str): The site to use for queries. Must be one of :py:const:`spicerack.constants.ALL_DATACENTERS`
 
         Returns
             list: returns an empty list if there are no results otherwise return a list of
