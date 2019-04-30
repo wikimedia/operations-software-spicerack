@@ -17,7 +17,7 @@ class TestGaneti:
         """Setup test environment"""
         # pylint: disable=attribute-defined-outside-init
 
-        self.ganeti = Ganeti(username='fake', password='password123')  # nosec
+        self.ganeti = Ganeti(username='fake', password='password123', timeout=10)  # nosec
 
         self.cluster = 'eqiad'
         self.base_url = CLUSTER_SVC_URL.format(dc=self.cluster) + '/2'
@@ -67,6 +67,16 @@ class TestGaneti:
         )
         with pytest.raises(GanetiError, match=r'Non-200 from API: 404:.*'):
             rapi.fetch_instance('testhost_404')
+
+    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    def test_ganeti_rapi_instance_timeout(self, requests_mock):
+        """A RAPI object should raise a GanetiError if a request times out."""
+        rapi = self.ganeti.rapi(self.cluster)
+        requests_mock.get(
+            self.base_url + '/instances/timeouthost', exc=requests.exceptions.ConnectTimeout
+        )
+        with pytest.raises(GanetiError, match='Timeout performing request to RAPI'):
+            rapi.fetch_instance('timeouthost')
 
     @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_rapi_instance_invalid(self, requests_mock):

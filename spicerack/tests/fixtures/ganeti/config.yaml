@@ -1,2 +1,3 @@
 username: test
 password: testpassword123
+timeout: 10
