@@ -2,6 +2,27 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.25`_ (2019-05-10)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* setup.py: fix ``urllib3`` dependency
+
+  * In order to build on Debian Stretch without backported packages, relax a bit the urllib3 dependency as the only
+    goal for to specify it is to avoid conflicts with the latest version.
+
+* documentations: fix Sphinx configuration
+
+  * In order to avoid issues while building the Debian package on Stretch where Sphinx ``1.4.9`` is available, change
+    configuration to:
+
+    * Reduce minimum Sphinx version to ``1.4.9`` in ``setup.py``
+    * Remove the ``warning-is-error`` configuration from ``setup.cfg`` that is applied to every Sphinx run, and move
+      it directly into ``tox.ini`` as a command line ``-W`` option, that will be executed only by ``tox`` and not
+      during the Debian package build process.
+
 `v0.0.24`_ (2019-05-09)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -479,3 +500,4 @@ New features
 .. _`v0.0.22`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.22
 .. _`v0.0.23`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.23
 .. _`v0.0.24`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.24
+.. _`v0.0.25`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.25
