@@ -2,6 +2,49 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.24`_ (2019-05-09)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* prometheus: add timeout support to ``query()`` method
+* ganeti: add timeout support
+* cookbook API: drop ``get_title()`` support
+
+  * No current cookbook is using the dynamic way to provide a title through ``get_title(args)``
+  * This abstraction has not proven to be useful and the fact to mangle dynamically the title of a cookbook based on
+    the current parameter while you can then execute it with different ones doesn't seem very useful, dropping it
+    completely from the Cookbook API
+
+* doc: mark Sphinx warnings as error
+
+  * To make the documentation building process more robust make Sphinx fail on warnings too
+  * This requires ``Sphinx > 1.5`` and will require to use the backport version while building the package on Debian Stretch
+
+* doc: add checker to ensure modules are documented
+
+  * It's common when adding a new module to forget to add the few bits required to auto-generated its documentation
+  * Add a check to ensure that all Spicerack modules are listed in the documentation API index and that the linked
+    files exists
+
+Bug Fixes
+"""""""""
+
+* ganeti: Fix RAPI port
+* prometheus: fix base URL template
+* doc: autodoc missing API modules
+
+Miscellanea
+"""""""""""
+
+* setup.py: force ``urllib3`` version due to ``pip`` bug
+* Add emacs ignores to gitignore
+* tests: temporarily force ``bandit < 1.6.0``
+
+    * Due to a bug upstream bandit 1.6.0 doesn't honor the excluded directories, causing the failure of the bandit tox
+      environments. Temporarily forcing its version
+
 `v0.0.23`_ (2019-04-19)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -435,3 +478,4 @@ New features
 .. _`v0.0.21`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.21
 .. _`v0.0.22`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.22
 .. _`v0.0.23`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.23
+.. _`v0.0.24`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.24

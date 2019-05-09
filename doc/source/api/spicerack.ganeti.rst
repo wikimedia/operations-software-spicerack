@@ -1,0 +1,4 @@
+ganeti
+======
+
+.. automodule:: spicerack.ganeti

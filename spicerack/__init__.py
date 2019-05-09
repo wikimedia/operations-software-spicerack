@@ -339,4 +339,4 @@ class Spicerack:
         """
         configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, 'ganeti', 'config.yaml'))
 
-        return Ganeti(configuration['username'], configuration['password'])
+        return Ganeti(configuration['username'], configuration['password'], configuration['timeout'])

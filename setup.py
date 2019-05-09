@@ -17,13 +17,15 @@ INSTALL_REQUIRES = [
     'pyyaml>=3.11',
     'redis>=2.10.0',
     'requests>=2.11.1',
+    # Temporary fix to avoid pip to install the latest version breaking install requirements of some dependency.
+    'urllib3>=1.21.1,<1.25',
 ]
 
 # Extra dependencies
 EXTRAS_REQUIRE = {
     # Test dependencies
     'tests': [
-        'bandit>=1.1.0',
+        'bandit>=1.1.0,<1.6.0',
         'flake8>=3.2.1',
         'flake8-import-order>=0.18.1',
         'mypy>=0.470',
@@ -34,7 +36,7 @@ EXTRAS_REQUIRE = {
         'requests-mock>=1.3.0',
         'sphinx_rtd_theme>=0.1.6',
         'sphinx-argparse>=0.1.15',
-        'Sphinx>=1.4.9',
+        'Sphinx>=1.5',
     ],
 }
 

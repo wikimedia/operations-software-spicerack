@@ -2,9 +2,7 @@
 import argparse
 
 
-def get_title(args):
-    """Calculate the title based on the args."""
-    return '{doc}: {args}'.format(doc=__doc__, args=args)
+__title__ = __doc__
 
 
 def argument_parser():

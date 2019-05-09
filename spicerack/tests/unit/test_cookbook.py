@@ -55,7 +55,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |-- group3.raise_system_exit_str: Group3 Raise SystemExit('message')
 |   `-- group3.subgroup3: -
 |       `-- group3.subgroup3.cookbook4: Group3 Subgroup3 Cookbook4
-`-- root: Top level cookbook: []
+`-- root: Top level cookbook
 """
 LIST_COOKBOOKS_GROUP3 = """cookbooks
 `-- group3
@@ -81,7 +81,7 @@ COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
 [0/1] group1: Group1 Test Cookbooks
 [0/3] group2: -
 [0/10] group3: -
-[NOTRUN] root: Top level cookbook: []
+[NOTRUN] root: Top level cookbook
 q - Quit
 h - Help
 """
@@ -90,7 +90,7 @@ COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
 [0/1] group1: Group1 Test Cookbooks
 [0/3] group2: -
 [0/10] group3: -
-[NOTRUN] root: Top level cookbook: []
+[NOTRUN] root: Top level cookbook
 q - Quit
 h - Help
 Not a tty, exiting.

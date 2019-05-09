@@ -2,7 +2,7 @@
 
 import logging
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 
 import requests
 
@@ -20,19 +20,22 @@ class PrometheusError(SpicerackError):
 class Prometheus:
     """Class to interact with the Prometheus server."""
 
-    _prometheus_api = 'http://prometheus.{site}.wmnet/ops/api/v1/query'
+    _prometheus_api = 'http://prometheus.svc.{site}.wmnet/ops/api/v1/query'
 
-    def query(self, query: str, site: str) -> List[Dict]:
+    def query(self, query: str, site: str, *, timeout: Optional[Union[float, int]] = 10) -> List[Dict]:
         """Preform a generic query
 
-        Arguments
+        Arguments:
             query (str): a prometheus query
-            site (str): The site to use for queries.  Must be one of
-                        :py:const:`spicerack.constants.ALL_DATACENTERS`
+            site (str): The site to use for queries. Must be one of
+                :py:const:`spicerack.constants.ALL_DATACENTERS`
+            timeout (float, int, None, optional): How many seconds to wait for the prometheus to
+                send data before giving up, as a float or int. Alternatively None to indicate an
+                infinite timeout.
 
-        Returns
+        Returns:
             list: returns an empty list if there are no results otherwise return a list of
-                  results of the form: {'metric': {}, 'value': [$timestamp, $value]}
+            results of the form: {'metric': {}, 'value': [$timestamp, $value]}
 
         Raises:
             spicerack.prometheus.PrometheusError: on error
@@ -44,7 +47,7 @@ class Prometheus:
             raise PrometheusError(msg)
 
         url = self._prometheus_api.format(site=site)
-        response = requests.get(url, params={'query': query})
+        response = requests.get(url, params={'query': query}, timeout=timeout)
         if response.status_code != requests.codes['ok']:
             msg = 'Unable to get metric: HTTP {code}: {text}'.format(
                 code=response.status_code, text=response.text)

@@ -6,6 +6,7 @@ from typing import Dict, Optional
 
 import requests
 from requests.auth import HTTPBasicAuth
+from requests.exceptions import Timeout
 
 from spicerack.constants import PUPPET_CA_PATH
 from spicerack.exceptions import SpicerackError
@@ -14,7 +15,7 @@ from spicerack.exceptions import SpicerackError
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # This is the template for the SVC URL for the RAPI end point
-CLUSTER_SVC_URL = 'https://ganeti01.svc.{dc}.wmnet:5030'
+CLUSTER_SVC_URL = 'https://ganeti01.svc.{dc}.wmnet:5080'
 # These are the configured available set of rows by Ganeti cluster DC
 CLUSTERS_AND_ROWS = {'eqiad': ('A', 'C'), 'codfw': ('A', 'B')}
 
@@ -26,19 +27,21 @@ class GanetiError(SpicerackError):
 class GanetiRAPI:
     """Class which wraps the read-only Ganeti RAPI"""
 
-    def __init__(self, cluster_url: str, username: str, password: str, ca_path: str):
+    def __init__(self, cluster_url: str, username: str, password: str, timeout: int, ca_path: str):
         """Initialize the instance
 
         Arguments:
             cluster (str): the short name of the cluster to access.
             username (str): the RAPI user name
             password (str): the RAPI user's password
+            timeout (int): the timeout in seconds for each request
             ca_path (str): the path to the signing certificate authority
 
         """
         self._auth = HTTPBasicAuth(username, password)
         self._ca_path = ca_path
         self._url = cluster_url
+        self._timeout = timeout
 
     def _api_get_request(self, *targets: str) -> Dict:
         """Perform a RAPI request.
@@ -54,7 +57,10 @@ class GanetiRAPI:
 
         """
         full_url = '/'.join([self._url, '2'] + list(targets))
-        result = requests.get(full_url, auth=self._auth, verify=self._ca_path)
+        try:
+            result = requests.get(full_url, auth=self._auth, verify=self._ca_path, timeout=self._timeout)
+        except Timeout as ex:
+            raise GanetiError('Timeout performing request to RAPI') from ex
 
         if result.status_code != 200:
             raise GanetiError('Non-200 from API: {}: {}'.format(result.status_code, result.text))
@@ -127,16 +133,18 @@ class GanetiRAPI:
 class Ganeti:
     """Class which wraps all Ganeti clusters."""
 
-    def __init__(self, username: str, password: str):
+    def __init__(self, username: str, password: str, timeout: int):
         """Initialize the instance
 
         Arguments:
             username (str): The RAPI username to use.
             password (str): The RAPI password to use.
+            timeout (int): The timeout in seconds for each request to the API.
 
         """
         self._username = username
         self._password = password
+        self._timeout = timeout
 
     def rapi(self, cluster: str) -> GanetiRAPI:
         """Return a RAPI object for a particular cluster.
@@ -156,4 +164,4 @@ class Ganeti:
 
         cluster_url = CLUSTER_SVC_URL.format(dc=cluster)
 
-        return GanetiRAPI(cluster_url, self._username, self._password, PUPPET_CA_PATH)
+        return GanetiRAPI(cluster_url, self._username, self._password, self._timeout, PUPPET_CA_PATH)
