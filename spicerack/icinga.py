@@ -125,6 +125,14 @@ class Icinga:
         logger.info('Scheduling downtime on Icinga server %s for hosts: %s', self._icinga_host, hosts)
         self._icinga_host.run_sync(*commands)
 
+    def recheck_all_services(self, hosts: Union[Sequence[str], NodeSet]) -> None:
+        """Force recheck of all services associated with a set of hosts
+
+        Arguments:
+            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+        """
+        self.host_command('SCHEDULE_FORCED_HOST_SVC_CHECKS', hosts)
+
     def remove_downtime(self, hosts: Union[Sequence[str], NodeSet]) -> None:
         """Remove a downtime from a set of hosts.
 
