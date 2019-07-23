@@ -31,6 +31,7 @@ class Icinga:
 
         Arguments:
             icinga_host (spicerack.remote.RemoteHosts): the RemoteHosts instance for the Icinga server.
+
         """
         self._icinga_host = icinga_host
         self._config_file = config_file
@@ -110,6 +111,7 @@ class Icinga:
             hosts (list, cumin.NodeSet): an iterable with the list of hostnames to downtime.
             reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
             duration (datetime.timedelta, optional): the length of the downtime period.
+
         """
         duration_seconds = int(duration.total_seconds())
         if duration_seconds < MIN_DOWNTIME_SECONDS:
@@ -126,10 +128,11 @@ class Icinga:
         self._icinga_host.run_sync(*commands)
 
     def recheck_all_services(self, hosts: Union[Sequence[str], NodeSet]) -> None:
-        """Force recheck of all services associated with a set of hosts
+        """Force recheck of all services associated with a set of hosts.
 
         Arguments:
             hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+
         """
         self.host_command('SCHEDULE_FORCED_HOST_SVC_CHECKS', hosts)
 
@@ -138,6 +141,7 @@ class Icinga:
 
         Arguments:
             hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+
         """
         self.host_command('DEL_DOWNTIME_BY_HOST_NAME', hosts)
 

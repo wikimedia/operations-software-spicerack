@@ -151,7 +151,7 @@ class TestIpmi:
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_reset_password_16(self, mocked_check_output):
-        """It should reset the users password and store the password as 16 bytes"""
+        """It should reset the users password and store the password as 16 bytes."""
         mocked_check_output.side_effect = [
             USERLIST_OUTPUT.encode(),
             b'Set User Password command successful (user 2)\n',
@@ -164,7 +164,7 @@ class TestIpmi:
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_reset_password_20(self, mocked_check_output):
-        """It should reset the users password and store the password as 20 bytes"""
+        """It should reset the users password and store the password as 20 bytes."""
         mocked_check_output.side_effect = [
             USERLIST_OUTPUT.encode(),
             b'Set User Password command successful (user 2)\n',
@@ -177,7 +177,7 @@ class TestIpmi:
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_reset_password_not_root(self, mocked_check_output):
-        """It should reset the users password"""
+        """It should reset the users password."""
         mocked_check_output.side_effect = [
             USERLIST_OUTPUT.encode(),
             b'Set User Password command successful (user 9)\n']
@@ -188,14 +188,14 @@ class TestIpmi:
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_reset_password_dryrun(self, mocked_check_output):
-        """It should not reset the users password"""
+        """It should not reset the users password."""
         mocked_check_output.return_value = USERLIST_OUTPUT.encode()
         self.ipmi_dry_run.reset_password('test-mgmt.example.com', 'root', 'a' * 16)
         mocked_check_output.called_once_with(IPMITOOL_BASE + ['user', 'list', '1'])
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_reset_password_fail_command(self, mocked_check_output):
-        """It should fail the password reset command"""
+        """It should fail the password reset command."""
         mocked_check_output.side_effect = [
             USERLIST_OUTPUT.encode(),
             b'Fail password reset\n']
@@ -207,7 +207,7 @@ class TestIpmi:
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_reset_password_connection_test(self, mocked_check_output):
-        """It should fail the check connection command"""
+        """It should fail the check connection command."""
         mocked_check_output.side_effect = [
             USERLIST_OUTPUT.encode(),
             b'Set User Password command successful (user 2)\n',
@@ -221,22 +221,22 @@ class TestIpmi:
 
     @mock.patch('spicerack.ipmi.check_output')
     def test_reset_nonexistent_username(self, mocked_check_output):
-        """It should raise IpmiError as the username will not be found"""
+        """It should raise IpmiError as the username will not be found."""
         with pytest.raises(ipmi.IpmiError, match="Unable to find ID for username: nonexistent"):
             self.ipmi.reset_password('test-mgmt.example.com', 'nonexistent', 'a' * 16)
         mocked_check_output.assert_called_once_with(IPMITOOL_BASE + ['user', 'list', '1'])
 
     def test_reset_password_bad_username(self):
-        """It should raise IpmiError is username is empty"""
+        """It should raise IpmiError is username is empty."""
         with pytest.raises(ipmi.IpmiError, match="Username can not be an empty string"):
             self.ipmi.reset_password('test-mgmt.example.com', '', 'a' * 16)
 
     def test_reset_password_short_password(self):
-        """It should raise IpmiError as password is less then 16 bytes"""
+        """It should raise IpmiError as password is less then 16 bytes."""
         with pytest.raises(ipmi.IpmiError, match="New passwords must be 16 bytes minimum"):
             self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 15)
 
     def test_reset_password_long_password(self):
-        """It should raise IpmiError as password is larger then 20 bytes"""
+        """It should raise IpmiError as password is larger then 20 bytes."""
         with pytest.raises(ipmi.IpmiError, match="New passwords is greater the IPMI 20 byte limit"):
             self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 21)

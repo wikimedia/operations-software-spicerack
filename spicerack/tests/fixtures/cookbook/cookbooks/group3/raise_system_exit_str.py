@@ -1,4 +1,4 @@
-"""Group3 Raise SystemExit('message')"""
+"""Group3 Raise SystemExit('message')."""
 __title__ = __doc__
 
 

@@ -19,7 +19,7 @@ class NetboxAPIError(NetboxError):
 
 
 class Netbox:
-    """Class which wraps Netbox API operations"""
+    """Class which wraps Netbox API operations."""
 
     def __init__(self, url: str, token: str, *, dry_run: bool = True):
         """Create Netbox instance.
@@ -77,7 +77,7 @@ class Netbox:
         return {ch['label']: ch['value'] for ch in self._dcim_choices['device:status']}
 
     def fetch_host(self, hostname: str) -> pynetbox.core.response.Record:
-        """Fetch a host (dcim.devices) object
+        """Fetch a host (dcim.devices) object.
 
         Arguments:
             hostname (str): the name of the host to fetch
@@ -99,7 +99,7 @@ class Netbox:
         return host
 
     def put_host_status(self, hostname: str, status: str) -> None:
-        """Set the device status
+        """Set the device status.
 
         Arguments:
             hostname (str): the name of the host to operate on
@@ -135,7 +135,7 @@ class Netbox:
             raise NetboxAPIError('failed to save status for {} {} -> {}'.format(hostname, oldstatus, status))
 
     def fetch_host_status(self, hostname: str) -> str:
-        """Return the current status of a host as a string
+        """Return the current status of a host as a string.
 
         Arguments:
             hostname (str): the name of the host status

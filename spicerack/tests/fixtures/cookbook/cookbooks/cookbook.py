@@ -1,4 +1,4 @@
-"""Top level cookbook"""
+"""Top level cookbook."""
 __title__ = __doc__
 
 

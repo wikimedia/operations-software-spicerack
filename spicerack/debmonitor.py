@@ -24,6 +24,7 @@ class Debmonitor:
             cert (str): the path to the TLS certificate to use to authenticate on Debmonitor.
             key (str): the path to the TLS key to use to authenticate on Debmonitor.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._base_url = 'https://{host}'.format(host=host)
         self._cert = cert

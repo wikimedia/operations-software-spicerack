@@ -14,7 +14,7 @@ MockedRecord = namedtuple('Record', ['address'])
 
 
 def mock_obj(datacenter, svc, pooled):
-    """Creates a mock conftool object"""
+    """Creates a mock conftool object."""
     obj = mock.MagicMock()
     obj.tags = {'dnsdisc': svc}
     obj.name = datacenter
@@ -153,7 +153,7 @@ class TestDiscovery:
         self.mocked_confctl.get.assert_called_once_with(dnsdisc=self.conftool_records)
 
     def test_check_if_depoolable_ok(self):
-        """No exception is raised if the active datacenters are ok"""
+        """No exception is raised if the active datacenters are ok."""
         self.mocked_confctl.get.return_value = [
             mock_obj('dcA', 'svcA', False),
             mock_obj('dcB', 'svcA', True),

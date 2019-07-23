@@ -30,7 +30,7 @@ class TestConfctl:
 
     @pytest.fixture
     def generated_entities(self, request):
-        """Fixture that generates entities to use in tests"""
+        """Fixture that generates entities to use in tests."""
         entities = []
         for name, attrs in request.param.items():
             obj = self.entity('test', name)
@@ -89,7 +89,7 @@ class TestConfctl:
 
     @pytest.mark.parametrize('generated_entities', [{'foo': {'pooled': True}, 'bar': {'pooled': False}}], indirect=True)
     def test_filter_objects_ok(self, generated_entities):
-        """It should correctly filter values based on their status"""
+        """It should correctly filter values based on their status."""
         self.entity.query = mock.MagicMock(return_value=generated_entities)
         to_select = [e for e in generated_entities if e.pooled is True]
         assert list(self.discovery.filter_objects({'pooled': True}, dnsdisc='test')) == to_select
@@ -131,7 +131,7 @@ class TestConfctl:
         (Exception, 'Generic error in conftool'),
     ))
     def test_update_objects_fail(self, generated_entities, exc_class, message):
-        """An error in the backend should raise an exception"""
+        """An error in the backend should raise an exception."""
         generated_entities[1].update = mock.MagicMock(side_effect=exc_class(message))
         with pytest.raises(confctl.ConfctlError):
             self.discovery.update_objects({'pooled': False}, generated_entities)
@@ -140,7 +140,7 @@ class TestConfctl:
 
     @pytest.mark.parametrize('generated_entities', [{'foo': {'pooled': True}, 'bar': {'pooled': True}}], indirect=True)
     def test_update_objects_dry_run(self, generated_entities):
-        """Under dry run, no update happens"""
+        """Under dry run, no update happens."""
         self.discovery_dry_run.update_objects({'pooled': False}, generated_entities)
         assert generated_entities[0].pooled is True
 

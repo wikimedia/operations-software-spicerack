@@ -15,12 +15,14 @@ NETBOX_TOKEN = 'FAKETOKEN123'
 
 
 def _request_error():
+    """Return a Netbox RequestError."""
     fakestatus = mock.Mock()
     fakestatus.status_code = 404
     return pynetbox.RequestError(fakestatus)
 
 
 def _fake_host():
+    """Return a mocked Netbox host."""
     fake_host = mock.Mock()
     fake_host.name = 'test'
     fake_host.status = 'Active'
@@ -29,6 +31,7 @@ def _fake_host():
 
 
 def _get_choices_mock():
+    """Return the possible Netbox device statuses."""
     with open(get_fixture_path('netbox', 'device_status.yaml')) as device_status_choices:
         choices_mock = mock.Mock(return_value=yaml.safe_load(device_status_choices))
     return choices_mock
@@ -44,7 +47,7 @@ def test_netbox_choices_api_error(mocked_pynetbox):
 
 @mock.patch('pynetbox.api')
 def test_netbox_choices_api_devices_missing(mocked_pynetbox):
-    """Test device status missing from choices API"""
+    """Test device status missing from choices API."""
     mocked_pynetbox().dcim.choices = mock.Mock(return_value={})
     nb = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
     with pytest.raises(NetboxError, match='device:status not present in DCIM choices returned by API'):
@@ -72,7 +75,7 @@ def test_fetch_host_error(mocked_pynetbox):
 
 @mock.patch('pynetbox.api')
 def test_fetch_host_status(mocked_pynetbox):
-    """Test fetching host status"""
+    """Test fetching host status."""
     mocked_pynetbox().dcim.devices.get.return_value = _fake_host()
     mocked_pynetbox().dcim.choices = _get_choices_mock()
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
@@ -82,7 +85,7 @@ def test_fetch_host_status(mocked_pynetbox):
 
 @mock.patch('pynetbox.api')
 def test_put_host_status_badstatus(mocked_pynetbox):
-    """Test putting writing an incorrect status"""
+    """Test putting writing an incorrect status."""
     mocked_pynetbox().dcim.devices.get.return_value = _fake_host()
     mocked_pynetbox().dcim.choices = _get_choices_mock()
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
@@ -94,7 +97,7 @@ def test_put_host_status_badstatus(mocked_pynetbox):
 
 @mock.patch('pynetbox.api')
 def test_put_host_status_good_status(mocked_pynetbox):
-    """Test setting a status and it working"""
+    """Test setting a status and it working."""
     fake_host = _fake_host()
     mocked_pynetbox().dcim.devices.get.return_value = fake_host
     mocked_pynetbox().dcim.choices = _get_choices_mock()
@@ -107,7 +110,7 @@ def test_put_host_status_good_status(mocked_pynetbox):
 
 @mock.patch('pynetbox.api')
 def test_put_host_status_save_failure(mocked_pynetbox):
-    """Test save failure"""
+    """Test save failure."""
     fake_host = _fake_host()
     mocked_pynetbox().dcim.devices.get.return_value = fake_host
     mocked_pynetbox().dcim.choices = _get_choices_mock()
@@ -120,7 +123,7 @@ def test_put_host_status_save_failure(mocked_pynetbox):
 
 @mock.patch('pynetbox.api')
 def test_put_host_status_dryrun_success(mocked_pynetbox):
-    """Test dry run, which  should always work on save"""
+    """Test dry run, which  should always work on save."""
     fake_host = _fake_host()
     mocked_pynetbox().dcim.devices.get.return_value = fake_host
     mocked_pynetbox().dcim.choices = _get_choices_mock()
@@ -132,7 +135,7 @@ def test_put_host_status_dryrun_success(mocked_pynetbox):
 
 @mock.patch('pynetbox.api')
 def test_put_host_status_error(mocked_pynetbox):
-    """Test exception during save"""
+    """Test exception during save."""
     fake_host = _fake_host()
     mocked_pynetbox().dcim.devices.get.return_value = fake_host
     mocked_pynetbox().dcim.choices = _get_choices_mock()

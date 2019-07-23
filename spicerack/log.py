@@ -23,6 +23,7 @@ class IRCSocketHandler(logging.Handler):
             host (str): tcpircbot hostname.
             port (int): tcpircbot listening port.
             username (str): the user to refer in the IRC messages.
+
         """
         super().__init__()
         self.addr = (host, port)
@@ -86,9 +87,11 @@ def setup_logging(
     Arguments:
         base_path (str): the base path where to save the logs.
         name (str): the name of log file to use without extension.
+        user (str): the username for the IRC logging.
         dry_run (bool, optional): whether this is a dry-run.
         host (str, optional): the tcpircbot hostname for the IRC logging.
         port (int, optional): the tcpircbot port for the IRC logging.
+
     """
     logging.raiseExceptions = False
     base_path = str(base_path)  # Since Python 3.6 it could be a path-like object
@@ -141,6 +144,7 @@ def log_task_start(message: str) -> None:
 
     Arguments:
         message (str): the message to be logged.
+
     """
     irc_logger.info('START - %s', message)
 
@@ -151,5 +155,6 @@ def log_task_end(status: str, message: str) -> None:
     Arguments:
         status (str): the final status of the task.
         message (str): the message to be logged.
+
     """
     irc_logger.info('END (%s) - %s', status, message)

@@ -48,6 +48,7 @@ class RemoteHostsAdapter:
 
         Arguments:
             remote_hosts (spicerack.remote.RemoteHosts): the instance to act on the remote hosts.
+
         """
         self._remote_hosts = remote_hosts
 
@@ -79,6 +80,7 @@ class Remote:
         Arguments:
             config (str): the path of Cumin's configuration file.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._config = Config(config)
         self._dry_run = dry_run
@@ -219,6 +221,7 @@ class RemoteHosts:
         Arguments:
             batch_size (int, optional): how many hosts to reboot in parallel.
             batch_sleep (float, optional): how long to sleep between one reboot and the next.
+
         """
         if len(self._hosts) == 1:  # Temporary workaround until T213296 is fixed.
             batch_sleep = None

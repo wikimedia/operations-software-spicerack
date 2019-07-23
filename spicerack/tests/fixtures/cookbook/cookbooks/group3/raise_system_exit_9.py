@@ -1,4 +1,4 @@
-"""Group3 Raise SystemExit(9)"""
+"""Group3 Raise SystemExit(9)."""
 import sys
 
 

@@ -11,10 +11,10 @@ from spicerack.tests import get_fixture_path, requests_mock_not_available
 
 
 class TestGaneti:
-    """Ganeti tests class"""
+    """Ganeti tests class."""
 
     def setup_method(self):
-        """Setup test environment"""
+        """Setup test environment."""
         # pylint: disable=attribute-defined-outside-init
 
         self.ganeti = Ganeti(username='fake', password='password123', timeout=10)  # nosec

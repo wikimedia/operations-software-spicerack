@@ -68,6 +68,7 @@ class Spicerack:
 
             spicerack_config_dir (str, optional): the path for the root configuration directory for Spicerack.
                 Module-specific configuration will be loaded from `config_dir/module_name/`.
+
         """
         # Attributes
         self._verbose = verbose

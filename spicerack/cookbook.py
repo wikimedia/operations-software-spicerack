@@ -104,6 +104,7 @@ class Cookbooks:
             spicerack (spicerack.Spicerack): the initialized instance of the library.
             path_filter (str, optional): an optional relative module path to filter for. If set, only cookbooks that
                 are part of this subtree will be collected.
+
         """
         self.base_dir = os.path.join(base_dir, self.cookbooks_module_prefix)
         self.args = args
@@ -278,6 +279,7 @@ class BaseCookbooksItem:
             module_name (str): the Python module to load.
             args (list): the command line arguments to pass to the item.
             spicerack (spicerack.Spicerack): the initialized instance of the library.
+
         """
         if '.' in module_name:
             self.name = module_name.rsplit('.', 1)[1]
@@ -424,7 +426,7 @@ class Cookbook(BaseCookbooksItem):
                 logger.exception("SystemExit('%s') %s %s:", e.code, message, self.path)
                 self.status = Cookbook.error
                 ret = COOKBOOK_EXCEPTION_RETCODE
-        except BaseException:
+        except BaseException:  # pylint: disable=broad-except
             logger.exception('Exception %s %s:', message, self.path)
             self.status = Cookbook.failed
             ret = COOKBOOK_EXCEPTION_RETCODE
@@ -464,7 +466,7 @@ class Cookbook(BaseCookbooksItem):
             else:
                 logger.exception("SystemExit('%s') %s %s:", e.code, message, self.path)
                 ret = COOKBOOK_PARSE_ARGS_FAIL_RETCODE
-        except BaseException:
+        except BaseException:  # pylint: disable=broad-except
             logger.exception('Exception %s %s:', message, self.path)
             ret = COOKBOOK_PARSE_ARGS_FAIL_RETCODE
 
@@ -515,6 +517,7 @@ class CookbooksMenu(BaseCookbooksItem):
         Arguments:
             item (spicerack.cookbook.Cookbook, spicerack.cookbook.CookbooksMenu): the item to append.
             add_parent (bool, optional): wheter to set the parent of the new item to the current instance.
+
         """
         if add_parent and isinstance(item, CookbooksMenu):
             item.parent = self

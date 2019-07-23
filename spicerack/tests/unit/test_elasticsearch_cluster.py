@@ -145,7 +145,7 @@ def test_wait_for_elasticsearch_up_retries_on_failures(mocked_sleep):
 
 
 def test_cluster_settings_are_unchanged_when_stopped_replication_is_dry_run():
-    """Check that cluster routing in dry run mode is truly safe"""
+    """Check that cluster routing in dry run mode is truly safe."""
     elasticsearch = Elasticsearch('endpoint:9200')
     elasticsearch.cluster.put_settings = mock.Mock(return_value=True)
     elasticsearch_cluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=True)
@@ -165,7 +165,7 @@ def test_get_nodes_wraps_exceptions():
 
 
 class TestElasticsearchClusters:
-    """Test class for Elasticsearch Clusters"""
+    """Test class for Elasticsearch Clusters."""
 
     def setup_method(self):
         """Setup the test environment."""
@@ -214,7 +214,7 @@ class TestElasticsearchClusters:
         self.elasticsearch2.indices.flush_synced.assert_called_with(request_timeout=30)
 
     def test_when_all_shards_are_assigned_no_allocation_is_performed(self):
-        """Test that shard allocation is not performed when all shards have been assigned on all clusters"""
+        """Test that shard allocation is not performed when all shards have been assigned on all clusters."""
         self.elasticsearch1.nodes.info = mock.Mock(return_value={'nodes': {'ELASTIC1': {'name': 'el1-alpha'}}})
         self.elasticsearch2.nodes.info = mock.Mock(return_value={'nodes': {'ELASTIC7': {'name': 'el1-beta'}}})
         self.elasticsearch1.cat.shards = mock.Mock(return_value=[
@@ -317,7 +317,7 @@ class TestElasticsearchClusters:
         })
 
     def test_frozen_writes_write_to_index(self):
-        """Test that elasticsearch write to index is called to freeze writes"""
+        """Test that elasticsearch write to index is called to freeze writes."""
         self.elasticsearch1.index = mock.Mock(return_value=True)
         self.elasticsearch2.index = mock.Mock(return_value=True)
         self.elasticsearch1.delete = mock.Mock(return_value=True)
@@ -334,7 +334,7 @@ class TestElasticsearchClusters:
         assert self.elasticsearch2.delete.called
 
     def test_when_frozen_writes_fails_exception_is_raised(self):
-        """Test that when elasticsearch write to index fails, an exception is raised
+        """Test that when elasticsearch write to index fails, an exception is raised.
 
         and a call to delete/unfreeze write is placed
         """
@@ -352,7 +352,7 @@ class TestElasticsearchClusters:
             assert self.elasticsearch2.delete.called
 
     def test_when_unfreeze_writes_fails_exception_is_raised(self):
-        """Test that when elasticsearch delete doc in index fails, an exception is raised
+        """Test that when elasticsearch delete doc in index fails, an exception is raised.
 
         and a call to delete/unfreeze write is placed
         """
@@ -370,7 +370,7 @@ class TestElasticsearchClusters:
             assert self.elasticsearch2.delete.called
 
     def test_no_call_to_freeze_write_in_dry_run(self):
-        """Test that when dry run is enabled, call to write to cluster index to freeze write is not placed"""
+        """Test that when dry run is enabled, call to write to cluster index to freeze write is not placed."""
         self.elasticsearch1.index = mock.Mock(return_value=True)
         self.elasticsearch2.delete = mock.Mock(return_value=True)
         cluster1 = ec.ElasticsearchCluster(self.elasticsearch1, None, dry_run=True)
@@ -401,7 +401,7 @@ class TestElasticsearchClusters:
 
     @mock.patch('spicerack.elasticsearch_cluster.retry')
     def test_wait_for_green_default_tries_test(self, retry):
-        """Checks that a default value of 1 is returned when timeout is less than 10"""
+        """Checks that a default value of 1 is returned when timeout is less than 10."""
         self.elasticsearch1.cluster.health = mock.Mock(return_value=True)
         self.elasticsearch2.cluster.health = mock.Mock(return_value=True)
         elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, None)
@@ -478,7 +478,7 @@ def test_get_next_clusters_nodes_raises_error_when_size_is_less_than_one():
 
 
 def test_get_next_nodes_returns_less_nodes_than_specified():
-    """Test that the nodes returned is less than specified based on if they have been restarted for each clusters"""
+    """Test that the nodes returned is less than specified based on if they have been restarted for each clusters."""
     remote = mock.Mock(spec_set=Remote)
     since = datetime.utcfromtimestamp(20 / 1000)
     elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info([
@@ -540,7 +540,7 @@ def test_get_next_nodes_no_rows():
 
 
 def test_get_next_nodes_fails_when_rows_are_not_same():
-    """Test that error is raised when clusters instances of the same node belong to different rows"""
+    """Test that error is raised when clusters instances of the same node belong to different rows."""
     since = datetime.utcfromtimestamp(20 / 1000)
     elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info([
         {
@@ -555,7 +555,7 @@ def test_get_next_nodes_fails_when_rows_are_not_same():
 
 
 def test_nodes_group_aggregates_same_clusters():
-    """Same cluster aggregated multiple times is ignored"""
+    """Same cluster aggregated multiple times is ignored."""
     node1 = json_node('elastic1001.example.com', 'alpha', row='row1')
     node2 = json_node('elastic1001.example.com', 'alpha', row='row1')
     cluster = mock.Mock()

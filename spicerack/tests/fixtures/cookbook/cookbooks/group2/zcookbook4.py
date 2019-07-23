@@ -1,4 +1,4 @@
-"""Group2 zCookbook4"""
+"""Group2 zCookbook4."""
 
 
 def run(_args, _spicerack):

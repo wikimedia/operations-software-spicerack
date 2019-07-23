@@ -28,6 +28,7 @@ class RedisCluster:
             cluster (str): the name of the cluster to connect to.
             config_dir (str): path to the directory containing the configuration files for the Redis clusters.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._dry_run = dry_run
         self._shards = defaultdict(dict)  # type: ignore
@@ -127,6 +128,7 @@ class RedisInstance:
 
         Arguments:
             **kwargs (mixed): arbitrary keyword arguments, to be passed to the `redis.StrictRedis` constructor.
+
         """
         self.host = kwargs.get('host')
         self.port = kwargs.get('port')
@@ -176,6 +178,7 @@ class RedisInstance:
 
         Arguments:
             master (spicerack.redis_cluster.RedisInstance): the master instance.
+
         """
         self._client.slaveof(master.host, master.port)
 

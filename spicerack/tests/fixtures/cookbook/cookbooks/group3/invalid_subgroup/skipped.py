@@ -1,4 +1,4 @@
-"""Group3 Invalid subgroup skipped"""
+"""Group3 Invalid subgroup skipped."""
 __title__ = __doc__
 
 

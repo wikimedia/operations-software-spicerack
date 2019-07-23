@@ -75,6 +75,7 @@ class Phabricator:
         Arguments:
             phabricator_client (phabricator.Phabricator): a Phabricator client instance.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._client = phabricator_client
         self._dry_run = dry_run

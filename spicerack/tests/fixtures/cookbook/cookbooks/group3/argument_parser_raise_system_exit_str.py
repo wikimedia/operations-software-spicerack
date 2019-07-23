@@ -1,4 +1,4 @@
-"""Group3 Raise SystemExit('message') in argument_parser()"""
+"""Group3 Raise SystemExit('message') in argument_parser()."""
 __title__ = __doc__
 
 

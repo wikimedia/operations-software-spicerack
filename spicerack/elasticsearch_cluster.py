@@ -85,6 +85,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
             remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
             nodes (list): list of dicts containing clusters hosts belong to.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         super().__init__(remote_hosts)
         self._nodes = nodes
@@ -130,6 +131,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
         Arguments:
             timeout (datetime.timedelta, optional): represent how long to wait for all instances to be up.
+
         """
         delay = timedelta(seconds=5)
         tries = max(floor(timeout / delay), 1)
@@ -156,6 +158,7 @@ class ElasticsearchClusters:
             clusters (list): list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
             remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._clusters = clusters
         self._remote = remote
@@ -170,6 +173,7 @@ class ElasticsearchClusters:
 
         Arguments:
             timeout (datetime.timedelta, optional): timedelta object for elasticsearch request timeout.
+
         """
         for cluster in self._clusters:
             cluster.flush_markers(timeout)
@@ -212,6 +216,7 @@ class ElasticsearchClusters:
         Arguments:
             timeout (datetime.timedelta, optional): timedelta object to represent how long to wait for green status
                 on all clusters.
+
         """
         delay = timedelta(seconds=10)
         tries = max(floor(timeout / delay), 1)
@@ -303,12 +308,13 @@ class ElasticsearchCluster:
     """Class to manage elasticsearch cluster."""
 
     def __init__(self, elasticsearch: Elasticsearch, remote: Remote, dry_run: bool = True) -> None:
-        """Initialize ElasticsearchCluster
+        """Initialize ElasticsearchCluster.
 
         Arguments:
             elasticsearch (elasticsearch.Elasticsearch): elasticsearch instance.
             remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional):  whether this is a DRY-RUN.
+
         """
         self._elasticsearch = elasticsearch
         self._remote = remote
@@ -317,7 +323,7 @@ class ElasticsearchCluster:
         self._freeze_writes_doc_type = 'mw_cirrus_metastore'
 
     def __str__(self) -> str:
-        """Class string method"""
+        """Class string method."""
         return str(self._elasticsearch)
 
     def get_nodes(self) -> Dict:
@@ -378,6 +384,7 @@ class ElasticsearchCluster:
 
         Arguments:
             cluster_routing (curator.ClusterRouting): Curator's cluster routing object.
+
         """
         if self._dry_run:
             cluster_routing.do_dry_run()
@@ -403,6 +410,7 @@ class ElasticsearchCluster:
 
         Arguments:
             reason (spicerack.administrative.Reason): Reason for freezing writes.
+
         """
         self._freeze_writes(reason)
         try:
@@ -423,6 +431,7 @@ class ElasticsearchCluster:
 
         Arguments:
             reason (spicerack.administrative.Reason): Reason for freezing writes.
+
         """
         doc = {'host': reason.hostname, 'timestamp': datetime.utcnow().timestamp(), 'reason': str(reason)}
         logger.info('Freezing all indices in %s', self)
@@ -437,7 +446,7 @@ class ElasticsearchCluster:
             ) from e
 
     def _unfreeze_writes(self) -> None:
-        """Enable writes on all elasticsearch indices"""
+        """Enable writes on all elasticsearch indices."""
         logger.info('Unfreezing all indices in %s', self)
         if self._dry_run:
             return
@@ -458,6 +467,7 @@ class ElasticsearchCluster:
 
         Arguments:
             timeout (datetime.timedelta): timedelta object for elasticsearch request timeout.
+
         """
         logger.info('flush markers on %s', self)
         try:
@@ -499,6 +509,7 @@ class ElasticsearchCluster:
             letting elasticsearch do its recovery on its own.
             We should verify from time to time that elastic recovery performance has not gone better
             and remove this step if proven unnecessary.
+
         """
         # shuffle nodes so that we don't allocate all shards on the same node
         shuffle(nodes)

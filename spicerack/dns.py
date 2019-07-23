@@ -32,6 +32,7 @@ class Dns:
 
         Arguments:
             nameserver_address (str, optional): the nameserver address to use, if not set uses the OS configuration.
+
         """
         if nameserver_address:
             self._resolver = resolver.Resolver(configure=False)

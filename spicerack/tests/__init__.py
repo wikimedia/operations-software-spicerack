@@ -55,7 +55,7 @@ def requests_mock_not_available():
 
 
 def elasticsearch_too_old():
-    """Check if elasticsearch version is less than 5.0.0
+    """Check if elasticsearch version is less than 5.0.0.
 
     Returns:
         bool: True if elasticsearch version is less 5.0.0, False if otherwise

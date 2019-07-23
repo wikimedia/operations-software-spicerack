@@ -1,4 +1,4 @@
-"""Group2 Cookbook2"""
+"""Group2 Cookbook2."""
 import argparse
 
 

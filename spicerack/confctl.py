@@ -33,6 +33,7 @@ class Confctl:
             config (str, optional): the path to the configuration file to load.
             schema (str, optional): the path to the Conftool schema to load.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._dry_run = dry_run
         self._schema = loader.Schema.from_file(schema)
@@ -60,6 +61,7 @@ class ConftoolEntity:
         Arguments:
             entity (conftool.kvobject.Entity): an instance of Conftool entity.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._entity = entity
         self._dry_run = dry_run
@@ -178,7 +180,7 @@ class ConftoolEntity:
             objects: Iterable[kvobject.Entity]
 
     ) -> None:
-        """Updates the value of the provided conftool objects
+        """Updates the value of the provided conftool objects.
 
         Arguments:
             changed (dict): the new values to set for the selected objects.

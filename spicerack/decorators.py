@@ -18,6 +18,7 @@ def ensure_wrap(func: Callable) -> Callable:
     Arguments:
         func: the decorated function, it must be a decorator. A decorator that accepts only one positional argument
             that is also a callable is not supported.
+
     """
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Callable:

@@ -103,7 +103,7 @@ def test_spicerack_ipmi(monkeypatch):
 
 @mock.patch("pynetbox.api")
 def test_spicerack_netbox(mocked_pynetbox):
-    """Test instantiating Netbox abstraction"""
+    """Test instantiating Netbox abstraction."""
     with open(get_fixture_path("netbox", "device_status.yaml")) as device_status_choices:
         mocked_pynetbox().dcim.choices = mock.Mock(return_value=yaml.safe_load(device_status_choices))
 
