@@ -6,7 +6,7 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import Dict, Iterable, Iterator, List, Optional, Sequence
+from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence
 
 import curator
 
@@ -277,19 +277,19 @@ class ElasticsearchClusters:
         return nodes_group.values()
 
     @staticmethod
-    def _to_rows(nodes: Sequence['NodesGroup']) -> Dict[str, Sequence['NodesGroup']]:
+    def _to_rows(nodes: Sequence['NodesGroup']) -> DefaultDict[str, List['NodesGroup']]:
         """Arrange nodes in rows, so each node belongs in their respective row.
 
         Arguments:
             nodes (list): list containing dicts of elasticsearch nodes.
 
         Returns:
-            dict: dict object containing a normalized rows of elasticsearch nodes. For example::
+            defaultdict: defaultdict object containing a normalized rows of elasticsearch nodes. For example::
 
                 {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
 
         """
-        rows = defaultdict(list)  # type: ignore
+        rows = defaultdict(list)  # type: DefaultDict[str, List['NodesGroup']]
         for node in nodes:
             rows[node.row].append(node)
         return rows
