@@ -1,5 +1,6 @@
 """Interactive module tests."""
 import configparser
+import re
 
 from logging import DEBUG
 
@@ -34,7 +35,7 @@ def test_load_yaml_config_no_raise(caplog, name):
         config_dict = load_yaml_config(get_fixture_path('config', name), raises=False)
 
     assert {} == config_dict
-    assert 'DEBUG    Could not load config file' in caplog.text
+    assert re.search(r'DEBUG.*Could not load config file', caplog.text) is not None
 
 
 def test_load_yaml_config_valid():

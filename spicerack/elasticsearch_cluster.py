@@ -6,7 +6,7 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import Dict, Iterable, Iterator, List, Optional, Sequence
+from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence
 
 import curator
 
@@ -33,8 +33,8 @@ ELASTICSEARCH_CLUSTERS = {
             'production-search-psi-codfw': 'https://search.svc.codfw.wmnet:9643',
         },
         'relforge': {
-            'relforge-eqiad': 'relforge1002.eqiad.wmnet:9200',
-            'relforge-eqiad-small-alpha': 'relforge1002.eqiad.wmnet:9400',
+            'relforge-eqiad': 'relforge1002.eqiad.wmnet:9243',
+            'relforge-eqiad-small-alpha': 'relforge1002.eqiad.wmnet:9443',
         },
     }
 }
@@ -85,6 +85,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
             remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
             nodes (list): list of dicts containing clusters hosts belong to.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         super().__init__(remote_hosts)
         self._nodes = nodes
@@ -130,6 +131,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
         Arguments:
             timeout (datetime.timedelta, optional): represent how long to wait for all instances to be up.
+
         """
         delay = timedelta(seconds=5)
         tries = max(floor(timeout / delay), 1)
@@ -156,6 +158,7 @@ class ElasticsearchClusters:
             clusters (list): list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
             remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._clusters = clusters
         self._remote = remote
@@ -170,6 +173,7 @@ class ElasticsearchClusters:
 
         Arguments:
             timeout (datetime.timedelta, optional): timedelta object for elasticsearch request timeout.
+
         """
         for cluster in self._clusters:
             cluster.flush_markers(timeout)
@@ -212,6 +216,7 @@ class ElasticsearchClusters:
         Arguments:
             timeout (datetime.timedelta, optional): timedelta object to represent how long to wait for green status
                 on all clusters.
+
         """
         delay = timedelta(seconds=10)
         tries = max(floor(timeout / delay), 1)
@@ -272,19 +277,19 @@ class ElasticsearchClusters:
         return nodes_group.values()
 
     @staticmethod
-    def _to_rows(nodes: Sequence['NodesGroup']) -> Dict[str, Sequence['NodesGroup']]:
+    def _to_rows(nodes: Sequence['NodesGroup']) -> DefaultDict[str, List['NodesGroup']]:
         """Arrange nodes in rows, so each node belongs in their respective row.
 
         Arguments:
             nodes (list): list containing dicts of elasticsearch nodes.
 
         Returns:
-            dict: dict object containing a normalized rows of elasticsearch nodes. For example::
+            defaultdict: defaultdict object containing a normalized rows of elasticsearch nodes. For example::
 
                 {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
 
         """
-        rows = defaultdict(list)  # type: ignore
+        rows = defaultdict(list)  # type: DefaultDict[str, List['NodesGroup']]
         for node in nodes:
             rows[node.row].append(node)
         return rows
@@ -303,12 +308,13 @@ class ElasticsearchCluster:
     """Class to manage elasticsearch cluster."""
 
     def __init__(self, elasticsearch: Elasticsearch, remote: Remote, dry_run: bool = True) -> None:
-        """Initialize ElasticsearchCluster
+        """Initialize ElasticsearchCluster.
 
         Arguments:
             elasticsearch (elasticsearch.Elasticsearch): elasticsearch instance.
             remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional):  whether this is a DRY-RUN.
+
         """
         self._elasticsearch = elasticsearch
         self._remote = remote
@@ -317,7 +323,7 @@ class ElasticsearchCluster:
         self._freeze_writes_doc_type = 'mw_cirrus_metastore'
 
     def __str__(self) -> str:
-        """Class string method"""
+        """Class string method."""
         return str(self._elasticsearch)
 
     def get_nodes(self) -> Dict:
@@ -378,6 +384,7 @@ class ElasticsearchCluster:
 
         Arguments:
             cluster_routing (curator.ClusterRouting): Curator's cluster routing object.
+
         """
         if self._dry_run:
             cluster_routing.do_dry_run()
@@ -403,6 +410,7 @@ class ElasticsearchCluster:
 
         Arguments:
             reason (spicerack.administrative.Reason): Reason for freezing writes.
+
         """
         self._freeze_writes(reason)
         try:
@@ -423,6 +431,7 @@ class ElasticsearchCluster:
 
         Arguments:
             reason (spicerack.administrative.Reason): Reason for freezing writes.
+
         """
         doc = {'host': reason.hostname, 'timestamp': datetime.utcnow().timestamp(), 'reason': str(reason)}
         logger.info('Freezing all indices in %s', self)
@@ -437,7 +446,7 @@ class ElasticsearchCluster:
             ) from e
 
     def _unfreeze_writes(self) -> None:
-        """Enable writes on all elasticsearch indices"""
+        """Enable writes on all elasticsearch indices."""
         logger.info('Unfreezing all indices in %s', self)
         if self._dry_run:
             return
@@ -458,6 +467,7 @@ class ElasticsearchCluster:
 
         Arguments:
             timeout (datetime.timedelta): timedelta object for elasticsearch request timeout.
+
         """
         logger.info('flush markers on %s', self)
         try:
@@ -499,6 +509,7 @@ class ElasticsearchCluster:
             letting elasticsearch do its recovery on its own.
             We should verify from time to time that elastic recovery performance has not gone better
             and remove this step if proven unnecessary.
+
         """
         # shuffle nodes so that we don't allocate all shards on the same node
         shuffle(nodes)

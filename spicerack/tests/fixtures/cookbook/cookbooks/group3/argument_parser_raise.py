@@ -1,4 +1,4 @@
-"""Group3 argument_parser() raise"""
+"""Group3 argument_parser() raise."""
 __title__ = __doc__
 
 

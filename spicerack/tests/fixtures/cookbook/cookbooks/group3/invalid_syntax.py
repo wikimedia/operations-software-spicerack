@@ -1,4 +1,4 @@
-"""Group3 Invalid syntax"""
+"""Group3 Invalid syntax."""
 __title__ = __doc__
 
 

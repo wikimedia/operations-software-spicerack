@@ -69,6 +69,7 @@ class PuppetHosts(RemoteHostsAdapter):
         Arguments:
             reason (spicerack.administrative.Reason): the reason to set for the Puppet disable and to use for the
                 Puppet enable.
+
         """
         self.disable(reason)
         try:
@@ -84,6 +85,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
         Arguments:
             reason (spicerack.administrative.Reason): the reason to set for the Puppet disable.
+
         """
         logger.info('Disabling Puppet with reason %s on %d hosts: %s', reason.quoted(), len(self), self)
         self._remote_hosts.run_sync('disable-puppet {reason}'.format(reason=reason.quoted()))
@@ -96,6 +98,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
         Arguments:
             reason (spicerack.administrative.Reason): the reason to use for the Puppet enable.
+
         """
         logger.info('Enabling Puppet with reason %s on %d hosts: %s', reason.quoted(), len(self), self)
         self._remote_hosts.run_sync('enable-puppet {reason}'.format(reason=reason.quoted()))
@@ -147,6 +150,7 @@ class PuppetHosts(RemoteHostsAdapter):
                 completes before timing out as set in run-puppet-agent.
             batch_size (int, optional): how many concurrent Puppet runs to perform. The default value is tailored to
                 not overload the Puppet masters.
+
         """
         args = []  # type: ignore
         if enable_reason is not None:
@@ -170,6 +174,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
         Arguments:
             has_systemd (bool, optional): if the host has systemd as init system.
+
         """
         commands = []  # type: ignore
         if has_systemd:
@@ -313,6 +318,7 @@ class PuppetMaster:
 
         Arguments:
             hostname (str): the FQDN of the host for which to remove the certificate.
+
         """
         commands = ['puppet node {action} {host}'.format(action=action, host=hostname)
                     for action in ('clean', 'deactivate')]
@@ -326,6 +332,7 @@ class PuppetMaster:
 
         Arguments:
             hostname (str): the FQDN of the host for which to remove the certificate.
+
         """
         self._master_host.run_sync('puppet ca destroy {host}'.format(host=hostname))
 
@@ -433,7 +440,8 @@ class PuppetMaster:
 
         if not response:
             raise PuppetMasterCheckError('No certificate found for hostname: {host}'.format(host=hostname))
-        elif len(response) > 1:
+
+        if len(response) > 1:
             raise PuppetMasterError('Expected one result from Puppet CA, got {num}'.format(num=len(response)))
 
         metadata = response[0]

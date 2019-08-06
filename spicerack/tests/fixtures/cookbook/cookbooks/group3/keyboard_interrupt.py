@@ -1,4 +1,4 @@
-"""Group3 Raise KeyboardInterrupt"""
+"""Group3 Raise KeyboardInterrupt."""
 __title__ = __doc__
 
 

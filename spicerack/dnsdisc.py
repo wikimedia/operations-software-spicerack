@@ -213,6 +213,7 @@ class Discovery:
 
         Arguments:
             datacenter (str): the DC in which to pool the discovery records.
+
         """
         # DRY-RUN handled by confctl
         self._conftool.set_and_verify('pooled', True, dnsdisc=self._conftool_selector, name=datacenter)
@@ -222,6 +223,7 @@ class Discovery:
 
         Arguments:
             datacenter (str): the DC from which to depool the discovery records.
+
         """
         self.check_if_depoolable(datacenter)
         # DRY-RUN handled by confctl

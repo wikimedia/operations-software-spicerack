@@ -23,6 +23,7 @@ class Management:
 
         Arguments:
             dns (spicerack.dns.Dns): the instance to use for DNS resolution.
+
         """
         self._dns = dns
 

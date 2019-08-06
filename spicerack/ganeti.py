@@ -1,4 +1,4 @@
-"""Ganeti module"""
+"""Ganeti module."""
 
 import logging
 
@@ -25,10 +25,10 @@ class GanetiError(SpicerackError):
 
 
 class GanetiRAPI:
-    """Class which wraps the read-only Ganeti RAPI"""
+    """Class which wraps the read-only Ganeti RAPI."""
 
     def __init__(self, cluster_url: str, username: str, password: str, timeout: int, ca_path: str):
-        """Initialize the instance
+        """Initialize the instance.
 
         Arguments:
             cluster (str): the short name of the cluster to access.
@@ -134,7 +134,7 @@ class Ganeti:
     """Class which wraps all Ganeti clusters."""
 
     def __init__(self, username: str, password: str, timeout: int):
-        """Initialize the instance
+        """Initialize the instance.
 
         Arguments:
             username (str): The RAPI username to use.

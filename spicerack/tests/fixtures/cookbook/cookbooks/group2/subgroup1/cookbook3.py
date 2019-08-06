@@ -1,4 +1,4 @@
-"""Group2 Subgroup1 Cookbook3"""
+"""Group2 Subgroup1 Cookbook3."""
 __title__ = __doc__
 
 

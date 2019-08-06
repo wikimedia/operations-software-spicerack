@@ -2,6 +2,7 @@
 
 Todo:
     replace with pyghmi.
+
 """
 import logging
 import os
@@ -37,6 +38,7 @@ class Ipmi:
         Arguments:
             password (str): the password to use to connect via IPMI.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         # FIXME: move to subprocess.run() with env once Python 3.4 support is dropped or directly to pyghmi.
         os.environ['IPMITOOL_PASSWORD'] = password
@@ -153,7 +155,7 @@ class Ipmi:
         return value
 
     def reset_password(self, mgmt_hostname: str, username: str, password: str) -> None:
-        """Reset the given usernames password to the one provided
+        """Reset the given usernames password to the one provided.
 
         Arguments:
             mgmt_hostname (str): the FQDN of the management interface of the host to target.
@@ -169,7 +171,8 @@ class Ipmi:
         if len(password) > IPMI_PASSWORD_MAX_LEN:
             raise IpmiError('New passwords is greater the IPMI {max_len} byte limit'.format(
                 max_len=IPMI_PASSWORD_MAX_LEN))
-        elif len(password) > IPMI_PASSWORD_MIN_LEN:
+
+        if len(password) > IPMI_PASSWORD_MIN_LEN:
             password_store_size = str(IPMI_PASSWORD_MAX_LEN)
         elif len(password) == IPMI_PASSWORD_MIN_LEN:
             password_store_size = str(IPMI_PASSWORD_MIN_LEN)
@@ -186,12 +189,15 @@ class Ipmi:
         result = self.command(
             mgmt_hostname,
             ['user', 'set', 'password', user_id, password, password_store_size])
+
         if self._dry_run:
             return
+
         if result != success:
             raise IpmiError('Password reset failed for username: {username}'.format(
                 username=username))
-        elif username == 'root':
+
+        if username == 'root':
             current_password = os.environ['IPMITOOL_PASSWORD']
             os.environ['IPMITOOL_PASSWORD'] = password
             try:
@@ -201,7 +207,7 @@ class Ipmi:
                 raise IpmiError('Password reset failed for username: root') from e
 
     def _get_user_id(self, mgmt_hostname: str, username: str) -> str:
-        """Get the user ID associated with a given username
+        """Get the user ID associated with a given username.
 
         Arguments:
             mgmt_hostname (str): the FQDN of the management interface of the host to target.

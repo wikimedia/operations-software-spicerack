@@ -1,4 +1,4 @@
-"""Group3 Raise Exception"""
+"""Group3 Raise Exception."""
 __title__ = __doc__
 
 

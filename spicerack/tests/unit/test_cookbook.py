@@ -35,27 +35,27 @@ LIST_COOKBOOKS_ALL = """cookbooks
 `-- root
 """
 LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
-|-- cookbook: Top level cookbook
-|-- group1: Group1 Test Cookbooks
-|   `-- group1.cookbook1: Group1 Cookbook1
+|-- cookbook: Top level cookbook.
+|-- group1: Group1 Test Cookbooks.
+|   `-- group1.cookbook1: Group1 Cookbook1.
 |-- group2: -
-|   |-- group2.cookbook2: Group2 Cookbook2
+|   |-- group2.cookbook2: Group2 Cookbook2.
 |   |-- group2.subgroup1: -
-|   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3
+|   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3.
 |   `-- group2.zcookbook4: UNKNOWN (unable to detect title)
 |-- group3: -
-|   |-- group3.argparse: Group3 argparse
-|   |-- group3.argument_parser_raise: Group3 argument_parser() raise
-|   |-- group3.argument_parser_raise_system_exit_str: Group3 Raise SystemExit('message') in argument_parser()
-|   |-- group3.keyboard_interrupt: Group3 Raise KeyboardInterrupt
-|   |-- group3.non_zero_exit: Group3 Non-Zero return code
-|   |-- group3.raise_exception: Group3 Raise Exception
-|   |-- group3.raise_system_exit_0: Group3 Raise SystemExit(0)
-|   |-- group3.raise_system_exit_9: Group3 Raise SystemExit(9)
-|   |-- group3.raise_system_exit_str: Group3 Raise SystemExit('message')
+|   |-- group3.argparse: Group3 argparse.
+|   |-- group3.argument_parser_raise: Group3 argument_parser() raise.
+|   |-- group3.argument_parser_raise_system_exit_str: Group3 Raise SystemExit('message') in argument_parser().
+|   |-- group3.keyboard_interrupt: Group3 Raise KeyboardInterrupt.
+|   |-- group3.non_zero_exit: Group3 Non-Zero return code.
+|   |-- group3.raise_exception: Group3 Raise Exception.
+|   |-- group3.raise_system_exit_0: Group3 Raise SystemExit(0).
+|   |-- group3.raise_system_exit_9: Group3 Raise SystemExit(9).
+|   |-- group3.raise_system_exit_str: Group3 Raise SystemExit('message').
 |   `-- group3.subgroup3: -
-|       `-- group3.subgroup3.cookbook4: Group3 Subgroup3 Cookbook4
-`-- root: Top level cookbook
+|       `-- group3.subgroup3.cookbook4: Group3 Subgroup3 Cookbook4.
+`-- root: Top level cookbook.
 """
 LIST_COOKBOOKS_GROUP3 = """cookbooks
 `-- group3
@@ -77,31 +77,31 @@ LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
         `-- group3.subgroup3.cookbook4
 """
 COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
-[NOTRUN] cookbook: Top level cookbook
-[0/1] group1: Group1 Test Cookbooks
+[NOTRUN] cookbook: Top level cookbook.
+[0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
 [0/10] group3: -
-[NOTRUN] root: Top level cookbook
+[NOTRUN] root: Top level cookbook.
 q - Quit
 h - Help
 """
 COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
-[NOTRUN] cookbook: Top level cookbook
-[0/1] group1: Group1 Test Cookbooks
+[NOTRUN] cookbook: Top level cookbook.
+[0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
 [0/10] group3: -
-[NOTRUN] root: Top level cookbook
+[NOTRUN] root: Top level cookbook.
 q - Quit
 h - Help
 Not a tty, exiting.
 """
-COOKBOOKS_GROUP1_MENU = """#--- Group1 Test Cookbooks args=[] ---#
-[NOTRUN] cookbook1: Group1 Cookbook1
+COOKBOOKS_GROUP1_MENU = """#--- Group1 Test Cookbooks. args=[] ---#
+[NOTRUN] cookbook1: Group1 Cookbook1.
 b - Back to parent menu
 h - Help
 """
 COOKBOOKS_GROUP2_MENU = """#--- group2 args=[] ---#
-[NOTRUN] cookbook2: Group2 Cookbook2
+[NOTRUN] cookbook2: Group2 Cookbook2.
 [0/1] subgroup1: -
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu
@@ -109,7 +109,7 @@ h - Help
 """
 COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """[Namespace(argument=None, k=False), False, False]
 #--- group2 args=[] ---#
-[PASS] cookbook2: Group2 Cookbook2
+[PASS] cookbook2: Group2 Cookbook2.
 [0/1] subgroup1: -
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu

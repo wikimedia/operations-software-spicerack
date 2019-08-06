@@ -1,1 +1,1 @@
-"""Group3 Invalid Subgroup Test Cookbooks"""
+"""Group3 Invalid Subgroup Test Cookbooks."""

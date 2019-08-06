@@ -1,0 +1,4 @@
+netbox
+======
+
+.. automodule:: spicerack.netbox

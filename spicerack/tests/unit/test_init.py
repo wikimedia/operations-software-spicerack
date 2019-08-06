@@ -3,6 +3,8 @@ import logging
 
 from unittest import mock
 
+import yaml
+
 from spicerack import puppet, Spicerack
 from spicerack.administrative import Reason
 from spicerack.confctl import ConftoolEntity
@@ -16,6 +18,7 @@ from spicerack.ipmi import Ipmi
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
+from spicerack.netbox import Netbox
 from spicerack.phabricator import Phabricator
 from spicerack.prometheus import Prometheus
 from spicerack.redis_cluster import RedisCluster
@@ -96,3 +99,13 @@ def test_spicerack_ipmi(monkeypatch):
     monkeypatch.setenv('MGMT_PASSWORD', 'env_password')
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
     assert isinstance(spicerack.ipmi(), Ipmi)
+
+
+@mock.patch("pynetbox.api")
+def test_spicerack_netbox(mocked_pynetbox):
+    """Test instantiating Netbox abstraction."""
+    with open(get_fixture_path("netbox", "device_status.yaml")) as device_status_choices:
+        mocked_pynetbox().dcim.choices = mock.Mock(return_value=yaml.safe_load(device_status_choices))
+
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    assert isinstance(spicerack.netbox(), Netbox)

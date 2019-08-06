@@ -1,4 +1,4 @@
-"""Group3 argparse"""
+"""Group3 argparse."""
 import argparse
 
 

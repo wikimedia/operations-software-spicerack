@@ -135,6 +135,14 @@ class TestIcinga:
         assert mocked_time.called
 
     @mock.patch('spicerack.icinga.time.time', return_value=1514764800)
+    def test_recheck_all_services(self, mocked_time):
+        """It should force a recheck of all services for the hosts on the Icinga server."""
+        self.icinga.recheck_all_services(NodeSet('host1'))
+        self.mocked_icinga_host.run_sync.assert_called_with(
+            'echo -n "[1514764800] SCHEDULE_FORCED_HOST_SVC_CHECKS;host1" > /var/lib/icinga/rw/icinga.cmd')
+        assert mocked_time.called
+
+    @mock.patch('spicerack.icinga.time.time', return_value=1514764800)
     def test_remove_downtime(self, mocked_time):
         """It should remove the downtime for the hosts on the Icinga server."""
         self.icinga.remove_downtime(NodeSet('host1'))

@@ -39,6 +39,7 @@ class MediaWiki:
             remote (spicerack.remote.Remote): the Remote instance.
             user (str): the name of the effective running user.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._conftool = conftool
         self._remote = remote

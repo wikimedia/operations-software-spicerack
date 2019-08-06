@@ -2,6 +2,7 @@
 
 Todo:
     replace with a proper MySQL module that uses a Python MySQL client, preferably in a parallel way.
+
 """
 import logging
 
@@ -78,6 +79,7 @@ class Mysql:
         Arguments:
             remote (spicerack.remote.Remote): the Remote instance.
             dry_run (bool, optional): whether this is a DRY-RUN.
+
         """
         self._remote = remote
         self._dry_run = dry_run
