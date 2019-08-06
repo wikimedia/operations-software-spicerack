@@ -2,6 +2,30 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.26`_ (2019-08-06)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* Add Netbox module
+* Add the ``LBRemoteCluster`` class to manage cluster behind a load balancer
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: Add a function to force a recheck of all sevices
+* confctl: Add ``filter_objects`` and ``update_objects``
+* confctl: add ``change_and_revert`` contextmanager
+
+Bug Fixes
+"""""""""
+
+* elasticsearch_cluster: correct ports for relforge cluster
+* elasticsearch_cluster: fix ``mypy`` newly reported bug
+* tests: fix ``pytest`` ``caplog`` matching
+* tests: fix ``pep257`` newly reported issues
+
 `v0.0.25`_ (2019-05-10)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -501,3 +525,4 @@ New features
 .. _`v0.0.23`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.23
 .. _`v0.0.24`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.24
 .. _`v0.0.25`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.25
+.. _`v0.0.26`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.26
