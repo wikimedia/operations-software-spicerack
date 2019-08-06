@@ -1,6 +1,7 @@
 spicerack (0.0.26-1) stretch-wikimedia; urgency=medium
 
   * v0.0.26 upstream release.
+  * Add python3-pynetbox dependency.
 
  -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Tue, 06 Aug 2019 14:30:48 +0200
 
