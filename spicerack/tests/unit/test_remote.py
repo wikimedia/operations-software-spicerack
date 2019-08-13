@@ -402,3 +402,18 @@ class TestRemoteHosts:
         with pytest.raises(remote.RemoteError,
                            match=r'Unable to extract data with <lambda> for host\[1-9\] from: test'):
             remote.RemoteHosts.results_to_list(results, callback=lambda x: 1 / 0)
+
+    def test_split_simple(self):
+        """It should correctly split a simple remote."""
+        results = list(self.remote_hosts.split(2))
+        assert len(results) == 2
+        assert len(results[0]) == 5
+        assert len(results[1]) == 4
+
+    def test_split_too_high(self):
+        """It should correctly split the remote even if the slices are too many."""
+        results = list(self.remote_hosts.split(15))
+        assert len(results) == 9
+        for result in results:
+            assert len(result) == 1
+            assert result._dry_run is False  # pylint: disable=protected-access
