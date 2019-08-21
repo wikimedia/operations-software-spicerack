@@ -150,3 +150,20 @@ class Netbox:
 
         """
         return self._fetch_host(hostname).status
+
+    def fetch_host_detail(self, hostname: str) -> Dict:
+        """Return a dict containing details about the host.
+
+        Arguments:
+            hostname (str): the name of the host to retrieve.
+
+        Returns:
+            dict: data about the host
+
+        Raises:
+            NetboxAPIError: on API error
+            NetboxError: on parameter error
+
+        """
+        host = self._fetch_host(hostname)
+        return host.serialize()

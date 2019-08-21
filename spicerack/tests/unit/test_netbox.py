@@ -26,6 +26,7 @@ def _fake_host():
     fake_host = mock.Mock()
     fake_host.name = 'test'
     fake_host.status = 'Active'
+    fake_host.serialize = mock.Mock(return_value={'name': 'test'})
     fake_host.save = mock.Mock(return_value=True)
     return fake_host
 
@@ -145,3 +146,14 @@ def test_put_host_status_error(mocked_pynetbox):
     with pytest.raises(NetboxAPIError, match='failed to save host status'):
         netbox.put_host_status('host', 'Planned')
     assert fake_host.save.called
+
+
+@mock.patch('pynetbox.api')
+def test_fetch_host_detail(mocked_pynetbox):
+    """Test fetching host detail."""
+    fake_host = _fake_host()
+    mocked_pynetbox().dcim.devices.get.return_value = fake_host
+    mocked_pynetbox().dcim.choices = _get_choices_mock()
+    netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
+    netbox.fetch_host_detail('test')
+    assert fake_host.serialize.called
