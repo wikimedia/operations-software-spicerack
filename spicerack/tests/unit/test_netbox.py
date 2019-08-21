@@ -55,22 +55,23 @@ def test_netbox_choices_api_devices_missing(mocked_pynetbox):
 
 
 @mock.patch('pynetbox.api')
-def test_fetch_host(mocked_pynetbox):
-    """Test fetching a single host."""
-    mocked_pynetbox.dcim.devices.get.return_value = _fake_host()
+def test_netbox_fetch_host_status_nohost(mocked_pynetbox):
+    """Test the error scenario where the host is not found."""
+    mocked_pynetbox().dcim.devices.get.return_value = None
+    mocked_pynetbox().dcim.choices = _get_choices_mock()
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
-
-    host = netbox.fetch_host('host')
-    assert host == mocked_pynetbox().dcim.devices.get()
+    with pytest.raises(NetboxError, match='host not found'):
+        netbox.fetch_host_status('host')
 
 
 @mock.patch('pynetbox.api')
-def test_fetch_host_error(mocked_pynetbox):
-    """Test host fetch error handling plumbing."""
-    mocked_pynetbox().dcim.devices.get.side_effect = _request_error()
+def test_netbox_fetch_host_status_error(mocked_pynetbox):
+    """Test the error scenario where the host is not found."""
+    mocked_pynetbox().dcim.devices.get = mock.Mock(side_effect=_request_error())
+    mocked_pynetbox().dcim.choices = _get_choices_mock()
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
-    with pytest.raises(NetboxAPIError, match='error retrieving host'):
-        netbox.fetch_host('host')
+    with pytest.raises(NetboxError, match='error retrieving host'):
+        netbox.fetch_host_status('host')
 
 
 @mock.patch('pynetbox.api')
