@@ -2,6 +2,17 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.27`_ (2019-08-25)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* remote: Move splitting of a ``RemoteHosts`` instance to a ``split()`` method.
+* netbox: Make host private and raise exception on not found.
+* netbox: Add method to return host information.
+
+
 `v0.0.26`_ (2019-08-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -526,3 +537,4 @@ New features
 .. _`v0.0.24`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.24
 .. _`v0.0.25`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.25
 .. _`v0.0.26`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.26
+.. _`v0.0.27`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.27

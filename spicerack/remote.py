@@ -168,8 +168,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
         # TODO: add better failure handling. Right now we just support counting batches with a failure, while we might
         # want to support success_threshold.
         failures = []
-        for nodeset in self._remote_hosts.hosts.split(n_slices):
-            remotes_slice = RemoteHosts(self._config, nodeset)
+        for remotes_slice in self._remote_hosts.split(n_slices):
             # Select the pooled servers for the selected services, from the group we're operating on now.
             with self._conftool.change_and_revert(
                     'pooled', 'yes', 'no',
@@ -404,6 +403,19 @@ class RemoteHosts:
 
         """
         return len(self._hosts)
+
+    def split(self, n_slices: int) -> Iterator['RemoteHosts']:
+        """Split the current remote in n_slices RemoteHosts instances.
+
+        Arguments:
+            n_slices (int): the number of slices to slice the remote in.
+
+        Yields:
+            The RemoteHosts instances for the subset of nodes.
+
+        """
+        for nodeset in self._hosts.split(n_slices):
+            yield RemoteHosts(self._config, nodeset, dry_run=self._dry_run)
 
     def run_async(
         self,

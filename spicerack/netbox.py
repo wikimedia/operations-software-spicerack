@@ -76,7 +76,7 @@ class Netbox:
 
         return {ch['label']: ch['value'] for ch in self._dcim_choices['device:status']}
 
-    def fetch_host(self, hostname: str) -> pynetbox.core.response.Record:
+    def _fetch_host(self, hostname: str) -> pynetbox.core.response.Record:
         """Fetch a host (dcim.devices) object.
 
         Arguments:
@@ -93,9 +93,10 @@ class Netbox:
         try:
             host = self._api.dcim.devices.get(name=hostname)
         except pynetbox.RequestError as ex:
-            # excepts on not found and other errors
+            # excepts on other errors
             raise NetboxAPIError('error retrieving host') from ex
-
+        if host is None:
+            raise NetboxAPIError('host not found')
         return host
 
     def put_host_status(self, hostname: str, status: str) -> None:
@@ -114,7 +115,7 @@ class Netbox:
         if status not in self.device_status_choices:
             raise NetboxError('{} is not an available status'.format(status))
 
-        host = self.fetch_host(hostname)
+        host = self._fetch_host(hostname)
         oldstatus = host.status
 
         if self._dry_run:
@@ -148,4 +149,21 @@ class Netbox:
             NetboxError: on parameter error
 
         """
-        return self.fetch_host(hostname).status
+        return self._fetch_host(hostname).status
+
+    def fetch_host_detail(self, hostname: str) -> Dict:
+        """Return a dict containing details about the host.
+
+        Arguments:
+            hostname (str): the name of the host to retrieve.
+
+        Returns:
+            dict: data about the host
+
+        Raises:
+            NetboxAPIError: on API error
+            NetboxError: on parameter error
+
+        """
+        host = self._fetch_host(hostname)
+        return host.serialize()
