@@ -165,3 +165,26 @@ class Ganeti:
         cluster_url = CLUSTER_SVC_URL.format(dc=cluster)
 
         return GanetiRAPI(cluster_url, self._username, self._password, self._timeout, PUPPET_CA_PATH)
+
+    def fetch_cluster_for_instance(self, fqdn: str) -> str:
+        """Return the cluster name for a given FQDN if possible.
+
+        Arguments:
+            fqdn (str): The FQDN for the host to locate.
+
+        Returns:
+            str: The cluster name if found.
+
+        Raises:
+           spicerack.ganeti.GanetiError: if the host was not found in any configured cluster.
+
+        """
+        for cluster in CLUSTERS_AND_ROWS:
+            cluster_rapi = self.rapi(cluster)
+            try:
+                cluster_rapi.fetch_instance(fqdn)
+                return cluster
+            except GanetiError:
+                continue
+
+        raise GanetiError("Cannot find {} in any configured cluster.".format(fqdn))
