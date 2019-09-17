@@ -5,10 +5,9 @@ Todo:
 
 """
 import logging
-import os
 
 from datetime import timedelta
-from subprocess import CalledProcessError, check_output  # nosec
+from subprocess import CalledProcessError, run  # nosec
 from typing import List
 
 from spicerack.decorators import retry
@@ -40,8 +39,7 @@ class Ipmi:
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
-        # FIXME: move to subprocess.run() with env once Python 3.4 support is dropped or directly to pyghmi.
-        os.environ['IPMITOOL_PASSWORD'] = password
+        self.env = {'IPMITOOL_PASSWORD': password}
         self._dry_run = dry_run
 
     def command(  # pylint: disable=no-self-use
@@ -71,7 +69,7 @@ class Ipmi:
             return ''
 
         try:
-            output = check_output(command).decode()  # nosec
+            output = run(command, env=self.env.copy()).stdout.decode()  # nosec
         except CalledProcessError as e:
             raise IpmiError('Remote IPMI for {mgmt} failed (exit={code}): {output}'.format(
                 mgmt=mgmt_hostname, code=e.returncode, output=e.output)) from e
@@ -218,12 +216,12 @@ class Ipmi:
                 username=username))
 
         if username == 'root':
-            current_password = os.environ['IPMITOOL_PASSWORD']
-            os.environ['IPMITOOL_PASSWORD'] = password
+            current_password = self.env['IPMITOOL_PASSWORD']
+            self.env['IPMITOOL_PASSWORD'] = password
             try:
                 self.check_connection(mgmt_hostname)
             except IpmiError as error:
-                os.environ['IPMITOOL_PASSWORD'] = current_password
+                self.env['IPMITOOL_PASSWORD'] = current_password
                 raise IpmiError('Password reset failed for username: root') from error
 
     def _get_user_id(self, mgmt_hostname: str, username: str, channel: int = 1) -> str:
