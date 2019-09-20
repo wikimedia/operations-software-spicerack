@@ -224,7 +224,9 @@ class TestIpmi:
         """It should raise IpmiError as the username will not be found."""
         with pytest.raises(ipmi.IpmiError, match="Unable to find ID for username: nonexistent"):
             self.ipmi.reset_password('test-mgmt.example.com', 'nonexistent', 'a' * 16)
-        mocked_check_output.assert_called_once_with(IPMITOOL_BASE + ['user', 'list', '1'])
+        mocked_check_output.assert_has_calls([
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1']),
+            mock.call(IPMITOOL_BASE + ['user', 'list', '2'])], any_order=True)
 
     def test_reset_password_bad_username(self):
         """It should raise IpmiError is username is empty."""
@@ -238,5 +240,5 @@ class TestIpmi:
 
     def test_reset_password_long_password(self):
         """It should raise IpmiError as password is larger then 20 bytes."""
-        with pytest.raises(ipmi.IpmiError, match="New passwords is greater the IPMI 20 byte limit"):
+        with pytest.raises(ipmi.IpmiError, match="New passwords is greater then the 20 byte limit"):
             self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 21)
