@@ -1,6 +1,6 @@
 """IPMI module tests."""
 
-from subprocess import CalledProcessError, CompletedProcess  # nosec
+from subprocess import CalledProcessError, CompletedProcess, PIPE  # nosec
 from unittest import mock
 
 import pytest
@@ -60,7 +60,7 @@ class TestIpmi:
     def test_command_ok(self, mocked_run):
         """It should execute the IPMI command as expected."""
         assert self.ipmi.command('test-mgmt.example.com', ['test_command']) == 'test'
-        mocked_run.assert_called_once_with(IPMITOOL_BASE + ['test_command'], env=ENV)
+        mocked_run.assert_called_once_with(IPMITOOL_BASE + ['test_command'], env=ENV, stdout=PIPE)
 
     @mock.patch('spicerack.ipmi.run')
     def test_command_dry_run_ok(self, mocked_run):
@@ -79,7 +79,8 @@ class TestIpmi:
     def test_check_connection_ok(self, mocked_run):
         """It should check that the connection to the remote IPMI works running a simple command."""
         self.ipmi_dry_run.check_connection('test-mgmt.example.com')
-        mocked_run.assert_called_once_with(IPMITOOL_BASE + ['chassis', 'power', 'status'], env=ENV)
+        mocked_run.assert_called_once_with(
+            IPMITOOL_BASE + ['chassis', 'power', 'status'], env=ENV, stdout=PIPE)
 
     @mock.patch('spicerack.ipmi.run', return_value=CompletedProcess((), 0, stdout=b'failed'))
     def test_check_connection_raise(self, mocked_run):
@@ -95,7 +96,8 @@ class TestIpmi:
         mocked_run.return_value = CompletedProcess(
             (), 0, stdout=BOOTPARAMS_OUTPUT.format(bootparams='0000000000', pxe='No override').encode())
         self.ipmi.check_bootparams('test-mgmt.example.com')
-        mocked_run.assert_called_once_with(IPMITOOL_BASE + ['chassis', 'bootparam', 'get', '5'], env=ENV)
+        mocked_run.assert_called_once_with(
+            IPMITOOL_BASE + ['chassis', 'bootparam', 'get', '5'], env=ENV, stdout=PIPE)
 
     @mock.patch('spicerack.ipmi.run')
     def test_check_bootparams_wrong_value(self, mocked_run):
@@ -136,8 +138,8 @@ class TestIpmi:
 
         assert not mocked_sleep.called
         mocked_run.assert_has_calls([
-            mock.call(IPMITOOL_BASE + ['chassis', 'bootdev', 'pxe'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['chassis', 'bootparam', 'get', '5'], env=ENV)])
+            mock.call(IPMITOOL_BASE + ['chassis', 'bootdev', 'pxe'], env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['chassis', 'bootparam', 'get', '5'], env=ENV, stdout=PIPE)])
 
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     @mock.patch('spicerack.ipmi.run')
@@ -162,9 +164,11 @@ class TestIpmi:
             CompletedProcess((), 0, stdout=b'Chassis Power is on')]
         self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 16)
         mocked_run.assert_has_calls([
-            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 16, '16'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'], env={'IPMITOOL_PASSWORD': 'a' * 16})])
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 16, '16'],
+                      env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'],
+                      env={'IPMITOOL_PASSWORD': 'a' * 16}, stdout=PIPE)])
         assert self.ipmi.env['IPMITOOL_PASSWORD'] == 'a' * 16
 
     @mock.patch('spicerack.ipmi.run')
@@ -176,9 +180,11 @@ class TestIpmi:
             CompletedProcess((), 0, stdout=b'Chassis Power is on')]
         self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 17)
         mocked_run.assert_has_calls([
-            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 17, '20'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'], env={'IPMITOOL_PASSWORD': 'a' * 17})])
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 17, '20'],
+                      env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'],
+                      env={'IPMITOOL_PASSWORD': 'a' * 17}, stdout=PIPE)])
         assert self.ipmi.env['IPMITOOL_PASSWORD'] == 'a' * 17
 
     @mock.patch('spicerack.ipmi.run')
@@ -189,15 +195,16 @@ class TestIpmi:
             CompletedProcess((), 0, stdout=b'Set User Password command successful (user 9)\n')]
         self.ipmi.reset_password('test-mgmt.example.com', 'user_number_9', 'a' * 16)
         mocked_run.assert_has_calls([
-            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '9', 'a' * 16, '16'], env=ENV)])
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '9', 'a' * 16, '16'],
+                      env=ENV, stdout=PIPE)])
 
     @mock.patch('spicerack.ipmi.run')
     def test_reset_password_dryrun(self, mocked_run):
         """It should not reset the users password."""
         mocked_run.return_value = CompletedProcess((), 0, stdout=USERLIST_OUTPUT.encode())
         self.ipmi_dry_run.reset_password('test-mgmt.example.com', 'root', 'a' * 16)
-        mocked_run.called_once_with(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV)
+        mocked_run.called_once_with(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV, stdout=PIPE)
 
     @mock.patch('spicerack.ipmi.run')
     def test_reset_password_fail_command(self, mocked_run):
@@ -208,8 +215,9 @@ class TestIpmi:
         with pytest.raises(ipmi.IpmiError, match="Password reset failed for username: user_number_9"):
             self.ipmi.reset_password('test-mgmt.example.com', 'user_number_9', 'a' * 16)
         mocked_run.assert_has_calls([
-            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '9', 'a' * 16, '16'], env=ENV)])
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '9', 'a' * 16, '16'],
+                      env=ENV, stdout=PIPE)])
         assert self.ipmi.env['IPMITOOL_PASSWORD'] == 'password'
 
     @mock.patch('spicerack.ipmi.run')
@@ -222,9 +230,11 @@ class TestIpmi:
         with pytest.raises(ipmi.IpmiError, match="Password reset failed for username: root"):
             self.ipmi.reset_password('test-mgmt.example.com', 'root', 'a' * 16)
         mocked_run.assert_has_calls([
-            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 16, '16'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'], env={'IPMITOOL_PASSWORD': 'a' * 16})])
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['user', 'set', 'password', '2', 'a' * 16, '16'],
+                      env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['chassis', 'power', 'status'], env={'IPMITOOL_PASSWORD': 'a' * 16},
+                      stdout=PIPE)])
         assert self.ipmi.env['IPMITOOL_PASSWORD'] == 'password'
 
     @mock.patch('spicerack.ipmi.run')
@@ -233,8 +243,8 @@ class TestIpmi:
         with pytest.raises(ipmi.IpmiError, match="Unable to find ID for username: nonexistent"):
             self.ipmi.reset_password('test-mgmt.example.com', 'nonexistent', 'a' * 16)
         mocked_run.assert_has_calls([
-            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV),
-            mock.call(IPMITOOL_BASE + ['user', 'list', '2'], env=ENV)], any_order=True)
+            mock.call(IPMITOOL_BASE + ['user', 'list', '1'], env=ENV, stdout=PIPE),
+            mock.call(IPMITOOL_BASE + ['user', 'list', '2'], env=ENV, stdout=PIPE)], any_order=True)
 
     def test_reset_password_bad_username(self):
         """It should raise IpmiError is username is empty."""
