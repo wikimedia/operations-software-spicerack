@@ -18,6 +18,10 @@ class NetboxAPIError(NetboxError):
     """Usually a wrapper for pynetbox.RequestError, errors that occur when accessing the API."""
 
 
+class NetboxHostNotFoundError(NetboxError):
+    """Raised when a host is not found for an operation."""
+
+
 class Netbox:
     """Class which wraps Netbox API operations."""
 
@@ -88,6 +92,7 @@ class Netbox:
         Raises:
             NetboxAPIError: on API error
             NetboxError: on parameter error
+            NetboxHostNotFoundError: if the host is not found
 
         """
         try:
@@ -96,11 +101,41 @@ class Netbox:
             # excepts on other errors
             raise NetboxAPIError('error retrieving host') from ex
         if host is None:
-            raise NetboxAPIError('host not found')
+            raise NetboxHostNotFoundError
+        return host
+
+    def _fetch_virtual_machine(self, hostname: str) -> pynetbox.core.response.Record:
+        """Fetch a virrtual machine (virtualization.virtual_machine) object.
+
+        Arguments:
+            hostname (str): the name of the host to fetch
+
+        Returns:
+            pynetbox.core.response.Record: the host object from the API
+
+        Raises:
+            NetboxAPIError: on API error
+            NetboxError: on parameter error
+            NetboxHostNotFoundError: if the host is not found
+
+        """
+        try:
+            host = self._api.virtualization.virtual_machines.get(name=hostname)
+        except pynetbox.RequestError as ex:
+            # excepts on other errors
+            raise NetboxAPIError('error retrieving VM') from ex
+
+        if host is None:
+            raise NetboxHostNotFoundError
+
         return host
 
     def put_host_status(self, hostname: str, status: str) -> None:
         """Set the device status.
+
+        Note:
+           This method does not operate on virtual machines since they are
+           updated automatically from Ganeti into Netbox.
 
         Arguments:
             hostname (str): the name of the host to operate on
@@ -147,9 +182,13 @@ class Netbox:
         Raises:
             NetboxAPIError: on API error
             NetboxError: on parameter error
+            NetboxHostNotFoundError: if the host is not found
 
         """
-        return self._fetch_host(hostname).status
+        try:
+            return self._fetch_host(hostname).status
+        except NetboxHostNotFoundError:
+            return self._fetch_virtual_machine(hostname).status
 
     def fetch_host_detail(self, hostname: str) -> Dict:
         """Return a dict containing details about the host.
@@ -163,7 +202,19 @@ class Netbox:
         Raises:
             NetboxAPIError: on API error
             NetboxError: on parameter error
+            NetboxHostNotFoundError: if the host is not found
 
         """
-        host = self._fetch_host(hostname)
-        return host.serialize()
+        is_virtual = False
+        vm_cluster = 'N/A'
+        try:
+            host = self._fetch_host(hostname)
+        except NetboxHostNotFoundError:
+            host = self._fetch_virtual_machine(hostname)
+            is_virtual = True
+            vm_cluster = host.cluster.name
+
+        ret = host.serialize()
+        ret['is_virtual'] = is_virtual
+        ret['cluster_name'] = vm_cluster
+        return ret

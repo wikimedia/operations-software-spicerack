@@ -2,6 +2,17 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.28`_ (2019-10-10)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* netbox: Transparently support read-only operations for virtual machines (`T231068`_).
+* ganeti: Add ability to get ganeti cluster for given instance (`T231068`_).
+* ipmi: add support for channel 2.
+* ipmi: use ``subprocess.run()`` instead of ``subprocess.check_output()``.
+
 `v0.0.27`_ (2019-08-25)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -510,6 +521,7 @@ New features
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`T219640`: https://phabricator.wikimedia.org/T213296
 .. _`T219799`: https://phabricator.wikimedia.org/T219799
+.. _`T231068`: https://phabricator.wikimedia.org/T231068
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -538,3 +550,4 @@ New features
 .. _`v0.0.25`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.25
 .. _`v0.0.26`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.26
 .. _`v0.0.27`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.27
+.. _`v0.0.28`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.28

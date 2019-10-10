@@ -5,10 +5,9 @@ Todo:
 
 """
 import logging
-import os
 
 from datetime import timedelta
-from subprocess import CalledProcessError, check_output  # nosec
+from subprocess import CalledProcessError, run  # nosec
 from typing import List
 
 from spicerack.decorators import retry
@@ -40,8 +39,7 @@ class Ipmi:
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
-        # FIXME: move to subprocess.run() with env once Python 3.4 support is dropped or directly to pyghmi.
-        os.environ['IPMITOOL_PASSWORD'] = password
+        self.env = {'IPMITOOL_PASSWORD': password}
         self._dry_run = dry_run
 
     def command(  # pylint: disable=no-self-use
@@ -71,7 +69,7 @@ class Ipmi:
             return ''
 
         try:
-            output = check_output(command).decode()  # nosec
+            output = run(command, env=self.env.copy()).stdout.decode()  # nosec
         except CalledProcessError as e:
             raise IpmiError('Remote IPMI for {mgmt} failed (exit={code}): {output}'.format(
                 mgmt=mgmt_hostname, code=e.returncode, output=e.output)) from e
@@ -151,8 +149,34 @@ class Ipmi:
         else:
             raise IpmiError("Unable to find the boot parameter '{label}' in: {output}".format(
                 label=param_label, output=bootparams))
-
         return value
+
+    @staticmethod
+    def _get_password_store_size(password: str) -> int:
+        """Parse the password to determine the correct storage size.
+
+        Ipmitool stores passwords in either 16 or 20 byte strings depending
+        on the password length.
+
+        Arguments:
+            password(str): the password string to parse
+
+        Raises:
+            spicerack.ipmi.IpmiError: if unable password is too big or too small
+
+        Returns:
+            int: A number representing the storage size
+
+        """
+        if len(password) > IPMI_PASSWORD_MAX_LEN:
+            raise IpmiError('New passwords is greater then the {max_len} byte limit'.format(
+                max_len=IPMI_PASSWORD_MAX_LEN))
+        if len(password) > IPMI_PASSWORD_MIN_LEN:
+            return IPMI_PASSWORD_MAX_LEN
+        if len(password) == IPMI_PASSWORD_MIN_LEN:
+            return IPMI_PASSWORD_MIN_LEN
+        raise IpmiError('New passwords must be {min_len} bytes minimum'.format(
+            min_len=IPMI_PASSWORD_MIN_LEN))
 
     def reset_password(self, mgmt_hostname: str, username: str, password: str) -> None:
         """Reset the given usernames password to the one provided.
@@ -166,24 +190,18 @@ class Ipmi:
             spicerack.ipmi.IpmiError: if unable reset password or arguments invalid
 
         """.format(min_len=IPMI_PASSWORD_MIN_LEN, max_len=IPMI_PASSWORD_MAX_LEN)
-        # ipmitool stores passwords in either 16 or 20 byte strings
-        # can't find much documentation on this
-        if len(password) > IPMI_PASSWORD_MAX_LEN:
-            raise IpmiError('New passwords is greater the IPMI {max_len} byte limit'.format(
-                max_len=IPMI_PASSWORD_MAX_LEN))
-
-        if len(password) > IPMI_PASSWORD_MIN_LEN:
-            password_store_size = str(IPMI_PASSWORD_MAX_LEN)
-        elif len(password) == IPMI_PASSWORD_MIN_LEN:
-            password_store_size = str(IPMI_PASSWORD_MIN_LEN)
-        else:
-            raise IpmiError('New passwords must be {min_len} bytes minimum'.format(
-                min_len=IPMI_PASSWORD_MIN_LEN))
-
         if not username:
             raise IpmiError('Username can not be an empty string')
 
-        user_id = self._get_user_id(mgmt_hostname, username)
+        password_store_size = str(Ipmi._get_password_store_size(password))
+
+        try:
+            user_id = self._get_user_id(mgmt_hostname, username)
+        except IpmiError:
+            # some systems (HP?) use channel 2
+            logger.info('unable to find user in channel 1 testing channel 2')
+            user_id = self._get_user_id(mgmt_hostname, username, 2)
+
         success = 'Set User Password command successful (user {user_id})\n'.format(
             user_id=user_id)
         result = self.command(
@@ -198,20 +216,21 @@ class Ipmi:
                 username=username))
 
         if username == 'root':
-            current_password = os.environ['IPMITOOL_PASSWORD']
-            os.environ['IPMITOOL_PASSWORD'] = password
+            current_password = self.env['IPMITOOL_PASSWORD']
+            self.env['IPMITOOL_PASSWORD'] = password
             try:
                 self.check_connection(mgmt_hostname)
-            except IpmiError as e:
-                os.environ['IPMITOOL_PASSWORD'] = current_password
-                raise IpmiError('Password reset failed for username: root') from e
+            except IpmiError as error:
+                self.env['IPMITOOL_PASSWORD'] = current_password
+                raise IpmiError('Password reset failed for username: root') from error
 
-    def _get_user_id(self, mgmt_hostname: str, username: str) -> str:
+    def _get_user_id(self, mgmt_hostname: str, username: str, channel: int = 1) -> str:
         """Get the user ID associated with a given username.
 
         Arguments:
             mgmt_hostname (str): the FQDN of the management interface of the host to target.
             username (str): The username to search for
+            channel (int): The channel number for the user list; Default: 1
 
         Raises:
             spicerack.ipmi.IpmiError: if unable to find the given username.
@@ -220,7 +239,7 @@ class Ipmi:
             str: the user ID associated with the username
 
         """
-        userlist = self.command(mgmt_hostname, ['user', 'list', '1'], is_safe=True)
+        userlist = self.command(mgmt_hostname, ['user', 'list', str(channel)], is_safe=True)
         for line in userlist.splitlines():
             words = line.split()
             if words[0] == 'ID':
