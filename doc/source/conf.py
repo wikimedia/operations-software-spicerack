@@ -127,7 +127,7 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'ClusterShell': ('http://clustershell.readthedocs.io/en/v1.8/', None),
     'cumin': ('https://doc.wikimedia.org/cumin/master/', None),
-    'requests': ('http://docs.python-requests.org/en/master/', None),
+    'requests': ('https://requests.readthedocs.io/en/master/', None),
 }
 
 # Napoleon settings
