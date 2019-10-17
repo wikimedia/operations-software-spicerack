@@ -36,7 +36,7 @@ class Dns:
         """
         if nameserver_address:
             self._resolver = resolver.Resolver(configure=False)
-            self._resolver.nameservers = [nameserver_address]  # type: ignore
+            self._resolver.nameservers = [nameserver_address]
         else:
             self._resolver = resolver.Resolver()
 
