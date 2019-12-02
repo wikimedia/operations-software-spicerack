@@ -330,7 +330,7 @@ class Remote:
             tags: Conftool tags for node type objects as keyword arguments.
 
         Returns:
-            spicerack.remote.LBRemoteHosts: LBRemoteHosts instance matching the given query
+            spicerack.remote.LBRemoteCluster: LBRemoteCluster instance matching the given query
 
         Raises:
            spicerack.remote.RemoteError
