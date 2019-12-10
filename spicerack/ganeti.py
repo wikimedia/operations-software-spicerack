@@ -31,7 +31,7 @@ class GanetiRAPI:
         """Initialize the instance.
 
         Arguments:
-            cluster (str): the short name of the cluster to access.
+            cluster_url (str): the short name of the cluster to access.
             username (str): the RAPI user name
             password (str): the RAPI user's password
             timeout (int): the timeout in seconds for each request

@@ -31,6 +31,7 @@ class Icinga:
 
         Arguments:
             icinga_host (spicerack.remote.RemoteHosts): the RemoteHosts instance for the Icinga server.
+            config_file (str, optional): the path to the Icinga main configuration file.
 
         """
         self._icinga_host = icinga_host

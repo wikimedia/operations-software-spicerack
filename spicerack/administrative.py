@@ -35,8 +35,7 @@ class Reason:
     def __setattr__(self, name: str, value: str) -> None:
         """Set an instance attribute with validation.
 
-        Parameters:
-            As required by Python's data model, see `object.__setattr__`.
+        Parameters as required by Python's data model, see `object.__setattr__`.
 
         Raises:
             ReasonError: on validation error of the parameters.
