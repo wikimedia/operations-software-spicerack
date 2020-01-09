@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # This is the template for the SVC URL for the RAPI end point
 CLUSTER_SVC_URL = 'https://ganeti01.svc.{dc}.wmnet:5080'
 # These are the configured available set of rows by Ganeti cluster DC
-CLUSTERS_AND_ROWS = {'eqiad': ('A', 'C'), 'codfw': ('A', 'B')}
+CLUSTERS_AND_ROWS = {'eqiad': ('A', 'C'), 'codfw': ('A', 'B'), 'esams': ('OE'),
+                     'ulsfo': ('1'), 'eqsin': ('1')}
 
 
 class GanetiError(SpicerackError):

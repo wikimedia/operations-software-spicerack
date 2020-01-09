@@ -20,8 +20,8 @@ class TestGaneti:
         self.ganeti = Ganeti(username='fake', password='password123', timeout=10)  # nosec
 
         self.cluster = 'eqiad'
-        self.base_url = CLUSTER_SVC_URL.format(dc=self.cluster) + '/2'
-        self.codfw_base_url = CLUSTER_SVC_URL.format(dc='codfw') + '/2'
+        self.cluster_base_url = {cluster: CLUSTER_SVC_URL.format(dc=cluster) + '/2' for cluster in CLUSTERS_AND_ROWS}
+        self.base_url = self.cluster_base_url[self.cluster]
 
         # load test fixtures
         with open(get_fixture_path('ganeti', 'info.json'), encoding='utf-8') as info_json:
@@ -97,19 +97,22 @@ class TestGaneti:
     def test_ganeti_get_cluster_for_instance(self, requests_mock):
         """We should get a cluster name that the host exists for."""
         requests_mock.get(self.base_url + '/instances/testhost', text=self.instance_info)
-        requests_mock.get(
-            self.codfw_base_url + '/instances/testhost', text=self.fourohfour, status_code=requests.codes['not_found']
-        )
+        for cluster in CLUSTERS_AND_ROWS:
+            if cluster == self.cluster:
+                continue
+            requests_mock.get(
+                self.cluster_base_url[cluster] + '/instances/testhost', text=self.fourohfour,
+                status_code=requests.codes['not_found']
+            )
         assert self.ganeti.fetch_cluster_for_instance('testhost') == self.cluster
 
     @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_get_cluster_for_instance_notfound(self, requests_mock):
         """We should get an exception if the host is not found in Ganeti."""
-        requests_mock.get(
-            self.base_url + '/instances/testhost', text=self.fourohfour, status_code=requests.codes['not_found']
-        )
-        requests_mock.get(
-            self.codfw_base_url + '/instances/testhost', text=self.fourohfour, status_code=requests.codes['not_found']
-        )
+        for cluster in CLUSTERS_AND_ROWS:
+            requests_mock.get(
+                self.cluster_base_url[cluster] + '/instances/testhost', text=self.fourohfour,
+                status_code=requests.codes['not_found']
+            )
         with pytest.raises(GanetiError, match='Cannot find testhost in any configured cluster.'):
             self.ganeti.fetch_cluster_for_instance('testhost')
