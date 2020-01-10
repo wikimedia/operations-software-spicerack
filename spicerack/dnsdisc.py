@@ -45,7 +45,7 @@ class Discovery:
         self._records = records
         self._dry_run = dry_run
 
-        self._resolvers = {}  # type: ignore
+        self._resolvers = {}
         for nameserver in self._remote.query('A:dns-auth').hosts:
             self._resolvers[nameserver] = resolver.Resolver()
             self._resolvers[nameserver].port = 5353

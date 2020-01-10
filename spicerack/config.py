@@ -26,7 +26,7 @@ def load_yaml_config(config_file: str, raises: bool = True) -> Dict:
         SpicerackError: if unable to load the configuration and ``raises`` is ``True``.
 
     """
-    config = {}  # type: ignore
+    config = {}
     try:
         with open(config_file, 'r') as fh:
             config = yaml.safe_load(fh)
