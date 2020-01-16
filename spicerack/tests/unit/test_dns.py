@@ -97,6 +97,15 @@ class TestDns:
         assert mocked_resolver.return_value.nameservers == ['127.0.0.1']
         self.mocked_resolver.assert_called_once_with()
 
+    @mock.patch('spicerack.dns.resolver.Resolver')
+    def test_init_with_nameserver_and_port(self, mocked_resolver):
+        """A non-standard port should be set in the dns Resolver if a nameserver is set."""
+        Dns(nameserver_address='127.0.0.1', port=5353)
+        mocked_resolver.assert_called_once_with(configure=False)
+        assert mocked_resolver.return_value.nameservers == ['127.0.0.1']
+        assert mocked_resolver.return_value.port == 5353
+        self.mocked_resolver.assert_called_once_with()
+
     def test_resolve_ipv4(self):
         """Should return the list of IPv4 matching the name."""
         assert self.dns.resolve_ipv4('host1.example.com') == ['10.0.0.1']
