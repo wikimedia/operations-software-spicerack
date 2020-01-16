@@ -1,6 +1,32 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.29`_ (2020-01-16)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* mediawiki: in ``stop_cronjobs()`` adapt for the migration from ``hhvm`` to ``php-fpm`` in  production (`T229792`_).
+* dnsdisc: use port ``5353`` to query the resolvers. The authdns part is answering to port ``5353`` from now on.
+* dns: allow to specify a custom port for the resolver. The authdns part is answering to port ``5353`` from now on,
+  allow to specify a custom port when instantiating a new ``Dns`` recursor.
+* ganeti: Add ``esams``, ``ulsfo`` and ``eqsin`` clusters and rows definitions.
+
+Bug Fixes
+"""""""""
+
+* ipmi: the change introduced via `I4d4ade351493a548e9e7a578bf9a7acbb45a5c0`_ to use ``subprocess.run()`` created a
+  regression causing the ``ipmi`` calls to no longer capture stdout. Restored normal behaviour (`T147074`_).
+
+Miscellanea
+"""""""""""
+
+* dns: remove unused type hint ignore comments.
+* remote: fix docstring return type.
+* documentation: updated link to the requests module documentation.
+* docstrings: fix pep257 reported errors.
+* mypy: Get rid of no longer needed ``# type: ignore`` annotations that are now detected automatically by ``mypy``.
 
 `v0.0.28`_ (2019-10-10)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -518,9 +544,13 @@ New features
 .. _`mediawiki.org: Coding_conventions/Python`: https://www.mediawiki.org/wiki/Manual:Coding_conventions/Python#Imports
 .. _`PEP0008#line_break_binary_operator`: https://www.python.org/dev/peps/pep-0008/#should-a-line-break-before-or-after-a-binary-operator
 
+.. _`I4d4ade351493a548e9e7a578bf9a7acbb45a5c0`: https://gerrit.wikimedia.org/r/q/I4d4ade351493a548e9e7a578bf9a7acbb45a5c0
+
+.. _`T147074`: https://phabricator.wikimedia.org/T147074
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`T219640`: https://phabricator.wikimedia.org/T213296
 .. _`T219799`: https://phabricator.wikimedia.org/T219799
+.. _`T229792`: https://phabricator.wikimedia.org/T229792
 .. _`T231068`: https://phabricator.wikimedia.org/T231068
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
@@ -551,3 +581,4 @@ New features
 .. _`v0.0.26`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.26
 .. _`v0.0.27`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.27
 .. _`v0.0.28`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.28
+.. _`v0.0.29`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.29
