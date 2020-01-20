@@ -2,7 +2,7 @@
 import pytest
 
 from spicerack.prometheus import Prometheus, PrometheusError
-from spicerack.tests import requests_mock_not_available
+from spicerack.tests import require_requests_mock
 
 
 TEST_URI = 'http://prometheus.svc.eqiad.wmnet/ops/api/v1/query'
@@ -30,7 +30,7 @@ def get_response_data(check='ok'):
     return json_data
 
 
-@pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+@require_requests_mock
 class TestPrometheus:
     """Test class for the Prometheus class."""
 

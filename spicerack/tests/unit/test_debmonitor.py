@@ -3,14 +3,14 @@ import pytest
 import requests
 
 from spicerack import debmonitor
-from spicerack.tests import requests_mock_not_available
+from spicerack.tests import require_requests_mock
 
 
 DEBMONITOR_HOST = 'debmonitor.example.com'
 HOST1_URL = 'https://{host}/hosts/host1.example.com'.format(host=DEBMONITOR_HOST)
 
 
-@pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+@require_requests_mock
 class TestDebmonitor:
     """Debmonitor class tests."""
 

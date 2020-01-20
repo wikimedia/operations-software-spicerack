@@ -33,32 +33,13 @@ SPICERACK_TEST_PARAMS = {
     'spicerack_config_dir': get_fixture_path(),
 }
 
+require_requests_mock = pytest.mark.skipif(  # pylint: disable=invalid-name
+    parse_version(get_distribution('requests_mock').version) < parse_version(REQUESTS_MOCK_MIN_VERSION),
+    reason='Requires requests-mock fixture')
 
-def caplog_not_available():
-    """Check if the caplog fixture is not available.
+require_caplog = pytest.mark.skipif(  # pylint: disable=invalid-name
+    parse_version(pytest.__version__) < parse_version(CAPLOG_MIN_VERSION), reason='Requires caplog fixture')
 
-    Returns:
-        bool: True if the caplog fixture is not available, False otherwise.
-
-    """
-    return parse_version(pytest.__version__) < parse_version(CAPLOG_MIN_VERSION)
-
-
-def requests_mock_not_available():
-    """Check if the requests_mock fixture is not available.
-
-    Returns:
-        bool: True if the requests_mock fixture is not available, False otherwise.
-
-    """
-    return parse_version(get_distribution('requests_mock').version) < parse_version(REQUESTS_MOCK_MIN_VERSION)
-
-
-def elasticsearch_too_old():
-    """Check if elasticsearch version is less than 5.0.0.
-
-    Returns:
-        bool: True if elasticsearch version is less 5.0.0, False if otherwise
-
-    """
-    return parse_version(get_distribution('elasticsearch').version) < parse_version(ELASTICSEARCH_MIN_VERSION)
+min_elasticsearch = pytest.mark.skipif(  # pylint: disable=invalid-name
+    parse_version(get_distribution('elasticsearch').version) < parse_version(ELASTICSEARCH_MIN_VERSION),
+    reason='Requires more recent elasticsearch module')

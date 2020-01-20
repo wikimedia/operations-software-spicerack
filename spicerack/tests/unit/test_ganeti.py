@@ -7,9 +7,10 @@ import requests
 
 from spicerack.exceptions import SpicerackError
 from spicerack.ganeti import CLUSTER_SVC_URL, CLUSTERS_AND_ROWS, Ganeti, GanetiError, GanetiRAPI
-from spicerack.tests import get_fixture_path, requests_mock_not_available
+from spicerack.tests import get_fixture_path, require_requests_mock
 
 
+@require_requests_mock
 class TestGaneti:
     """Ganeti tests class."""
 
@@ -43,7 +44,6 @@ class TestGaneti:
         with pytest.raises(SpicerackError, match=r'Cannot find cluster bogus cluster \(expected .*'):
             self.ganeti.rapi('bogus cluster')
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_rapi_master_success(self, requests_mock):
         """The master property of a RAPI should be the hostname for the master of this cluster."""
         requests_mock.get(self.base_url + '/info', text=self.info)
@@ -52,14 +52,12 @@ class TestGaneti:
         rapi = self.ganeti.rapi(self.cluster)
         assert rapi.master == master
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_rapi_master_failure(self, requests_mock):
         """If a master is not specified by the uptsream API, the value of master on a RAPI should be None."""
         requests_mock.get(self.base_url + '/info', text=self.bogus_data)
         rapi = self.ganeti.rapi(self.cluster)
         assert rapi.master is None
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_rapi_instance_notfound(self, requests_mock):
         """A RAPI object should raise a GanetiError if a requested host does not exist."""
         rapi = self.ganeti.rapi(self.cluster)
@@ -69,7 +67,6 @@ class TestGaneti:
         with pytest.raises(GanetiError, match=r'Non-200 from API: 404:.*'):
             rapi.fetch_instance('testhost_404')
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_rapi_instance_timeout(self, requests_mock):
         """A RAPI object should raise a GanetiError if a request times out."""
         rapi = self.ganeti.rapi(self.cluster)
@@ -77,7 +74,6 @@ class TestGaneti:
         with pytest.raises(GanetiError, match='Timeout performing request to RAPI'):
             rapi.fetch_instance('timeouthost')
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_rapi_instance_invalid(self, requests_mock):
         """If no mac is present in host data, fetch_instance_mac should raise a GanetiError."""
         rapi = self.ganeti.rapi(self.cluster)
@@ -85,7 +81,6 @@ class TestGaneti:
         with pytest.raises(GanetiError, match=''):
             rapi.fetch_instance_mac('testhost_invalid')
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_rapi_instance_valid(self, requests_mock):
         """The MAC returned by RAPI.fetch_instance_mac should match the data returned by the API."""
         rapi = self.ganeti.rapi(self.cluster)
@@ -93,7 +88,6 @@ class TestGaneti:
         mac = json.loads(self.instance_info)['nic.macs'][0]
         assert mac == rapi.fetch_instance_mac('testhost')
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_get_cluster_for_instance(self, requests_mock):
         """We should get a cluster name that the host exists for."""
         requests_mock.get(self.base_url + '/instances/testhost', text=self.instance_info)
@@ -106,7 +100,6 @@ class TestGaneti:
             )
         assert self.ganeti.fetch_cluster_for_instance('testhost') == self.cluster
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
     def test_ganeti_get_cluster_for_instance_notfound(self, requests_mock):
         """We should get an exception if the host is not found in Ganeti."""
         for cluster in CLUSTERS_AND_ROWS:

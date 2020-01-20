@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 
 from spicerack import cookbook, Spicerack
-from spicerack.tests import caplog_not_available, SPICERACK_TEST_PARAMS
+from spicerack.tests import require_caplog, SPICERACK_TEST_PARAMS
 
 
 COOKBOOKS_BASE_PATH = 'spicerack/tests/fixtures/cookbook'
@@ -179,7 +179,7 @@ class TestCookbooks:
         cookbooks = cookbook.Cookbooks(os.path.join(COOKBOOKS_BASE_PATH, 'non_existent'), [], self.spicerack)
         assert cookbooks.menu.get_tree() == ''
 
-    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
+    @require_caplog
     @pytest.mark.parametrize('module, err_messages, absent_err_messages, code, args', (
         ('cookbook', ['START - Cookbook cookbook', 'END (PASS) - Cookbook cookbook (exit_code=0)'], [], 0, []),
         ('cookbook', [], ['START - Cookbook', 'END ('], cookbook.COOKBOOK_NO_PARSER_WITH_ARGS_RETCODE, ['arg1']),
@@ -212,7 +212,7 @@ class TestCookbooks:
         for message in absent_err_messages:
             assert message not in caplog.text
 
-    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
+    @require_caplog
     def test_main_execute_cookbook_invalid_args(self, tmpdir, capsys, caplog):
         """Calling a cookbook with the wrong args should let argparse print its message."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
@@ -237,7 +237,7 @@ class TestCookbooks:
         _, err = capsys.readouterr()
         assert 'DRY-RUN' in err
 
-    @pytest.mark.skipif(caplog_not_available(), reason='Requires caplog fixture')
+    @require_caplog
     def test_main_list(self, tmpdir, capsys, caplog):
         """Calling main() with the -l/--list option should print the available cookbooks."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
