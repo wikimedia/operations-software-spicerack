@@ -33,7 +33,7 @@
       51200,
       153600
    ],
-   "name" : "testhost.example.com",
+   "name" : "test.example.com",
    "hvparams" : {
       "security_domain" : "",
       "vnc_bind_address" : "0.0.0.0",

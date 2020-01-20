@@ -162,7 +162,7 @@
    "primary_ip_version" : 4,
    "volume_group_name" : "ganeti",
    "use_external_mip_script" : false,
-   "master" : "ganeti2175.example.com",
+   "master" : "ganeti1.example.com",
    "beparams" : {
       "default" : {
          "vcpus" : 1,

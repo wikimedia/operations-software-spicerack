@@ -10,6 +10,7 @@ from requests.exceptions import Timeout
 
 from spicerack.constants import PUPPET_CA_PATH
 from spicerack.exceptions import SpicerackError
+from spicerack.remote import Remote, RemoteHosts
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -131,21 +132,61 @@ class GanetiRAPI:
         return instance_info['nic.macs'][0]
 
 
+class GntInstance:
+    """Class that wraps gnt-instance command execution on a Ganeti cluster master host."""
+
+    def __init__(self, master: RemoteHosts, instance: str):
+        """Initialize the instance.
+
+        Arguments:
+            master (spicerack.remote.RemoteHosts): the Ganeti cluster master remote instance.
+            instance (str): the FQDN of the Ganeti VM instance to act upon.
+
+        """
+        self._master = master
+        self._instance = instance
+
+    def shutdown(self, *, timeout: int = 2) -> None:
+        """Shutdown the Ganeti VM instance.
+
+        Arguments:
+            timeout (int): time in minutes to wait for a clean shutdown before pulling the plug.
+
+        """
+        self._master.run_sync('gnt-instance shutdown --timeout={timeout} {instance}'.format(
+            timeout=timeout, instance=self._instance))
+
+    def remove(self, *, shutdown_timeout: int = 2) -> None:
+        """Shutdown and remove the VM instance from the Ganeti cluster, including its disks.
+
+        Arguments:
+            shutdown_timeout (int): time in minutes to wait for a clean shutdown before pulling the plug.
+
+        Note:
+            This action requires few minutes, inform the user about the waiting time when using this method.
+
+        """
+        self._master.run_sync('gnt-instance remove --shutdown-timeout={timeout} --force {instance}'.format(
+            timeout=shutdown_timeout, instance=self._instance))
+
+
 class Ganeti:
     """Class which wraps all Ganeti clusters."""
 
-    def __init__(self, username: str, password: str, timeout: int):
+    def __init__(self, username: str, password: str, timeout: int, remote: Remote):
         """Initialize the instance.
 
         Arguments:
             username (str): The RAPI username to use.
             password (str): The RAPI password to use.
             timeout (int): The timeout in seconds for each request to the API.
+            remote (spicerack.remote.Remote): the remote instance to connect to Ganeti hosts.
 
         """
         self._username = username
         self._password = password
         self._timeout = timeout
+        self._remote = remote
 
     def rapi(self, cluster: str) -> GanetiRAPI:
         """Return a RAPI object for a particular cluster.
@@ -189,3 +230,20 @@ class Ganeti:
                 continue
 
         raise GanetiError("Cannot find {} in any configured cluster.".format(fqdn))
+
+    def instance(self, instance: str) -> GntInstance:
+        """Return an instance of GntInstance to perform RW operation on the given Ganeti VM instance.
+
+        Arguments:
+            instance (str): the FQDN of the Ganeti VM instance to act upon.
+
+        Returns:
+            spicerack.ganeti.GntInstance: ready to perform RW actions.
+
+        """
+        cluster = self.fetch_cluster_for_instance(instance)
+        master = self.rapi(cluster).master
+        if master is None:
+            raise GanetiError('Master for cluster {cluster} is None'.format(cluster=cluster))
+
+        return GntInstance(self._remote.query(master), instance)
