@@ -101,11 +101,23 @@ def test_spicerack_ipmi(monkeypatch):
     assert isinstance(spicerack.ipmi(), Ipmi)
 
 
-@mock.patch("pynetbox.api")
-def test_spicerack_netbox(mocked_pynetbox):
+@mock.patch('spicerack.dns.resolver.Resolver', autospec=True)
+@mock.patch('spicerack.remote.Remote.query', autospec=True)
+@mock.patch('pynetbox.api')
+def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_resolver):
     """Test instantiating Netbox abstraction."""
+    netbox_server = mock.MagicMock(spec_set=RemoteHosts)
+    netbox_server.hosts = 'netbox-server.example.com'
+    mocked_remote_query.return_value = netbox_server
+
     with open(get_fixture_path("netbox", "device_status.yaml")) as device_status_choices:
         mocked_pynetbox().dcim.choices = mock.Mock(return_value=yaml.safe_load(device_status_choices))
 
+    dns_response = MockedDnsAnswer(ttl=600, rrset=[
+        MockedDnsTarget(target=MockedTarget('netbox-server.example.com.'))])
+    mocked_resolver.return_value.query.return_value = dns_response
+
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
     assert isinstance(spicerack.netbox(), Netbox)
+    assert spicerack.netbox_master_host.hosts == 'netbox-server.example.com'
