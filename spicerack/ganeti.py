@@ -135,16 +135,28 @@ class GanetiRAPI:
 class GntInstance:
     """Class that wraps gnt-instance command execution on a Ganeti cluster master host."""
 
-    def __init__(self, master: RemoteHosts, instance: str):
+    def __init__(self, master: RemoteHosts, cluster: str, instance: str):
         """Initialize the instance.
 
         Arguments:
             master (spicerack.remote.RemoteHosts): the Ganeti cluster master remote instance.
+            cluster (str): the Ganeti cluster name.
             instance (str): the FQDN of the Ganeti VM instance to act upon.
 
         """
         self._master = master
+        self._cluster = cluster
         self._instance = instance
+
+    @property
+    def cluster(self) -> str:
+        """Getter for the Ganeti cluster property.
+
+        Returns:
+            str: the Ganeti cluster name the instance belongs to.
+
+        """
+        return self._cluster
 
     def shutdown(self, *, timeout: int = 2) -> None:
         """Shutdown the Ganeti VM instance.
@@ -231,19 +243,21 @@ class Ganeti:
 
         raise GanetiError("Cannot find {} in any configured cluster.".format(fqdn))
 
-    def instance(self, instance: str) -> GntInstance:
+    def instance(self, instance: str, *, cluster: str = '') -> GntInstance:
         """Return an instance of GntInstance to perform RW operation on the given Ganeti VM instance.
 
         Arguments:
             instance (str): the FQDN of the Ganeti VM instance to act upon.
+            cluster (str, optional): the name of the Ganeti cluster where to look for the instance.
 
         Returns:
             spicerack.ganeti.GntInstance: ready to perform RW actions.
 
         """
-        cluster = self.fetch_cluster_for_instance(instance)
+        if not cluster:
+            cluster = self.fetch_cluster_for_instance(instance)
         master = self.rapi(cluster).master
         if master is None:
             raise GanetiError('Master for cluster {cluster} is None'.format(cluster=cluster))
 
-        return GntInstance(self._remote.query(master), instance)
+        return GntInstance(self._remote.query(master), cluster, instance)

@@ -112,12 +112,14 @@ class TestGaneti:
         with pytest.raises(GanetiError, match='Cannot find test.example.com in any configured cluster.'):
             self.ganeti.fetch_cluster_for_instance(self.instance)
 
-    def test_instance_ok(self, requests_mock):
+    @pytest.mark.parametrize('cluster', ('', 'eqiad'))
+    def test_instance_ok(self, cluster, requests_mock):
         """It should return an instance of GntInstance for a properly configured cluster."""
         self._set_requests_mock_for_instance(requests_mock)
         requests_mock.get(self.base_url + '/info', text=self.info)
-        instance = self.ganeti.instance(self.instance)
+        instance = self.ganeti.instance(self.instance, cluster=cluster)
         assert isinstance(instance, GntInstance)
+        assert instance.cluster == 'eqiad'
         self.remote.query.assert_called_once_with('ganeti1.example.com')
 
     def test_instance_missing_master(self, requests_mock):
