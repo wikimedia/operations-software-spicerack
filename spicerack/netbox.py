@@ -218,5 +218,5 @@ class Netbox:
 
         ret = host.serialize()
         ret['is_virtual'] = is_virtual
-        ret['cluster_name'] = vm_cluster
+        ret['ganeti_cluster'] = vm_cluster
         return ret

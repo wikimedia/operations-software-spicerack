@@ -189,7 +189,7 @@ def test_fetch_host_detail_vm(mocked_pynetbox):
     detail = netbox.fetch_host_detail('test')
     assert fake_host.serialize.called
     assert detail['is_virtual']
-    assert detail['cluster_name'] == 'testcluster'
+    assert detail['ganeti_cluster'] == 'testcluster'
 
 
 @mock.patch('pynetbox.api')
