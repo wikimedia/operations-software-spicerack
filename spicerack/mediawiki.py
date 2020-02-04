@@ -186,7 +186,7 @@ class MediaWiki:
             spicerack.remote.RemoteHosts: the instance for the target host.
 
         """
-        return self._remote.query('P{O:mediawiki::maintenance} and A:' + datacenter)
+        return self._remote.query('A:mw-maintenance and A:' + datacenter)
 
     def check_cronjobs_enabled(self, datacenter: str) -> None:
         """Check that MediaWiki cronjobs are set in the given DC.
