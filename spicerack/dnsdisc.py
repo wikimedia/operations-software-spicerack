@@ -147,7 +147,7 @@ class Discovery:
     def check_record(self, name: str, expected_name: str) -> None:
         """Check that a Discovery record resolves on all authoritative resolvers to the correct IP.
 
-        The IP to use for the comparison it obtained resolving the expected_name record.
+        The IP to use for the comparison is obtained resolving the expected_name record.
         For example with name='servicename-rw.discovery.wmnet' and expected_name='servicename.svc.eqiad.wmnet', this
         method will resolve the 'expected_name' to get its IP address and then verify that on all authoritative
         resolvers the record for 'name' resolves to the same IP.

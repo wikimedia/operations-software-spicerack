@@ -22,7 +22,7 @@ from spicerack.log import irc_logger
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
-from spicerack.netbox import Netbox
+from spicerack.netbox import Netbox, NETBOX_DOMAIN
 from spicerack.phabricator import create_phabricator, Phabricator
 from spicerack.prometheus import Prometheus
 from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
@@ -133,6 +133,16 @@ class Spicerack:
 
         """
         return self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
+
+    @property
+    def netbox_master_host(self) -> RemoteHosts:
+        """Getter for the ``netbox_master_host`` property.
+
+        Returns:
+            spicerack.remote.RemoteHosts: the instance to execute commands on the Netbox master host.
+
+        """
+        return self.remote().query(self.dns().resolve_cname(NETBOX_DOMAIN))
 
     def remote(self) -> Remote:
         """Get a Remote instance.
@@ -341,7 +351,7 @@ class Spicerack:
         """
         configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, 'ganeti', 'config.yaml'))
 
-        return Ganeti(configuration['username'], configuration['password'], configuration['timeout'])
+        return Ganeti(configuration['username'], configuration['password'], configuration['timeout'], self.remote())
 
     def netbox(self) -> Netbox:
         """Get a Netbox instance to interact with Netbox's API.

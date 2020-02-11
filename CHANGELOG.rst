@@ -1,6 +1,49 @@
 Spicerack Changelog
 -------------------
 
+
+`v0.0.30`_ (2020-02-11)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* netbox: rename injected property in host details (`T231068`_).
+
+  * When fetching host details from Netbox, Spicerack injects some properties to distinguish between virtual and
+    physical hosts. Renaming the ``cluster_name`` property to ``ganeti_cluster`` to avoid possible confusions.
+
+New features
+""""""""""""
+
+* spicerack: add getter for the Netbox master host. In some cases is necessary to execute commands on the Netbox master
+  host, add a getter to resolve its real hostname (`T231068`_).
+
+* ganeti: add cluster to ``instance()`` (`T231068`_).
+
+  * Allow to specify the Ganeti cluster name when calling ``instance()``. If set the instance will be searched only in
+    that cluster.
+  * Pass the cluster name to the ``GntInstance`` constructor and expose it via a getter to remove the necessity to look
+    it up separately when cluster was not passed to ``instance()`` for auto-detection.
+
+* ganeti: add initial support for ``gnt-instance`` (`T231068`_).
+
+  * Add initial support for ``gnt-* commands`` to be executed on the cluster master via remote execution.
+  * Add initial support for ``gnt-instance`` commands to perform Ganeti VMs decommissioning, in particular:
+
+    * ``shutdown``: to shutdown a Ganeti VM, with its optional ``timeout`` parameter.
+    * ``remove``: to shutdown and remove a Ganeti VM, with its optional ``shutdown_timeout`` parameter.
+
+Minor improvements
+""""""""""""""""""
+
+* mediawiki: use Cumin alias instead of role query (`T243935`_).
+
+Miscellanea
+"""""""""""
+
+* dnsdisc: fix typo in docstring.
+
 `v0.0.29`_ (2020-01-16)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -552,6 +595,7 @@ New features
 .. _`T219799`: https://phabricator.wikimedia.org/T219799
 .. _`T229792`: https://phabricator.wikimedia.org/T229792
 .. _`T231068`: https://phabricator.wikimedia.org/T231068
+.. _`T243935`: https://phabricator.wikimedia.org/T243935
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -582,3 +626,4 @@ New features
 .. _`v0.0.27`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.27
 .. _`v0.0.28`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.28
 .. _`v0.0.29`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.29
+.. _`v0.0.30`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.30

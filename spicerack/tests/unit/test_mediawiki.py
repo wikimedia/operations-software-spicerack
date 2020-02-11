@@ -8,7 +8,7 @@ import requests
 
 from spicerack.mediawiki import MediaWiki, MediaWikiCheckError, MediaWikiError
 from spicerack.remote import RemoteExecutionError
-from spicerack.tests import caplog_not_available, requests_mock_not_available
+from spicerack.tests import require_caplog, require_requests_mock
 
 
 class TestMediaWiki:
@@ -45,25 +45,25 @@ class TestMediaWiki:
         self.mediawiki = MediaWiki(self.mocked_confctl, self.mocked_remote, self.username, dry_run=False)
         self.mediawiki_dry_run = MediaWiki(self.mocked_confctl, self.mocked_remote, self.username)
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     def test_check_config_line(self, requests_mock):
         """It should verify the config published at noc.wikimedia.org."""
         requests_mock.get('http://host1/conf/file1.php.txt', text='data')
         assert self.mediawiki.check_config_line('file1', 'data') is True
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_caplog
     def test_get_siteinfo(self, requests_mock):
         """It should get the siteinfo API from a canary host."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
         assert MediaWiki.get_siteinfo('eqiad') == self.siteinfo_ro
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     def test_check_siteinfo_ok(self, requests_mock):
         """It should check that a specific key in siteinfo API matches a value and not raise exception."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_rw))
         MediaWiki.check_siteinfo('eqiad', {('query', 'general', 'wmf-config', 'wmfEtcdLastModifiedIndex'): 123456})
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     def test_check_siteinfo_multi_ok(self, requests_mock):
         """It should check that multiple keys in siteinfo API matches multiple values and not raise exception."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_rw))
@@ -72,7 +72,7 @@ class TestMediaWiki:
             ('batchcomplete',): True,
             ('query', 'general', 'readonly'): False})
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_check_siteinfo_raise_check(self, mocked_sleep, requests_mock):
         """It should retry if it doesn't match and raise MediaWikiCheckError after all retries have failed."""
@@ -82,7 +82,7 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_check_siteinfo_raise_error(self, mocked_sleep, requests_mock):
         """It should retry if it fails and raise MediaWikiError after all retries have failed."""
@@ -92,8 +92,8 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    @pytest.mark.skipif(caplog_not_available() or requests_mock_not_available(),
-                        reason='Requires caplog and requests-mock fixtures')
+    @require_caplog
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_check_siteinfo_key_error(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiError if the key is not present in siteinfo."""
@@ -103,8 +103,8 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    @pytest.mark.skipif(caplog_not_available() or requests_mock_not_available(),
-                        reason='Requires caplog and requests-mock fixtures')
+    @require_caplog
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_check_siteinfo_timeout(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiError if it fails to get siteinfo."""
@@ -120,7 +120,7 @@ class TestMediaWiki:
         self.mocked_remote.query.assert_called_once_with('C:Deployment::Rsync and R:Class%cron_ensure = absent')
         assert 'scap sync-file' in self.mocked_remote.query.return_value.run_sync.call_args[0][0]
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     def test_set_readonly(self, requests_mock):
         """It should set the readonly message in Conftool and verify it in siteinfo."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
@@ -128,7 +128,7 @@ class TestMediaWiki:
         self.mediawiki.set_readonly('eqiad', message)
         self.mocked_confctl.set_and_verify.assert_called_once_with('val', message, name='ReadOnly', scope='eqiad')
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_set_readonly_dry_run(self, mocked_sleep, requests_mock):
         """It should not set the readonly message in Conftool and the siteinfo check should not raise."""
@@ -136,7 +136,7 @@ class TestMediaWiki:
         self.mediawiki_dry_run.set_readonly('eqiad', 'invalid')
         assert mocked_sleep.called
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_set_readonly_raise(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiCheckError if unable to check the value has changed and not in dry_run."""
@@ -146,14 +146,14 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     def test_set_readwrite(self, requests_mock):
         """It should set the readonly variale in Conftool to False and verify it in siteinfo."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_rw))
         self.mediawiki.set_readwrite('eqiad')
         self.mocked_confctl.set_and_verify.assert_called_once_with('val', False, name='ReadOnly', scope='eqiad')
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_set_readwrite_dry_run(self, mocked_sleep, requests_mock):
         """It should not set the readonly variable in Conftool and the siteinfo check should not raise."""
@@ -161,7 +161,7 @@ class TestMediaWiki:
         self.mediawiki_dry_run.set_readwrite('eqiad')
         assert mocked_sleep.called
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_set_readwrite_raise(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiCheckError if unable to check the value has changed and not in dry_run."""
@@ -171,7 +171,7 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     def test_set_master_datacenter(self, requests_mock):
         """It should set the master datacenter in Conftool."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
@@ -180,7 +180,7 @@ class TestMediaWiki:
         self.mocked_confctl.set_and_verify.assert_called_once_with(
             'val', 'eqiad', name='WMFMasterDatacenter', scope='common')
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_set_master_datacenter_dry_run(self, mocked_sleep, requests_mock):
         """It should not set the master datacenter in Conftool and not raise as the siteinfo check fails."""
@@ -189,7 +189,7 @@ class TestMediaWiki:
         self.mediawiki_dry_run.set_master_datacenter('codfw')
         assert mocked_sleep.called
 
-    @pytest.mark.skipif(requests_mock_not_available(), reason='Requires requests-mock fixture')
+    @require_requests_mock
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_set_master_datacenter_raise(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiCheckError if unable to check the value has changed and not in dry_run."""
@@ -203,13 +203,13 @@ class TestMediaWiki:
     def test_check_cronjobs_enabled(self):
         """It should ensure that the cronjobs are present and not commented out."""
         self.mediawiki.check_cronjobs_enabled('dc1')
-        self.mocked_remote.query.assert_called_once_with('P{O:mediawiki::maintenance} and A:dc1')
+        self.mocked_remote.query.assert_called_once_with('A:mw-maintenance and A:dc1')
         assert 'crontab -u www-data -l' in self.mocked_remote.query.return_value.run_sync.call_args[0][0]
 
     def test_stop_cronjobs(self):
         """It should ensure that the cronjobs are present and not commented out."""
         self.mediawiki.stop_cronjobs('dc1')
-        self.mocked_remote.query.assert_called_with('P{O:mediawiki::maintenance} and A:dc1')
+        self.mocked_remote.query.assert_called_with('A:mw-maintenance and A:dc1')
         assert 'crontab -u www-data -r' in self.mocked_remote.query.return_value.run_async.call_args[0][0].command
 
     def test_stop_cronjobs_stray_procs(self):

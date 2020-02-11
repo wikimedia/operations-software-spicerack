@@ -7,6 +7,8 @@ import pynetbox
 
 from spicerack.exceptions import SpicerackError
 
+
+NETBOX_DOMAIN = 'netbox.wikimedia.org'
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -216,5 +218,5 @@ class Netbox:
 
         ret = host.serialize()
         ret['is_virtual'] = is_virtual
-        ret['cluster_name'] = vm_cluster
+        ret['ganeti_cluster'] = vm_cluster
         return ret

@@ -12,12 +12,10 @@ from spicerack import elasticsearch_cluster as ec
 from spicerack.administrative import Reason
 from spicerack.elasticsearch_cluster import NodesGroup
 from spicerack.remote import Remote, RemoteHosts
-from spicerack.tests import elasticsearch_too_old
+from spicerack.tests import min_elasticsearch
 
 
-pytestmark = pytest.mark.skipif(  # pylint: disable=invalid-name
-    elasticsearch_too_old(), reason='Requires more recent elasticsearch module'
-)
+pytestmark = min_elasticsearch  # pylint: disable=invalid-name
 
 
 def test_create_elasticsearch_clusters():
