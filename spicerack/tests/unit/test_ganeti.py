@@ -8,7 +8,7 @@ import pytest
 import requests
 
 from spicerack.exceptions import SpicerackError
-from spicerack.ganeti import CLUSTER_SVC_URL, CLUSTERS_AND_ROWS, Ganeti, GanetiError, GanetiRAPI, GntInstance
+from spicerack.ganeti import CLUSTERS_AND_ROWS, Ganeti, GanetiError, GanetiRAPI, GntInstance, RAPI_URL_FORMAT
 from spicerack.remote import Remote
 from spicerack.tests import get_fixture_path, require_requests_mock
 
@@ -23,9 +23,10 @@ class TestGaneti:
         self.remote = mock.MagicMock(spec_set=Remote)
         self.ganeti = Ganeti(username='user', password='pass', timeout=10, remote=self.remote)  # nosec
 
-        self.cluster = 'eqiad'
+        self.cluster = 'ganeti01.svc.eqiad.wmnet'
         self.instance = 'test.example.com'
-        self.cluster_base_url = {cluster: CLUSTER_SVC_URL.format(dc=cluster) + '/2' for cluster in CLUSTERS_AND_ROWS}
+        self.cluster_base_url = {cluster: RAPI_URL_FORMAT.format(cluster=cluster) + '/2'
+                                 for cluster in CLUSTERS_AND_ROWS}
         self.base_url = self.cluster_base_url[self.cluster]
         self.instance_url = '{base_url}/instances/{instance}'.format(base_url=self.base_url, instance=self.instance)
 
@@ -112,21 +113,21 @@ class TestGaneti:
         with pytest.raises(GanetiError, match='Cannot find test.example.com in any configured cluster.'):
             self.ganeti.fetch_cluster_for_instance(self.instance)
 
-    @pytest.mark.parametrize('cluster', ('', 'eqiad'))
+    @pytest.mark.parametrize('cluster', ('', 'ganeti01.svc.eqiad.wmnet'))
     def test_instance_ok(self, cluster, requests_mock):
         """It should return an instance of GntInstance for a properly configured cluster."""
         self._set_requests_mock_for_instance(requests_mock)
         requests_mock.get(self.base_url + '/info', text=self.info)
         instance = self.ganeti.instance(self.instance, cluster=cluster)
         assert isinstance(instance, GntInstance)
-        assert instance.cluster == 'eqiad'
+        assert instance.cluster == 'ganeti01.svc.eqiad.wmnet'
         self.remote.query.assert_called_once_with('ganeti1.example.com')
 
     def test_instance_missing_master(self, requests_mock):
         """It should raise a GanetiError exception if unable to determin the instance's master to manage it."""
         self._set_requests_mock_for_instance(requests_mock)
         requests_mock.get(self.base_url + '/info', text=self.bogus_data)
-        with pytest.raises(GanetiError, match='Master for cluster eqiad is None'):
+        with pytest.raises(GanetiError, match='Master for cluster ganeti01.svc.eqiad.wmnet is None'):
             self.ganeti.instance(self.instance)
 
     @pytest.mark.parametrize('kwargs', ({}, {'timeout': 0}))

@@ -15,11 +15,17 @@ from spicerack.remote import Remote, RemoteHosts
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-# This is the template for the SVC URL for the RAPI end point
-CLUSTER_SVC_URL = 'https://ganeti01.svc.{dc}.wmnet:5080'
-# These are the configured available set of rows by Ganeti cluster DC
-CLUSTERS_AND_ROWS = {'eqiad': ('A', 'C'), 'codfw': ('A', 'B'), 'esams': ('OE'),
-                     'ulsfo': ('1'), 'eqsin': ('1')}
+RAPI_URL_FORMAT = 'https://{cluster}:5080'
+""":py:class:`str`: the template string to construct the Ganeti RAPI URL."""
+
+CLUSTERS_AND_ROWS = {
+    'ganeti01.svc.eqiad.wmnet': ('A', 'C'),
+    'ganeti01.svc.codfw.wmnet': ('A', 'B'),
+    'ganeti01.svc.esams.wmnet': ('OE',),
+    'ganeti01.svc.ulsfo.wmnet': ('1',),
+    'ganeti01.svc.eqsin.wmnet': ('1',)
+}
+""":py:class:`dict`: the available Ganeti clusters with the set of available rows in each of them."""
 
 
 class GanetiError(SpicerackError):
@@ -33,7 +39,7 @@ class GanetiRAPI:
         """Initialize the instance.
 
         Arguments:
-            cluster_url (str): the short name of the cluster to access.
+            cluster_url (str): the URL of the RAPI endpoint.
             username (str): the RAPI user name
             password (str): the RAPI user's password
             timeout (int): the timeout in seconds for each request
@@ -204,7 +210,7 @@ class Ganeti:
         """Return a RAPI object for a particular cluster.
 
         Arguments:
-            cluster (str): the name of the cluster to get a RAPI for.
+            cluster (str): the name of the Ganeti cluster to get a RAPI for.
 
         Returns:
             spicerack.ganeti.GanetiRAPI: the RAPI interface object
@@ -216,7 +222,7 @@ class Ganeti:
         if cluster not in CLUSTERS_AND_ROWS:
             raise GanetiError('Cannot find cluster {} (expected {}).'.format(cluster, tuple(CLUSTERS_AND_ROWS.keys())))
 
-        cluster_url = CLUSTER_SVC_URL.format(dc=cluster)
+        cluster_url = RAPI_URL_FORMAT.format(cluster=cluster)
 
         return GanetiRAPI(cluster_url, self._username, self._password, self._timeout, PUPPET_CA_PATH)
 
