@@ -171,6 +171,7 @@ class GntInstance:
             timeout (int): time in minutes to wait for a clean shutdown before pulling the plug.
 
         """
+        logger.info('Shutting down VM %s in cluster %s', self._instance, self._cluster)
         self._master.run_sync('gnt-instance shutdown --timeout={timeout} {instance}'.format(
             timeout=timeout, instance=self._instance))
 
@@ -184,6 +185,7 @@ class GntInstance:
             This action requires few minutes, inform the user about the waiting time when using this method.
 
         """
+        logger.info('Removing VM %s in cluster %s. This may take a few minutes.', self._instance, self._cluster)
         self._master.run_sync('gnt-instance remove --shutdown-timeout={timeout} --force {instance}'.format(
             timeout=shutdown_timeout, instance=self._instance))
 
