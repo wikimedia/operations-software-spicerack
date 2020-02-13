@@ -27,6 +27,9 @@ CLUSTERS_AND_ROWS = {
 }
 """:py:class:`dict`: the available Ganeti clusters with the set of available rows in each of them."""
 
+INSTANCE_LINKS = ('public', 'private', 'analytics')
+""":py:class:`tuple`: the list of possible instance link types."""
+
 
 class GanetiError(SpicerackError):
     """Raised on errors from Ganeti operations."""
@@ -188,6 +191,57 @@ class GntInstance:
         logger.info('Removing VM %s in cluster %s. This may take a few minutes.', self._instance, self._cluster)
         self._master.run_sync('gnt-instance remove --shutdown-timeout={timeout} --force {instance}'.format(
             timeout=shutdown_timeout, instance=self._instance))
+
+    def add(self, *, row: str, vcpus: int, memory: int, disk: int, link: str) -> None:
+        """Create the VM for the instance in the Ganeti cluster with the specified characteristic.
+
+        Arguments:
+            row (str): the Datacenter physical row where to allocate the instance, one of
+                :py:const:`spicerack.ganeti.CLUSTERS_AND_ROWS` based on the current cluster.
+            vcpus (int): the number of virtual CPUs to assign to the instance.
+            memory (int): the amount of RAM to assign to the instance in gigabytes.
+            disk (int): the amount of disk to assign to the instance in gigabytes.
+            link (str): the type of network link to use, one of :py:const:`spicerack.ganeti.INSTANCE_LINKS`.
+
+        Raises:
+            spicerack.ganeti.GanetiError: on parameter validation error.
+
+        Note:
+            This action requires few minutes, inform the user about the waiting time when using this method.
+
+        """
+        if link not in INSTANCE_LINKS:
+            raise GanetiError("Invalid link '{link}', expected one of: {links}".format(
+                link=link, links=INSTANCE_LINKS))
+
+        if row not in CLUSTERS_AND_ROWS[self._cluster]:  # type: ignore
+            raise GanetiError("Invalid row '{row}' for cluster {cluster}, expected one of: {rows}".format(
+                row=row, cluster=self._cluster, rows=CLUSTERS_AND_ROWS[self._cluster]))
+
+        local_vars = locals()
+        for var_label in ('vcpus', 'memory', 'disk'):
+            if local_vars[var_label] <= 0:
+                raise GanetiError("Invalid value '{value}' for {label}, expected positive integer.".format(
+                    value=local_vars[var_label], label=var_label))
+
+        command = ('gnt-instance add'
+                   ' -t drbd'
+                   ' -I hail'
+                   ' --net 0:link={link}'
+                   ' --hypervisor-parameters=kvm:boot_order=network'
+                   ' -o debootstrap+default'
+                   ' --no-install'
+                   ' -g row_{row}'
+                   ' -B vcpus={vcpus},memory={memory}g'
+                   ' --disk 0:size={disk}g'
+                   ' {fqdn}').format(link=link, row=row, vcpus=vcpus, memory=memory, disk=disk, fqdn=self._instance)
+
+        logger.info(('Creating VM %s in cluster %s with row=%s vcpus=%d memory=%dGB disk=%dGB link=%s. '
+                     'This may take a few minutes.'), self._instance, self._cluster, row, vcpus, memory, disk, link)
+
+        results = self._master.run_sync(command)
+        for _, output in results:
+            logger.info(output.message().decode())
 
 
 class Ganeti:
