@@ -201,7 +201,8 @@ class TestCookbooks:
     ))  # pylint: disable=too-many-arguments
     def test_main_execute_cookbook(self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args):
         """Calling execute_cookbook() should intercept any exception raised."""
-        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath,
+                  'http_proxy': 'http://proxy.example.com:8080'}
         with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main([module] + args)

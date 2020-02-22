@@ -2,3 +2,8 @@
 cookbooks_base_dir: /path/to/cookbooks/checkout
 # Base directory for cookbook's logs.
 logs_base_dir:  /var/log/spicerack
+# Hostname and port to use for the special IRC logging using tcpircbot.
+tcpircbot_host: tcpircbot.example.com
+tcpircbot_port: 1234
+# Optional HTTP/HTTPS proxy scheme://url:port to use for external calls. It's also exposed to the cookbooks.
+http_proxy: http://proxy.example.com:8080

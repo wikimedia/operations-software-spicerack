@@ -3,7 +3,7 @@ import os
 
 from logging import Logger
 from socket import gethostname
-from typing import Optional
+from typing import Dict, Optional
 
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -48,7 +48,8 @@ class Spicerack:
         conftool_config: str = '/etc/conftool/config.yaml',
         conftool_schema: str = '/etc/conftool/schema.yaml',
         debmonitor_config: str = '/etc/debmonitor.conf',
-        spicerack_config_dir: str = '/etc/spicerack'
+        spicerack_config_dir: str = '/etc/spicerack',
+        http_proxy: str = ''
     ) -> None:
         """Initialize the service locator for the Spicerack library.
 
@@ -68,11 +69,13 @@ class Spicerack:
 
             spicerack_config_dir (str, optional): the path for the root configuration directory for Spicerack.
                 Module-specific configuration will be loaded from `config_dir/module_name/`.
+            http_proxy (str, optional): the scheme://url:port of the HTTP proxy to use for external calls.
 
         """
         # Attributes
         self._verbose = verbose
         self._dry_run = dry_run
+        self._http_proxy = http_proxy
         self._cumin_config = cumin_config
         self._conftool_config = conftool_config
         self._conftool_schema = conftool_schema
@@ -113,6 +116,33 @@ class Spicerack:
 
         """
         return self._username
+
+    @property
+    def http_proxy(self) -> str:
+        """Getter for the HTTP PROXY to use for external calls.
+
+        Returns:
+            str: the scheme://url:port of the proxy.
+
+        """
+        return self._http_proxy
+
+    @property
+    def requests_proxies(self) -> Optional[Dict[str, str]]:
+        """Getter to return the HTTP proxy configuration for the Requests module.
+
+        Returns:
+            dict: with the proxies as required by Requests documentation.
+            :py:data:`None`: if no HTTP proxy is set.
+
+        See Also:
+            https://requests.readthedocs.io/en/master/user/advanced/#proxies
+
+        """
+        if not self._http_proxy:
+            return None
+
+        return {'http': self._http_proxy, 'https': self._http_proxy}
 
     @property
     def irc_logger(self) -> Logger:
