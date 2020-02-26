@@ -2,6 +2,28 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.31`_ (2020-02-26)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* ganeti: add VM creation capability (`T231068`_).
+* spicerack: add support for an HTTP proxy.
+
+  * To perform calls to external endpoints it might be necessary to use an HTTP proxy, add support for it.
+  * Read the ``http_proxy`` config from the main spicerack configuration file and inject it into Spicerack that will
+    also expose it to the cookbooks.
+  * Add a getter for the ``http_proxy`` property to Spicerack.
+  * Add a helper that returns a ``proxies`` dictionary to be used by the Python Requests module.
+
+Minor improvements
+""""""""""""""""""
+
+* ganeti: use canonical Ganeti cluster names (`T231068`_).
+* ganeti: add logging for ``GntInstance`` actions (`T231068`_).
+
+
 `v0.0.30`_ (2020-02-11)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -627,3 +649,4 @@ New features
 .. _`v0.0.28`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.28
 .. _`v0.0.29`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.29
 .. _`v0.0.30`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.30
+.. _`v0.0.31`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.31
