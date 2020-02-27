@@ -53,7 +53,7 @@ def _get_choices_mock():
 def test_netbox_choices_api_error(mocked_pynetbox):
     """Test an API error retrieving the choices list."""
     mocked_pynetbox().dcim.choices = mock.Mock(side_effect=_request_error())
-    with pytest.raises(NetboxAPIError, match=r'error fetching dcim choices'):
+    with pytest.raises(NetboxAPIError, match=r'Error fetching Netbox DCIM choices'):
         Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
 
 
@@ -62,7 +62,7 @@ def test_netbox_choices_api_devices_missing(mocked_pynetbox):
     """Test device status missing from choices API."""
     mocked_pynetbox().dcim.choices = mock.Mock(return_value={})
     nb = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
-    with pytest.raises(NetboxError, match='device:status not present in DCIM choices returned by API'):
+    with pytest.raises(NetboxError, match='device:status not present in Netbox DCIM choices.'):
         nb.device_status_choices  # pylint: disable=pointless-statement
 
 
@@ -84,7 +84,7 @@ def test_netbox_fetch_host_status_error(mocked_pynetbox):
     mocked_pynetbox().virtualization.virtual_machines.get = mock.Mock(side_effect=_request_error())
     mocked_pynetbox().dcim.choices = _get_choices_mock()
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
-    with pytest.raises(NetboxError, match='error retrieving host'):
+    with pytest.raises(NetboxError, match='Error retrieving Netbox host'):
         netbox.fetch_host_status('host')
 
 
@@ -107,7 +107,7 @@ def test_put_host_status_badstatus(mocked_pynetbox):
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
 
     # Test setting an impossible status
-    with pytest.raises(NetboxError, match='Fakestatus is not an available status'):
+    with pytest.raises(NetboxError, match='Fakestatus is not an available Netbox host status'):
         netbox.put_host_status('host', 'FakeStatus')
 
 
@@ -134,8 +134,8 @@ def test_put_host_status_save_failure(mocked_pynetbox):
     mocked_pynetbox().dcim.choices = _get_choices_mock()
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=False)
     fake_host.save.return_value = False
-    with pytest.raises(NetboxAPIError, match='failed to save status for host Active -> Planned'):
-        netbox.put_host_status('host', 'Planned')
+    with pytest.raises(NetboxAPIError, match='Failed to update Netbox status for host testhost Active -> Planned'):
+        netbox.put_host_status('testhost', 'Planned')
     assert fake_host.save.called
 
 
@@ -160,8 +160,8 @@ def test_put_host_status_error(mocked_pynetbox):
     mocked_pynetbox().dcim.choices = _get_choices_mock()
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=False)
     fake_host.save.side_effect = _request_error()
-    with pytest.raises(NetboxAPIError, match='failed to save host status'):
-        netbox.put_host_status('host', 'Planned')
+    with pytest.raises(NetboxAPIError, match='Failed to save Netbox status for host testhost Active -> Planned'):
+        netbox.put_host_status('testhost', 'Planned')
     assert fake_host.save.called
 
 
@@ -211,7 +211,7 @@ def test_fetch_host_status_vm_error(mocked_pynetbox):
     mocked_pynetbox().dcim.choices = _get_choices_mock()
     netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
 
-    with pytest.raises(NetboxAPIError, match="error retrieving VM"):
+    with pytest.raises(NetboxAPIError, match="Error retrieving Netbox VM"):
         netbox.fetch_host_status('host')
 
 
