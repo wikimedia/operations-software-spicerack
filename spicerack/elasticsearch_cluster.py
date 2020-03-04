@@ -33,8 +33,8 @@ ELASTICSEARCH_CLUSTERS = {
             'production-search-psi-codfw': 'https://search.svc.codfw.wmnet:9643',
         },
         'relforge': {
-            'relforge-eqiad': 'relforge1002.eqiad.wmnet:9243',
-            'relforge-eqiad-small-alpha': 'relforge1002.eqiad.wmnet:9443',
+            'relforge-eqiad': 'https://relforge1002.eqiad.wmnet:9243',
+            'relforge-eqiad-small-alpha': 'https://relforge1002.eqiad.wmnet:9443',
         },
     }
 }
