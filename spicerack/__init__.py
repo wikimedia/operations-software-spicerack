@@ -119,6 +119,16 @@ class Spicerack:
         return self._username
 
     @property
+    def config_dir(self) -> str:
+        """Getter for Spicerack's configuration file directory.
+
+        Returns:
+            str: a filesystem location of configuration files.
+
+        """
+        return self._spicerack_config_dir
+
+    @property
     def http_proxy(self) -> str:
         """Getter for the HTTP PROXY to use for external calls.
 
