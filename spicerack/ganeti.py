@@ -214,7 +214,7 @@ class GntInstance:
             raise GanetiError("Invalid link '{link}', expected one of: {links}".format(
                 link=link, links=INSTANCE_LINKS))
 
-        if row not in CLUSTERS_AND_ROWS[self._cluster]:  # type: ignore
+        if row not in CLUSTERS_AND_ROWS[self._cluster]:
             raise GanetiError("Invalid row '{row}' for cluster {cluster}, expected one of: {rows}".format(
                 row=row, cluster=self._cluster, rows=CLUSTERS_AND_ROWS[self._cluster]))
 

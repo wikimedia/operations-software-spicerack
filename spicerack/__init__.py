@@ -86,6 +86,7 @@ class Spicerack:
         self._current_hostname = gethostname()
         self._irc_logger = irc_logger
         self._confctl = None  # type: Optional[Confctl]
+        self._ipmi = None  # type: Optional[Ipmi]
 
     @property
     def dry_run(self) -> bool:
@@ -116,6 +117,16 @@ class Spicerack:
 
         """
         return self._username
+
+    @property
+    def config_dir(self) -> str:
+        """Getter for Spicerack's configuration file directory.
+
+        Returns:
+            str: a filesystem location of configuration files.
+
+        """
+        return self._spicerack_config_dir
 
     @property
     def http_proxy(self) -> str:
@@ -306,14 +317,26 @@ class Spicerack:
         """
         return PuppetMaster(self.remote().query(get_puppet_ca_hostname()))
 
-    def ipmi(self) -> Ipmi:
+    def ipmi(self, *, cached: bool = False) -> Ipmi:
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
+
+        Arguments:
+            cached (bool, optional): whether to cache the Ipmi instance and allow to re-use it without re-asking the
+                management password. The cached instance will be returned at each future call of this method with
+                the cached parameter set to :py:data:`True`.
 
         Returns:
             spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
 
         """
-        return Ipmi(interactive.get_management_password(), dry_run=self._dry_run)
+        if cached and self._ipmi is not None:
+            return self._ipmi
+
+        ipmi = Ipmi(interactive.get_management_password(), dry_run=self._dry_run)
+        if cached:
+            self._ipmi = ipmi
+
+        return ipmi
 
     def phabricator(self, bot_config_file: str, section: str = 'phabricator_bot') -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.

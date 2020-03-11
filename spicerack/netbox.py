@@ -58,7 +58,7 @@ class Netbox:
         try:
             dcim_choices = api.dcim.choices()
         except pynetbox.RequestError as ex:
-            raise NetboxAPIError('error fetching dcim choices') from ex
+            raise NetboxAPIError('Error fetching Netbox DCIM choices') from ex
         return dcim_choices
 
     @property
@@ -74,11 +74,8 @@ class Netbox:
 
         """
         if 'device:status' not in self._dcim_choices:
-            raise NetboxError(
-                'device:status not present in DCIM choices returned by API (keys in choices: {})'.format(
-                    self._dcim_choices.keys()
-                )
-            )
+            raise NetboxError('device:status not present in Netbox DCIM choices. Available keys are: {}'.format(
+                self._dcim_choices.keys()))
 
         return {ch['label']: ch['value'] for ch in self._dcim_choices['device:status']}
 
@@ -101,7 +98,8 @@ class Netbox:
             host = self._api.dcim.devices.get(name=hostname)
         except pynetbox.RequestError as ex:
             # excepts on other errors
-            raise NetboxAPIError('error retrieving host') from ex
+            raise NetboxAPIError('Error retrieving Netbox host') from ex
+
         if host is None:
             raise NetboxHostNotFoundError
         return host
@@ -125,7 +123,7 @@ class Netbox:
             host = self._api.virtualization.virtual_machines.get(name=hostname)
         except pynetbox.RequestError as ex:
             # excepts on other errors
-            raise NetboxAPIError('error retrieving VM') from ex
+            raise NetboxAPIError('Error retrieving Netbox VM') from ex
 
         if host is None:
             raise NetboxHostNotFoundError
@@ -150,13 +148,14 @@ class Netbox:
         """
         status = status.capitalize()
         if status not in self.device_status_choices:
-            raise NetboxError('{} is not an available status'.format(status))
+            raise NetboxError('{} is not an available Netbox host status'.format(status))
 
         host = self._fetch_host(hostname)
         oldstatus = host.status
 
         if self._dry_run:
-            logger.info('skipping host status write due to dry-run mode for %s %s -> %s', hostname, oldstatus, status)
+            logger.info('Skipping Netbox status update in DRY-RUN mode for host %s %s -> %s',
+                        hostname, oldstatus, status)
             return
 
         host.status = self.device_status_choices[status]
@@ -164,13 +163,14 @@ class Netbox:
             save_result = host.save()
         except pynetbox.RequestError as ex:
             raise NetboxAPIError(
-                'failed to save host status for {} {} -> {}'.format(hostname, oldstatus, status)
+                'Failed to save Netbox status for host {} {} -> {}'.format(hostname, oldstatus, status)
             ) from ex
 
         if save_result:
-            logger.info('wrote status for %s %s -> %s', hostname, oldstatus, status)
+            logger.info('Netbox status updated for host %s %s -> %s', hostname, oldstatus, status)
         else:
-            raise NetboxAPIError('failed to save status for {} {} -> {}'.format(hostname, oldstatus, status))
+            raise NetboxAPIError('Failed to update Netbox status for host {} {} -> {}'.format(
+                hostname, oldstatus, status))
 
     def fetch_host_status(self, hostname: str) -> str:
         """Return the current status of a host as a string.

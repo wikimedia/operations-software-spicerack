@@ -33,8 +33,8 @@ ELASTICSEARCH_CLUSTERS = {
             'production-search-psi-codfw': 'https://search.svc.codfw.wmnet:9643',
         },
         'relforge': {
-            'relforge-eqiad': 'relforge1002.eqiad.wmnet:9243',
-            'relforge-eqiad-small-alpha': 'relforge1002.eqiad.wmnet:9443',
+            'relforge-eqiad': 'https://relforge1002.eqiad.wmnet:9243',
+            'relforge-eqiad-small-alpha': 'https://relforge1002.eqiad.wmnet:9443',
         },
     }
 }
@@ -166,7 +166,7 @@ class ElasticsearchClusters:
 
     def __str__(self) -> str:
         """Class string method."""
-        return str(self._clusters)
+        return ', '.join(str(cluster) for cluster in self._clusters)
 
     def flush_markers(self, timeout: timedelta = timedelta(seconds=60)) -> None:
         """Flush markers on all clusters.
@@ -324,7 +324,7 @@ class ElasticsearchCluster:
 
     def __str__(self) -> str:
         """Class string method."""
-        return str(self._elasticsearch)
+        return str(self._elasticsearch.info()['cluster_name'])
 
     def get_nodes(self) -> Dict:
         """Get all Elasticsearch Nodes.
