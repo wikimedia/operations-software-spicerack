@@ -81,7 +81,7 @@ class Dns:
             spicerack.dns.DnsNotFound: when no address is found.
 
         """
-        addresses = []  # type: ignore
+        addresses = []
         for func in ('resolve_ipv4', 'resolve_ipv6'):
             try:
                 addresses += getattr(self, func)(name)

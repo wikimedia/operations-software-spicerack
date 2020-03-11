@@ -77,7 +77,7 @@ class Discovery:
                 }
 
         """
-        services = defaultdict(list)  # type: ignore
+        services = defaultdict(list)
         for obj in self._conftool.get(dnsdisc=self._conftool_selector):
             if obj.pooled:
                 service = obj.tags['dnsdisc']

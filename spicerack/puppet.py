@@ -152,7 +152,7 @@ class PuppetHosts(RemoteHostsAdapter):
                 not overload the Puppet masters.
 
         """
-        args = []  # type: ignore
+        args = []
         if enable_reason is not None:
             args += ['--enable', enable_reason.quoted()]
         if quiet:
@@ -176,7 +176,7 @@ class PuppetHosts(RemoteHostsAdapter):
             has_systemd (bool, optional): if the host has systemd as init system.
 
         """
-        commands = []  # type: ignore
+        commands = []
         if has_systemd:
             commands += ['systemctl stop puppet.service', 'systemctl reset-failed puppet.service || true']
 
