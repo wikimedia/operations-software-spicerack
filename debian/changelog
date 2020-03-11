@@ -1,3 +1,9 @@
+spicerack (0.0.32-1) stretch-wikimedia; urgency=medium
+
+  * v0.0.32 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Wed, 11 Mar 2020 15:06:54 +0100
+
 spicerack (0.0.31-1) stretch-wikimedia; urgency=medium
 
   * v0.0.31 upstream release.
