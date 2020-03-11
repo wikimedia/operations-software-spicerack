@@ -7,7 +7,7 @@ from unittest import mock
 import pytest
 
 from spicerack import cookbook, Spicerack
-from spicerack.tests import require_caplog, SPICERACK_TEST_PARAMS
+from spicerack.tests import get_fixture_path, require_caplog, SPICERACK_TEST_PARAMS
 
 
 COOKBOOKS_BASE_PATH = 'spicerack/tests/fixtures/cookbook'
@@ -145,6 +145,14 @@ def test_parse_args_list():
     assert args.cookbook is None
 
 
+def test_main_wrong_instance_config(capsys):
+    """If the configuration file has invalid instance_params it should print an error and exit."""
+    ret = cookbook.main(['-c', get_fixture_path('config_wrong_overrides.yaml'), 'cookbook'])
+    _, err = capsys.readouterr()
+    assert ret == 1
+    assert 'Unable to instantiate Spicerack, check your configuration' in err
+
+
 class TestCookbooks:
     """Test class for the Cookbooks class."""
 
@@ -201,8 +209,7 @@ class TestCookbooks:
     ))  # pylint: disable=too-many-arguments
     def test_main_execute_cookbook(self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args):
         """Calling execute_cookbook() should intercept any exception raised."""
-        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath,
-                  'http_proxy': 'http://proxy.example.com:8080'}
+        config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
         with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
             with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main([module] + args)

@@ -790,11 +790,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = argument_parser().parse_args(argv)
     config = load_yaml_config(args.config_file)
     sys.path.append(config['cookbooks_base_dir'])
-    params = {'verbose': args.verbose, 'dry_run': args.dry_run}
-    if config.get('http_proxy'):
-        params['http_proxy'] = config['http_proxy']
+    params = config.get('instance_params', {})
+    params.update({'verbose': args.verbose, 'dry_run': args.dry_run})
 
-    spicerack = Spicerack(**params)
+    try:
+        spicerack = Spicerack(**params)
+    except TypeError as e:
+        print('Unable to instantiate Spicerack, check your configuration:', e, file=sys.stderr)
+        return 1
+
     cookbooks = Cookbooks(config['cookbooks_base_dir'], args.cookbook_args, spicerack, path_filter=args.cookbook)
 
     if args.list:

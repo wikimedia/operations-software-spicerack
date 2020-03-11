@@ -1,0 +1,5 @@
+cookbooks_base_dir: spicerack/tests/fixtures/cookbook
+logs_base_dir: logs
+
+instance_params:
+  invalid: True
