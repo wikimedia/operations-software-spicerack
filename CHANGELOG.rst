@@ -2,6 +2,29 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.32`_ (2020-03-11)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* spicerack: allow to override Spicerack's instance parameters from the configuration file. See :ref:`config.yaml`.
+* spicerack: allow to cache the ``Ipmi`` instance so that it can be re-used without re-asking the management password.
+* spicerack: expose to cookbooks the ``_spicerack_config_dir`` parameter via a getter.
+* netbox: fine tune log and exception messages.
+* elasticsearch: return the cluster name in ``ElasticsearchCluster.__str__``.
+* mysql: update ``CORE_SECTIONS`` for external storage RW instances (`T226704`_).
+
+Bug Fixes
+"""""""""
+
+* elasticsearch: add ``https://`` to relforge endpoints.
+
+Miscellanea
+"""""""""""
+
+* tests: remove unused mypy type ignore comments.
+
 `v0.0.31`_ (2020-02-26)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -615,6 +638,7 @@ New features
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`T219640`: https://phabricator.wikimedia.org/T213296
 .. _`T219799`: https://phabricator.wikimedia.org/T219799
+.. _`T226704`: https://phabricator.wikimedia.org/T226704
 .. _`T229792`: https://phabricator.wikimedia.org/T229792
 .. _`T231068`: https://phabricator.wikimedia.org/T231068
 .. _`T243935`: https://phabricator.wikimedia.org/T243935
@@ -650,3 +674,4 @@ New features
 .. _`v0.0.29`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.29
 .. _`v0.0.30`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.30
 .. _`v0.0.31`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.31
+.. _`v0.0.32`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.32
