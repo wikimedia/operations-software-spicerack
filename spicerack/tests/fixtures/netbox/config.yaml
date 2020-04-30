@@ -1,2 +1,3 @@
-api_url: "https://fake.com/"
-api_token: "FAKETOKEN123456789"
+api_url: https://netbox.example.com
+api_token_ro: ro_token
+api_token_rw: rw_token

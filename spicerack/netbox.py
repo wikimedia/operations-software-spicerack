@@ -36,7 +36,7 @@ class Netbox:
             dry_run (bool, optional): set to False to cause writes to Netbox to occur
 
         """
-        self._api = pynetbox.api(url, token)
+        self._api = pynetbox.api(url, token=token)
         self._dry_run = dry_run
 
         self._dcim_choices = self._get_dcim_choices(self._api)

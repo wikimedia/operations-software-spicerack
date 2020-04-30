@@ -406,12 +406,20 @@ class Spicerack:
 
         return Ganeti(configuration['username'], configuration['password'], configuration['timeout'], self.remote())
 
-    def netbox(self) -> Netbox:
+    def netbox(self, *, read_write: bool = False) -> Netbox:
         """Get a Netbox instance to interact with Netbox's API.
+
+        Arguments:
+            read_write (bool, optional): whether to use a read-write token.
 
         Returns:
             spicerack.netbox.Netbox: the instance
 
         """
         config = load_yaml_config(os.path.join(self._spicerack_config_dir, 'netbox', 'config.yaml'))
-        return Netbox(config['api_url'], config['api_token'], dry_run=self._dry_run)
+        if read_write and not self._dry_run:
+            token = config['api_token_rw']
+        else:
+            token = config['api_token_ro']
+
+        return Netbox(config['api_url'], token, dry_run=self._dry_run)
