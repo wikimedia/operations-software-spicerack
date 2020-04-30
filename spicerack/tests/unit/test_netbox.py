@@ -50,6 +50,14 @@ def _get_choices_mock():
 
 
 @mock.patch('pynetbox.api')
+def test_netbox_api(mocked_api):
+    """An instance of Netbox should instantiate the Netbox API and expose it via the api property."""
+    netbox = Netbox(NETBOX_URL, NETBOX_TOKEN, dry_run=True)
+    mocked_api.called_once_with(NETBOX_URL, token=NETBOX_TOKEN)
+    assert netbox.api == mocked_api()
+
+
+@mock.patch('pynetbox.api')
 def test_netbox_choices_api_error(mocked_pynetbox):
     """Test an API error retrieving the choices list."""
     mocked_pynetbox().dcim.choices = mock.Mock(side_effect=_request_error())

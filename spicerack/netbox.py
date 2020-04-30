@@ -41,6 +41,19 @@ class Netbox:
 
         self._dcim_choices = self._get_dcim_choices(self._api)
 
+    @property
+    def api(self) -> pynetbox.api:
+        """Getter for the Netbox API property.
+
+        Todo:
+            When feasible expose instead higher level functionalities.
+
+        Returns:
+            pynetbox.api: the Netbox API instance.
+
+        """
+        return self._api
+
     @staticmethod
     def _get_dcim_choices(api: pynetbox.api) -> Dict[str, Dict]:
         """Access the netbox choices API and return the choices values for the DCIM module.
