@@ -5,6 +5,12 @@ Spicerack Changelog
 `v0.0.33`_ (2020-05-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+API breaking changes
+""""""""""""""""""""
+
+* netbox: the default instance returned when calling ``Spicerack.netbox()`` uses a read-only token. To have read-write
+  access to Netbox the ``read_write`` parameter should be set to ``True``.
+
 New features
 """"""""""""
 
@@ -13,7 +19,7 @@ New features
   * Use a RO token by default, allow to request a Netbox instance with a RW token.
   * Always use a RO token if in dry-run mode to allow to expose the Netbox API object directly to the clients.
 
-* netbox: expose the pynetbox API object: 
+* netbox: expose the pynetbox API object:
 
   * To allow to perform additional operations not yet abstracted by the Netbox class, expose the pynetbox API object
     directly.
