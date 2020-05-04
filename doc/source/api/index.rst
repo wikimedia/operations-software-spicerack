@@ -4,7 +4,7 @@ Python API
 Spicerack Python API autodoc.
 
 .. automodule:: spicerack
-  :no-inherited-members:
+   :members:
 
 .. autodata:: __version__
 
