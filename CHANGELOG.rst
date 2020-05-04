@@ -2,6 +2,28 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.33`_ (2020-05-04)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* netbox: add support for RW and RO tokens:
+
+  * Use a RO token by default, allow to request a Netbox instance with a RW token.
+  * Always use a RO token if in dry-run mode to allow to expose the Netbox API object directly to the clients.
+
+* netbox: expose the pynetbox API object: 
+
+  * To allow to perform additional operations not yet abstracted by the Netbox class, expose the pynetbox API object
+    directly.
+  * The dry-run mode support is ensured by the RO token.
+
+Minor improvements
+""""""""""""""""""
+
+* include the username in logfiles
+
 `v0.0.32`_ (2020-03-11)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -675,3 +697,4 @@ New features
 .. _`v0.0.30`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.30
 .. _`v0.0.31`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.31
 .. _`v0.0.32`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.32
+.. _`v0.0.33`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.33

@@ -36,10 +36,23 @@ class Netbox:
             dry_run (bool, optional): set to False to cause writes to Netbox to occur
 
         """
-        self._api = pynetbox.api(url, token)
+        self._api = pynetbox.api(url, token=token)
         self._dry_run = dry_run
 
         self._dcim_choices = self._get_dcim_choices(self._api)
+
+    @property
+    def api(self) -> pynetbox.api:
+        """Getter for the Netbox API property.
+
+        Todo:
+            When feasible expose instead higher level functionalities.
+
+        Returns:
+            pynetbox.api: the Netbox API instance.
+
+        """
+        return self._api
 
     @staticmethod
     def _get_dcim_choices(api: pynetbox.api) -> Dict[str, Dict]:

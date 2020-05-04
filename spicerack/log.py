@@ -98,14 +98,15 @@ def setup_logging(
     os.makedirs(base_path, mode=0o755, exist_ok=True)
 
     # Default INFO logging
-    formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] %(message)s')
+    formatter = logging.Formatter(fmt='%(asctime)s {} %(process)d [%(levelname)s] %(message)s'.format(user))
     handler = logging.FileHandler(os.path.join(base_path, '{name}.log'.format(name=name)))
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
 
     # Extended logging for detailed debugging
     formatter_extended = logging.Formatter(
-        fmt='%(asctime)s [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] %(message)s')
+        fmt='%(asctime)s {} %(process)d [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] %(message)s'
+            .format(user))
     handler_extended = logging.FileHandler(os.path.join(base_path, '{name}-extended.log'.format(name=name)))
     handler_extended.setFormatter(formatter_extended)
     handler_extended.setLevel(logging.DEBUG)

@@ -3,6 +3,7 @@ import logging
 
 from unittest import mock
 
+import pytest
 import yaml
 
 from spicerack import puppet, Spicerack
@@ -123,23 +124,30 @@ def test_spicerack_ipmi_cached(monkeypatch):
     assert spicerack.ipmi().env == {'IPMITOOL_PASSWORD': 'second_password'}
 
 
+@pytest.mark.parametrize('read_write, token', (
+    (False, 'ro_token'),
+    (True, 'rw_token'),
+))
 @mock.patch('spicerack.dns.resolver.Resolver', autospec=True)
 @mock.patch('spicerack.remote.Remote.query', autospec=True)
 @mock.patch('pynetbox.api')
-def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_resolver):
+def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_resolver, read_write, token):
     """Test instantiating Netbox abstraction."""
     netbox_server = mock.MagicMock(spec_set=RemoteHosts)
     netbox_server.hosts = 'netbox-server.example.com'
     mocked_remote_query.return_value = netbox_server
 
-    with open(get_fixture_path("netbox", "device_status.yaml")) as device_status_choices:
+    with open(get_fixture_path('netbox', 'device_status.yaml')) as device_status_choices:
         mocked_pynetbox().dcim.choices = mock.Mock(return_value=yaml.safe_load(device_status_choices))
 
     dns_response = MockedDnsAnswer(ttl=600, rrset=[
         MockedDnsTarget(target=MockedTarget('netbox-server.example.com.'))])
     mocked_resolver.return_value.query.return_value = dns_response
+    mocked_pynetbox.reset_mock()
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
-    assert isinstance(spicerack.netbox(), Netbox)
+    assert isinstance(spicerack.netbox(read_write=read_write), Netbox)
+    # Values from fixtures/netbox/config.yaml
+    mocked_pynetbox.assert_called_once_with('https://netbox.example.com', token=token)
     assert spicerack.netbox_master_host.hosts == 'netbox-server.example.com'
