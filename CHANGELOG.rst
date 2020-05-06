@@ -2,6 +2,30 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.34`_ (2020-05-06)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* netbox: removed property ``device_status_choices`` of the ``Netbox`` class, not currently used and removed from Netbox
+  API starting from version 2.8.0.
+
+Bug Fixes
+"""""""""
+
+* netbox: adapt to new Netbox API:
+
+  * Netbox API starting with Netbox 2.8.0 have removed the choices API endpoint. Given that it was used only for the
+    status, removing its support completely for now given that is not directly supported by the pynetbox library yet.
+
+Miscellanea
+"""""""""""
+
+* doc: set min version of sphinx_rtd_theme to 0.1.9 to match Debian Stetch.
+* doc: fix documentation generation for Sphinx 3
+* changelog: specify breaking change for v0.0.33.
+
 `v0.0.33`_ (2020-05-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -704,3 +728,4 @@ New features
 .. _`v0.0.31`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.31
 .. _`v0.0.32`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.32
 .. _`v0.0.33`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.33
+.. _`v0.0.34`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.34
