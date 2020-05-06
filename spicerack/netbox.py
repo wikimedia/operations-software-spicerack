@@ -39,8 +39,6 @@ class Netbox:
         self._api = pynetbox.api(url, token=token)
         self._dry_run = dry_run
 
-        self._dcim_choices = self._get_dcim_choices(self._api)
-
     @property
     def api(self) -> pynetbox.api:
         """Getter for the Netbox API property.
@@ -53,44 +51,6 @@ class Netbox:
 
         """
         return self._api
-
-    @staticmethod
-    def _get_dcim_choices(api: pynetbox.api) -> Dict[str, Dict]:
-        """Access the netbox choices API and return the choices values for the DCIM module.
-
-        Arguments:
-            api (:obj:`pynetbox.api`): An instantiated pynetbox api object.
-
-        Returns:
-            dict: A dictionary keyed by choice identifier.
-
-        Raises:
-            spicerack.netbox.NetboxAPIError: on API error.
-
-        """
-        try:
-            dcim_choices = api.dcim.choices()
-        except pynetbox.RequestError as ex:
-            raise NetboxAPIError('Error fetching Netbox DCIM choices') from ex
-        return dcim_choices
-
-    @property
-    def device_status_choices(self) -> Dict[str, int]:
-        """Return the dictionary of device status choices.
-
-        Returns:
-           dict: the device status choices, keyed by label, with the value as the field value.
-
-        Raises:
-            spicerack.netbox.NetboxAPIError: on API errors populating the choice list.
-            spicerack.netbox.NetboxError: On the choice list not being available.
-
-        """
-        if 'device:status' not in self._dcim_choices:
-            raise NetboxError('device:status not present in Netbox DCIM choices. Available keys are: {}'.format(
-                self._dcim_choices.keys()))
-
-        return {ch['label']: ch['value'] for ch in self._dcim_choices['device:status']}
 
     def _fetch_host(self, hostname: str) -> pynetbox.core.response.Record:
         """Fetch a host (dcim.devices) object.
@@ -152,17 +112,14 @@ class Netbox:
 
         Arguments:
             hostname (str): the name of the host to operate on
-            status (str): A status name, from the keys on .device_status_choices
+            status (str): A status label or name
 
         Raises:
             NetboxAPIError: on API error.
             NetboxError: on parameter error.
 
         """
-        status = status.capitalize()
-        if status not in self.device_status_choices:
-            raise NetboxError('{} is not an available Netbox host status'.format(status))
-
+        status = status.lower()
         host = self._fetch_host(hostname)
         oldstatus = host.status
 
@@ -171,7 +128,7 @@ class Netbox:
                         hostname, oldstatus, status)
             return
 
-        host.status = self.device_status_choices[status]
+        host.status = status
         try:
             save_result = host.save()
         except pynetbox.RequestError as ex:
