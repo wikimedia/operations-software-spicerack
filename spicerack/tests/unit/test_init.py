@@ -4,7 +4,6 @@ import logging
 from unittest import mock
 
 import pytest
-import yaml
 
 from spicerack import puppet, Spicerack
 from spicerack.administrative import Reason
@@ -136,9 +135,6 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_resolver,
     netbox_server = mock.MagicMock(spec_set=RemoteHosts)
     netbox_server.hosts = 'netbox-server.example.com'
     mocked_remote_query.return_value = netbox_server
-
-    with open(get_fixture_path('netbox', 'device_status.yaml')) as device_status_choices:
-        mocked_pynetbox().dcim.choices = mock.Mock(return_value=yaml.safe_load(device_status_choices))
 
     dns_response = MockedDnsAnswer(ttl=600, rrset=[
         MockedDnsTarget(target=MockedTarget('netbox-server.example.com.'))])
