@@ -8,6 +8,7 @@ from spicerack.exceptions import SpicerackError
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+MIN_SECRET_SIZE = 6
 
 
 def ask_confirmation(message: str) -> None:
@@ -84,7 +85,7 @@ def get_management_password() -> str:
     if password is None:
         logger.debug('MGMT_PASSWORD environment variable not found')
         # Ask for a password, raise exception if not a tty
-        password = getpass.getpass(prompt='Management Password: ')
+        password = get_secret('Management Password')
     else:
         logger.info('Using Management Password from the MGMT_PASSWORD environment variable')
 
@@ -92,3 +93,26 @@ def get_management_password() -> str:
         raise SpicerackError('Empty Management Password')
 
     return password
+
+
+def get_secret(title: str, *, confirm: bool = False) -> str:
+    """Ask the user for a secret e.g. password.
+
+    Arguments:
+        title (str): The message to show the user.
+        confirm (bool, optional): If :py:data:`True` ask the user to confirm the password.
+
+    Returns:
+        str: the secret.
+
+    """
+    new_secret = getpass.getpass(prompt='{}: '.format(title))
+
+    while len(new_secret) < MIN_SECRET_SIZE:
+        new_secret = getpass.getpass(
+            prompt='Secret must be at least {} characters. try again: '.format(MIN_SECRET_SIZE))
+
+    if confirm and new_secret != getpass.getpass(prompt='Again, just to be sure: '):
+        raise SpicerackError('{}: Passwords did not match'.format(title))
+
+    return new_secret

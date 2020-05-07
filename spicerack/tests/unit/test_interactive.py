@@ -115,3 +115,40 @@ def test_get_management_password_empty(monkeypatch):
     monkeypatch.setenv('MGMT_PASSWORD', '')
     with pytest.raises(SpicerackError, match='Empty Management Password'):
         interactive.get_management_password()
+
+
+@mock.patch('spicerack.interactive.getpass')
+def test_get_secret_correct_noconfirm(mocked_getpass):
+    """Should ask for secret once and return the secret."""
+    mocked_getpass.getpass.return_value = 'interactive_password'
+    assert interactive.get_secret('secret') == 'interactive_password'
+    mocked_getpass.getpass.assert_called_once_with(prompt='secret: ')
+
+
+@mock.patch('spicerack.interactive.getpass')
+def test_get_secret_correct(mocked_getpass):
+    """Should ask for secret twice and return the secret."""
+    mocked_getpass.getpass.side_effect = ['interactive_password', 'interactive_password']
+    assert interactive.get_secret('secret', confirm=True) == 'interactive_password'
+    mocked_getpass.getpass.assert_has_calls(
+        [mock.call(prompt='secret: '), mock.call(prompt='Again, just to be sure: ')])
+
+
+@mock.patch('spicerack.interactive.getpass')
+def test_get_secret_bad_retry(mocked_getpass):
+    """Should ask for secret twice and raise SpicerackError if they don't match."""
+    mocked_getpass.getpass.side_effect = ['interactive_password', 'foobar']
+    with pytest.raises(SpicerackError, match='secret: Passwords did not match'):
+        interactive.get_secret('secret', confirm=True)
+    mocked_getpass.getpass.assert_has_calls(
+        [mock.call(prompt='secret: '), mock.call(prompt='Again, just to be sure: ')])
+
+
+@mock.patch('spicerack.interactive.getpass')
+def test_get_secret_too_small(mocked_getpass):
+    """Should ask for secret until the minimum length is met."""
+    mocked_getpass.getpass.side_effect = ['5char', 'interactive_password']
+    assert interactive.get_secret('secret') == 'interactive_password'
+    mocked_getpass.getpass.assert_has_calls(
+        [mock.call(prompt='secret: '),
+         mock.call(prompt='Secret must be at least 6 characters. try again: ')])
