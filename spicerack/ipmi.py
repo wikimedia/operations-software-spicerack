@@ -69,7 +69,7 @@ class Ipmi:
             return ''
 
         try:
-            output = run(command, env=self.env.copy(), stdout=PIPE).stdout.decode()  # nosec
+            output = run(command, env=self.env.copy(), stdout=PIPE, check=True).stdout.decode()  # nosec
         except CalledProcessError as e:
             raise IpmiError('Remote IPMI for {mgmt} failed (exit={code}): {output}'.format(
                 mgmt=mgmt_hostname, code=e.returncode, output=e.output)) from e
