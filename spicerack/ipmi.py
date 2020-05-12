@@ -7,7 +7,7 @@ Todo:
 import logging
 
 from datetime import timedelta
-from subprocess import CalledProcessError, PIPE, run  # nosec
+from subprocess import CalledProcessError, PIPE, run
 from typing import List
 
 from spicerack.decorators import retry
@@ -69,7 +69,7 @@ class Ipmi:
             return ''
 
         try:
-            output = run(command, env=self.env.copy(), stdout=PIPE, check=True).stdout.decode()  # nosec
+            output = run(command, env=self.env.copy(), stdout=PIPE, check=True).stdout.decode()
         except CalledProcessError as e:
             raise IpmiError('Remote IPMI for {mgmt} failed (exit={code}): {output}'.format(
                 mgmt=mgmt_hostname, code=e.returncode, output=e.output)) from e

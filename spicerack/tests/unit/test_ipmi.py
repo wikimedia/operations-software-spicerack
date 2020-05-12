@@ -1,6 +1,6 @@
 """IPMI module tests."""
 
-from subprocess import CalledProcessError, CompletedProcess, PIPE  # nosec
+from subprocess import CalledProcessError, CompletedProcess, PIPE
 from unittest import mock
 
 import pytest

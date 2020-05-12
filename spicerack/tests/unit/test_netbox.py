@@ -9,7 +9,7 @@ from spicerack.netbox import Netbox, NetboxAPIError, NetboxError, NetboxHostNotF
 
 
 NETBOX_URL = 'https://example.com/'
-NETBOX_TOKEN = 'FAKETOKEN123'
+NETBOX_TOKEN = 'FAKETOKEN'  # nosec
 
 
 def _request_error():
