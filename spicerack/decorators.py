@@ -30,6 +30,7 @@ def ensure_wrap(func: Callable) -> Callable:
 
     return wrapper
 
+
 # TODO: 'func=None' is a workaround for https://github.com/PyCQA/pylint/issues/259, restore it to 'func, *' once fixed
 # and remove the type: ignore comments.
 @ensure_wrap
