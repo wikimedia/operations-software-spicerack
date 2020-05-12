@@ -372,6 +372,7 @@ class Cookbook(BaseCookbooksItem):
 
         :Parameters:
             according to spicerack.cookbook.BaseCookbooksItem.
+
         """
         super().__init__(module_name, args, spicerack)
         self.status = Cookbook.not_run
@@ -490,6 +491,7 @@ class CookbooksMenu(BaseCookbooksItem):
 
         :Parameters:
             according to spicerack.cookbook.BaseCookbooksItem.
+
         """
         super().__init__(module_name, args, spicerack)
         self.parent = None  # type: Optional[CookbooksMenu]
