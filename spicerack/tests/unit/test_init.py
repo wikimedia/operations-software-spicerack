@@ -6,6 +6,7 @@ from unittest import mock
 import pytest
 
 from spicerack import puppet, Spicerack
+from spicerack.actions import ActionsDict
 from spicerack.administrative import Reason
 from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
@@ -43,6 +44,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert spicerack.http_proxy == proxy
     assert spicerack.requests_proxies == {'http': proxy, 'https': proxy}
     assert isinstance(spicerack.irc_logger, logging.Logger)
+    assert isinstance(spicerack.actions, ActionsDict)
     assert isinstance(spicerack.remote(), Remote)
     assert isinstance(spicerack.confctl('discovery'), ConftoolEntity)
     assert isinstance(spicerack.confctl('mwconfig'), ConftoolEntity)

@@ -8,6 +8,7 @@ from typing import Dict, Optional
 from pkg_resources import DistributionNotFound, get_distribution
 
 from spicerack import interactive
+from spicerack.actions import ActionsDict
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.config import load_ini_config, load_yaml_config
@@ -87,6 +88,7 @@ class Spicerack:
         self._irc_logger = irc_logger
         self._confctl = None  # type: Optional[Confctl]
         self._ipmi = None  # type: Optional[Ipmi]
+        self._actions = ActionsDict()
 
     @property
     def dry_run(self) -> bool:
@@ -164,6 +166,16 @@ class Spicerack:
 
         """
         return self._irc_logger
+
+    @property
+    def actions(self) -> ActionsDict:
+        """Getter for the ``actions`` property.
+
+        Returns:
+            spicerack.actions.ActionsDict: a dictionary to log and record cookbook actions.
+
+        """
+        return self._actions
 
     @property
     def icinga_master_host(self) -> RemoteHosts:

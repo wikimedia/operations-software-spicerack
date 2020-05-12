@@ -12,6 +12,7 @@ Spicerack Python API autodoc.
 
 .. toctree::
 
+   spicerack.actions
    spicerack.administrative
    spicerack.confctl
    spicerack.config
