@@ -29,6 +29,7 @@ Spicerack Python API autodoc.
    spicerack.ipmi
    spicerack.management
    spicerack.mediawiki
+   spicerack.mysql
    spicerack.mysql_legacy
    spicerack.netbox
    spicerack.phabricator

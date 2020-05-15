@@ -22,6 +22,7 @@ from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
+from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NETBOX_DOMAIN
 from spicerack.phabricator import create_phabricator, Phabricator
@@ -251,6 +252,15 @@ class Spicerack:
 
         """
         return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
+
+    def mysql(self) -> Mysql:
+        """Get a Mysql instance.
+
+        Returns:
+            spicerack.mysql.Mysql: the Mysql instance.
+
+        """
+        return Mysql(dry_run=self._dry_run)
 
     def mysql_legacy(self) -> MysqlLegacy:
         """Get a MysqlLegacy instance.
