@@ -36,6 +36,7 @@ Spicerack Python API autodoc.
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote
+   spicerack.typing
 
 .. The spicerack.cookbook and spicerack.log module are explicitely excluded from the public documentation as they
    should not be used directly by the cookbooks.

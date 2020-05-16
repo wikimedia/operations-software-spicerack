@@ -4,13 +4,12 @@ import time
 
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Iterator, Sequence, Union
-
-from cumin import NodeSet
+from typing import Iterator
 
 from spicerack.administrative import Reason
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteHosts
+from spicerack.typing import TypeHosts
 
 
 DOWNTIME_COMMAND = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
@@ -70,7 +69,7 @@ class Icinga:
     @contextmanager
     def hosts_downtimed(
         self,
-        hosts: Sequence[Union[str, NodeSet]],
+        hosts: TypeHosts,
         reason: Reason,
         *,
         duration: timedelta = timedelta(hours=4),
@@ -79,7 +78,7 @@ class Icinga:
         """Context manager to perform actions while the hosts are downtimed on Icinga.
 
         Arguments:
-            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to downtime.
+            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to downtime.
             reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
             duration (datetime.timedelta, optional): the length of the downtime period.
             remove_on_error: should the downtime be removed even if an exception was raised.
@@ -101,7 +100,7 @@ class Icinga:
 
     def downtime_hosts(
         self,
-        hosts: Union[Sequence[str], NodeSet],
+        hosts: TypeHosts,
         reason: Reason,
         *,
         duration: timedelta = timedelta(hours=4)
@@ -109,7 +108,7 @@ class Icinga:
         """Downtime hosts on the Icinga server for the given time with a message.
 
         Arguments:
-            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to downtime.
+            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to downtime.
             reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
             duration (datetime.timedelta, optional): the length of the downtime period.
 
@@ -128,30 +127,30 @@ class Icinga:
         logger.info('Scheduling downtime on Icinga server %s for hosts: %s', self._icinga_host, hosts)
         self._icinga_host.run_sync(*commands)
 
-    def recheck_all_services(self, hosts: Union[Sequence[str], NodeSet]) -> None:
+    def recheck_all_services(self, hosts: TypeHosts) -> None:
         """Force recheck of all services associated with a set of hosts.
 
         Arguments:
-            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to recheck.
 
         """
         self.host_command('SCHEDULE_FORCED_HOST_SVC_CHECKS', hosts)
 
-    def remove_downtime(self, hosts: Union[Sequence[str], NodeSet]) -> None:
+    def remove_downtime(self, hosts: TypeHosts) -> None:
         """Remove a downtime from a set of hosts.
 
         Arguments:
-            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to remove the downtime from.
 
         """
         self.host_command('DEL_DOWNTIME_BY_HOST_NAME', hosts)
 
-    def host_command(self, command: str, hosts: Union[Sequence[str], NodeSet], *args: str) -> None:
+    def host_command(self, command: str, hosts: TypeHosts, *args: str) -> None:
         """Execute a host-specific Icinga command on the Icinga server for a set of hosts.
 
         Arguments:
             command (str): the Icinga command to execute.
-            hosts (list, cumin.NodeSet): an iterable with the list of hostnames to iterate the command for.
+            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to iterate the command to.
             *args (str): optional positional arguments to pass to the command.
 
         See Also:
