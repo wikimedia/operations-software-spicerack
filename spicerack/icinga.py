@@ -4,7 +4,7 @@ import time
 
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Iterator
+from typing import Iterator, List
 
 from spicerack.administrative import Reason
 from spicerack.exceptions import SpicerackError
@@ -120,7 +120,7 @@ class Icinga:
         if not hosts:
             raise IcingaError('Got empty hosts list to downtime')
 
-        hostnames = [host.split('.')[0] for host in hosts]
+        hostnames = Icinga._get_hostnames(hosts)
         commands = [DOWNTIME_COMMAND.format(hostname=name, duration=duration_seconds, reason=reason.quoted())
                     for name in hostnames]
 
@@ -157,7 +157,8 @@ class Icinga:
             https://icinga.com/docs/icinga1/latest/en/extcommands2.html
 
         """
-        commands = [self._get_command_string(command, host.split('.')[0], *args) for host in hosts]
+        hostnames = Icinga._get_hostnames(hosts)
+        commands = [self._get_command_string(command, hostname, *args) for hostname in hostnames]
         self._icinga_host.run_sync(*commands)
 
     def _get_command_string(self, *args: str) -> str:
@@ -172,3 +173,16 @@ class Icinga:
         """
         return 'echo -n "[{now}] {args}" > {command_file}'.format(
             now=int(time.time()), args=';'.join(args), command_file=self.command_file)
+
+    @staticmethod
+    def _get_hostnames(fqdns: TypeHosts) -> List[str]:
+        """Convert FQDNs into hostnames.
+
+        Arguments:
+            hosts (spicerack.typing.TypeHosts): an iterable with the list of hostnames to iterate the command for.
+
+        Returns:
+            list: the list of hostnames.
+
+        """
+        return [fqdn.split('.')[0] for fqdn in fqdns]
