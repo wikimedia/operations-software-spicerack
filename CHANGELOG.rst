@@ -2,6 +2,14 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.36`_ (2020-05-18)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* tests: add ``@require_caplog`` to some ``actions`` module tests to fix the build on Debian Stretch.
+
 `v0.0.35`_ (2020-05-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -809,3 +817,4 @@ New features
 .. _`v0.0.33`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.33
 .. _`v0.0.34`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.34
 .. _`v0.0.35`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.35
+.. _`v0.0.36`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.36
