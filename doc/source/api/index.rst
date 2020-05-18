@@ -12,6 +12,7 @@ Spicerack Python API autodoc.
 
 .. toctree::
 
+   spicerack.actions
    spicerack.administrative
    spicerack.confctl
    spicerack.config
@@ -28,13 +29,14 @@ Spicerack Python API autodoc.
    spicerack.ipmi
    spicerack.management
    spicerack.mediawiki
-   spicerack.mysql
+   spicerack.mysql_legacy
    spicerack.netbox
    spicerack.phabricator
    spicerack.prometheus
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote
+   spicerack.typing
 
 .. The spicerack.cookbook and spicerack.log module are explicitely excluded from the public documentation as they
    should not be used directly by the cookbooks.

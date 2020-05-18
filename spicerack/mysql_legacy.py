@@ -1,4 +1,4 @@
-"""MySQL module.
+"""MySQL module (legacy).
 
 Todo:
     replace with a proper MySQL module that uses a Python MySQL client, preferably in a parallel way.
@@ -25,11 +25,11 @@ CORE_SECTIONS = ('s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 'x1', 'es4', 'e
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class MysqlError(SpicerackError):
+class MysqlLegacyError(SpicerackError):
     """Custom exception class for errors of this module."""
 
 
-class MysqlRemoteHosts(RemoteHostsAdapter):
+class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
     """Custom RemoteHosts class to execute MySQL queries."""
 
     def run_query(  # pylint: disable=too-many-arguments
@@ -66,7 +66,7 @@ class MysqlRemoteHosts(RemoteHostsAdapter):
                                            batch_sleep=batch_sleep, is_safe=is_safe)
 
 
-class Mysql:
+class MysqlLegacy:
     """Class to manage MySQL servers."""
 
     heartbeat_query = ("SELECT ts FROM heartbeat.heartbeat WHERE datacenter = '{dc}' and shard = '{section}' "
@@ -84,39 +84,39 @@ class Mysql:
         self._remote = remote
         self._dry_run = dry_run
 
-    def get_dbs(self, query: str) -> MysqlRemoteHosts:
-        """Get a MysqlRemoteHosts instance for the matching hosts.
+    def get_dbs(self, query: str) -> MysqlLegacyRemoteHosts:
+        """Get a MysqlLegacyRemoteHosts instance for the matching hosts.
 
         Arguments:
             query (str): the Remote query to use to fetch the DB hosts.
 
         Returns:
-            spicerack.mysql.MysqlRemoteHosts: an instance with the remote targets.
+            spicerack.mysql_legacy.MysqlLegacyRemoteHosts: an instance with the remote targets.
 
         """
-        return MysqlRemoteHosts(self._remote.query(query))
+        return MysqlLegacyRemoteHosts(self._remote.query(query))
 
     def get_core_dbs(
         self, *,
         datacenter: Optional[str] = None,
         section: Optional[str] = None,
         replication_role: Optional[str] = None
-    ) -> MysqlRemoteHosts:
+    ) -> MysqlLegacyRemoteHosts:
         """Find the core databases matching the parameters.
 
         Arguments:
             datacenter (str, optional): the name of the datacenter to filter for, accepted values are those specified in
                 :py:data:`spicerack.constants.CORE_DATACENTERS`.
             replication_role (str, optional): the repication role to filter for, accepted values are those specified in
-                :py:data:`spicerack.mysql.REPLICATION_ROLES`.
+                :py:data:`spicerack.mysql_legacy.REPLICATION_ROLES`.
             section (str, optional): a specific section to filter for, accepted values are those specified in
-                :py:data:`spicerack.mysql.CORE_SECTIONS`.
+                :py:data:`spicerack.mysql_legacy.CORE_SECTIONS`.
 
         Raises:
-            spicerack.mysql.MysqlError: on invalid data or unexpected matching hosts.
+            spicerack.mysql_legacy.MysqlLegacyError: on invalid data or unexpected matching hosts.
 
         Returns:
-            spicerack.mysql.MysqlRemoteHosts: an instance with the remote targets.
+            spicerack.mysql_legacy.MysqlLegacyRemoteHosts: an instance with the remote targets.
 
         """
         query_parts = ['P{O:mariadb::core}']
@@ -126,7 +126,7 @@ class Mysql:
         if datacenter is not None:
             dc_multipler = 1
             if datacenter not in CORE_DATACENTERS:
-                raise MysqlError('Got invalid datacenter {dc}, accepted values are: {dcs}'.format(
+                raise MysqlLegacyError('Got invalid datacenter {dc}, accepted values are: {dcs}'.format(
                     dc=datacenter, dcs=CORE_DATACENTERS))
 
             query_parts.append('A:' + datacenter)
@@ -134,24 +134,24 @@ class Mysql:
         if section is not None:
             section_multiplier = 1
             if section not in CORE_SECTIONS:
-                raise MysqlError('Got invalid section {section}, accepted values are: {sections}'.format(
+                raise MysqlLegacyError('Got invalid section {section}, accepted values are: {sections}'.format(
                     section=section, sections=CORE_SECTIONS))
 
             query_parts.append('P{{C:mariadb::heartbeat and R:Class%shard = "{section}"}}'.format(section=section))
 
         if replication_role is not None:
             if replication_role not in REPLICATION_ROLES:
-                raise MysqlError('Got invalid replication_role {role}, accepted values are: {roles}'.format(
+                raise MysqlLegacyError('Got invalid replication_role {role}, accepted values are: {roles}'.format(
                     role=replication_role, roles=REPLICATION_ROLES))
 
             query_parts.append(
                 'P{{C:mariadb::config and R:Class%replication_role = "{role}"}}'.format(role=replication_role))
 
-        mysql_hosts = MysqlRemoteHosts(self._remote.query(' and '.join(query_parts)))
+        mysql_hosts = MysqlLegacyRemoteHosts(self._remote.query(' and '.join(query_parts)))
 
         # Sanity check of matched hosts in case of master selection
         if replication_role == 'master' and len(mysql_hosts) != dc_multipler * section_multiplier:
-            raise MysqlError('Matched {matched} masters, expected {expected}'.format(
+            raise MysqlLegacyError('Matched {matched} masters, expected {expected}'.format(
                 matched=len(mysql_hosts), expected=dc_multipler * section_multiplier))
 
         return mysql_hosts
@@ -164,7 +164,7 @@ class Mysql:
 
         Raises:
             spicerack.remote.RemoteExecutionError: on Remote failures.
-            spicerack.mysql.MysqlError: on failing to verify the modified value.
+            spicerack.mysql_legacy.MysqlLegacyError: on failing to verify the modified value.
 
         """
         logger.debug('Setting core DB masters in %s to be read-only', datacenter)
@@ -180,7 +180,7 @@ class Mysql:
 
         Raises:
             spicerack.remote.RemoteExecutionError: on Remote failures.
-            spicerack.mysql.MysqlError: on failing to verify the modified value.
+            spicerack.mysql_legacy.MysqlLegacyError: on failing to verify the modified value.
 
         """
         logger.debug('Setting core DB masters in %s to be read-write', datacenter)
@@ -196,7 +196,7 @@ class Mysql:
             is_read_only (bool): whether the read-only mode should be set or not.
 
         Raises:
-            spicerack.mysql.MysqlError: on failure.
+            spicerack.mysql_legacy.MysqlLegacyError: on failure.
 
         """
         logger.debug('Verifying core DB masters in %s have read-only=%d', datacenter, is_read_only)
@@ -211,7 +211,7 @@ class Mysql:
                 failed = True
 
         if failed and not self._dry_run:
-            raise MysqlError('Verification failed that core DB masters in {dc} have read-only={ro}'.format(
+            raise MysqlLegacyError('Verification failed that core DB masters in {dc} have read-only={ro}'.format(
                 dc=datacenter, ro=is_read_only))
 
     def check_core_masters_in_sync(self, dc_from: str, dc_to: str) -> None:
@@ -243,13 +243,13 @@ class Mysql:
                 {'s1': datetime.datetime(2018, 1, 2, 11, 22, 33, 123456)}
 
         Raises:
-            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
+            spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime.
 
         """
         heartbeats = {}
         for section in CORE_SECTIONS:
             core_dbs = self.get_core_dbs(datacenter=datacenter, section=section, replication_role='master')
-            heartbeats[section] = Mysql._get_heartbeat(core_dbs, section, heartbeat_dc)
+            heartbeats[section] = MysqlLegacy._get_heartbeat(core_dbs, section, heartbeat_dc)
 
         return heartbeats
 
@@ -268,13 +268,13 @@ class Mysql:
                 :py:class:`datetime.datetime` for each core section as values.
 
         Raises:
-            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
+            spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime.
 
         """
         for section, heartbeat in heartbeats.items():
             self._check_core_master_in_sync(datacenter, heartbeat_dc, section, heartbeat)
 
-    @retry(exceptions=(MysqlError,))
+    @retry(exceptions=(MysqlLegacyError,))
     def _check_core_master_in_sync(
         self,
         datacenter: str,
@@ -292,12 +292,12 @@ class Mysql:
                 master is in sync with it.
 
         Raises:
-            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime or not yet
-                in sync.
+            spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime
+                or not yet in sync.
 
         """
         core_dbs = self.get_core_dbs(datacenter=datacenter, section=section, replication_role='master')
-        local_heartbeat = Mysql._get_heartbeat(core_dbs, section, heartbeat_dc)
+        local_heartbeat = MysqlLegacy._get_heartbeat(core_dbs, section, heartbeat_dc)
 
         # The check requires that local_heartbeat is stricly greater than parent_heartbeat because heartbeat writes also
         # when the DB is in read-only mode and has a granularity of 1s (as of 2018-09), meaning that an event could have
@@ -305,16 +305,17 @@ class Mysql:
         # have been replicated, hence checking the next heartbeat to ensure they are in sync.
         if local_heartbeat <= parent_heartbeat:
             delta = (local_heartbeat - parent_heartbeat).total_seconds()
-            raise MysqlError(('Heartbeat from master {host} for section {section} not yet in sync: {hb} <= {master_hb} '
-                              '(delta={delta})').format(host=core_dbs, section=section, hb=local_heartbeat,
-                                                        master_hb=parent_heartbeat, delta=delta))
+            raise MysqlLegacyError(('Heartbeat from master {host} for section {section} not yet in sync: '
+                                    '{hb} <= {master_hb} (delta={delta})').format(
+                                        host=core_dbs, section=section, hb=local_heartbeat,
+                                        master_hb=parent_heartbeat, delta=delta))
 
     @staticmethod
-    def _get_heartbeat(mysql_hosts: MysqlRemoteHosts, section: str, heartbeat_dc: str) -> datetime:
+    def _get_heartbeat(mysql_hosts: MysqlLegacyRemoteHosts, section: str, heartbeat_dc: str) -> datetime:
         """Get the heartbeat from the remote host for a given DC.
 
         Arguments:
-            mysql_hosts (spicerack.mysql.MysqlRemoteHosts): the instance for the target DB to query.
+            mysql_hosts (spicerack.mysql_legacy.MysqlLegacyRemoteHosts): the instance for the target DB to query.
             section (str): the DB section for which to get the heartbeat.
             heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
 
@@ -322,10 +323,10 @@ class Mysql:
             datetime.datetime: the converted heartbeat.
 
         Raises:
-            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
+            spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime.
 
         """
-        query = Mysql.heartbeat_query.format(dc=heartbeat_dc, section=section)
+        query = MysqlLegacy.heartbeat_query.format(dc=heartbeat_dc, section=section)
 
         for _, output in mysql_hosts.run_query(query, is_safe=True):
             try:
@@ -333,9 +334,10 @@ class Mysql:
                 heartbeat = datetime.strptime(heartbeat_str, '%Y-%m-%dT%H:%M:%S.%f')
                 break
             except (TypeError, ValueError) as e:
-                raise MysqlError("Unable to convert heartbeat '{hb}' into datetime".format(hb=heartbeat_str)) from e
+                raise MysqlLegacyError("Unable to convert heartbeat '{hb}' into datetime".format(
+                    hb=heartbeat_str)) from e
         else:
-            raise MysqlError('Unable to get heartbeat from master {host} for section {section}'.format(
+            raise MysqlLegacyError('Unable to get heartbeat from master {host} for section {section}'.format(
                 host=mysql_hosts, section=section))
 
         return heartbeat

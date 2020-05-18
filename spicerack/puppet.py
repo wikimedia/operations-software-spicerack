@@ -4,7 +4,7 @@ import logging
 
 from contextlib import contextmanager
 from datetime import datetime, timedelta
-from subprocess import CalledProcessError, check_output  # nosec
+from subprocess import CalledProcessError, check_output
 from typing import Dict, Iterator, List, Optional, Union
 
 from cumin import NodeSet

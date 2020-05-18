@@ -2,7 +2,7 @@
 import json
 
 from datetime import datetime, timedelta, timezone
-from subprocess import CalledProcessError  # nosec
+from subprocess import CalledProcessError
 from unittest import mock
 
 import pytest

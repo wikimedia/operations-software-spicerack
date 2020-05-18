@@ -8,6 +8,7 @@ from typing import Dict, Optional
 from pkg_resources import DistributionNotFound, get_distribution
 
 from spicerack import interactive
+from spicerack.actions import ActionsDict
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.config import load_ini_config, load_yaml_config
@@ -21,7 +22,7 @@ from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
-from spicerack.mysql import Mysql
+from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NETBOX_DOMAIN
 from spicerack.phabricator import create_phabricator, Phabricator
 from spicerack.prometheus import Prometheus
@@ -87,6 +88,7 @@ class Spicerack:
         self._irc_logger = irc_logger
         self._confctl = None  # type: Optional[Confctl]
         self._ipmi = None  # type: Optional[Ipmi]
+        self._actions = ActionsDict()
 
     @property
     def dry_run(self) -> bool:
@@ -166,6 +168,16 @@ class Spicerack:
         return self._irc_logger
 
     @property
+    def actions(self) -> ActionsDict:
+        """Getter for the ``actions`` property.
+
+        Returns:
+            spicerack.actions.ActionsDict: a dictionary to log and record cookbook actions.
+
+        """
+        return self._actions
+
+    @property
     def icinga_master_host(self) -> RemoteHosts:
         """Getter for the ``icinga_master_host`` property.
 
@@ -240,14 +252,14 @@ class Spicerack:
         """
         return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
 
-    def mysql(self) -> Mysql:
-        """Get a Mysql instance.
+    def mysql_legacy(self) -> MysqlLegacy:
+        """Get a MysqlLegacy instance.
 
         Returns:
-            spicerack.mysql.Mysql: the Mysql instance.
+            spicerack.mysql_legacy.MysqlLegacy: the MysqlLegacy instance.
 
         """
-        return Mysql(self.remote(), dry_run=self._dry_run)
+        return MysqlLegacy(self.remote(), dry_run=self._dry_run)
 
     def redis_cluster(self, cluster: str) -> RedisCluster:
         """Get a RedisCluster instance.

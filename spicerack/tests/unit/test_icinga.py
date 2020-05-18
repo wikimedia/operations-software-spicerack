@@ -10,6 +10,7 @@ from cumin import NodeSet
 from spicerack import icinga
 from spicerack.administrative import Reason
 from spicerack.remote import RemoteHosts
+from spicerack.tests import get_fixture_path
 
 
 def set_mocked_icinga_host_output(mocked_icinga_host, output):
@@ -149,3 +150,145 @@ class TestIcinga:
         self.mocked_icinga_host.run_sync.assert_called_with(
             'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1" > /var/lib/icinga/rw/icinga.cmd')
         assert mocked_time.called
+
+    def test_get_status_ok(self):
+        """It should parse the JSON payload and return an instance of HostsStatus."""
+        with open(get_fixture_path('icinga', 'status_valid.json')) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+
+        status = self.icinga.get_status('host[1-2]')
+
+        assert not status.optimal
+        assert status.non_optimal_hosts == ['host2']
+        assert status.failed_services == {'host2': ['check_name1', 'check_name2']}
+        assert status.failed_hosts == []
+
+    def test_get_status_parse_fail(self):
+        """It should raise IcingaStatusParseError if unable to parse the JSON payload."""
+        with open(get_fixture_path('icinga', 'status_invalid.json')) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+
+        with pytest.raises(icinga.IcingaStatusParseError, match='Unable to parse Icinga status'):
+            self.icinga.get_status('host[1-2]')
+
+    def test_get_status_missing_hosts(self):
+        """It should raise IcingaStatusNotFoundError if any host is missing its status."""
+        with open(get_fixture_path('icinga', 'status_missing.json')) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+        with pytest.raises(icinga.IcingaStatusNotFoundError, match='Host host2 was not found in Icinga status'):
+            self.icinga.get_status('host[1-2]')
+
+    def test_get_status_no_output(self):
+        """It should raise IcingaError if there is no output from the icinga-status command."""
+        self.mocked_icinga_host.run_sync.return_value = iter(())
+        with pytest.raises(icinga.IcingaError, match='no output from icinga-status'):
+            self.icinga.get_status('host[1-2]')
+
+
+def _get_hoststatus(hostname, down=False, failed=False):
+    """Return an instance of HostStatus suitable for testing based on the parameters.
+
+    Arguments:
+        hostname: the name to use for the host.
+        down: whether the reported state should be UP or DOWN.
+        failed: whether if should have some failed services or not.
+
+    """
+    params = {
+        'name': hostname,
+        'state': 'UP',
+        'optimal': True,
+        'failed_services': [],
+    }
+
+    failed_services = [
+        {'host': hostname, 'name': 'check_name1', 'status': {}},
+        {'host': hostname, 'name': 'check_name2', 'status': {}},
+    ]
+
+    if down:
+        params['state'] = 'DOWN'
+        params['optimal'] = False
+
+    if failed:
+        params['failed_services'] = failed_services
+        params['optimal'] = False
+
+    return icinga.HostStatus(**params)
+
+
+def test_hoststatus_failed_services():
+    """It should return the list of check names that are failed."""
+    status = _get_hoststatus('hostname', failed=True)
+    assert status.failed_services == ['check_name1', 'check_name2']
+
+
+class TestHostsStatus:
+    """Tests for the HostsStatus class."""
+
+    def setup_method(self):
+        """Setup the test environment."""
+        # pylint: disable=attribute-defined-outside-init
+        self.status = {
+            'ok': icinga.HostsStatus(),  # All optimal hosts
+            'down': icinga.HostsStatus(),  # Some hosts are down, no hosts have failed services
+            'failed': icinga.HostsStatus(),  # All hosts up, but some have failed services
+            'down_failed': icinga.HostsStatus(),  # Some hosts are donw, some have failed services
+        }
+
+        for i in range(1, 4):
+            hostname = 'host{i}'.format(i=i)
+            self.status['ok'][hostname] = _get_hoststatus(hostname)
+            self.status['down'][hostname] = _get_hoststatus(hostname)
+            self.status['failed'][hostname] = _get_hoststatus(hostname)
+            self.status['down_failed'][hostname] = _get_hoststatus(hostname)
+
+        for i in range(4, 6):
+            hostname = 'host{i}'.format(i=i)
+            self.status['down'][hostname] = _get_hoststatus(hostname, down=True)
+            self.status['down_failed'][hostname] = _get_hoststatus(hostname, down=True)
+
+        for i in range(6, 8):
+            hostname = 'host{i}'.format(i=i)
+            self.status['failed'][hostname] = _get_hoststatus(hostname, failed=True)
+            self.status['down_failed'][hostname] = _get_hoststatus(hostname, failed=True)
+
+    def test_optimal_ok(self):
+        """It should return True if all hosts are optimal."""
+        assert self.status['ok'].optimal
+
+    @pytest.mark.parametrize('key', ('down', 'failed', 'down_failed'))
+    def test_optimal_ko(self, key):
+        """If should return False if any host is not optimal."""
+        assert not self.status[key].optimal
+
+    @pytest.mark.parametrize('key, expected', (
+        ('ok', []),
+        ('down', ['host4', 'host5']),
+        ('failed', ['host6', 'host7']),
+        ('down_failed', ['host4', 'host5', 'host6', 'host7']),
+    ))
+    def test_non_optimal_hosts(self, key, expected):
+        """It should return the list of hostnames with non optimal status."""
+        assert sorted(self.status[key].non_optimal_hosts) == expected
+
+    @pytest.mark.parametrize('key, expected', (
+        ('ok', {}),
+        ('down', {'host4': [], 'host5': []}),
+        ('failed', {'host6': ['check_name1', 'check_name2'], 'host7': ['check_name1', 'check_name2']}),
+        ('down_failed', {'host4': [], 'host5': [], 'host6': ['check_name1', 'check_name2'],
+                         'host7': ['check_name1', 'check_name2']}),
+    ))
+    def test_failed_services(self, key, expected):
+        """It should return the dictionary with the hostnames as key and the list of failed services as values."""
+        assert self.status[key].failed_services == expected
+
+    @pytest.mark.parametrize('key, expected', (
+        ('ok', []),
+        ('down', ['host4', 'host5']),
+        ('failed', []),
+        ('down_failed', ['host4', 'host5']),
+    ))
+    def test_failed_hosts(self, key, expected):
+        """It should return the list of hostnames with non optimal status."""
+        assert sorted(self.status[key].failed_hosts) == expected
