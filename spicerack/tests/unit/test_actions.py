@@ -4,6 +4,7 @@ import logging
 from textwrap import dedent
 
 from spicerack import actions
+from spicerack.tests import require_caplog
 
 
 def test_actionsdict_string_representation():
@@ -44,6 +45,7 @@ class TestActions:
         assert self.actions.status == 'PASS'
         assert not self.actions.actions
 
+    @require_caplog
     def test_success(self, caplog):
         """It should register a success action."""
         self.actions.success('success1')
@@ -53,6 +55,7 @@ class TestActions:
         assert len(self.actions.actions) == 1
         self._check_logs(caplog, 'success1', logging.INFO)
 
+    @require_caplog
     def test_warning(self, caplog):
         """It should register a warning action."""
         self.actions.warning('warning1')
@@ -63,6 +66,7 @@ class TestActions:
         assert len(self.actions.actions) == 2
         self._check_logs(caplog, 'warning1', logging.WARNING)
 
+    @require_caplog
     def test_failure(self, caplog):
         """It should register a failed action."""
         self.actions.failure('failure1')
