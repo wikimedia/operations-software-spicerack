@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from datetime import timedelta
 from typing import Dict, Iterator, List, Mapping, Sequence
 
+from cumin.transports import Command
+
 from spicerack.administrative import Reason
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteHosts
@@ -268,8 +270,9 @@ class Icinga:
             IcingaStatusNotFoundError: if a host is not found in the Icinga status.
 
         """
-        command = '/usr/local/bin/icinga-status -j "{hosts}"'.format(hosts=hosts)
-        for _, output in self._icinga_host.run_sync(command):
+        # icinga-status exits with non-zero exit code on missing and non-optimal hosts.
+        command = Command('/usr/local/bin/icinga-status -j "{hosts}"'.format(hosts=hosts), ok_codes=[])
+        for _, output in self._icinga_host.run_sync(command, is_safe=True):  # icinga-status is a read-only script
             json_status = output.message().decode()
             break
         else:

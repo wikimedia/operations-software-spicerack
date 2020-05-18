@@ -2,6 +2,18 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.37`_ (2020-05-18)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* icinga: fix ``get_status()``:
+
+  * The ``icinga-status`` script that returns the status can be run also in dry-run mode as it's a read-only tool.
+  * The ``icinga-status`` script exits with a non-zero exit status on non-optimal and missing hosts, accept any exit
+    code.
+
 `v0.0.36`_ (2020-05-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -818,3 +830,4 @@ New features
 .. _`v0.0.34`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.34
 .. _`v0.0.35`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.35
 .. _`v0.0.36`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.36
+.. _`v0.0.37`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.37
