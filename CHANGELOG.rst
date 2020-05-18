@@ -2,6 +2,84 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.35`_ (2020-05-18)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* Rename ``mysql`` module to ``mysql_legacy``:
+
+  * The existing ``mysql`` module uses remote execution of the mysql client to interact with mysqld's. Moving this out
+    of the way to allow room for a new ``mysql`` module which uses a native mysql client library.
+
+New features
+""""""""""""
+
+* interactive: add ``get_secret()`` function for requesting secrets interactively with optional ask for confirmation.
+
+* icinga: allow to check the status of a host:
+
+  * Add a ``get_status()`` method that allows to get the current status of a set of hosts in Icinga.
+  * The returned status allow to quickly check if all the hosts are in optimal state, get a list of those that are not
+    and the services that are failing on those hosts.
+
+* actions: new module to track cookbook actions:
+
+  * Add a new actions module that contains an ``Actions`` class and an ``ActionsDict`` class that is an ordered
+    dictionary with default dictionary functionalities of ``Actions`` class instances.
+  * The ``Actions`` instances allow to keep track of actions performed by acookbook with the following features:
+
+    * Save the message of the action with different levels (``success``, ``warning``, ``failure``).
+    * Log the message of the action with the associated log level.
+    * Keep track of the presence of any warning or failure.
+    * Have a nice string representation of the actions, suitable to be used to update a Phabricator task.
+
+  * The ``ActionsDict`` class has too a nice string representation of its items.
+  * This is a porting with some generalization of the code present in the `sre.hosts.decommission`_ cookbook.
+  * Pre-create an ``ActionsDict`` instance in spicerack so that it can be accessed in the cookbooks directly as
+    ``spicerack.actions``.
+
+* typing: add a ``typing`` module for custom type hints:
+
+  * Add a new typing module to hold all custom types useful across Spicerack.
+  * Define a custom type ``TypeHosts`` that can be either a ``NodeSet`` or a sequence of strings.
+  * Use the new type in the icinga module.
+
+Bug Fixes
+"""""""""
+
+* ipmi: fix ``subprocess.run()`` calls to raise on failure.
+
+  * The ``check`` parameter is by default :py:data:`False`, hence not raising an exception if the executed command exit
+    with a non-zero exit code.
+  * Forcing the ``check`` parameter to be :py:data:`True` to ensure an exception is raised on failure.
+
+Miscellanea
+"""""""""""
+
+* icinga: refactor input parsing:
+
+  * The Icinga class needs to use hostnames instead of FQDNs.
+  * Move the conversion from FQDNs (or hostnames) to hostnames to a static method so that can be used across the
+    class without repetition of code.
+
+* tests: fix newly reported flake8 issues.
+* tests: relax Prospector dependency
+
+  * The upstream bug that required to set an upper limit on the version of Prospector has been fixed.
+  * Removing the upper bound to get newer features.
+  * Fix newly reported issues.
+
+* tests: relax Bandit dependency
+
+  * The upstream bug that required to set an upper limit on the version of Bandit has now a workaround using a specific
+    syntax for the exclude files.
+  * Removing the upper bound to get newer features.
+  * Fix newly reported issues.
+  * Remove ``nosec`` comments not needed anymore and convert some of them into skipped checks in ``tox.ini``. This way
+    the affected lines are still checked for other issues.
+
 `v0.0.34`_ (2020-05-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -685,6 +763,7 @@ New features
 .. _`PEP0008#line_break_binary_operator`: https://www.python.org/dev/peps/pep-0008/#should-a-line-break-before-or-after-a-binary-operator
 
 .. _`I4d4ade351493a548e9e7a578bf9a7acbb45a5c0`: https://gerrit.wikimedia.org/r/q/I4d4ade351493a548e9e7a578bf9a7acbb45a5c0
+.. _`sre.hosts.decommission`: https://gerrit.wikimedia.org/r/plugins/gitiles/operations/cookbooks/+/cea161a91ec21dcd48fe0d3fa899c1f19fc4801b/cookbooks/sre/hosts/decommission.py#42
 
 .. _`T147074`: https://phabricator.wikimedia.org/T147074
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
@@ -729,3 +808,4 @@ New features
 .. _`v0.0.32`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.32
 .. _`v0.0.33`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.33
 .. _`v0.0.34`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.34
+.. _`v0.0.35`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.35
