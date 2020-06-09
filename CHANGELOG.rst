@@ -2,6 +2,19 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.38`_ (2020-06-09)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* ganeti: update the list of available rows in the ``eqiad`` and ``codfw`` datacenters.
+
+Miscellanea
+"""""""""""
+
+* Add support for Python 3.8.
+
 `v0.0.37`_ (2020-05-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -831,3 +844,4 @@ New features
 .. _`v0.0.35`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.35
 .. _`v0.0.36`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.36
 .. _`v0.0.37`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.37
+.. _`v0.0.38`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.38
