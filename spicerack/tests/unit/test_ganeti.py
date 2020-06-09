@@ -173,7 +173,7 @@ class TestGaneti:
         ({'row': 'A', 'vcpus': 1, 'memory': 1, 'disk': 1, 'link': 'invalid'},
          r"Invalid link 'invalid', expected one of: \('public', 'private', 'analytics'\)"),
         ({'row': 'invalid', 'vcpus': 1, 'memory': 1, 'disk': 1, 'link': 'private'},
-         r"Invalid row 'invalid' for cluster ganeti01.svc.eqiad.wmnet, expected one of: \('A', 'C'\)"),
+         r"Invalid row 'invalid' for cluster ganeti01.svc.eqiad.wmnet, expected one of: \('A', 'B', 'C', 'D'\)"),
         ({'row': 'A', 'vcpus': -1, 'memory': 1, 'disk': 1, 'link': 'private'},
          r"Invalid value '-1' for vcpus, expected positive integer."),
         ({'row': 'A', 'vcpus': 1, 'memory': -1, 'disk': 1, 'link': 'private'},

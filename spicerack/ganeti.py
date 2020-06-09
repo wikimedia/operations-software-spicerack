@@ -19,8 +19,8 @@ RAPI_URL_FORMAT = 'https://{cluster}:5080'
 """:py:class:`str`: the template string to construct the Ganeti RAPI URL."""
 
 CLUSTERS_AND_ROWS = {
-    'ganeti01.svc.eqiad.wmnet': ('A', 'C'),
-    'ganeti01.svc.codfw.wmnet': ('A', 'B'),
+    'ganeti01.svc.eqiad.wmnet': ('A', 'B', 'C', 'D'),
+    'ganeti01.svc.codfw.wmnet': ('A', 'B', 'C', 'D'),
     'ganeti01.svc.esams.wmnet': ('OE',),
     'ganeti01.svc.ulsfo.wmnet': ('1',),
     'ganeti01.svc.eqsin.wmnet': ('1',)
