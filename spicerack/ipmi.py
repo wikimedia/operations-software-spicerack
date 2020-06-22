@@ -8,15 +8,15 @@ import logging
 
 from datetime import timedelta
 from subprocess import CalledProcessError, PIPE, run
-from typing import List
+from typing import Dict, List, Tuple
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 
-IPMI_PASSWORD_MAX_LEN = 20
-IPMI_PASSWORD_MIN_LEN = 16
-IPMI_SAFE_BOOT_PARAMS = ('0000000000', '8000020000')  # No or unimportant overrides.
+IPMI_PASSWORD_MAX_LEN: int = 20
+IPMI_PASSWORD_MIN_LEN: int = 16
+IPMI_SAFE_BOOT_PARAMS: Tuple[str, ...] = ('0000000000', '8000020000')  # No or unimportant overrides.
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -39,7 +39,7 @@ class Ipmi:
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
-        self.env = {'IPMITOOL_PASSWORD': password}
+        self.env: Dict[str, str] = {'IPMITOOL_PASSWORD': password}
         self._dry_run = dry_run
 
     def command(  # pylint: disable=no-self-use

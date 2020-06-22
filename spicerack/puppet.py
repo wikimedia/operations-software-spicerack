@@ -5,7 +5,7 @@ import logging
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from subprocess import CalledProcessError, check_output
-from typing import Dict, Iterator, List, Optional, Union
+from typing import cast, Dict, Iterator, List, Optional, Union
 
 from cumin import NodeSet
 from cumin.transports import Command
@@ -16,7 +16,7 @@ from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import RemoteExecutionError, RemoteHosts, RemoteHostsAdapter
 
 
-PUPPET_COMMON_SCRIPT = '/usr/local/share/bash/puppet-common.sh'
+PUPPET_COMMON_SCRIPT: str = '/usr/local/share/bash/puppet-common.sh'
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -290,8 +290,8 @@ class PuppetHosts(RemoteHostsAdapter):
 class PuppetMaster:
     """Class to manage nodes and certificates on a Puppet master and Puppet CA server."""
 
-    PUPPET_CERT_STATE_REQUESTED = 'requested'
-    PUPPET_CERT_STATE_SIGNED = 'signed'
+    PUPPET_CERT_STATE_REQUESTED: str = 'requested'
+    PUPPET_CERT_STATE_SIGNED: str = 'signed'
 
     def __init__(self, master_host: RemoteHosts) -> None:
         """Initialize the instance.
@@ -346,12 +346,12 @@ class PuppetMaster:
             spicerack.puppet.PuppetMasterError: if the certificate is not valid.
 
         """
-        response = self._run_json_command('puppet ca --render-as json verify {host}'.format(host=hostname))
+        response = cast(Dict, self._run_json_command('puppet ca --render-as json verify {host}'.format(host=hostname)))
 
-        if not response['valid']:  # type: ignore
+        if not response['valid']:
             raise PuppetMasterError(
                 'Invalid certificate for {host}: {error}'.format(
-                    host=hostname, error=response['error']))  # type: ignore
+                    host=hostname, error=response['error']))
 
     def sign(self, hostname: str, fingerprint: str, allow_alt_names: bool = False) -> None:
         """Sign a CSR on the Puppet CA for the given host checking its fingerprint.

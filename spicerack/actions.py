@@ -30,7 +30,7 @@ class Actions:
 
         """
         self.name = name
-        self.actions = []  # type: List[str]
+        self.actions: List[str] = []
         self.has_warnings = False
         self.has_failures = False
 

@@ -4,7 +4,7 @@ import os
 import socket
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 
 root_logger = logging.getLogger()  # pylint: disable=invalid-name
@@ -27,7 +27,7 @@ class IRCSocketHandler(logging.Handler):
 
         """
         super().__init__()
-        self.addr = (host, port)
+        self.addr: Tuple[str, int] = (host, port)
         self.username = username
         self.level = logging.INFO
 

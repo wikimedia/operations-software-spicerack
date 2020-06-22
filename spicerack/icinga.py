@@ -5,7 +5,7 @@ import time
 
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Dict, Iterator, List, Mapping, Sequence
+from typing import Dict, Iterator, List, Mapping, Optional, Sequence
 
 from cumin.transports import Command
 
@@ -15,9 +15,9 @@ from spicerack.remote import RemoteHosts
 from spicerack.typing import TypeHosts
 
 
-DOWNTIME_COMMAND = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
-ICINGA_DOMAIN = 'icinga.wikimedia.org'
-MIN_DOWNTIME_SECONDS = 60  # Minimum time in seconds the downtime can be set
+DOWNTIME_COMMAND: str = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
+ICINGA_DOMAIN: str = 'icinga.wikimedia.org'
+MIN_DOWNTIME_SECONDS: int = 60  # Minimum time in seconds the downtime can be set
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -129,10 +129,10 @@ class Icinga:
         """
         self._icinga_host = icinga_host
         self._config_file = config_file
-        self._command_file = None
+        self._command_file: Optional[str] = None
 
     @property
-    def command_file(self) -> str:
+    def command_file(self) -> Optional[str]:
         """Getter for the command_file property.
 
         Returns:
@@ -158,7 +158,7 @@ class Icinga:
             raise IcingaError('Unable to read command_file configuration') from e
 
         self._command_file = command_file
-        return self._command_file  # type: ignore
+        return self._command_file
 
     @contextmanager
     def hosts_downtimed(

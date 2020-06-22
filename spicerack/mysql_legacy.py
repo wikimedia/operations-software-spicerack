@@ -18,9 +18,9 @@ from spicerack.exceptions import SpicerackError
 from spicerack.remote import Remote, RemoteHostsAdapter
 
 
-REPLICATION_ROLES = ('master', 'slave', 'standalone')
+REPLICATION_ROLES: Tuple[str, ...] = ('master', 'slave', 'standalone')
 """tuple: list of valid replication roles."""
-CORE_SECTIONS = ('s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 'x1', 'es4', 'es5')
+CORE_SECTIONS: Tuple[str, ...] = ('s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 'x1', 'es4', 'es5')
 """tuple: list of valid MySQL RW section names (external storage RO sections are not included here)."""
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

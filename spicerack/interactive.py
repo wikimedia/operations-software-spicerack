@@ -8,7 +8,7 @@ from spicerack.exceptions import SpicerackError
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-MIN_SECRET_SIZE = 6
+MIN_SECRET_SIZE: int = 6
 
 
 def ask_confirmation(message: str) -> None:

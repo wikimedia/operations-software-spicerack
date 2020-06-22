@@ -20,7 +20,7 @@ from spicerack.remote import Remote, RemoteHosts, RemoteHostsAdapter
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
-ELASTICSEARCH_CLUSTERS = {
+ELASTICSEARCH_CLUSTERS: Dict[str, Dict[str, Dict[str, str]]] = {
     'search': {
         'search_eqiad': {
             'production-search-eqiad': 'https://search.svc.eqiad.wmnet:9243',
@@ -267,7 +267,7 @@ class ElasticsearchClusters:
             dict: merged clusters nodes.
 
         """
-        nodes_group = {}  # type: ignore
+        nodes_group: Dict[str, NodesGroup] = {}
         for cluster in self._clusters:
             for json_node in cluster.get_nodes().values():
                 node_name = json_node['attributes']['hostname']
@@ -291,7 +291,7 @@ class ElasticsearchClusters:
                 {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
 
         """
-        rows = defaultdict(list)  # type: DefaultDict[str, List['NodesGroup']]
+        rows: DefaultDict[str, List[NodesGroup]] = defaultdict(list)
         for node in nodes:
             rows[node.row].append(node)
         return rows
@@ -321,8 +321,8 @@ class ElasticsearchCluster:
         self._elasticsearch = elasticsearch
         self._remote = remote
         self._dry_run = dry_run
-        self._freeze_writes_index = 'mw_cirrus_metastore'
-        self._freeze_writes_doc_type = 'mw_cirrus_metastore'
+        self._freeze_writes_index: str = 'mw_cirrus_metastore'
+        self._freeze_writes_doc_type: str = 'mw_cirrus_metastore'
 
     def __str__(self) -> str:
         """Class string method."""
@@ -564,11 +564,11 @@ class NodesGroup:
             cluster (spicerack.elasticsearch_cluster.ElasticsearchCluster): an elasticsearch instance
 
         """
-        self._hostname = json_node['attributes']['hostname']
-        self._fqdn = json_node['attributes']['fqdn']
-        self._clusters_names = [json_node['settings']['cluster']['name']]
-        self._clusters_instances = [cluster]
-        self._row = json_node['attributes']['row']
+        self._hostname: str = json_node['attributes']['hostname']
+        self._fqdn: str = json_node['attributes']['fqdn']
+        self._clusters_names: List[str] = [json_node['settings']['cluster']['name']]
+        self._clusters_instances: List[ElasticsearchCluster] = [cluster]
+        self._row: str = json_node['attributes']['row']
         self._oldest_start_time = datetime.utcfromtimestamp(json_node['jvm']['start_time_in_millis'] / 1000)
 
     def accumulate(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:

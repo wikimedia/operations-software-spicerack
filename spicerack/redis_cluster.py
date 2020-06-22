@@ -3,7 +3,7 @@ import logging
 import os
 
 from collections import defaultdict
-from typing import Any, Tuple, Union
+from typing import Any, DefaultDict, Dict, Tuple, Union
 
 from redis import StrictRedis
 
@@ -31,7 +31,7 @@ class RedisCluster:
 
         """
         self._dry_run = dry_run
-        self._shards = defaultdict(dict)  # type: ignore
+        self._shards: DefaultDict[str, Dict] = defaultdict(dict)
         config = load_yaml_config(os.path.join(config_dir, cluster + '.yaml'))
 
         for datacenter, shards in config['shards'].items():
@@ -130,8 +130,8 @@ class RedisInstance:
             **kwargs (mixed): arbitrary keyword arguments, to be passed to the `redis.StrictRedis` constructor.
 
         """
-        self.host = kwargs.get('host')
-        self.port = kwargs.get('port')
+        self.host: str = kwargs.get('host', '')
+        self.port: int = kwargs.get('port', 0)
         self._client = StrictRedis(**kwargs)
 
     @property
@@ -167,7 +167,7 @@ class RedisInstance:
             tuple: a 2-element tuple with (host/IP, port) of the instance.
 
         """
-        return self.host, self.port  # type: ignore
+        return self.host, self.port
 
     def stop_replica(self) -> None:
         """Stop the replica on the instance."""

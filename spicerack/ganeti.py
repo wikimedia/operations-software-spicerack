@@ -2,7 +2,7 @@
 
 import logging
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -15,10 +15,10 @@ from spicerack.remote import Remote, RemoteHosts
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-RAPI_URL_FORMAT = 'https://{cluster}:5080'
+RAPI_URL_FORMAT: str = 'https://{cluster}:5080'
 """:py:class:`str`: the template string to construct the Ganeti RAPI URL."""
 
-CLUSTERS_AND_ROWS = {
+CLUSTERS_AND_ROWS: Dict[str, Tuple[str, ...]] = {
     'ganeti01.svc.eqiad.wmnet': ('A', 'B', 'C', 'D'),
     'ganeti01.svc.codfw.wmnet': ('A', 'B', 'C', 'D'),
     'ganeti01.svc.esams.wmnet': ('OE',),
@@ -27,7 +27,7 @@ CLUSTERS_AND_ROWS = {
 }
 """:py:class:`dict`: the available Ganeti clusters with the set of available rows in each of them."""
 
-INSTANCE_LINKS = ('public', 'private', 'analytics')
+INSTANCE_LINKS: Tuple[str, ...] = ('public', 'private', 'analytics')
 """:py:class:`tuple`: the list of possible instance link types."""
 
 
