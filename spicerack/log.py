@@ -3,7 +3,8 @@ import logging
 import os
 import socket
 
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 
 root_logger = logging.getLogger()  # pylint: disable=invalid-name
@@ -75,7 +76,7 @@ class FilterOutCumin(logging.Filter):
 
 
 def setup_logging(
-    base_path: str,
+    base_path: Union[str, Path],
     name: str,
     user: str,
     dry_run: bool = True,
@@ -85,7 +86,7 @@ def setup_logging(
     """Setup the root logger instance.
 
     Arguments:
-        base_path (str): the base path where to save the logs.
+        base_path (str, pathlib.Path): the base path where to save the logs.
         name (str): the name of log file to use without extension.
         user (str): the username for the IRC logging.
         dry_run (bool, optional): whether this is a dry-run.
@@ -94,7 +95,6 @@ def setup_logging(
 
     """
     logging.raiseExceptions = False
-    base_path = str(base_path)  # Since Python 3.6 it could be a path-like object
     os.makedirs(base_path, mode=0o755, exist_ok=True)
 
     # Default INFO logging

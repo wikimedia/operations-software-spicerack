@@ -196,8 +196,7 @@ class ElasticsearchClusters:
         """
         logger.info('Freezing writes on %s', self)
         with ExitStack() as stack:
-            # TODO: remove the pylint disable once https://github.com/PyCQA/pylint/issues/3137 is fixed (py36 only)
-            yield [stack.enter_context(cluster.frozen_writes(reason))  # pylint: disable=no-member
+            yield [stack.enter_context(cluster.frozen_writes(reason))
                    for cluster in self._clusters]
 
     @contextmanager
@@ -210,8 +209,7 @@ class ElasticsearchClusters:
         """
         logger.info('stopping replication on %s', self)
         with ExitStack() as stack:
-            # TODO: remove the pylint disable once https://github.com/PyCQA/pylint/issues/3137 is fixed (py36 only)
-            yield [stack.enter_context(cluster.stopped_replication())  # pylint: disable=no-member
+            yield [stack.enter_context(cluster.stopped_replication())
                    for cluster in self._clusters]
 
     def wait_for_green(self, timeout: timedelta = timedelta(hours=1)) -> None:
