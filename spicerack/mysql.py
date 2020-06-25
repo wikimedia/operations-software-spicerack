@@ -54,15 +54,15 @@ class Mysql:
                 transactions. **Note**: This parameter has no effect if DRY-RUN is set.
             charset (str, optional): Query charset to use.
             read_default_file (str, optional): ``my.cnf``-format file to read from. Defaults
-                to ``~/.my.cnf``. Set to ``None`` to disable.
+                to ``~/.my.cnf``. Set to :py:data:`None` to disable.
             read_default_group: Section of read_default_file to use. If not specified, it
                 will be set based on the target hostname.
             ssl (dict, optional): SSL configuration to use. Defaults to using the
                 puppet CA. Set to ``{}`` to disable.
-            **kwargs: Options passed directly to pymysql's Connection constructor.
+            **kwargs: Options passed directly to :py:class:`pymysql.connections.Connection`.
 
-        Returns:
-            MysqlConnection: a context managed mysql connection.
+        Yields:
+            :py:class:`pymysql.connections.Connection`: a context-managed mysql connection.
 
         """
         # FIXME(kormat): read-only support is limited to DML sql statements.
