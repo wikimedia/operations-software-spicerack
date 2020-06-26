@@ -76,7 +76,7 @@ class Mysql:
             if kwargs.get("host", "").startswith("labsdb"):
                 read_default_group += "labsdb"
         if ssl is None:
-            ssl = {'ca': PUPPET_CA_PATH}
+            ssl = {"ca": PUPPET_CA_PATH}
 
         conn = Connection(
             charset=charset,
