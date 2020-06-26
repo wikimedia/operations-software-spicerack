@@ -119,7 +119,7 @@ class MysqlLegacy:
             spicerack.mysql_legacy.MysqlLegacyRemoteHosts: an instance with the remote targets.
 
         """
-        query_parts = ['P{O:mariadb::core}']
+        query_parts = ['A:db-core']
         dc_multipler = len(CORE_DATACENTERS)
         section_multiplier = len(CORE_SECTIONS)
 
@@ -137,15 +137,14 @@ class MysqlLegacy:
                 raise MysqlLegacyError('Got invalid section {section}, accepted values are: {sections}'.format(
                     section=section, sections=CORE_SECTIONS))
 
-            query_parts.append('P{{C:mariadb::heartbeat and R:Class%shard = "{section}"}}'.format(section=section))
+            query_parts.append('A:db-section-{section}'.format(section=section))
 
         if replication_role is not None:
             if replication_role not in REPLICATION_ROLES:
                 raise MysqlLegacyError('Got invalid replication_role {role}, accepted values are: {roles}'.format(
                     role=replication_role, roles=REPLICATION_ROLES))
 
-            query_parts.append(
-                'P{{C:mariadb::config and R:Class%replication_role = "{role}"}}'.format(role=replication_role))
+            query_parts.append('A:db-role-{role}'.format(role=replication_role))
 
         mysql_hosts = MysqlLegacyRemoteHosts(self._remote.query(' and '.join(query_parts)))
 

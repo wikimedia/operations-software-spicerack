@@ -50,24 +50,24 @@ class TestMysqlLegacy:
         self.mocked_remote.query.assert_called_once_with('query')
 
     @pytest.mark.parametrize('kwargs, query, match', (
-        ({}, 'P{O:mariadb::core}', 'db10[01-99],db20[01-99]'),
-        ({'datacenter': 'eqiad'}, 'P{O:mariadb::core} and A:eqiad', 'db10[01-99]'),
-        ({'section': 's1'}, 'P{O:mariadb::core} and P{C:mariadb::heartbeat and R:Class%shard = "s1"}',
+        ({}, 'A:db-core', 'db10[01-99],db20[01-99]'),
+        ({'datacenter': 'eqiad'}, 'A:db-core and A:eqiad', 'db10[01-99]'),
+        ({'section': 's1'}, 'A:db-core and A:db-section-s1',
          'db10[01-10],db20[01-10]'),
         ({'replication_role': 'master'},
-         'P{O:mariadb::core} and P{C:mariadb::config and R:Class%replication_role = "master"}',
+         'A:db-core and A:db-role-master',
          'db10[01-11],db20[01-11]'),
         ({'datacenter': 'eqiad', 'section': 's1'},
-         'P{O:mariadb::core} and A:eqiad and P{C:mariadb::heartbeat and R:Class%shard = "s1"}', 'db10[01-10]'),
+         'A:db-core and A:eqiad and A:db-section-s1', 'db10[01-10]'),
         ({'datacenter': 'eqiad', 'replication_role': 'master'},
-         'P{O:mariadb::core} and A:eqiad and P{C:mariadb::config and R:Class%replication_role = "master"}',
+         'A:db-core and A:eqiad and A:db-role-master',
          'db10[01-11]'),
         ({'section': 's1', 'replication_role': 'master'},
-         ('P{O:mariadb::core} and P{C:mariadb::heartbeat and R:Class%shard = "s1"} and '
-          'P{C:mariadb::config and R:Class%replication_role = "master"}'), 'db1001,db2001'),
+         ('A:db-core and A:db-section-s1 and '
+          'A:db-role-master'), 'db1001,db2001'),
         ({'datacenter': 'eqiad', 'section': 's1', 'replication_role': 'master'},
-         ('P{O:mariadb::core} and A:eqiad and P{C:mariadb::heartbeat and R:Class%shard = "s1"} and '
-          'P{C:mariadb::config and R:Class%replication_role = "master"}'), 'db1001'),
+         ('A:db-core and A:eqiad and A:db-section-s1 and '
+          'A:db-role-master'), 'db1001'),
     ))
     def test_get_core_dbs_ok(self, kwargs, query, match):
         """It should return the right DBs based on the parameters."""
