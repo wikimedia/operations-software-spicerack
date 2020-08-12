@@ -23,7 +23,7 @@ class Prometheus:
     _prometheus_api: str = 'http://prometheus.svc.{site}.wmnet/ops/api/v1/query'
 
     def query(self, query: str, site: str, *, timeout: Optional[Union[float, int]] = 10) -> List[Dict]:
-        """Preform a generic query.
+        """Perform a generic query.
 
         Arguments:
             query (str): a prometheus query

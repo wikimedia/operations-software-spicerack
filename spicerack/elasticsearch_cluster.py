@@ -6,7 +6,7 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence
+from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 import curator
 
@@ -14,12 +14,16 @@ from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportE
 from urllib3.exceptions import HTTPError
 
 from spicerack.administrative import Reason
+from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
+from spicerack.prometheus import Prometheus
 from spicerack.remote import Remote, RemoteHosts, RemoteHostsAdapter
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+# TODO: following should eventually be moved to puppet
 ELASTICSEARCH_CLUSTERS: Dict[str, Dict[str, Dict[str, str]]] = {
     'search': {
         'search_eqiad': {
@@ -38,7 +42,6 @@ ELASTICSEARCH_CLUSTERS: Dict[str, Dict[str, Dict[str, str]]] = {
         },
     }
 }
-# TODO: to be moved to puppet
 
 
 class ElasticsearchClusterError(SpicerackError):
@@ -49,12 +52,14 @@ class ElasticsearchClusterCheckError(SpicerackCheckError):
     """Custom Exception class for check errors of this module."""
 
 
-def create_elasticsearch_clusters(clustergroup: str, remote: Remote, dry_run: bool = True) -> 'ElasticsearchClusters':
+def create_elasticsearch_clusters(clustergroup: str, remote: Remote, prometheus: Prometheus,
+                                  dry_run: bool = True) -> 'ElasticsearchClusters':
     """Create ElasticsearchClusters instance.
 
     Arguments:
         clustergroup (str): name of cluster group.
         remote (spicerack.remote.Remote): the Remote instance.
+        prometheus (spicerack.prometheus.Prometheus): the prometheus instance.
         dry_run (bool, optional):  whether this is a DRY-RUN.
 
     Raises:
@@ -72,7 +77,7 @@ def create_elasticsearch_clusters(clustergroup: str, remote: Remote, dry_run: bo
 
     clusters = [Elasticsearch(endpoint) for endpoint in endpoints]
     elasticsearch_clusters = [ElasticsearchCluster(cluster, remote, dry_run=dry_run) for cluster in clusters]
-    return ElasticsearchClusters(elasticsearch_clusters, remote, dry_run=dry_run)
+    return ElasticsearchClusters(elasticsearch_clusters, remote, prometheus, CORE_DATACENTERS, dry_run=dry_run)
 
 
 class ElasticsearchHosts(RemoteHostsAdapter):
@@ -151,17 +156,22 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 class ElasticsearchClusters:
     """Class to manage elasticsearch clusters."""
 
-    def __init__(self, clusters: Sequence['ElasticsearchCluster'], remote: Remote, dry_run: bool = True) -> None:
+    def __init__(self, clusters: Sequence['ElasticsearchCluster'], remote: Remote,
+                 prometheus: Prometheus, core_datacenters: Tuple[str, ...], dry_run: bool = True) -> None:
         """Initialize ElasticsearchClusters.
 
         Arguments:
             clusters (list): list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
             remote (spicerack.remote.Remote): the Remote instance.
+            prometheus (spicerack.prometheus.Prometheus): the prometheus instance.
+            core_datacenters (tuple): Tuple of str representing each "core" dc; used for queries to monitor write queue
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
         self._clusters = clusters
         self._remote = remote
+        self._prometheus = prometheus
+        self._core_datacenters = core_datacenters
         self._dry_run = dry_run
 
     def __str__(self) -> str:
@@ -234,9 +244,9 @@ class ElasticsearchClusters:
     def get_next_clusters_nodes(self, started_before: datetime, size: int = 1) -> Optional[ElasticsearchHosts]:
         """Get next set of cluster nodes for cookbook operations like upgrade, rolling restart etc.
 
-        Nodes are selected from the row with the least restarted nodes. This ensure that a row is fully upgraded
+        Nodes are selected from the row with the least restarted nodes. This ensures that a row is fully upgraded
         before moving to the next row. Since shards cannot move to a node with an older version of elasticsearch,
-        this should help to keep all shards allocated at all time.
+        this should help to keep all shards allocated at all times.
 
         Arguments:
             started_before (datetime.datetime): the time against after which we check if the node has been restarted.
@@ -304,6 +314,48 @@ class ElasticsearchClusters:
         """
         for cluster in self._clusters:
             cluster.reset_indices_to_read_write()
+
+    @retry(exceptions=ElasticsearchClusterCheckError, tries=60, delay=timedelta(seconds=60), backoff_mode='constant')
+    def wait_for_all_write_queues_empty(self) -> None:
+        """Wait for all relevant CirrusSearch write queues to be empty.
+
+        Checks the Prometheus server in each of the CORE_DATACENTERS
+
+        At most waits for 60*60 seconds = 1 hour.
+
+        Does not retry if prometheus returns empty results for all datacenters.
+
+        """
+        # We expect all DCs except one to return empty results, but we have a problem if all return empty
+        have_received_results = False
+        for dc in self._core_datacenters:
+            query = ('kafka_burrow_partition_lag{{'
+                     '    group="cpjobqueue-cirrusSearchElasticaWrite",'
+                     '    topic=~"[[:alpha:]]*.cpjobqueue.partitioned.mediawiki.job.cirrusSearchElasticaWrite"'
+                     '}}')
+            # Query returns a list of dictionaries each of format {'metric': {}, 'value': [$timestamp, $value]}
+            results = self._prometheus.query(query, dc)
+            if not results:
+                logger.info("Prometheus returned no results for query %s in dc %s", query, dc)
+                continue
+
+            have_received_results = True
+
+            # queue_results => (topic, partition, value)
+            queue_results = [(partitioned_result['metric']['topic'],
+                              partitioned_result['metric']['partition'],
+                              int(partitioned_result['value'][1]))
+                             for partitioned_result in results]
+            logger.debug("Prom query %s returned queue_results of %s", query, queue_results)
+
+            # If any of the partitions are non-empty, raise an error
+            for (topic, partition, queue_size) in queue_results:
+                if queue_size > 0:
+                    raise ElasticsearchClusterCheckError("Write queue not empty (had value of {}) for partition {}"
+                                                         "of topic {}.".format(queue_size, partition, topic))
+        if not have_received_results:
+            raise ElasticsearchClusterError("Prometheus query {} for each of {} returned empty response,"
+                                            "is query correct?".format(query, self._core_datacenters))
 
 
 class ElasticsearchCluster:
@@ -509,7 +561,7 @@ class ElasticsearchCluster:
         Todo:
             It was found that forcing allocation of shards may perform better in terms of speed than
             letting elasticsearch do its recovery on its own.
-            We should verify from time to time that elastic recovery performance has not gone better
+            We should verify from time to time that elastic recovery performance has not gotten better
             and remove this step if proven unnecessary.
 
         """

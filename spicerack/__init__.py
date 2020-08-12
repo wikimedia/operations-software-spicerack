@@ -293,7 +293,7 @@ class Spicerack:
             spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
 
         """
-        return create_elasticsearch_clusters(clustergroup, self.remote(), dry_run=self._dry_run)
+        return create_elasticsearch_clusters(clustergroup, self.remote(), self.prometheus(), dry_run=self._dry_run)
 
     def admin_reason(self, reason: str, task_id: Optional[str] = None) -> Reason:
         """Get an administrative Reason instance.
