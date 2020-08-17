@@ -48,6 +48,7 @@ class TestActions:
     @require_caplog
     def test_success(self, caplog):
         """It should register a success action."""
+        caplog.set_level('INFO')  # Necessary until https://github.com/pytest-dev/pytest/issues/7335 is fixed
         self.actions.success('success1')
         assert self.actions.status == 'PASS'
         assert not self.actions.has_warnings
