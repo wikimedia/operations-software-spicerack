@@ -228,7 +228,7 @@ class Icinga:
             hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to recheck.
 
         """
-        self.host_command('SCHEDULE_FORCED_HOST_SVC_CHECKS', hosts)
+        self.host_command('SCHEDULE_FORCED_HOST_SVC_CHECKS', hosts, str(int(time.time())))
 
     def remove_downtime(self, hosts: TypeHosts) -> None:
         """Remove a downtime from a set of hosts.
