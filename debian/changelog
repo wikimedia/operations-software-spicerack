@@ -1,4 +1,4 @@
-spicerack (0.0.39-1) stretch-wikimedia; urgency=medium
+spicerack (0.0.39-1) buster-wikimedia; urgency=medium
 
   * v0.0.39 upstream release.
 
