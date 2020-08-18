@@ -18,6 +18,7 @@ from spicerack.icinga import Icinga
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
+from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox
 from spicerack.phabricator import Phabricator
@@ -51,6 +52,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.dns(), Dns)
     assert isinstance(spicerack.discovery('discovery-record'), Discovery)
     assert isinstance(spicerack.mediawiki(), MediaWiki)
+    assert isinstance(spicerack.mysql(), Mysql)
     assert isinstance(spicerack.mysql_legacy(), MysqlLegacy)
     assert isinstance(spicerack.redis_cluster('cluster'), RedisCluster)
     assert isinstance(spicerack.elasticsearch_clusters('search_eqiad'), ElasticsearchClusters)

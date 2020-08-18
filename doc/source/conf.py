@@ -61,7 +61,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'Spicerack'
 title = u'{project} Documentation'.format(project=project)
-copyright = u"2018, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
+copyright = u"2018-2020, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
 author = u'Riccardo Coccioli'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -128,6 +128,7 @@ intersphinx_mapping = {
     'ClusterShell': ('http://clustershell.readthedocs.io/en/v1.8/', None),
     'cumin': ('https://doc.wikimedia.org/cumin/master/', None),
     'requests': ('https://requests.readthedocs.io/en/master/', None),
+    'pymysql': ('https://pymysql.readthedocs.io/en/latest/', None),
 }
 
 # Napoleon settings

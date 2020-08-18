@@ -22,6 +22,7 @@ from spicerack.ipmi import Ipmi
 from spicerack.log import irc_logger
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
+from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NETBOX_DOMAIN
 from spicerack.phabricator import create_phabricator, Phabricator
@@ -32,7 +33,7 @@ from spicerack.remote import Remote, RemoteHosts
 
 
 try:
-    __version__ = get_distribution('wikimedia-spicerack').version  # Must be the same used as 'name' in setup.py
+    __version__: str = get_distribution('wikimedia-spicerack').version  # Must be the same used as 'name' in setup.py
     """:py:class:`str`: the version of the current Spicerack module."""
 except DistributionNotFound:  # pragma: no cover - this should never happen during tests
     pass  # package is not installed
@@ -86,8 +87,8 @@ class Spicerack:
         self._username = interactive.get_username()
         self._current_hostname = gethostname()
         self._irc_logger = irc_logger
-        self._confctl = None  # type: Optional[Confctl]
-        self._ipmi = None  # type: Optional[Ipmi]
+        self._confctl: Optional[Confctl] = None
+        self._ipmi: Optional[Ipmi] = None
         self._actions = ActionsDict()
 
     @property
@@ -251,6 +252,15 @@ class Spicerack:
 
         """
         return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
+
+    def mysql(self) -> Mysql:
+        """Get a Mysql instance.
+
+        Returns:
+            spicerack.mysql.Mysql: the Mysql instance.
+
+        """
+        return Mysql(dry_run=self._dry_run)
 
     def mysql_legacy(self) -> MysqlLegacy:
         """Get a MysqlLegacy instance.

@@ -78,7 +78,7 @@ class CookbookError(SpicerackError):
 class CookbooksModuleInterface:
     """Module interface to be used as type hint for the imported cookbooks."""
 
-    __title__ = ''
+    __title__: str = ''
     """str: the cookbook static title."""
 
     @staticmethod
@@ -93,7 +93,7 @@ class CookbooksModuleInterface:
 class Cookbooks:
     """Collect and represent available cookbooks."""
 
-    cookbooks_module_prefix = 'cookbooks'
+    cookbooks_module_prefix: str = 'cookbooks'
 
     def __init__(self, base_dir: str, args: List[str], spicerack: Spicerack, path_filter: Optional[str] = None) -> None:
         """Initialize the Cookbook class and collect CookbooksMenu and Cookbook items.
@@ -270,7 +270,7 @@ class Cookbooks:
 class BaseCookbooksItem:
     """Base class for any item collected by the Cookbooks class."""
 
-    fallback_title = '-'
+    fallback_title: str = '-'
 
     def __init__(self, module_name: str, args: List[str], spicerack: Spicerack) -> None:
         """Base cookbooks's item constructor.
@@ -363,8 +363,8 @@ class BaseCookbooksItem:
 class Cookbook(BaseCookbooksItem):
     """Cookbook class."""
 
-    fallback_title = 'UNKNOWN (unable to detect title)'
-    statuses = ('NOTRUN', 'PASS', 'FAIL', 'ERROR')  # Status labels
+    fallback_title: str = 'UNKNOWN (unable to detect title)'
+    statuses: Tuple[str, str, str, str] = ('NOTRUN', 'PASS', 'FAIL', 'ERROR')  # Status labels
     not_run, success, failed, error = statuses  # Valid statuses variables
 
     def __init__(self, module_name: str, args: List[str], spicerack: Spicerack) -> None:
@@ -450,7 +450,7 @@ class Cookbook(BaseCookbooksItem):
 
         """
         ret = -1
-        args = None
+        args: Optional[argparse.Namespace] = None
         message = 'raised while parsing arguments for cookbook'
 
         if not hasattr(self.module, 'argument_parser'):
@@ -477,13 +477,13 @@ class Cookbook(BaseCookbooksItem):
 class CookbooksMenu(BaseCookbooksItem):
     """Cookbooks Menu class."""
 
-    back_answer = 'b'
+    back_answer: str = 'b'
     """str: interactive menu answer to go back to the parent menu."""
-    help_answer = 'h'
+    help_answer: str = 'h'
     """str: interactive menu answer to print the generic CookbooksMenu help message."""
-    quit_answer = 'q'
+    quit_answer: str = 'q'
     """str: answer to quit the interactive menu."""
-    help_message = COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=Cookbook.statuses)
+    help_message: str = COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=Cookbook.statuses)
     """str: the generic CookbooksMenu help message."""
 
     def __init__(self, module_name: str, args: List[str], spicerack: Spicerack) -> None:
@@ -494,7 +494,7 @@ class CookbooksMenu(BaseCookbooksItem):
 
         """
         super().__init__(module_name, args, spicerack)
-        self.parent = None  # type: Optional[CookbooksMenu]
+        self.parent: Optional[CookbooksMenu] = None
         self.items = {}  # type: ignore
 
     @property
@@ -561,8 +561,8 @@ class CookbooksMenu(BaseCookbooksItem):
             tuple: (int, int) with the number of completed and total items.
 
         """
-        completed = 0
-        total = 0
+        completed: int = 0
+        total: int = 0
         for item in self.items.values():
             if isinstance(item, CookbooksMenu):
                 sub_completed, sub_total = item.calculate_status()
@@ -602,7 +602,7 @@ class CookbooksMenu(BaseCookbooksItem):
             list: the list of lines that represent the tree.
 
         """
-        lines = []
+        lines: List[str] = []
         for i, key in enumerate(sorted(self.items.keys())):
             is_final = (i == len(self.items) - 1)
             name = self.items[key].path

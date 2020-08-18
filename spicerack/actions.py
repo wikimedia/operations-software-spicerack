@@ -1,7 +1,6 @@
 """Actions module."""
 import logging
 
-from collections import OrderedDict
 from typing import Hashable, List
 
 
@@ -31,7 +30,7 @@ class Actions:
 
         """
         self.name = name
-        self.actions = []  # type: List[str]
+        self.actions: List[str] = []
         self.has_warnings = False
         self.has_failures = False
 
@@ -101,21 +100,16 @@ class Actions:
         self.actions.append(message)
 
 
-class ActionsDict(OrderedDict):
-    """OrderedDict with defaultdict capabilities for the :py:class:`spicerack.actions.Action` class.
+class ActionsDict(dict):
+    """Custom dictionary with defaultdict capabilities for the :py:class:`spicerack.actions.Action` class.
 
-    Inherits from :py:class:`collections.OrderedDict` and automatically instantiate and returns a new instance of the
-    :py:class:`spicerack.actions.Actions` class for every missing key like a :py:class:`collections.defaultdict`.
+    Automatically instantiate and returns a new instance of the :py:class:`spicerack.actions.Actions` class for every
+    missing key like a :py:class:`collections.defaultdict`.
 
     When accessing a missing key, the key itself is passed to the new :py:class:`spicerack.actions.Actions` instance
     as ``name``.
 
     When converted to string returns a nicely formatted representation of the instance and all its items.
-
-    Todo:
-        Once the support of Python 3.5 is dropped this can be converted into a simple factory with a single ``new()``
-        method that returns an instance of ``defaultdict(Actions)``.
-
     """
 
     def __missing__(self, key: Hashable) -> Actions:

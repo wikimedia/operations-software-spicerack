@@ -1,7 +1,7 @@
 """DNS module."""
 import logging
 
-from typing import List, Optional, Union
+from typing import cast, List, Optional, Union
 
 from dns import resolver, reversename, rrset
 from dns.exception import DNSException
@@ -104,7 +104,7 @@ class Dns:
 
         """
         response = self.resolve(reversename.from_address(address), 'PTR')
-        return self._parse_targets(response.rrset)  # type: ignore
+        return self._parse_targets(cast(rrset.RRset, response.rrset))
 
     def resolve_cname(self, name: str) -> str:
         """Perform a DNS lookup for CNAME record for the given name.
@@ -116,7 +116,7 @@ class Dns:
             str: the absolute target name for this CNAME, without the trailing dot.
 
         """
-        targets = self._parse_targets(self.resolve(name, 'CNAME').rrset)  # type: ignore
+        targets = self._parse_targets(cast(rrset.RRset, self.resolve(name, 'CNAME').rrset))
         if len(targets) != 1:
             raise DnsError('Found multiple CNAMEs target for {name}: {targets}'.format(name=name, targets=targets))
 
@@ -161,7 +161,7 @@ class Dns:
             list: the list of IPv4 or IPv6 addresses as strings returned by the DNS response.
 
         """
-        return [rdata.address for rdata in self.resolve(name, record_type).rrset]  # type: ignore
+        return [rdata.address for rdata in cast(rrset.RRset, self.resolve(name, record_type).rrset)]
 
     @staticmethod
     def _parse_targets(response_set: rrset.RRset) -> List[str]:

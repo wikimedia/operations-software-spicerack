@@ -31,8 +31,10 @@ def ensure_wrap(func: Callable) -> Callable:
     return wrapper
 
 
-# TODO: 'func=None' is a workaround for https://github.com/PyCQA/pylint/issues/259, restore it to 'func, *' once fixed
-# and remove the type: ignore comments.
+# TODO: 'func=None' is a workaround for https://github.com/PyCQA/pylint/issues/259
+# It was fixed in https://github.com/PyCQA/pylint/pull/2926 but the current Prospector doesn't include yet a recent
+# enough version of pylint that has the fix.
+# Once fixed restore the signature to 'func: Callable, *' and remove the type: ignore comments.
 @ensure_wrap
 def retry(
     func: Optional[Callable] = None,

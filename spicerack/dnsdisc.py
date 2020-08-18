@@ -2,7 +2,7 @@
 import logging
 
 from collections import defaultdict
-from typing import Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional
 
 from dns import resolver
 from dns.exception import DNSException
@@ -45,7 +45,7 @@ class Discovery:
         self._records = records
         self._dry_run = dry_run
 
-        self._resolvers = {}
+        self._resolvers: Dict[str, resolver.Resolver] = {}
         for nameserver in self._remote.query('A:dns-auth').hosts:
             self._resolvers[nameserver] = resolver.Resolver()
             self._resolvers[nameserver].port = 5353

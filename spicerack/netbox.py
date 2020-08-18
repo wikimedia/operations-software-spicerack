@@ -8,7 +8,7 @@ import pynetbox
 from spicerack.exceptions import SpicerackError
 
 
-NETBOX_DOMAIN = 'netbox.wikimedia.org'
+NETBOX_DOMAIN: str = 'netbox.wikimedia.org'
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 

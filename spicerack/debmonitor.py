@@ -26,7 +26,7 @@ class Debmonitor:
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
-        self._base_url = 'https://{host}'.format(host=host)
+        self._base_url: str = 'https://{host}'.format(host=host)
         self._cert = cert
         self._key = key
         self._dry_run = dry_run

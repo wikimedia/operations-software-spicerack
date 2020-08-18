@@ -18,9 +18,9 @@ from spicerack.exceptions import SpicerackError
 from spicerack.remote import Remote, RemoteHostsAdapter
 
 
-REPLICATION_ROLES = ('master', 'slave', 'standalone')
+REPLICATION_ROLES: Tuple[str, ...] = ('master', 'slave', 'standalone')
 """tuple: list of valid replication roles."""
-CORE_SECTIONS = ('s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 'x1', 'es4', 'es5')
+CORE_SECTIONS: Tuple[str, ...] = ('s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 'x1', 'es4', 'es5')
 """tuple: list of valid MySQL RW section names (external storage RO sections are not included here)."""
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -119,7 +119,7 @@ class MysqlLegacy:
             spicerack.mysql_legacy.MysqlLegacyRemoteHosts: an instance with the remote targets.
 
         """
-        query_parts = ['P{O:mariadb::core}']
+        query_parts = ['A:db-core']
         dc_multipler = len(CORE_DATACENTERS)
         section_multiplier = len(CORE_SECTIONS)
 
@@ -137,15 +137,14 @@ class MysqlLegacy:
                 raise MysqlLegacyError('Got invalid section {section}, accepted values are: {sections}'.format(
                     section=section, sections=CORE_SECTIONS))
 
-            query_parts.append('P{{C:mariadb::heartbeat and R:Class%shard = "{section}"}}'.format(section=section))
+            query_parts.append('A:db-section-{section}'.format(section=section))
 
         if replication_role is not None:
             if replication_role not in REPLICATION_ROLES:
                 raise MysqlLegacyError('Got invalid replication_role {role}, accepted values are: {roles}'.format(
                     role=replication_role, roles=REPLICATION_ROLES))
 
-            query_parts.append(
-                'P{{C:mariadb::config and R:Class%replication_role = "{role}"}}'.format(role=replication_role))
+            query_parts.append('A:db-role-{role}'.format(role=replication_role))
 
         mysql_hosts = MysqlLegacyRemoteHosts(self._remote.query(' and '.join(query_parts)))
 

@@ -28,8 +28,8 @@ class MediaWikiCheckError(SpicerackCheckError):
 class MediaWiki:
     """Class to manage MediaWiki-specific resources."""
 
-    _list_cronjobs_command = '"$(crontab -u www-data -l | sed -r \'/^(#|$)/d\')"'
-    _siteinfo_url = 'http://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2'
+    _list_cronjobs_command: str = '"$(crontab -u www-data -l | sed -r \'/^(#|$)/d\')"'
+    _siteinfo_url: str = 'http://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2'
 
     def __init__(self, conftool: ConftoolEntity, remote: Remote, user: str, dry_run: bool = True) -> None:
         """Initialize the instance.
