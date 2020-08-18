@@ -15,6 +15,7 @@ Build-Depends:
   python3-flake8,
   python3-mock (>= 2.0.0),
   python3-phabricator,
+  python3-pymysql,
   python3-pynetbox,
   python3-pytest,
   python3-pytest-cov,
@@ -30,7 +31,7 @@ Build-Depends:
   python3-urllib3 (<< 1.25),
   python3-yaml
 Homepage: https://github.com/wikimedia/operations-software-spicerack
-X-Python3-Version: >= 3.5
+X-Python3-Version: >= 3.7
 
 Package: spicerack
 Architecture: any
