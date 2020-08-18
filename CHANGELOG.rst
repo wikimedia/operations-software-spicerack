@@ -1,6 +1,28 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.39`_ (2020-08-18)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* Add native mysql spicerack module.
+
+Bug Fixes
+"""""""""
+
+* mysql_legacy: update Cumin queries for DB selection due to Puppet refactors.
+* icinga: fix bug for ``recheck_all_services()``, the signature of the Icinga command requires a check time too.
+
+Miscellanea
+"""""""""""
+
+* Remove support for Python 3.5 and 3.6.
+* actions: refactored to take advantage of more recent Python versions.
+* Add type hints for variables and attributes since the support for older Python versions has been dropped.
+* Pin to a working version of prospector as 1.3.0 was overenthusiastic with updating its dependencies.
+* actions: fix test for pytest regression in version 6.0.0.
 
 `v0.0.38`_ (2020-06-09)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -845,3 +867,4 @@ New features
 .. _`v0.0.36`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.36
 .. _`v0.0.37`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.37
 .. _`v0.0.38`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.38
+.. _`v0.0.39`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.39
