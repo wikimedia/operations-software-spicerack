@@ -1,6 +1,7 @@
-spicerack (0.0.40-1) stretch-wikimedia; urgency=medium
+spicerack (0.0.40-1) buster-wikimedia; urgency=medium
 
   * v0.0.40 upstream release.
+  * Move default target distro to buster-wikimedia.
 
  -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Thu, 27 Aug 2020 23:52:53 +0200
 
