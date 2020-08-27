@@ -70,7 +70,20 @@ Logging
 The logging is already pre-setup by the ``cookbook`` entry point script that initialize the root logger, so that each
 cookbook can just initialize its own :py:mod:`logging` instance and log. A special logger to send notification to the
 ``#wikimedia-operations`` IRC channel is also available through the ``spicerack`` argument passed to the cookbook's
-``run()`` function.
+``run()`` function in its ``irc_logger`` property.
+The log files can be found in `/var/log/spicerack/${PATH_OF_THE_COOKBOOK}` on the host where the cookbooks are run.
+All normal log messages are sent to two separate files, of which one always logs at ``DEBUG`` level even if
+``-v/--verbose`` is not set.
+So for example running the cookbook ``foo.bar.baz`` will generate two log files::
+
+    /var/log/spicerack/foo/bar/baz.log  # with INFO and higher log levels
+    /var/log/spicerack/foo/bar/baz-extended.log  # with all log levels
+
+If the cookbook is started with a directory of multiple cookbooks then the logs are all concentrated in the directory
+path ones::
+
+    /var/log/spicerack/foo/bar.log  # with INFO and higher log levels
+    /var/log/spicerack/foo/bar-extended.log  # with all log levels
 
 Example of logging::
 
@@ -78,7 +91,13 @@ Example of logging::
 
     logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-    logger.info('message')
+    logger.info('message')  # this goes to stdout in the operator shell and is logged in both files.
+    logger.debug('message') # this goes to stdout in the operator shell only if -v/--verbose is set and is logged only
+                            # in the extended file.
+
+    def run(args, spicerack):
+        spicerack.irc_logger.info('message')  # This sends a message to the #wikimedia-operation IRC channel with:
+                                              # !log user@host message
 
 Spicerack library
 ^^^^^^^^^^^^^^^^^

@@ -1,6 +1,20 @@
 Spicerack Changelog
 -------------------
 
+
+`v0.0.40`_ (2020-08-27)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* elasticsearch_cluster: verify all write queues are empty querying Prometheus (`T261239`_).
+
+Miscellanea
+"""""""""""
+
+* doc: improved logging documentation.
+
 `v0.0.39`_ (2020-08-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -828,6 +842,7 @@ New features
 .. _`T229792`: https://phabricator.wikimedia.org/T229792
 .. _`T231068`: https://phabricator.wikimedia.org/T231068
 .. _`T243935`: https://phabricator.wikimedia.org/T243935
+.. _`T261239`: https://phabricator.wikimedia.org/T261239
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -868,3 +883,4 @@ New features
 .. _`v0.0.37`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.37
 .. _`v0.0.38`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.38
 .. _`v0.0.39`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.39
+.. _`v0.0.40`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.40
