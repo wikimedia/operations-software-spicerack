@@ -125,7 +125,7 @@ class Discovery:
             if not self._dry_run:
                 raise
 
-    @retry(backoff_mode='linear', exceptions=(DiscoveryCheckError,))
+    @retry(tries=10, backoff_mode='constant', exceptions=(DiscoveryCheckError,))
     def check_ttl(self, ttl: int) -> None:
         """Check the TTL for all records.
 
@@ -143,7 +143,7 @@ class Discovery:
                 raise DiscoveryCheckError("Expected TTL '{expected}', got '{ttl}' for record {record}".format(
                     expected=ttl, ttl=record.ttl, record=record[0].address))
 
-    @retry(backoff_mode='linear', exceptions=(DiscoveryError,))
+    @retry(tries=10, backoff_mode='constant', exceptions=(DiscoveryError,))
     def check_record(self, name: str, expected_name: str) -> None:
         """Check that a Discovery record resolves on all authoritative resolvers to the correct IP.
 

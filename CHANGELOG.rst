@@ -2,6 +2,14 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.41`_ (2020-08-31)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* dnsdisc: change retry logic to wait up to 27 seconds with more frequent checks instead of the current 9 seconds.
+
 `v0.0.40`_ (2020-08-27)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -884,3 +892,4 @@ New features
 .. _`v0.0.38`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.38
 .. _`v0.0.39`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.39
 .. _`v0.0.40`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.40
+.. _`v0.0.41`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.41
