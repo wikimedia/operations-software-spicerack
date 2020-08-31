@@ -329,10 +329,10 @@ class ElasticsearchClusters:
         # We expect all DCs except one to return empty results, but we have a problem if all return empty
         have_received_results = False
         for dc in self._core_datacenters:
-            query = ('kafka_burrow_partition_lag{{'
+            query = ('kafka_burrow_partition_lag{'
                      '    group="cpjobqueue-cirrusSearchElasticaWrite",'
                      '    topic=~"[[:alpha:]]*.cpjobqueue.partitioned.mediawiki.job.cirrusSearchElasticaWrite"'
-                     '}}')
+                     '}')
             # Query returns a list of dictionaries each of format {'metric': {}, 'value': [$timestamp, $value]}
             results = self._prometheus.query(query, dc)
             if not results:
