@@ -2,6 +2,14 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.42`_ (2020-08-31)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug Fixes
+"""""""""
+
+* elasticsearch: fix prometheus query syntax.
+
 `v0.0.41`_ (2020-08-31)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -893,3 +901,4 @@ New features
 .. _`v0.0.39`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.39
 .. _`v0.0.40`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.40
 .. _`v0.0.41`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.41
+.. _`v0.0.42`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.42
