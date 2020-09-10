@@ -3,7 +3,7 @@ import os
 
 from logging import Logger
 from socket import gethostname
-from typing import Dict, Optional
+from typing import Dict, Optional, Sequence
 
 from pkg_resources import DistributionNotFound, get_distribution
 
@@ -283,17 +283,20 @@ class Spicerack:
         """
         return RedisCluster(cluster, os.path.join(self._spicerack_config_dir, 'redis_cluster'), dry_run=self._dry_run)
 
-    def elasticsearch_clusters(self, clustergroup: str) -> ElasticsearchClusters:
+    def elasticsearch_clusters(self, clustergroup: str,
+                               write_queue_datacenters: Sequence[str]) -> ElasticsearchClusters:
         """Get an ElasticsearchClusters instance.
 
         Arguments:
             clustergroup (str): name of cluster group e.g ``search_eqiad``.
+            write_queue_datacenters (Sequence[str]): Sequence of which core DCs to query write queues for.
 
         Returns:
             spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
 
         """
-        return create_elasticsearch_clusters(clustergroup, self.remote(), self.prometheus(), dry_run=self._dry_run)
+        return create_elasticsearch_clusters(clustergroup, write_queue_datacenters,
+                                             self.remote(), self.prometheus(), dry_run=self._dry_run)
 
     def admin_reason(self, reason: str, task_id: Optional[str] = None) -> Reason:
         """Get an administrative Reason instance.

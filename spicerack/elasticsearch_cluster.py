@@ -6,7 +6,7 @@ from contextlib import contextmanager, ExitStack
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence
 
 import curator
 
@@ -14,7 +14,6 @@ from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportE
 from urllib3.exceptions import HTTPError
 
 from spicerack.administrative import Reason
-from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.prometheus import Prometheus
@@ -52,12 +51,14 @@ class ElasticsearchClusterCheckError(SpicerackCheckError):
     """Custom Exception class for check errors of this module."""
 
 
-def create_elasticsearch_clusters(clustergroup: str, remote: Remote, prometheus: Prometheus,
+def create_elasticsearch_clusters(clustergroup: str, write_queue_datacenters: Sequence[str],
+                                  remote: Remote, prometheus: Prometheus,
                                   dry_run: bool = True) -> 'ElasticsearchClusters':
     """Create ElasticsearchClusters instance.
 
     Arguments:
         clustergroup (str): name of cluster group.
+        write_queue_datacenters (Sequence[str]): Sequence of which core DCs to query write queues for.
         remote (spicerack.remote.Remote): the Remote instance.
         prometheus (spicerack.prometheus.Prometheus): the prometheus instance.
         dry_run (bool, optional):  whether this is a DRY-RUN.
@@ -77,7 +78,7 @@ def create_elasticsearch_clusters(clustergroup: str, remote: Remote, prometheus:
 
     clusters = [Elasticsearch(endpoint) for endpoint in endpoints]
     elasticsearch_clusters = [ElasticsearchCluster(cluster, remote, dry_run=dry_run) for cluster in clusters]
-    return ElasticsearchClusters(elasticsearch_clusters, remote, prometheus, CORE_DATACENTERS, dry_run=dry_run)
+    return ElasticsearchClusters(elasticsearch_clusters, remote, prometheus, write_queue_datacenters, dry_run=dry_run)
 
 
 class ElasticsearchHosts(RemoteHostsAdapter):
@@ -157,21 +158,22 @@ class ElasticsearchClusters:
     """Class to manage elasticsearch clusters."""
 
     def __init__(self, clusters: Sequence['ElasticsearchCluster'], remote: Remote,
-                 prometheus: Prometheus, core_datacenters: Tuple[str, ...], dry_run: bool = True) -> None:
+                 prometheus: Prometheus, write_queue_datacenters: Sequence[str],
+                 dry_run: bool = True) -> None:
         """Initialize ElasticsearchClusters.
 
         Arguments:
             clusters (list): list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
             remote (spicerack.remote.Remote): the Remote instance.
             prometheus (spicerack.prometheus.Prometheus): the prometheus instance.
-            core_datacenters (tuple): Tuple of str representing each "core" dc; used for queries to monitor write queue
+            write_queue_datacenters (Sequence[str]): Sequence of which core DCs to query write queues for.
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
         self._clusters = clusters
         self._remote = remote
         self._prometheus = prometheus
-        self._core_datacenters = core_datacenters
+        self._write_queue_datacenters = write_queue_datacenters
         self._dry_run = dry_run
 
     def __str__(self) -> str:
@@ -324,11 +326,11 @@ class ElasticsearchClusters:
         At most waits for 60*60 seconds = 1 hour.
 
         Does not retry if prometheus returns empty results for all datacenters.
-
         """
         # We expect all DCs except one to return empty results, but we have a problem if all return empty
         have_received_results = False
-        for dc in self._core_datacenters:
+
+        for dc in self._write_queue_datacenters:
             query = ('kafka_burrow_partition_lag{'
                      '    group="cpjobqueue-cirrusSearchElasticaWrite",'
                      '    topic=~"[[:alpha:]]*.cpjobqueue.partitioned.mediawiki.job.cirrusSearchElasticaWrite"'
@@ -354,8 +356,8 @@ class ElasticsearchClusters:
                     raise ElasticsearchClusterCheckError("Write queue not empty (had value of {}) for partition {}"
                                                          "of topic {}.".format(queue_size, partition, topic))
         if not have_received_results:
-            raise ElasticsearchClusterError("Prometheus query {} for each of {} returned empty response,"
-                                            "is query correct?".format(query, self._core_datacenters))
+            raise ElasticsearchClusterError("Prometheus query {} returned empty response for all dcs in {}, "
+                                            "is query correct?".format(query, self._write_queue_datacenters))
 
 
 class ElasticsearchCluster:

@@ -21,14 +21,14 @@ pytestmark = min_elasticsearch  # pylint: disable=invalid-name
 
 def test_create_elasticsearch_clusters():
     """It should return an instance of ElasticsearchCluster."""
-    target = ec.create_elasticsearch_clusters('search_eqiad', None, None)
+    target = ec.create_elasticsearch_clusters('search_eqiad', ['some_core_dc'], None, None)
     assert isinstance(target, ec.ElasticsearchClusters)
 
 
 def test_create_elasticsearch_clusters_fail():
     """It should throw an ElasticsearchCluster Exception."""
     with pytest.raises(ec.ElasticsearchClusterError, match='No cluster group named search_test'):
-        ec.create_elasticsearch_clusters('search_test', None, None)
+        ec.create_elasticsearch_clusters('search_test', ['some_core_dc'], None, None)
 
 
 def test_get_remote_hosts():
@@ -419,6 +419,20 @@ class TestElasticsearchClusters:
 
         with pytest.raises(ec.ElasticsearchClusterError):
             elasticsearch_clusters.wait_for_all_write_queues_empty()
+
+    def test_write_queue_datacenters_get_queried(self):
+        """Ensure that there is a prometheus query for each dc of write_queue_datacenters."""
+        prometheus = mock.MagicMock(spec_set=Prometheus)
+        prometheus.query = mock.MagicMock(return_value=[{'metric': {'topic': 'the_topic', 'partition': 'the_partition'},
+                                                        'value': [1597958424.599, '0']},
+                                                        {'metric': {'topic': 'the_topic', 'partition': 'the_partition'},
+                                                        'value': [1597958424.599, '0']},
+                                                        {'metric': {'topic': 'the_topic', 'partition': 'the_partition'},
+                                                        'value': [1597958424.599, '0']}])
+        elasticsearch_clusters = ec.ElasticsearchClusters(self.clusters, None, prometheus, ['eqiad', 'codfw'])
+        elasticsearch_clusters.wait_for_all_write_queues_empty()
+
+        assert prometheus.query.mock_calls == [mock.call(mock.ANY, 'eqiad'), mock.call(mock.ANY, 'codfw')]
 
     def test_wait_for_green_on_all_clusters_elastisearch_call(self):
         """Makes sure the call to elasticsearch.cluster.health is placed for each cluster."""
