@@ -55,7 +55,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.mysql(), Mysql)
     assert isinstance(spicerack.mysql_legacy(), MysqlLegacy)
     assert isinstance(spicerack.redis_cluster('cluster'), RedisCluster)
-    assert isinstance(spicerack.elasticsearch_clusters('search_eqiad'), ElasticsearchClusters)
+    assert isinstance(spicerack.elasticsearch_clusters('search_eqiad', ('some_core_dc',)), ElasticsearchClusters)
     assert isinstance(spicerack.admin_reason('Reason message', task_id='T12345'), Reason)
     assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), puppet.PuppetHosts)
     assert isinstance(spicerack.phabricator(get_fixture_path('phabricator', 'valid.conf')), Phabricator)

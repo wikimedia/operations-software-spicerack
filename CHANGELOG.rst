@@ -2,6 +2,14 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.43`_ (2020-09-16)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* elasticsearch: Store which datacenters to query for metrics in Prometheus.
+
 `v0.0.42`_ (2020-08-31)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -902,3 +910,4 @@ New features
 .. _`v0.0.40`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.40
 .. _`v0.0.41`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.41
 .. _`v0.0.42`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.42
+.. _`v0.0.43`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.43
