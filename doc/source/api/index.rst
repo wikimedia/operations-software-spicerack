@@ -19,7 +19,6 @@ Spicerack Python API autodoc.
    spicerack.constants
    spicerack.debmonitor
    spicerack.decorators
-   spicerack.dns
    spicerack.dnsdisc
    spicerack.elasticsearch_cluster
    spicerack.exceptions

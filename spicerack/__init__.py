@@ -6,6 +6,7 @@ from socket import gethostname
 from typing import Dict, Optional, Sequence
 
 from pkg_resources import DistributionNotFound, get_distribution
+from wmflib.dns import Dns
 
 from spicerack import interactive
 from spicerack.actions import ActionsDict
@@ -13,7 +14,6 @@ from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.config import load_ini_config, load_yaml_config
 from spicerack.debmonitor import Debmonitor
-from spicerack.dns import Dns
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, ElasticsearchClusters
 from spicerack.ganeti import Ganeti
@@ -227,7 +227,7 @@ class Spicerack:
         """Get a Dns instance.
 
         Returns:
-            spicerack.dns.Dns: a Dns instance that will use the operating system default namserver(s).
+            wmflib.dns.Dns: a Dns instance that will use the operating system default namserver(s).
 
         """
         return Dns()
