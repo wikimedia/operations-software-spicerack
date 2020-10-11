@@ -4,7 +4,6 @@ Python API
 Spicerack Python API autodoc.
 
 .. automodule:: spicerack
-   :members:
 
 .. autodata:: __version__
 
