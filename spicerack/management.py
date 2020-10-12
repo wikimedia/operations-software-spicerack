@@ -9,7 +9,7 @@ from spicerack.exceptions import SpicerackError
 
 
 DC_HOSTNAME_PATTERN: re.Pattern = re.compile(r'(?P<dc_id>[1-5])[0-9]{3}$')
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class ManagementError(SpicerackError):

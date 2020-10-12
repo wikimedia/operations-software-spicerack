@@ -14,7 +14,7 @@ from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class MediaWikiError(SpicerackError):

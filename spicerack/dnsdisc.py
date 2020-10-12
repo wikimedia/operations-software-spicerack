@@ -13,7 +13,7 @@ from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import Remote
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class DiscoveryError(SpicerackError):

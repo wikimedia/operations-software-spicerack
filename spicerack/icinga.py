@@ -18,7 +18,7 @@ from spicerack.typing import TypeHosts
 DOWNTIME_COMMAND: str = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
 ICINGA_DOMAIN: str = 'icinga.wikimedia.org'
 MIN_DOWNTIME_SECONDS: int = 60  # Minimum time in seconds the downtime can be set
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class IcingaError(SpicerackError):

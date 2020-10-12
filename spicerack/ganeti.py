@@ -13,7 +13,7 @@ from spicerack.exceptions import SpicerackError
 from spicerack.remote import Remote, RemoteHosts
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 RAPI_URL_FORMAT: str = 'https://{cluster}:5080'
 """:py:class:`str`: the template string to construct the Ganeti RAPI URL."""

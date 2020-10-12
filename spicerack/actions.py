@@ -4,7 +4,7 @@ import logging
 from typing import Hashable, List
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class Actions:

@@ -17,7 +17,7 @@ from spicerack.exceptions import SpicerackCheckError, SpicerackError
 IPMI_PASSWORD_MAX_LEN: int = 20
 IPMI_PASSWORD_MIN_LEN: int = 16
 IPMI_SAFE_BOOT_PARAMS: Tuple[str, ...] = ('0000000000', '8000020000')  # No or unimportant overrides.
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class IpmiError(SpicerackError):
