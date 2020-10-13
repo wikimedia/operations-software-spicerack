@@ -29,6 +29,7 @@ Build-Depends:
   python3-sphinx-argparse,
   python3-sphinx-rtd-theme,
   python3-urllib3 (<< 1.25),
+  python3-wmflib,
   python3-yaml
 Homepage: https://github.com/wikimedia/operations-software-spicerack
 X-Python3-Version: >= 3.7
