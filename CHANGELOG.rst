@@ -2,6 +2,25 @@ Spicerack Changelog
 -------------------
 
 
+`v0.0.44`_ (2020-10-13)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Breaking changes
+""""""""""""""""
+
+* dns: the ``dns`` module has been migrated to ``wmflib`` and removed from Spicerack. Its access via the
+  ``spicerack.dns(()`` accessor is unchanged, but any direct imports from the ``spicerack.dns`` module in
+  cookbooks must be replaced with ``wmflib.dns`` (`T257905`_).
+
+Miscellanea
+"""""""""""
+
+* Spicerack now depends on the new ``wmflib`` package.
+* log: adjust the return type of ``FilterOutCumin.filter()`` as required by mypy (upstream documentation incorrect).
+* documentation: refactor and simplify its configuration.
+* pylint: allow ``logger`` as module-scope name given that is used throughout the project so that there is no need for
+  a pylint disable comment.
+
 `v0.0.43`_ (2020-09-16)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -866,6 +885,7 @@ New features
 .. _`T229792`: https://phabricator.wikimedia.org/T229792
 .. _`T231068`: https://phabricator.wikimedia.org/T231068
 .. _`T243935`: https://phabricator.wikimedia.org/T243935
+.. _`T257905`: https://phabricator.wikimedia.org/T257905
 .. _`T261239`: https://phabricator.wikimedia.org/T261239
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
@@ -911,3 +931,4 @@ New features
 .. _`v0.0.41`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.41
 .. _`v0.0.42`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.42
 .. _`v0.0.43`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.43
+.. _`v0.0.44`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.44
