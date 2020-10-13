@@ -2,13 +2,14 @@
 import logging
 import re
 
+from wmflib.dns import Dns, DnsError
+
 from spicerack.constants import ALL_DATACENTERS, INTERNAL_TLD, MANAGEMENT_SUBDOMAIN
-from spicerack.dns import Dns, DnsError
 from spicerack.exceptions import SpicerackError
 
 
 DC_HOSTNAME_PATTERN: re.Pattern = re.compile(r'(?P<dc_id>[1-5])[0-9]{3}$')
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class ManagementError(SpicerackError):
@@ -22,7 +23,7 @@ class Management:
         """Initialize the instance.
 
         Arguments:
-            dns (spicerack.dns.Dns): the instance to use for DNS resolution.
+            dns (wmflib.dns.Dns): the instance to use for DNS resolution.
 
         """
         self._dns = dns

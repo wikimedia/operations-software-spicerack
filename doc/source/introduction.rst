@@ -89,7 +89,7 @@ Example of logging::
 
     import logging
 
-    logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+    logger = logging.getLogger(__name__)
 
     logger.info('message')  # this goes to stdout in the operator shell and is logged in both files.
     logger.debug('message') # this goes to stdout in the operator shell only if -v/--verbose is set and is logged only

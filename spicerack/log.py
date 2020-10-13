@@ -58,21 +58,21 @@ class IRCSocketHandler(logging.Handler):
 class FilterOutCumin(logging.Filter):
     """A logging output filter to filter out Cumin's logs."""
 
-    def filter(self, record: logging.LogRecord) -> int:
+    def filter(self, record: logging.LogRecord) -> bool:
         """Filter out Cumin's log messages.
 
         Arguments:
             record (logging.LogRecord):
 
         Returns:
-            int: 0 if the record should be filtered out, non-zero if it should be included. According to Python's
-            logging interface, see: https://docs.python.org/3/library/logging.html#filter-objects
+            int: :py:data:`False` if the record should be filtered out, :py:data:`True` if it should be included.
+            According to Python's logging interface, see: https://docs.python.org/3/library/logging.html#filter-objects
 
         """
         if record.name == 'cumin' or record.name.startswith('cumin.'):
-            return 0  # Filter it out
+            return False  # Filter it out
 
-        return 1
+        return True
 
 
 def setup_logging(

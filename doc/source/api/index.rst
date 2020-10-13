@@ -4,7 +4,6 @@ Python API
 Spicerack Python API autodoc.
 
 .. automodule:: spicerack
-   :members:
 
 .. autodata:: __version__
 
@@ -19,7 +18,6 @@ Spicerack Python API autodoc.
    spicerack.constants
    spicerack.debmonitor
    spicerack.decorators
-   spicerack.dns
    spicerack.dnsdisc
    spicerack.elasticsearch_cluster
    spicerack.exceptions

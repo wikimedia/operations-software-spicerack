@@ -11,7 +11,7 @@ from spicerack.tests import require_caplog
 
 GENERIC_LOG_RECORD = logging.LogRecord('module', logging.DEBUG, '/source/file.py', 1, 'message', [], None)
 CUMIN_LOG_RECORD = logging.LogRecord('cumin.module', logging.DEBUG, '/cumin/source/file.py', 1, 'message', [], None)
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def _assert_match_in_tmpdir(match, tmp_dir):

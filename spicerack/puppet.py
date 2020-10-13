@@ -17,7 +17,7 @@ from spicerack.remote import RemoteExecutionError, RemoteHosts, RemoteHostsAdapt
 
 
 PUPPET_COMMON_SCRIPT: str = '/usr/local/share/bash/puppet-common.sh'
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def get_puppet_ca_hostname() -> str:

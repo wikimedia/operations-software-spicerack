@@ -7,7 +7,7 @@ import phabricator
 from spicerack.exceptions import SpicerackError
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def create_phabricator(

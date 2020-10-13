@@ -14,7 +14,7 @@ from spicerack.config import load_yaml_config
 from spicerack.exceptions import SpicerackError
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 COOKBOOK_NO_PARSER_WITH_ARGS_RETCODE = 95
 """int: reserved exit code: the cookbook doesn't have an argument_parser() function but was called with arguments."""
 COOKBOOK_PARSE_ARGS_FAIL_RETCODE = 96

@@ -9,7 +9,7 @@ from spicerack.exceptions import SpicerackError
 
 
 NETBOX_DOMAIN: str = 'netbox.wikimedia.org'
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class NetboxError(SpicerackError):

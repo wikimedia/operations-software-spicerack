@@ -21,6 +21,7 @@ INSTALL_REQUIRES = [
     'requests>=2.11.1',
     # Temporary fix to avoid pip to install the latest version breaking install requirements of some dependency.
     'urllib3<1.25',
+    'wmflib',
 ]
 
 # Extra dependencies

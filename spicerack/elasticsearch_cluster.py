@@ -20,7 +20,7 @@ from spicerack.prometheus import Prometheus
 from spicerack.remote import Remote, RemoteHosts, RemoteHostsAdapter
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 # TODO: following should eventually be moved to puppet
 ELASTICSEARCH_CLUSTERS: Dict[str, Dict[str, Dict[str, str]]] = {

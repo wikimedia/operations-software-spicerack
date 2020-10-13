@@ -42,6 +42,7 @@ pylint:
     max-attributes: 14
     max-locals: 16
     include-naming-hint: true
+    const-rgx: (([A-Z_][A-Z0-9_]*)|(__.*__)|(logger))$  # Add 'logger' as a valid module-scope name
     variable-rgx: (([a-z][a-z0-9_]{0,30})|(_[a-z0-9_]*))$
     variable-name-hint: (([a-z][a-z0-9_]{0,30})|(_[a-z0-9_]*))$
 

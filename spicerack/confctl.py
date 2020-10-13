@@ -11,7 +11,7 @@ from conftool.drivers import BackendError
 from spicerack.exceptions import SpicerackError
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class ConfctlError(SpicerackError):

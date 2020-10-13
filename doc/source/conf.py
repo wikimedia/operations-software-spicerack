@@ -125,7 +125,7 @@ man_pages = [
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
-    'ClusterShell': ('http://clustershell.readthedocs.io/en/v1.8/', None),
+    'ClusterShell': ('http://clustershell.readthedocs.io/en/v1.8.1/', None),
     'cumin': ('https://doc.wikimedia.org/cumin/master/', None),
     'requests': ('https://requests.readthedocs.io/en/master/', None),
     'pymysql': ('https://pymysql.readthedocs.io/en/latest/', None),
@@ -146,7 +146,12 @@ napoleon_use_rtype = True
 napoleon_use_keyword = True
 
 # Autodoc settings
-autodoc_default_flags = ['members', 'show-inheritance', 'inherited-members']
+autodoc_default_options = {
+    # Using None as value instead of True to support the version of Sphinx used in Buster
+    'members': None,
+    'member-order': 'groupwise',
+    'show-inheritance': None,
+}
 autoclass_content = 'both'
 
 
@@ -154,62 +159,25 @@ autoclass_content = 'both'
 
 def filter_namedtuple_docstrings(app, what, name, obj, options, lines):
     """Fix the automatically generated docstrings for namedtuples classes."""
-    if what == 'attribute' and len(lines) == 1 and lines[0].startswith('Alias for field number'):
-        lines[0] = 'See the Keyword Arguments description.'
+    if what == 'property' and len(lines) == 1 and lines[0].startswith('Alias for field number'):
+        del lines[:]
+
+
+# Keep track of documented classes to avoid annotating both class and __init__.
+# Necessary when using autoclass_content 'both' and add_abstract_annotations().
+_spicerack_documented_classes = set()
 
 
 def add_abstract_annotations(app, what, name, obj, options, lines):
-    """Workaround to add an abstract annotation for ABC abstract classes and abstract methods."""
-    if ((what in ('method', 'attribute') and getattr(obj, '__isabstractmethod__', False)) or
-            (what == 'class' and len(getattr(obj, '__abstractmethods__', [])) > 0)):
+    """Workaround to add an abstract annotation for ABC abstract classes."""
+    if (what == 'class' and len(getattr(obj, '__abstractmethods__', [])) > 0
+            and name not in _spicerack_documented_classes):
         lines.insert(0, '``abstract``')
-
-
-def add_inherited_annotations(app, what, name, obj, options, lines):
-    """Workaround to add an inherited annotation for methods inherited from the parent classes."""
-    if what == 'method':
-        if hasattr(obj, 'im_class'):
-            if obj.__name__ not in obj.im_class.__dict__:
-                lines.insert(0, '``inherited``')
-        elif isinstance(obj, types.FunctionType):  # Static methods
-            module_name, class_name, _ = name.rsplit('.', 2)
-            module = importlib.import_module(module_name)  # Dynamically import the module
-            if obj.__name__ not in getattr(module, class_name).__dict__:  # Dynamically inspect the class
-                lines.insert(0, '``inherited``')
-                lines.insert(0, '``static``')
-
-    elif what == 'attribute':
-        module_name, class_name, prop = name.rsplit('.', 2)
-        module = importlib.import_module(module_name)  # Dynamically import the module
-        if prop not in getattr(module, class_name).__dict__:  # Dynamically inspect the class
-            lines.insert(0, '``inherited``')
-
-
-def skip_external_inherited(app, what, name, obj, skip, options):
-    """Skip methods inherited from external libraries."""
-    if not (what == 'class' and hasattr(obj, 'im_class') and obj.__name__ not in obj.im_class.__dict__):
-        return
-
-    classes = [obj.im_class]
-    while classes:
-        c = classes.pop()
-        if obj.__name__ in c.__dict__:  # Found the class that defined the method
-            return 'spicerack' not in c.__module__  # Skip if from external libraries
-        else:
-            classes = list(c.__bases__) + classes  # Continue in the inheritance tree
-
-
-def skip_exceptions_init(app, what, name, obj, skip, options):
-    """Skip __init__ and with_traceback methods for Exception classes."""
-    if what == 'exception' and name in ('__init__', 'with_traceback'):
-        return True
+        _spicerack_documented_classes.add(name)
 
 
 def setup(app):
     """Register the filter_namedtuple_docstrings function."""
     app.connect('autodoc-process-docstring', filter_namedtuple_docstrings)
     app.connect('autodoc-process-docstring', add_abstract_annotations)
-    app.connect('autodoc-process-docstring', add_inherited_annotations)
-    app.connect('autodoc-skip-member', skip_exceptions_init)
-    app.connect('autodoc-skip-member', skip_external_inherited)
     app.add_stylesheet('theme_overrides.css')  # override wide tables in RTD theme

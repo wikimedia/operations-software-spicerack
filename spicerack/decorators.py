@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional, Tuple, Type, Union
 from spicerack.exceptions import SpicerackError
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 def ensure_wrap(func: Callable) -> Callable:

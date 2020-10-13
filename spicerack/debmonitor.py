@@ -6,7 +6,7 @@ import requests
 from spicerack.exceptions import SpicerackError
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
 class DebmonitorError(SpicerackError):
