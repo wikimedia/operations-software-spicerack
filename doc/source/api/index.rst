@@ -34,5 +34,5 @@ Spicerack Python API autodoc.
    spicerack.remote
    spicerack.typing
 
-.. The spicerack.cookbook and spicerack.log module are explicitely excluded from the public documentation as they
+.. The spicerack._cookbook and spicerack._log module are explicitely excluded from the public documentation as they
    should not be used directly by the cookbooks.

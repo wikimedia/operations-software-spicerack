@@ -6,7 +6,7 @@ from unittest import mock
 
 import pytest
 
-from spicerack import cookbook, Spicerack
+from spicerack import _cookbook as cookbook, Spicerack
 from spicerack.tests import get_fixture_path, SPICERACK_TEST_PARAMS
 
 
@@ -209,8 +209,8 @@ class TestCookbooks:
     def test_main_execute_cookbook(self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args):
         """Calling execute_cookbook() should intercept any exception raised."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
-            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+        with mock.patch('spicerack._cookbook.load_yaml_config', lambda config_dir: config):
+            with mock.patch('spicerack._cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main([module] + args)
 
         assert ret == code
@@ -222,8 +222,8 @@ class TestCookbooks:
     def test_main_execute_cookbook_invalid_args(self, tmpdir, capsys, caplog):
         """Calling a cookbook with the wrong args should let argparse print its message."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
-            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+        with mock.patch('spicerack._cookbook.load_yaml_config', lambda config_dir: config):
+            with mock.patch('spicerack._cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main(['group3.argparse', '--invalid'])
 
         assert ret == 2
@@ -235,8 +235,8 @@ class TestCookbooks:
     def test_main_execute_dry_run(self, capsys, tmpdir):
         """Calling main() with a cookbook and dry_run mode should execute it and set the dry run mode."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
-            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack_dry_run):
+        with mock.patch('spicerack._cookbook.load_yaml_config', lambda config_dir: config):
+            with mock.patch('spicerack._cookbook.Spicerack', return_value=self.spicerack_dry_run):
                 ret = cookbook.main(['-d', 'root'])
 
         assert ret == 0
@@ -246,8 +246,8 @@ class TestCookbooks:
     def test_main_list(self, tmpdir, capsys, caplog):
         """Calling main() with the -l/--list option should print the available cookbooks."""
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
-            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+        with mock.patch('spicerack._cookbook.load_yaml_config', lambda config_dir: config):
+            with mock.patch('spicerack._cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main(['-l'])
 
         out, _ = capsys.readouterr()
@@ -298,15 +298,15 @@ class TestCookbooks:
          + cookbook.COOKBOOKS_MENU_HELP_MESSAGE.format(statuses=cookbook.Cookbook.statuses) + '\n'
          + COOKBOOKS_MENU_TTY),
     ))
-    @mock.patch('spicerack.cookbook.sys.stdout.isatty')
+    @mock.patch('spicerack._cookbook.sys.stdout.isatty')
     @mock.patch('builtins.input')    # pylint: disable=too-many-arguments
     def test_cookbooks_main_menu(self, mocked_input, mocked_tty, tty, answer, output, capsys, tmpdir):
         """Calling main() with a menu should show the menu and allow to interact with it."""
         mocked_tty.return_value = tty
         mocked_input.side_effect = answer
         config = {'cookbooks_base_dir': COOKBOOKS_BASE_PATH, 'logs_base_dir': tmpdir.strpath}
-        with mock.patch('spicerack.cookbook.load_yaml_config', lambda config_dir: config):
-            with mock.patch('spicerack.cookbook.Spicerack', return_value=self.spicerack):
+        with mock.patch('spicerack._cookbook.load_yaml_config', lambda config_dir: config):
+            with mock.patch('spicerack._cookbook.Spicerack', return_value=self.spicerack):
                 ret = cookbook.main([])
 
         out, _ = capsys.readouterr()

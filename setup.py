@@ -66,7 +66,7 @@ setup(
     description='Automation framework for the WMF production infrastructure',
     entry_points={
         'console_scripts': [
-            'cookbook = spicerack.cookbook:main',
+            'cookbook = spicerack._cookbook:main',
         ],
     },
     extras_require=EXTRAS_REQUIRE,

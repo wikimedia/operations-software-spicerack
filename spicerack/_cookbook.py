@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple, Type, Union
 
 from wmflib.config import load_yaml_config
 
-from spicerack import log, Spicerack
+from spicerack import _log, Spicerack
 from spicerack.exceptions import SpicerackError
 
 
@@ -404,7 +404,7 @@ class Cookbook(BaseCookbooksItem):
             128 and not in the range 90-99 (reserved exit codes) in case of failure.
 
         """
-        log.log_task_start('Cookbook ' + self.path)
+        _log.log_task_start('Cookbook ' + self.path)
         message = 'raised while executing cookbook'
 
         try:
@@ -435,7 +435,7 @@ class Cookbook(BaseCookbooksItem):
         else:
             self.status = Cookbook.success if ret == 0 else Cookbook.failed
 
-        log.log_task_end(self.status, 'Cookbook {name} (exit_code={ret})'.format(
+        _log.log_task_end(self.status, 'Cookbook {name} (exit_code={ret})'.format(
             name=self.path, ret=ret))
 
         return ret
@@ -773,8 +773,8 @@ def execute_cookbook(config: Dict[str, str], args: argparse.Namespace, cookbooks
 
     cookbook_path, cookbook_name = os.path.split(cookbook.path.replace('.', os.sep))
     base_path = os.path.join(config['logs_base_dir'], cookbook_path)
-    log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.username, dry_run=args.dry_run,
-                      host=config.get('tcpircbot_host', None), port=int(config.get('tcpircbot_port', 0)))
+    _log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.username, dry_run=args.dry_run,
+                       host=config.get('tcpircbot_host', None), port=int(config.get('tcpircbot_port', 0)))
 
     logger.debug('Executing cookbook %s with args: %s', args.cookbook, args.cookbook_args)
     return cookbook.run()

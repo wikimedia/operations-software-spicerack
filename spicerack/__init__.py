@@ -13,6 +13,7 @@ from wmflib.dns import Dns
 from wmflib.phabricator import create_phabricator, Phabricator
 
 from spicerack import interactive
+from spicerack._log import irc_logger
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.debmonitor import Debmonitor
@@ -21,7 +22,6 @@ from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, Elast
 from spicerack.ganeti import Ganeti
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.ipmi import Ipmi
-from spicerack.log import irc_logger
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
