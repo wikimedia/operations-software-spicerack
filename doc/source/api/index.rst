@@ -11,10 +11,8 @@ Spicerack Python API autodoc.
 
 .. toctree::
 
-   spicerack.actions
    spicerack.administrative
    spicerack.confctl
-   spicerack.config
    spicerack.constants
    spicerack.debmonitor
    spicerack.decorators
@@ -30,7 +28,6 @@ Spicerack Python API autodoc.
    spicerack.mysql
    spicerack.mysql_legacy
    spicerack.netbox
-   spicerack.phabricator
    spicerack.prometheus
    spicerack.puppet
    spicerack.redis_cluster

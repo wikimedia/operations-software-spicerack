@@ -9,8 +9,9 @@ import sys
 from abc import abstractmethod
 from typing import Dict, List, Optional, Tuple, Type, Union
 
+from wmflib.config import load_yaml_config
+
 from spicerack import log, Spicerack
-from spicerack.config import load_yaml_config
 from spicerack.exceptions import SpicerackError
 
 

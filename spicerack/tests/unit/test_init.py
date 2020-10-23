@@ -5,10 +5,11 @@ from unittest import mock
 
 import pytest
 
+from wmflib.actions import ActionsDict
 from wmflib.dns import Dns
+from wmflib.phabricator import Phabricator
 
 from spicerack import puppet, Spicerack
-from spicerack.actions import ActionsDict
 from spicerack.administrative import Reason
 from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
@@ -22,7 +23,6 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox
-from spicerack.phabricator import Phabricator
 from spicerack.prometheus import Prometheus
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts

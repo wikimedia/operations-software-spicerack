@@ -91,7 +91,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
         """Initialize the instance.
 
         Arguments:
-            config (spicerack.config.Config): cumin configuration.
+            config (cumin.Config): cumin configuration.
             remote_hosts (spicerack.remote.RemoteHosts): the instance to act on the remote hosts.
             conftool (spicerack.confctl.ConftoolEntity): the conftool entity to operate on.
 

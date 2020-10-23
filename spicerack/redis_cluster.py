@@ -6,8 +6,8 @@ from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Tuple, Union
 
 from redis import StrictRedis
+from wmflib.config import load_yaml_config
 
-from spicerack.config import load_yaml_config
 from spicerack.exceptions import SpicerackError
 
 

@@ -6,13 +6,14 @@ from socket import gethostname
 from typing import Dict, Optional, Sequence
 
 from pkg_resources import DistributionNotFound, get_distribution
+from wmflib.actions import ActionsDict
+from wmflib.config import load_ini_config, load_yaml_config
 from wmflib.dns import Dns
+from wmflib.phabricator import create_phabricator, Phabricator
 
 from spicerack import interactive
-from spicerack.actions import ActionsDict
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
-from spicerack.config import load_ini_config, load_yaml_config
 from spicerack.debmonitor import Debmonitor
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, ElasticsearchClusters
@@ -25,7 +26,6 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NETBOX_DOMAIN
-from spicerack.phabricator import create_phabricator, Phabricator
 from spicerack.prometheus import Prometheus
 from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
 from spicerack.redis_cluster import RedisCluster
@@ -173,7 +173,7 @@ class Spicerack:
         """Getter for the ``actions`` property.
 
         Returns:
-            spicerack.actions.ActionsDict: a dictionary to log and record cookbook actions.
+            wmflib.actions.ActionsDict: a dictionary to log and record cookbook actions.
 
         """
         return self._actions
@@ -379,7 +379,7 @@ class Spicerack:
                 parameters.
 
         Returns:
-            spicerack.phabricator.Phabricator: the instance.
+            wmflib.phabricator.Phabricator: the instance.
 
         """
         # Allow to specify the configuration file as opposed to other methods so that different clients can use

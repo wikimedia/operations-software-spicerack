@@ -1,4 +1,0 @@
-phabricator
-===========
-
-.. automodule:: spicerack.phabricator
