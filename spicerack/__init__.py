@@ -6,6 +6,7 @@ from socket import gethostname
 from typing import Dict, Optional, Sequence
 
 from pkg_resources import DistributionNotFound, get_distribution
+from wmflib import requests
 from wmflib.actions import ActionsDict
 from wmflib.config import load_ini_config, load_yaml_config
 from wmflib.dns import Dns
@@ -448,3 +449,17 @@ class Spicerack:
             token = config['api_token_ro']
 
         return Netbox(config['api_url'], token, dry_run=self._dry_run)
+
+    def requests_session(self, name: str, *, timeout: float = requests.DEFAULT_TIMEOUT,  # pylint: disable=no-self-use
+                         tries: int = 3, backoff: float = 1.0) -> requests.Session:
+        """Return a new requests Session with timeout and retry logic.
+
+        Params:
+            according to :py:func:`wmflib.requests.http_session`.
+
+        Returns:
+            requests.Session: the pre-configured session.
+
+        """
+        name = 'Spicerack/{version} {name}'.format(version=__version__, name=name)
+        return requests.http_session(name, timeout=timeout, tries=tries, backoff=backoff)

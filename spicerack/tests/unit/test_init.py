@@ -5,6 +5,7 @@ from unittest import mock
 
 import pytest
 
+from requests import Session
 from wmflib.actions import ActionsDict
 from wmflib.dns import Dns
 from wmflib.phabricator import Phabricator
@@ -63,6 +64,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.debmonitor(), Debmonitor)
     assert isinstance(spicerack.management(), Management)
     assert isinstance(spicerack.ganeti(), Ganeti)
+    assert isinstance(spicerack.requests_session('name'), Session)
     assert mocked_remote_query.called
 
 
