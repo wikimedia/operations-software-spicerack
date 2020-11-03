@@ -17,8 +17,6 @@ INSTALL_REQUIRES = [
     'pynetbox>=4.0.6',
     'redis>=2.10.0',
     'requests>=2.11.1',
-    # Temporary fix to avoid pip to install the latest version breaking install requirements of some dependency.
-    'urllib3<1.25',
     'wmflib',
 ]
 
@@ -30,8 +28,7 @@ EXTRAS_REQUIRE = {
         'flake8>=3.2.1',
         'flake8-import-order>=0.18.1',
         'mypy>=0.470',
-        # Temporary upper constraint until https://github.com/PyCQA/prospector/issues/389 is fixed
-        'prospector[with_everything]>=0.12.4,<=1.2.0',
+        'prospector[with_everything]>=0.12.4',
         'pytest-cov>=1.8.0',
         'pytest-xdist>=1.15.0',
         'pytest>=3.0.3',
