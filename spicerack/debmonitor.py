@@ -3,6 +3,8 @@ import logging
 
 import requests
 
+from wmflib.requests import http_session
+
 from spicerack.exceptions import SpicerackError
 
 
@@ -30,6 +32,7 @@ class Debmonitor:
         self._cert = cert
         self._key = key
         self._dry_run = dry_run
+        self._http_session = http_session('.'.join((self.__module__, self.__class__.__name__)))
 
     def host_delete(self, hostname: str) -> None:
         """Remove a host and all its packages from Debmonitor.
@@ -47,7 +50,7 @@ class Debmonitor:
             return
 
         url = '{base}/hosts/{host}'.format(base=self._base_url, host=hostname)
-        response = requests.delete(url, cert=(self._cert, self._key), timeout=3)
+        response = self._http_session.delete(url, cert=(self._cert, self._key))
 
         if response.status_code == requests.codes['no_content']:
             logger.info('Removed host %s from Debmonitor', hostname)

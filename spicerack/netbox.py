@@ -5,6 +5,8 @@ from typing import Dict
 
 import pynetbox
 
+from wmflib.requests import http_session
+
 from spicerack.exceptions import SpicerackError
 
 
@@ -37,6 +39,7 @@ class Netbox:
 
         """
         self._api = pynetbox.api(url, token=token)
+        self._api.http_session = http_session('.'.join((self.__module__, self.__class__.__name__)))
         self._dry_run = dry_run
 
     @property

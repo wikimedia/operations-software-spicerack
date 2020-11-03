@@ -84,11 +84,11 @@ class TestGaneti:
         with pytest.raises(GanetiError, match=r'Non-200 from API: 404:.*'):
             rapi.fetch_instance(self.instance)
 
-    def test_rapi_instance_timeout(self, requests_mock):
-        """A RAPI object should raise a GanetiError if a request times out."""
+    def test_rapi_instance_request_fail(self, requests_mock):
+        """A RAPI object should raise a GanetiError if a request fails."""
         rapi = self.ganeti.rapi(self.cluster)
         requests_mock.get(self.instance_url, exc=requests.exceptions.ConnectTimeout)
-        with pytest.raises(GanetiError, match='Timeout performing request to RAPI'):
+        with pytest.raises(GanetiError, match='Error while performing request to RAPI'):
             rapi.fetch_instance(self.instance)
 
     def test_rapi_instance_invalid(self, requests_mock):
