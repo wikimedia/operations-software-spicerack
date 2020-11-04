@@ -13,10 +13,6 @@ from spicerack.administrative import Reason
 from spicerack.elasticsearch_cluster import NodesGroup
 from spicerack.prometheus import Prometheus
 from spicerack.remote import Remote, RemoteHosts
-from spicerack.tests import min_elasticsearch
-
-
-pytestmark = min_elasticsearch  # pylint: disable=invalid-name
 
 
 def test_create_elasticsearch_clusters():

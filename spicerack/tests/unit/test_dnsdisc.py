@@ -7,7 +7,6 @@ import pytest
 from dns.exception import DNSException
 
 from spicerack.dnsdisc import Discovery, DiscoveryCheckError, DiscoveryError
-from spicerack.tests import require_caplog
 
 
 MockedRecord = namedtuple('Record', ['address'])
@@ -192,7 +191,6 @@ class TestDiscovery:
                            match='Services svcA, svcB cannot be depooled as they are only active in dcB'):
             self.discovery.check_if_depoolable('dcB')
 
-    @require_caplog
     def test_check_if_depoolable_ko_dry_run(self, caplog):
         """Doesn't raise exception when a service would be taken out of commission but in dry-run mode."""
         self.mocked_confctl.get.return_value = [
