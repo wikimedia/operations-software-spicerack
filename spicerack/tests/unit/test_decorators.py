@@ -1,9 +1,11 @@
 """Dnsdisc module tests."""
+import logging
 from datetime import timedelta
 from unittest import mock
 
 import pytest
 
+from spicerack import decorators
 from spicerack.decorators import get_backoff_sleep, retry
 from spicerack.exceptions import SpicerackError
 
@@ -24,7 +26,7 @@ class DryRunRetry:
 def _generate_mocked_function(calls):
     func = mock.Mock()
     func.side_effect = calls
-    func.__name__ = 'mocked'
+    func.__qualname__ = 'mocked'
     return func
 
 
@@ -106,6 +108,24 @@ def test_retry_fail_args(mocked_sleep, exc, kwargs):
 
     func.assert_called_once_with()
     assert not mocked_sleep.called
+
+
+@pytest.mark.parametrize('failure_message, expected_log', (
+    (None, "Attempt to run 'unittest.mock.mocked' raised:"),
+    ('custom failure message', 'custom failure message'),
+))
+@mock.patch('spicerack.decorators.time.sleep', return_value=None)
+def test_retry_failure_message(mocked_sleep, failure_message, expected_log, caplog):
+    """Using @retry with a failure_message should log that message when an exception is caught."""
+    caplog.set_level(logging.WARNING, decorators.logger.name)
+
+    func = _generate_mocked_function([SpicerackError('error1'), True])
+    ret = retry(failure_message=failure_message)(func)()
+
+    assert ret
+    assert expected_log in caplog.text
+    assert 'error1' in caplog.text
+    assert mocked_sleep.call_count == 1
 
 
 @pytest.mark.parametrize('kwargs, message', (

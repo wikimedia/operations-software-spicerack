@@ -41,7 +41,8 @@ def retry(
     tries: int = 3,
     delay: timedelta = timedelta(seconds=3),
     backoff_mode: str = 'exponential',
-    exceptions: Tuple[Type[Exception], ...] = (SpicerackError,)
+    exceptions: Tuple[Type[Exception], ...] = (SpicerackError,),
+    failure_message: Optional[str] = None,
 ) -> Callable:
     """Decorator to retry a function or method if it raises certain exceptions with customizable backoff.
 
@@ -69,11 +70,17 @@ def retry(
 
         exceptions (type, tuple, optional): the decorated function call will be retried if it fails until it succeeds
             or `tries` attempts are reached. A retryable failure is defined as raising any of the exceptions listed.
+        failure_message (str, optional): the message to log each time there's a retryable failure. Retry information
+            and exception message are also included. Default: "Attempt to run '<fully qualified function>' raised"
 
     Returns:
         function: the decorated function.
 
     """
+    if not failure_message:
+        failure_message = "Attempt to run '{module}.{qualname}' raised".format(
+            module=func.__module__, qualname=func.__qualname__)  # type: ignore
+
     @wraps(func)  # type: ignore
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         """Decorator."""
@@ -96,8 +103,8 @@ def retry(
                 return func(*args, **kwargs)  # type: ignore
             except exceptions as e:
                 sleep = get_backoff_sleep(backoff_mode, delay.total_seconds(), attempt)
-                logger.warning("Failed to call '%s.%s' [%d/%d, retrying in %.2fs]: %s",
-                               func.__module__, func.__name__, attempt, effective_tries, sleep, e)  # type: ignore
+                logger.warning("[%d/%d, retrying in %.2fs] %s: %s",
+                               attempt, effective_tries, sleep, failure_message, e)
                 time.sleep(sleep)
 
         return func(*args, **kwargs)  # type: ignore
