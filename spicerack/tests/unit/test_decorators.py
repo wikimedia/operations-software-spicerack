@@ -1,11 +1,9 @@
 """Dnsdisc module tests."""
-import logging
 from datetime import timedelta
 from unittest import mock
 
 import pytest
 
-from spicerack import decorators
 from spicerack.decorators import get_backoff_sleep, retry
 from spicerack.exceptions import SpicerackError
 
@@ -117,8 +115,6 @@ def test_retry_fail_args(mocked_sleep, exc, kwargs):
 @mock.patch('spicerack.decorators.time.sleep', return_value=None)
 def test_retry_failure_message(mocked_sleep, failure_message, expected_log, caplog):
     """Using @retry with a failure_message should log that message when an exception is caught."""
-    caplog.set_level(logging.WARNING, decorators.logger.name)
-
     func = _generate_mocked_function([SpicerackError('error1'), True])
     ret = retry(failure_message=failure_message)(func)()
 
@@ -126,6 +122,22 @@ def test_retry_failure_message(mocked_sleep, failure_message, expected_log, capl
     assert expected_log in caplog.text
     assert 'error1' in caplog.text
     assert mocked_sleep.call_count == 1
+
+
+@mock.patch('spicerack.decorators.time.sleep', return_value=None)
+def test_retry_fail_chained_exceptions(mocked_sleep, caplog):
+    """When @retry catches a chained exception, it should log exception messages all the way down the chain."""
+    def side_effect():
+        try:
+            raise SpicerackError('error2') from SpicerackError('error3')
+        except SpicerackError:
+            raise SpicerackError('error1')
+    func = _generate_mocked_function(side_effect)
+    with pytest.raises(SpicerackError, match='error1'):
+        retry(func)()
+
+    assert 'error1\nRaised while handling: error2\nCaused by: error3' in caplog.text
+    assert mocked_sleep.call_count == 2
 
 
 @pytest.mark.parametrize('kwargs, message', (

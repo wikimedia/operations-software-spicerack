@@ -4,7 +4,7 @@ import time
 
 from datetime import timedelta
 from functools import wraps
-from typing import Any, Callable, Optional, Tuple, Type, Union
+from typing import Any, Callable, cast, Optional, Tuple, Type, Union
 
 from spicerack.exceptions import SpicerackError
 
@@ -104,12 +104,37 @@ def retry(
             except exceptions as e:
                 sleep = get_backoff_sleep(backoff_mode, delay.total_seconds(), attempt)
                 logger.warning("[%d/%d, retrying in %.2fs] %s: %s",
-                               attempt, effective_tries, sleep, failure_message, e)
+                               attempt, effective_tries, sleep, failure_message, _exception_message(e))
                 time.sleep(sleep)
 
         return func(*args, **kwargs)  # type: ignore
 
     return wrapper
+
+
+def _exception_message(exception: BaseException) -> str:
+    """Joins the message of the given exception with those of any chained exceptions.
+
+    Arguments:
+        exception (BaseException): The most-recently raised exception.
+
+    Returns:
+        str: The joined message, formatted suitably for logging.
+
+    """
+    message_parts = [str(exception)]
+    while exception.__cause__ is not None or exception.__context__ is not None:
+        # __cause__ and __context__ shouldn't both be set, but we use the same logic here as the built-in
+        # exception handler, giving __cause__ priority, as described in PEP 3134. We list messages in
+        # reverse order from the built-in handler (i.e. newest exception first) since we aren't following a
+        # traceback.
+        if exception.__cause__ is not None:
+            message_parts.append('Caused by: {chained_exc}'.format(chained_exc=exception.__cause__))
+            exception = exception.__cause__
+        else:  # e.__context__ is not None, due to the while condition.
+            message_parts.append('Raised while handling: {chained_exc}'.format(chained_exc=exception.__context__))
+            exception = cast(BaseException, exception.__context__)  # Casting away the Optional.
+    return '\n'.join(message_parts)
 
 
 def get_backoff_sleep(backoff_mode: str, base: Union[int, float], index: int) -> Union[int, float]:
