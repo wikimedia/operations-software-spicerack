@@ -346,7 +346,8 @@ class TestPuppetMaster:
     def test_destroy(self):
         """It should delete the certificate of the host in the Puppet CA."""
         self.puppet_master.destroy('test.example.com')
-        self.mocked_master_host.run_sync.assert_called_once_with('puppet ca destroy test.example.com')
+        self.mocked_master_host.run_sync.assert_called_once_with(
+            'puppet ca --disable_warnings deprecations destroy test.example.com')
 
     def test_verify_ok(self):
         """It should verify that the host has a signed certificate in the Puppet CA."""
@@ -356,7 +357,8 @@ class TestPuppetMaster:
 
         self.puppet_master.verify('test.example.com')
         self.mocked_master_host.run_sync.assert_called_once_with(
-            'puppet ca --render-as json verify test.example.com', is_safe=True)
+            'puppet ca --disable_warnings deprecations --render-as json verify test.example.com',
+            is_safe=True)
 
     def test_verify_raise(self):
         """It should raise PuppetMasterError if the certificate is not valid on the Puppet CA."""
@@ -368,14 +370,15 @@ class TestPuppetMaster:
             self.puppet_master.verify('test.example.com')
 
         self.mocked_master_host.run_sync.assert_called_once_with(
-            'puppet ca --render-as json verify test.example.com', is_safe=True)
+            'puppet ca --disable_warnings deprecations --render-as json verify test.example.com',
+            is_safe=True)
 
     def test_verify_no_output(self):
         """It should raise PuppetMasterError if there is no output from the executed command."""
         self.mocked_master_host.run_sync.return_value = iter(())
-        with pytest.raises(puppet.PuppetMasterError,
-                           match=('Got no output from Puppet master while executing command: '
-                                  'puppet ca --render-as json verify test.example.com')):
+        with pytest.raises(puppet.PuppetMasterError, match=(
+            'Got no output from Puppet master while executing command: '
+                'puppet ca --disable_warnings deprecations --render-as json verify test.example.com')):
             self.puppet_master.verify('test.example.com')
 
     def test_verify_invalid_json(self):
@@ -384,9 +387,9 @@ class TestPuppetMaster:
         results = [(NodeSet('puppetmaster.example.com'), MsgTreeElem(json_output, parent=MsgTreeElem()))]
         self.mocked_master_host.run_sync.return_value = iter(results)
 
-        with pytest.raises(puppet.PuppetMasterError,
-                           match=('Unable to parse Puppet master response for command '
-                                  '"puppet ca --render-as json verify test.example.com"')):
+        with pytest.raises(puppet.PuppetMasterError, match=(
+            'Unable to parse Puppet master response for command '
+                '"puppet ca --disable_warnings deprecations --render-as json verify test.example.com"')):
             self.puppet_master.verify('test.example.com')
 
     def test_sign_ok(self):
@@ -400,9 +403,13 @@ class TestPuppetMaster:
         self.puppet_master.sign('test.example.com', '00:AA')
 
         self.mocked_master_host.run_sync.assert_has_calls([
-            mock.call(r'puppet ca --render-as json list --all --subject "test\.example\.com"', is_safe=True),
-            mock.call('puppet cert sign --no-allow-dns-alt-names test.example.com'),
-            mock.call(r'puppet ca --render-as json list --all --subject "test\.example\.com"', is_safe=True),
+            mock.call(
+                r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+                is_safe=True),
+            mock.call('puppet cert --disable_warnings deprecations sign --no-allow-dns-alt-names test.example.com'),
+            mock.call(
+                r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+                is_safe=True),
         ])
 
     def test_sign_alt_dns(self):
@@ -416,9 +423,13 @@ class TestPuppetMaster:
         self.puppet_master.sign('test.example.com', '00:AA', allow_alt_names=True)
 
         self.mocked_master_host.run_sync.assert_has_calls([
-            mock.call(r'puppet ca --render-as json list --all --subject "test\.example\.com"', is_safe=True),
-            mock.call('puppet cert sign --allow-dns-alt-names test.example.com'),
-            mock.call(r'puppet ca --render-as json list --all --subject "test\.example\.com"', is_safe=True),
+            mock.call(
+                r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+                is_safe=True),
+            mock.call('puppet cert --disable_warnings deprecations sign --allow-dns-alt-names test.example.com'),
+            mock.call(
+                r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+                is_safe=True),
         ])
 
     def test_sign_wrong_state(self):
@@ -466,7 +477,8 @@ class TestPuppetMaster:
         self.puppet_master.wait_for_csr('test.example.com')
 
         self.mocked_master_host.run_sync.assert_called_once_with(
-            r'puppet ca --render-as json list --all --subject "test\.example\.com"', is_safe=True)
+            r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+            is_safe=True)
 
     def test_wait_for_csr_fail(self):
         """It should raise PuppetMasterError if the certificate is in a wrong state."""
@@ -498,7 +510,8 @@ class TestPuppetMaster:
 
         assert metadata == json.loads(PUPPET_CA_CERT_METADATA_SIGNED.decode())[0]
         self.mocked_master_host.run_sync.assert_called_once_with(
-            r'puppet ca --render-as json list --all --subject "test\.example\.com"', is_safe=True)
+            r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+            is_safe=True)
 
     @pytest.mark.parametrize('json_output, exception_message', (
         (b'[{"name":"test.example.com"},{"name":"test.example.com"}]', 'Expected one result from Puppet CA, got 2'),
