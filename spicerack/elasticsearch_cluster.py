@@ -39,6 +39,11 @@ ELASTICSEARCH_CLUSTERS: Dict[str, Dict[str, Dict[str, str]]] = {
             'relforge-eqiad': 'https://relforge1002.eqiad.wmnet:9243',
             'relforge-eqiad-small-alpha': 'https://relforge1002.eqiad.wmnet:9443',
         },
+        'cloudelastic': {
+            'cloudelastic-chi-https': 'https://cloudelastic.wikimedia.org:9243',
+            'cloudelastic-omega-https': 'https://cloudelastic.wikimedia.org:9443',
+            'cloudelastic-psi-https': 'https://cloudelastic.wikimedia.org:9643',
+        }
     }
 }
 
