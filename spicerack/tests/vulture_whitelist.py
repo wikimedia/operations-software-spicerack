@@ -17,6 +17,9 @@ whitelist_mock = Whitelist()
 whitelist_mock.return_value
 whitelist_mock.side_effect
 
+whitelist_ganeti = Whitelist()
+whitelist_ganeti.Ganeti._http_session.auth
+
 whitelist_log = Whitelist()
 whitelist_log.IRCSocketHandler.level
 

@@ -1,4 +1,0 @@
-actions
-=======
-
-.. automodule:: spicerack.actions

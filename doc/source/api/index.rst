@@ -11,11 +11,10 @@ Spicerack Python API autodoc.
 
 .. toctree::
 
-   spicerack.actions
    spicerack.administrative
    spicerack.confctl
-   spicerack.config
    spicerack.constants
+   spicerack.cookbook
    spicerack.debmonitor
    spicerack.decorators
    spicerack.dnsdisc
@@ -30,12 +29,11 @@ Spicerack Python API autodoc.
    spicerack.mysql
    spicerack.mysql_legacy
    spicerack.netbox
-   spicerack.phabricator
    spicerack.prometheus
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote
    spicerack.typing
 
-.. The spicerack.cookbook and spicerack.log module are explicitely excluded from the public documentation as they
-   should not be used directly by the cookbooks.
+.. The private modules spicerack._* are explicitely excluded from the public documentation as they should not be used
+   directly by the cookbooks.

@@ -13,10 +13,6 @@ from spicerack.administrative import Reason
 from spicerack.elasticsearch_cluster import NodesGroup
 from spicerack.prometheus import Prometheus
 from spicerack.remote import Remote, RemoteHosts
-from spicerack.tests import min_elasticsearch
-
-
-pytestmark = min_elasticsearch  # pylint: disable=invalid-name
 
 
 def test_create_elasticsearch_clusters():
@@ -155,7 +151,7 @@ def test_cluster_settings_are_unchanged_when_stopped_replication_is_dry_run():
 def test_get_nodes_wraps_exceptions():
     """Get nodes should wrap exceptions from elasticsearch client."""
     elasticsearch = mock.Mock()
-    elasticsearch.nodes.info = mock.Mock(side_effect=TransportError())
+    elasticsearch.nodes.info = mock.Mock(side_effect=TransportError(500, 'test'))
     remote = mock.Mock()
 
     cluster = ec.ElasticsearchCluster(elasticsearch, remote)
@@ -341,7 +337,7 @@ class TestElasticsearchClusters:
 
         and a call to delete/unfreeze write is placed
         """
-        self.elasticsearch1.index = mock.Mock(side_effect=TransportError('test'))
+        self.elasticsearch1.index = mock.Mock(side_effect=TransportError(500, 'test'))
         self.elasticsearch2.index = mock.Mock(return_value=True)
         self.elasticsearch1.delete = mock.Mock(return_value=True)
         self.elasticsearch2.delete = mock.Mock(return_value=True)
@@ -361,7 +357,7 @@ class TestElasticsearchClusters:
         """
         self.elasticsearch1.index = mock.Mock(return_value=True)
         self.elasticsearch2.index = mock.Mock(return_value=True)
-        self.elasticsearch1.delete = mock.Mock(side_effect=TransportError('test'))
+        self.elasticsearch1.delete = mock.Mock(side_effect=TransportError(500, 'test'))
         self.elasticsearch2.delete = mock.Mock(return_value=True)
         reason = Reason('test', 'test_user', 'test_host', task_id='T111222')
         elasticsearch_clusters = self.default_elasticsearch_clusters()
@@ -464,8 +460,8 @@ class TestElasticsearchClusters:
     @mock.patch('spicerack.decorators.time.sleep', return_value=None)
     def test_wait_for_green_retry_test(self, mocked_sleep):
         """Test that the retry is called again when cluster health request throws an exception."""
-        self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError('test'))
-        self.elasticsearch2.cluster.health = mock.Mock(side_effect=TransportError('test'))
+        self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError(500, 'test'))
+        self.elasticsearch2.cluster.health = mock.Mock(side_effect=TransportError(500, 'test'))
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         with pytest.raises(ec.ElasticsearchClusterCheckError):
             elasticsearch_clusters.wait_for_green(timedelta(seconds=20))
@@ -489,7 +485,7 @@ class TestElasticsearchClusters:
         """Exceptions from underlying elasticsearch client should be wrapped."""
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         for client in [self.elasticsearch1, self.elasticsearch2]:
-            client.indices.put_settings = mock.Mock(side_effect=TransportError('test'))
+            client.indices.put_settings = mock.Mock(side_effect=TransportError(500, 'test'))
 
         with pytest.raises(ec.ElasticsearchClusterError):
             elasticsearch_clusters.reset_indices_to_read_write()

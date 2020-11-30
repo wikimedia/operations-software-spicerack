@@ -2,7 +2,7 @@ Cookbook CLI
 ============
 
 .. argparse::
-   :module: spicerack.cookbook
+   :module: spicerack._cookbook
    :func: argument_parser
    :prog: cookbook
    :nodefault:

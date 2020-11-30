@@ -10,17 +10,13 @@ with open('README.rst', 'r') as readme:
 INSTALL_REQUIRES = [
     'conftool>=1.0.1',
     'cumin>=3.0.2',
-    'dnspython>=1.15.0',
+    'dnspython>=1.16.0',
     'elasticsearch>=5.0.0,<6.0.0',
     'elasticsearch-curator>=5.0.0,<5.4.0',
-    'phabricator>=0.7.0',
     'pymysql>=0.9.3',
-    'pynetbox>=4.0.6',
-    'pyyaml>=3.11',
-    'redis>=2.10.0',
-    'requests>=2.11.1',
-    # Temporary fix to avoid pip to install the latest version breaking install requirements of some dependency.
-    'urllib3<1.25',
+    'pynetbox>=5.0.7',
+    'redis>=3.2.1',
+    'requests>=2.21.0',
     'wmflib',
 ]
 
@@ -28,19 +24,18 @@ INSTALL_REQUIRES = [
 EXTRAS_REQUIRE = {
     # Test dependencies
     'tests': [
-        'bandit>=1.1.0',
-        'flake8>=3.2.1',
+        'bandit>=1.5.1',
+        'flake8>=3.6.0',
         'flake8-import-order>=0.18.1',
-        'mypy>=0.470',
-        # Temporary upper constraint until https://github.com/PyCQA/prospector/issues/389 is fixed
-        'prospector[with_everything]>=0.12.4,<=1.2.0',
-        'pytest-cov>=1.8.0',
-        'pytest-xdist>=1.15.0',
-        'pytest>=3.0.3',
-        'requests-mock>=1.3.0',
-        'sphinx_rtd_theme>=0.1.9',
-        'sphinx-argparse>=0.1.15',
-        'Sphinx>=1.4.9',
+        'mypy>=0.670',
+        'prospector[with_everything]>=0.12.4',
+        'pytest-cov>=2.6.0',
+        'pytest-xdist>=1.26.1',
+        'pytest>=3.10.1',
+        'requests-mock>=1.5.2',
+        'sphinx_rtd_theme>=0.4.3',
+        'sphinx-argparse>=0.2.2',
+        'Sphinx>=1.8.4',
     ],
 }
 
@@ -71,7 +66,7 @@ setup(
     description='Automation framework for the WMF production infrastructure',
     entry_points={
         'console_scripts': [
-            'cookbook = spicerack.cookbook:main',
+            'cookbook = spicerack._cookbook:main',
         ],
     },
     extras_require=EXTRAS_REQUIRE,

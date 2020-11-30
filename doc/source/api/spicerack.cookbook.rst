@@ -1,0 +1,4 @@
+cookbook
+========
+
+.. automodule:: spicerack.cookbook

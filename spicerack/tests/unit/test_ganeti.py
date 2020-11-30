@@ -13,10 +13,9 @@ from cumin import NodeSet
 from spicerack.exceptions import SpicerackError
 from spicerack.ganeti import CLUSTERS_AND_ROWS, Ganeti, GanetiError, GanetiRAPI, GntInstance, RAPI_URL_FORMAT
 from spicerack.remote import Remote
-from spicerack.tests import get_fixture_path, require_requests_mock
+from spicerack.tests import get_fixture_path
 
 
-@require_requests_mock
 class TestGaneti:
     """Ganeti tests class."""
 
@@ -84,11 +83,11 @@ class TestGaneti:
         with pytest.raises(GanetiError, match=r'Non-200 from API: 404:.*'):
             rapi.fetch_instance(self.instance)
 
-    def test_rapi_instance_timeout(self, requests_mock):
-        """A RAPI object should raise a GanetiError if a request times out."""
+    def test_rapi_instance_request_fail(self, requests_mock):
+        """A RAPI object should raise a GanetiError if a request fails."""
         rapi = self.ganeti.rapi(self.cluster)
         requests_mock.get(self.instance_url, exc=requests.exceptions.ConnectTimeout)
-        with pytest.raises(GanetiError, match='Timeout performing request to RAPI'):
+        with pytest.raises(GanetiError, match='Error while performing request to RAPI'):
             rapi.fetch_instance(self.instance)
 
     def test_rapi_instance_invalid(self, requests_mock):

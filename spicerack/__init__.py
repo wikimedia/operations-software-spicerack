@@ -6,26 +6,27 @@ from socket import gethostname
 from typing import Dict, Optional, Sequence
 
 from pkg_resources import DistributionNotFound, get_distribution
+from wmflib import requests
+from wmflib.actions import ActionsDict
+from wmflib.config import load_ini_config, load_yaml_config
 from wmflib.dns import Dns
+from wmflib.phabricator import create_phabricator, Phabricator
 
 from spicerack import interactive
-from spicerack.actions import ActionsDict
+from spicerack._log import irc_logger
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
-from spicerack.config import load_ini_config, load_yaml_config
 from spicerack.debmonitor import Debmonitor
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, ElasticsearchClusters
 from spicerack.ganeti import Ganeti
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
 from spicerack.ipmi import Ipmi
-from spicerack.log import irc_logger
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NETBOX_DOMAIN
-from spicerack.phabricator import create_phabricator, Phabricator
 from spicerack.prometheus import Prometheus
 from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
 from spicerack.redis_cluster import RedisCluster
@@ -173,7 +174,7 @@ class Spicerack:
         """Getter for the ``actions`` property.
 
         Returns:
-            spicerack.actions.ActionsDict: a dictionary to log and record cookbook actions.
+            wmflib.actions.ActionsDict: a dictionary to log and record cookbook actions.
 
         """
         return self._actions
@@ -379,7 +380,7 @@ class Spicerack:
                 parameters.
 
         Returns:
-            spicerack.phabricator.Phabricator: the instance.
+            wmflib.phabricator.Phabricator: the instance.
 
         """
         # Allow to specify the configuration file as opposed to other methods so that different clients can use
@@ -448,3 +449,17 @@ class Spicerack:
             token = config['api_token_ro']
 
         return Netbox(config['api_url'], token, dry_run=self._dry_run)
+
+    def requests_session(self, name: str, *, timeout: float = requests.DEFAULT_TIMEOUT,  # pylint: disable=no-self-use
+                         tries: int = 3, backoff: float = 1.0) -> requests.Session:
+        """Return a new requests Session with timeout and retry logic.
+
+        Params:
+            according to :py:func:`wmflib.requests.http_session`.
+
+        Returns:
+            requests.Session: the pre-configured session.
+
+        """
+        name = 'Spicerack/{version} {name}'.format(version=__version__, name=name)
+        return requests.http_session(name, timeout=timeout, tries=tries, backoff=backoff)

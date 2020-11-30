@@ -3,9 +3,8 @@ import logging
 
 from typing import Any, Dict, Tuple
 
-import requests
-
 from cumin.transports import Command
+from wmflib.requests import http_session
 
 from spicerack.confctl import ConftoolEntity
 from spicerack.constants import CORE_DATACENTERS
@@ -45,6 +44,7 @@ class MediaWiki:
         self._remote = remote
         self._user = user
         self._dry_run = dry_run
+        self._http_session = http_session('.'.join((self.__module__, self.__class__.__name__)), timeout=10)
 
     def check_config_line(self, filename: str, expected: str) -> bool:
         """Check that a MediaWiki configuration file contains some value.
@@ -62,14 +62,13 @@ class MediaWiki:
         """
         noc_server = self._remote.query('O:Noc::Site').hosts[0]
         url = 'http://{noc}/conf/{filename}.php.txt'.format(noc=noc_server, filename=filename)
-        mwconfig = requests.get(url, headers={'Host': 'noc.wikimedia.org'}, timeout=10)
+        mwconfig = self._http_session.get(url, headers={'Host': 'noc.wikimedia.org'})
         found = (expected in mwconfig.text)
         logger.debug('Checked message (found=%s) in MediaWiki config %s:\n%s', found, url, expected)
 
         return found
 
-    @staticmethod
-    def get_siteinfo(datacenter: str) -> Dict:
+    def get_siteinfo(self, datacenter: str) -> Dict:
         """Get the JSON paylod for siteinfo from a random host in a given datacenter.
 
         Arguments:
@@ -85,13 +84,12 @@ class MediaWiki:
         url = MediaWiki._siteinfo_url.format(dc=datacenter)
         headers = {'X-Forwarded-Proto': 'https', 'Host': 'en.wikipedia.org'}
 
-        response = requests.get(url, headers=headers, timeout=3)
+        response = self._http_session.get(url, headers=headers, timeout=3)
         response.raise_for_status()
 
         return response.json()
 
-    @staticmethod
-    def check_siteinfo(datacenter: str, checks: Dict[Tuple[str, ...], Any], samples: int = 1) -> None:
+    def check_siteinfo(self, datacenter: str, checks: Dict[Tuple[str, ...], Any], samples: int = 1) -> None:
         """Check that a specific value in siteinfo matches the expected ones, on multiple hosts.
 
         Arguments:
@@ -111,7 +109,7 @@ class MediaWiki:
         """
         for i in range(1, samples + 1):  # Randomly check different hosts from the load balancer
             logger.debug('Checking siteinfo %d/%d', i, samples)
-            MediaWiki._check_siteinfo(datacenter, checks)
+            self._check_siteinfo(datacenter, checks)
 
     def scap_sync_config_file(self, filename: str, message: str) -> None:
         """Execute scap sync-file to deploy a specific configuration file of wmf-config.
@@ -251,9 +249,8 @@ class MediaWiki:
             # We just log an error, don't actually report a failure to the system. We can live with this.
             logger.error('Stray php processes still present on the maintenance host, please check')
 
-    @staticmethod
     @retry(tries=5, backoff_mode='constant', exceptions=(MediaWikiError, MediaWikiCheckError))
-    def _check_siteinfo(datacenter: str, checks: Dict[Tuple[str], Any]) -> None:
+    def _check_siteinfo(self, datacenter: str, checks: Dict[Tuple[str], Any]) -> None:
         """Check that a specific value in siteinfo matches the expected ones, retrying if doesn't match.
 
         Arguments:
@@ -270,7 +267,7 @@ class MediaWiki:
 
         """
         try:
-            siteinfo = MediaWiki.get_siteinfo(datacenter)
+            siteinfo = self.get_siteinfo(datacenter)
         except Exception as e:
             raise MediaWikiError('Failed to get siteinfo') from e
 

@@ -334,7 +334,7 @@ class PuppetMaster:
             hostname (str): the FQDN of the host for which to remove the certificate.
 
         """
-        self._master_host.run_sync('puppet ca destroy {host}'.format(host=hostname))
+        self._master_host.run_sync('puppet ca --disable_warnings deprecations destroy {host}'.format(host=hostname))
 
     def verify(self, hostname: str) -> None:
         """Verify that there is a valid certificate signed by the Puppet CA for the given hostname.
@@ -346,7 +346,8 @@ class PuppetMaster:
             spicerack.puppet.PuppetMasterError: if the certificate is not valid.
 
         """
-        response = cast(Dict, self._run_json_command('puppet ca --render-as json verify {host}'.format(host=hostname)))
+        response = cast(Dict, self._run_json_command(
+            'puppet ca --disable_warnings deprecations --render-as json verify {host}'.format(host=hostname)))
 
         if not response['valid']:
             raise PuppetMasterError(
@@ -380,7 +381,8 @@ class PuppetMaster:
         else:
             dns_option = '--no-allow-dns-alt-names'
 
-        command = 'puppet cert sign {dns_option} {host}'.format(dns_option=dns_option, host=hostname)
+        command = 'puppet cert --disable_warnings deprecations sign {dns_option} {host}'.format(
+            dns_option=dns_option, host=hostname)
         logger.info('Signing CSR for %s with fingerprint %s', hostname, fingerprint)
         executed = self._master_host.run_sync(command)
 
@@ -435,8 +437,9 @@ class PuppetMaster:
             spicerack.puppet.PuppetMasterError: if more than one certificate is found or it has invalid data.
 
         """
-        response = self._run_json_command('puppet ca --render-as json list --all --subject "{pattern}"'.format(
-            pattern=hostname.replace('.', r'\.')))
+        response = self._run_json_command(
+            'puppet ca --disable_warnings deprecations --render-as json list --all --subject "{pattern}"'.format(
+                pattern=hostname.replace('.', r'\.')))
 
         if not response:
             raise PuppetMasterCheckError('No certificate found for hostname: {host}'.format(host=hostname))

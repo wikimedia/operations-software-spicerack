@@ -129,6 +129,7 @@ intersphinx_mapping = {
     'cumin': ('https://doc.wikimedia.org/cumin/master/', None),
     'requests': ('https://requests.readthedocs.io/en/master/', None),
     'pymysql': ('https://pymysql.readthedocs.io/en/latest/', None),
+    'wmflib': ('https://doc.wikimedia.org/wmflib/master/', None),
 }
 
 # Napoleon settings

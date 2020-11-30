@@ -1,9 +1,17 @@
-"""Top level class cookbook."""
+"""Multiple cookbook classes."""
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase
 
 
-class ExampleCookbook(CookbookBase):
-    """Top level class cookbook."""
+class CookbookA(CookbookBase):
+    """Multiple cookbook classes."""
+
+    def get_runner(self, args):
+        """As required by the parent class."""
+        return ExampleRunner()
+
+
+class CookbookB(CookbookBase):
+    """Multiple cookbook classes."""
 
     def get_runner(self, args):
         """As required by the parent class."""

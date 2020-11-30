@@ -24,7 +24,7 @@ class DryRunRetry:
 def _generate_mocked_function(calls):
     func = mock.Mock()
     func.side_effect = calls
-    func.__name__ = 'mocked'
+    func.__qualname__ = 'mocked'
     return func
 
 
@@ -106,6 +106,38 @@ def test_retry_fail_args(mocked_sleep, exc, kwargs):
 
     func.assert_called_once_with()
     assert not mocked_sleep.called
+
+
+@pytest.mark.parametrize('failure_message, expected_log', (
+    (None, "Attempt to run 'unittest.mock.mocked' raised:"),
+    ('custom failure message', 'custom failure message'),
+))
+@mock.patch('spicerack.decorators.time.sleep', return_value=None)
+def test_retry_failure_message(mocked_sleep, failure_message, expected_log, caplog):
+    """Using @retry with a failure_message should log that message when an exception is caught."""
+    func = _generate_mocked_function([SpicerackError('error1'), True])
+    ret = retry(failure_message=failure_message)(func)()
+
+    assert ret
+    assert expected_log in caplog.text
+    assert 'error1' in caplog.text
+    assert mocked_sleep.call_count == 1
+
+
+@mock.patch('spicerack.decorators.time.sleep', return_value=None)
+def test_retry_fail_chained_exceptions(mocked_sleep, caplog):
+    """When @retry catches a chained exception, it should log exception messages all the way down the chain."""
+    def side_effect():
+        try:
+            raise SpicerackError('error2') from SpicerackError('error3')
+        except SpicerackError:
+            raise SpicerackError('error1')
+    func = _generate_mocked_function(side_effect)
+    with pytest.raises(SpicerackError, match='error1'):
+        retry(func)()
+
+    assert 'error1\nRaised while handling: error2\nCaused by: error3' in caplog.text
+    assert mocked_sleep.call_count == 2
 
 
 @pytest.mark.parametrize('kwargs, message', (

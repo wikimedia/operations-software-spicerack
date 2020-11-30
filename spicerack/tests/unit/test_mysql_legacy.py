@@ -8,7 +8,7 @@ from cumin import Config, NodeSet
 
 from spicerack import mysql_legacy
 from spicerack.remote import Remote, RemoteHosts
-from spicerack.tests import get_fixture_path, require_caplog
+from spicerack.tests import get_fixture_path
 from spicerack.tests.unit.test_remote import mock_cumin
 
 
@@ -96,7 +96,6 @@ class TestMysqlLegacy:
 
         assert self.mocked_remote.query.called
 
-    @require_caplog
     @pytest.mark.parametrize('mode, value', (('readonly', b'1'), ('readwrite', b'0')))
     def test_set_core_masters_readonly(self, mode, value, caplog):
         """It should set the masters as read-only/read-write."""
@@ -105,7 +104,6 @@ class TestMysqlLegacy:
         getattr(self.mysql, 'set_core_masters_' + mode)('eqiad')
         assert 'SET GLOBAL read_only=' + value.decode() in caplog.text
 
-    @require_caplog
     @pytest.mark.parametrize('readonly, reply', ((True, b'1'), (False, b'0')))
     def test_verify_core_masters_readonly_ok(self, readonly, reply, caplog):
         """Should verify that the masters have the intended read-only value."""

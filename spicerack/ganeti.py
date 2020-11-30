@@ -4,9 +4,9 @@ import logging
 
 from typing import Dict, Optional, Tuple
 
-import requests
 from requests.auth import HTTPBasicAuth
-from requests.exceptions import Timeout
+from requests.exceptions import RequestException
+from wmflib.requests import http_session
 
 from spicerack.constants import PUPPET_CA_PATH
 from spicerack.exceptions import SpicerackError
@@ -49,10 +49,10 @@ class GanetiRAPI:
             ca_path (str): the path to the signing certificate authority
 
         """
-        self._auth = HTTPBasicAuth(username, password)
-        self._ca_path = ca_path
         self._url = cluster_url
-        self._timeout = timeout
+        self._http_session = http_session('.'.join((self.__module__, self.__class__.__name__)), timeout=timeout)
+        self._http_session.auth = HTTPBasicAuth(username, password)
+        self._http_session.verify = ca_path
 
     def _api_get_request(self, *targets: str) -> Dict:
         """Perform a RAPI request.
@@ -69,9 +69,9 @@ class GanetiRAPI:
         """
         full_url = '/'.join([self._url, '2'] + list(targets))
         try:
-            result = requests.get(full_url, auth=self._auth, verify=self._ca_path, timeout=self._timeout)
-        except Timeout as ex:
-            raise GanetiError('Timeout performing request to RAPI') from ex
+            result = self._http_session.get(full_url)
+        except RequestException as ex:
+            raise GanetiError('Error while performing request to RAPI') from ex
 
         if result.status_code != 200:
             raise GanetiError('Non-200 from API: {}: {}'.format(result.status_code, result.text))

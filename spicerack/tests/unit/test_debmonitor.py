@@ -3,14 +3,12 @@ import pytest
 import requests
 
 from spicerack import debmonitor
-from spicerack.tests import require_requests_mock
 
 
 DEBMONITOR_HOST = 'debmonitor.example.com'
 HOST1_URL = 'https://{host}/hosts/host1.example.com'.format(host=DEBMONITOR_HOST)
 
 
-@require_requests_mock
 class TestDebmonitor:
     """Debmonitor class tests."""
 

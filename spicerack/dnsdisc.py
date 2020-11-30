@@ -125,7 +125,8 @@ class Discovery:
             if not self._dry_run:
                 raise
 
-    @retry(tries=10, backoff_mode='constant', exceptions=(DiscoveryCheckError,))
+    @retry(tries=10, backoff_mode='constant', exceptions=(DiscoveryCheckError,),
+           failure_message='Waiting for DNS TTL update...')
     def check_ttl(self, ttl: int) -> None:
         """Check the TTL for all records.
 
@@ -142,8 +143,13 @@ class Discovery:
             if record.ttl != ttl:
                 raise DiscoveryCheckError("Expected TTL '{expected}', got '{ttl}' for record {record}".format(
                     expected=ttl, ttl=record.ttl, record=record[0].address))
+        if len(self._records) == 1:
+            logger.info('%s.discovery.wmnet TTL is correct.', self._records[0])
+        else:
+            logger.info('%s discovery.wmnet TTLs are correct.', self._records)
 
-    @retry(tries=10, backoff_mode='constant', exceptions=(DiscoveryError,))
+    @retry(tries=10, backoff_mode='constant', exceptions=(DiscoveryError,),
+           failure_message='Waiting for DNS record update...')
     def check_record(self, name: str, expected_name: str) -> None:
         """Check that a Discovery record resolves on all authoritative resolvers to the correct IP.
 
@@ -175,6 +181,8 @@ class Discovery:
 
         if failed:
             raise DiscoveryError('Failed to check record {name}'.format(name=name))
+
+        logger.info('%s.discovery.wmnet record is correct.', name)
 
     def resolve(self, name: Optional[str] = None) -> Iterator[resolver.Answer]:
         """Generator that yields the resolved records.

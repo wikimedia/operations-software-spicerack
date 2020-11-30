@@ -6,6 +6,8 @@ from typing import Dict, List, Optional, Union
 
 import requests
 
+from wmflib.requests import http_session
+
 from spicerack.constants import ALL_DATACENTERS
 from spicerack.exceptions import SpicerackError
 
@@ -21,6 +23,10 @@ class Prometheus:
     """Class to interact with the Prometheus server."""
 
     _prometheus_api: str = 'http://prometheus.svc.{site}.wmnet/ops/api/v1/query'
+
+    def __init__(self) -> None:
+        """Initialize the instance."""
+        self._http_session = http_session('.'.join((self.__module__, self.__class__.__name__)))
 
     def query(self, query: str, site: str, *, timeout: Optional[Union[float, int]] = 10) -> List[Dict]:
         """Perform a generic query.
@@ -47,7 +53,7 @@ class Prometheus:
             raise PrometheusError(msg)
 
         url = self._prometheus_api.format(site=site)
-        response = requests.get(url, params={'query': query}, timeout=timeout)
+        response = self._http_session.get(url, params={'query': query}, timeout=timeout)
         if response.status_code != requests.codes['ok']:
             msg = 'Unable to get metric: HTTP {code}: {text}'.format(
                 code=response.status_code, text=response.text)

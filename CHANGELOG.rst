@@ -1,6 +1,67 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.45`_ (2020-11-30)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* Removed config and phabricator modules migrated to wmflib and update imports.
+* remote: re-enabled Cumin's output removing its suppression. The work on `T212783`_ will make it more flexible on
+  a per-execution basis, but for now is better to just re-enable it and make the errors surface to the users.
+
+New features
+""""""""""""
+
+* cookbook API: add class API
+
+  * In addition to the simple cookbooks function API interface add support for a more integrated class-based API.
+  * Spicerack will perform auto-detection of the API used by the cookbook and automatically convert the module-based
+    API cookbooks into class-based cookbooks so that only one interface is actually supported internally.
+  * The class API defines a ``CookbookBase`` class that cookbooks that want to use this API must extend creating a
+    derived class. The derived class can have any name. Multiple cookbooks in the same module are supported.
+  * The class-based API allows a more in-depth integration with Spicerack:
+
+    * Allow to perform additional initialization and validation steps in the class constructor before the cookbook
+      execution starts, allowing the cookbook to bail out before execution and any related ``!log-ging``.
+    * Allow to define a custom runtime description that will be included, for example, in the ``START/END`` logging
+      messages that are also sent to IRC and ``!log-ed`` into SAL.
+    * Refactor the Cookbook API documentation to be more detailed and following Sphinx standards to document the
+      cookbooks module interfaces.
+    * Refactor out from the private ``_cookbook`` module some functionalities to a ``_menu`` and ``_module_api``
+      modules.
+
+* spicerack: add ``requests_session`` accessor to get a requests's ``Session`` pre-configured by ``wmflib`` with a
+  default timeout, retry logic and ``User-Agent``.
+* decorators: Add an optional custom failure message to ``@retry``:
+
+  * The ``@retry`` decorator logs the messages from exceptions raised during execution, but when there are chained
+    exceptions ("raise from", etc.) only the top-level error is logged. For example, in ``MediaWiki._check_siteinfo``,
+    we only log ``Failed to get siteinfo`` and throw away the message from the underlying ``RequestException``.
+    Instead, this traverses the exception chain (using the same logic as the built-in default handler for uncaught
+    exceptions) and includes each exception's message in the log entry.
+
+Minor improvements
+""""""""""""""""""
+
+* Convert all usage of the ``requests`` package to use the ``wmflib.requests.http_session`` instead to have a nice
+  ``User-Agent``, a default timeout and a retry logic on some failures across ``Spicerack``.
+* puppet: suppress deprecation warnings.
+* decorators: Log chained exception messages in ``@retry``.
+
+Miscellanea
+"""""""""""
+
+* doc: add missing link to the ``wmflib`` package.
+* dependencies: remove temporary hacks.
+* dependencies: update min version to match the versions in Debian Buster.
+* tests: remove ``require_*`` decorators.
+* Refactoring: renamed internal modules with a leading underscore:
+
+  * Moved ``cookbook.py`` to ``_cookbook.py`` and ``log.py`` to ``_log.py`` as all their content is actually internal
+    to ``spicerack`` and no client should use any of that. They were already excluded from the generated documentation
+    for the same purpose.
 
 `v0.0.44`_ (2020-10-13)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -878,6 +939,7 @@ New features
 .. _`sre.hosts.decommission`: https://gerrit.wikimedia.org/r/plugins/gitiles/operations/cookbooks/+/cea161a91ec21dcd48fe0d3fa899c1f19fc4801b/cookbooks/sre/hosts/decommission.py#42
 
 .. _`T147074`: https://phabricator.wikimedia.org/T147074
+.. _`T212783`: https://phabricator.wikimedia.org/T212783
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`T219640`: https://phabricator.wikimedia.org/T213296
 .. _`T219799`: https://phabricator.wikimedia.org/T219799
@@ -932,3 +994,4 @@ New features
 .. _`v0.0.42`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.42
 .. _`v0.0.43`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.43
 .. _`v0.0.44`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.44
+.. _`v0.0.45`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.45
