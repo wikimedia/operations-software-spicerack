@@ -1,3 +1,10 @@
+spicerack (0.0.45-1) buster-wikimedia; urgency=medium
+
+  * v0.0.45 upstream release.
+  * Removed python3-phabricator and python3-yaml from Build-Depends.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Mon, 30 Nov 2020 16:02:36 -0000
+
 spicerack (0.0.44-1) buster-wikimedia; urgency=medium
 
   * v0.0.44 upstream release.
