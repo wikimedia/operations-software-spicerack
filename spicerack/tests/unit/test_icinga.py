@@ -199,6 +199,8 @@ def _get_hoststatus(hostname, down=False, failed=False):
         'state': 'UP',
         'optimal': True,
         'failed_services': [],
+        'downtimed': False,
+        'notifications_enabled': True,
     }
 
     failed_services = [
