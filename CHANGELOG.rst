@@ -1,6 +1,15 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.46`_ (2020-12-10)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: add support for downtimed and notifications_enabled parameters (`T269672`_).
+* elasticsearch-cluster: add support for cloudelastic (`T268779`_).
+
 `v0.0.45`_ (2020-11-30)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -949,6 +958,8 @@ New features
 .. _`T243935`: https://phabricator.wikimedia.org/T243935
 .. _`T257905`: https://phabricator.wikimedia.org/T257905
 .. _`T261239`: https://phabricator.wikimedia.org/T261239
+.. _`T268779`: https://phabricator.wikimedia.org/T268779
+.. _`T269672`: https://phabricator.wikimedia.org/T269672
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -995,3 +1006,4 @@ New features
 .. _`v0.0.43`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.43
 .. _`v0.0.44`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.44
 .. _`v0.0.45`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.45
+.. _`v0.0.46`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.46
