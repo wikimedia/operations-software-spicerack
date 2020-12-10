@@ -3,7 +3,9 @@
         "failed_services": [],
         "name": "host1",
         "optimal": true,
-        "state": "UP"
+        "state": "UP",
+        "downtimed": false,
+        "notifications_enabled": true
     },
     "host2": false
 }

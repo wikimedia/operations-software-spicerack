@@ -86,7 +86,8 @@ class HostStatus:
     """:py:class:`str`: the Icinga value for a host that is up and running. The other values for the Icinga host state
     are ``DOWN`` and ``UNREACHABLE``."""
 
-    def __init__(self, *, name: str, state: str, optimal: bool, failed_services: Sequence[Mapping]):
+    def __init__(self, *, name: str, state: str, optimal: bool, failed_services: Sequence[Mapping],
+                 downtimed: bool, notifications_enabled: bool):
         """Initialize the instance.
 
         Arguments:
@@ -94,12 +95,16 @@ class HostStatus:
             state (str): the Icinga state for the host, one of ``UP``, ``DOWN``, UNREACHABLE``.
             optimal (bool): whether the host is in optimal state (all green).
             failed_services (list): a list of dictionaries representing the failed services.
+            downtimed (bool): whether the host is currently downtimed.
+            notifications_enabled: (bool): whether the host has notifications enabled.
 
         """
         self.name = name
         self.state = state
         self.optimal = optimal
         self.failed_services_raw = failed_services  # TODO: could be improved creating a ServiceStatus class
+        self.downtimed = downtimed
+        self.notifications_enabled = notifications_enabled
 
     @property
     def failed_services(self) -> List[str]:
