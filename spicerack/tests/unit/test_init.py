@@ -22,7 +22,7 @@ from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
-from spicerack.netbox import Netbox
+from spicerack.netbox import Netbox, NetboxServer
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
@@ -159,3 +159,7 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_resolve_c
     # Values from fixtures/netbox/config.yaml
     mocked_pynetbox.assert_called_once_with("https://netbox.example.com", token=token)
     assert spicerack.netbox_master_host.hosts == "netbox-server.example.com"
+
+    mocked_pynetbox.reset_mock()
+    mocked_pynetbox.return_value.dcim.devices.get.return_value.role.slug = "server"
+    assert isinstance(spicerack.netbox_server("host1"), NetboxServer)

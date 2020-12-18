@@ -27,7 +27,7 @@ from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
-from spicerack.netbox import NETBOX_DOMAIN, Netbox
+from spicerack.netbox import NETBOX_DOMAIN, Netbox, NetboxServer
 from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
@@ -479,6 +479,22 @@ class Spicerack:
             token = config["api_token_ro"]
 
         return Netbox(config["api_url"], token, dry_run=self._dry_run)
+
+    def netbox_server(self, hostname: str, *, read_write: bool = False) -> NetboxServer:
+        """Get a NetboxServer instance to interact with a server in Netbox, both physical and virtual.
+
+        Arguments:
+            hostname (str): the hostname (not FQDN) of the server to manage.
+            read_write (bool, optional): whether to use a read-write token.
+
+        Raises:
+            spicerack.netbox.NetboxError: if unable to find or load the server.
+
+        Returns:
+            spicerack.netbox.NetboxServer: the NetboxServer instance.
+
+        """
+        return self.netbox(read_write=read_write).get_server(hostname)
 
     def requests_session(  # pylint: disable=no-self-use
         self, name: str, *, timeout: float = requests.DEFAULT_TIMEOUT, tries: int = 3, backoff: float = 1.0
