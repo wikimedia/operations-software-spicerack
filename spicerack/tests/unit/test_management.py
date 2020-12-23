@@ -3,9 +3,9 @@ from unittest import mock
 
 import pytest
 
+from wmflib.constants import ALL_DATACENTERS
 from wmflib.dns import Dns, DnsError
 
-from spicerack.constants import ALL_DATACENTERS
 from spicerack.management import Management, ManagementError
 
 

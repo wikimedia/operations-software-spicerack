@@ -29,7 +29,6 @@ Spicerack Python API autodoc.
    spicerack.mysql
    spicerack.mysql_legacy
    spicerack.netbox
-   spicerack.prometheus
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote

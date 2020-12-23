@@ -1,58 +1,15 @@
 """Log module."""
 import logging
 import os
-import socket
 
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
+
+from wmflib.irc import SALSocketHandler
 
 
 root_logger = logging.getLogger()  # pylint: disable=invalid-name
 irc_logger = logging.getLogger('spicerack_irc_announce')  # pylint: disable=invalid-name
-
-
-class IRCSocketHandler(logging.Handler):
-    """Log handler for logmsgbot on #wikimedia-operation.
-
-    Sends log events to a tcpircbot server for relay to an IRC channel.
-    """
-
-    def __init__(self, host: str, port: int, username: str) -> None:
-        """Initialize the IRC socket handler.
-
-        Arguments:
-            host (str): tcpircbot hostname.
-            port (int): tcpircbot listening port.
-            username (str): the user to refer in the IRC messages.
-
-        """
-        super().__init__()
-        self.addr: Tuple[str, int] = (host, port)
-        self.username = username
-        self.level = logging.INFO
-
-    def emit(self, record: logging.LogRecord) -> None:
-        """According to Python logging.Handler interface.
-
-        See https://docs.python.org/3/library/logging.html#handler-objects
-        """
-        # Stashbot expects !log messages relayed by logmsgbot to have the
-        # format: "!log <nick> <msg>". The <nick> is parsed out and used as
-        # the label of who actually made the SAL entry.
-        message = '!log {user}@{host} {msg}'.format(
-            msg=record.getMessage(), user=self.username, host=socket.gethostname())
-        sock = None
-
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1.0)
-            sock.connect(self.addr)
-            sock.sendall(message.encode('utf-8'))
-        except OSError:
-            self.handleError(record)
-        finally:
-            if sock is not None:
-                sock.close()
 
 
 class FilterOutCumin(logging.Filter):
@@ -126,7 +83,7 @@ def setup_logging(
     root_logger.setLevel(logging.DEBUG)
 
     if not dry_run and host is not None and port > 0:
-        irc_logger.addHandler(IRCSocketHandler(host, port, user))
+        irc_logger.addHandler(SALSocketHandler(host, port, user))
         irc_logger.setLevel(logging.INFO)
 
     # Silence external noisy loggers

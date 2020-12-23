@@ -10,9 +10,10 @@ from wmflib import requests
 from wmflib.actions import ActionsDict
 from wmflib.config import load_ini_config, load_yaml_config
 from wmflib.dns import Dns
+from wmflib.interactive import get_username
 from wmflib.phabricator import create_phabricator, Phabricator
+from wmflib.prometheus import Prometheus
 
-from spicerack import interactive
 from spicerack._log import irc_logger
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
@@ -21,13 +22,13 @@ from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, ElasticsearchClusters
 from spicerack.ganeti import Ganeti
 from spicerack.icinga import Icinga, ICINGA_DOMAIN
+from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NETBOX_DOMAIN
-from spicerack.prometheus import Prometheus
 from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
@@ -85,7 +86,7 @@ class Spicerack:
         self._debmonitor_config = debmonitor_config
         self._spicerack_config_dir = spicerack_config_dir
 
-        self._username = interactive.get_username()
+        self._username = get_username()
         self._current_hostname = gethostname()
         self._irc_logger = irc_logger
         self._confctl: Optional[Confctl] = None
@@ -358,7 +359,7 @@ class Spicerack:
         if cached and self._ipmi is not None:
             return self._ipmi
 
-        ipmi = Ipmi(interactive.get_management_password(), dry_run=self._dry_run)
+        ipmi = Ipmi(get_management_password(), dry_run=self._dry_run)
         if cached:
             self._ipmi = ipmi
 
@@ -391,7 +392,7 @@ class Spicerack:
         """Get an Prometheus instance.
 
         Returns:
-            spicerack.prometheus.Prometheus: Prometheus instance.
+            wmflib.prometheus.Prometheus: Prometheus instance.
 
         """
         return Prometheus()
