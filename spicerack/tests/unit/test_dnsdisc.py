@@ -1,4 +1,6 @@
 """Dnsdisc module tests."""
+import logging
+
 from collections import namedtuple
 from unittest import mock
 
@@ -61,16 +63,17 @@ class TestDiscovery:
         self.mocked_resolver.Resolver.return_value.query = MockedQuery
 
         self.discovery = Discovery(self.mocked_confctl, self.mocked_remote, self.records, dry_run=False)
+        self.discovery_single = Discovery(self.mocked_confctl, self.mocked_remote, self.records[0:1], dry_run=False)
         self.discovery_dry_run = Discovery(self.mocked_confctl, self.mocked_remote, self.records)
 
     def test_init(self):
         """Creating a Discovery instance should initialize the resolvers based on a cumin query."""
         self.mocked_remote.query.assert_has_calls([mock.call('A:dns-auth')] * 2)
         self.mocked_resolver.Resolver.assert_called_with()
-        assert self.mocked_resolver.Resolver.call_count == 4
+        assert self.mocked_resolver.Resolver.call_count == 6
         self.mocked_resolver.query.assert_has_calls(
             [mock.call(self.nameservers[0]), mock.call(self.nameservers[1])], any_order=True)
-        assert self.mocked_resolver.query.call_count == 4
+        assert self.mocked_resolver.query.call_count == 6
 
     def test_init_ko(self):
         """Creating a Discovery instance should raise DiscoveryError if unable to initialize the resolvers."""
@@ -81,7 +84,7 @@ class TestDiscovery:
     def test_resolve_address(self):
         """Calling resolve_address() sould raise DiscoveryError if unable to resolve the address."""
         with pytest.raises(DiscoveryError, match='Unable to resolve raise.svc.eqiad.wmnet'):
-            self.discovery.resolve_address('raise.svc.eqiad.wmnet')
+            self.discovery_single.resolve_address('raise.svc.eqiad.wmnet')
 
     def test_update_ttl(self):
         """Calling update_ttl() should update the TTL of the conftool objects."""
@@ -105,6 +108,16 @@ class TestDiscovery:
     def test_check_ttl_ok(self):
         """Calling check_ttl() should verify that the correct TTL is returned by the authoritative nameservers."""
         self.discovery.check_ttl(10)
+
+    @pytest.mark.parametrize('expected, name', (
+        ('record1.discovery.wmnet TTL is correct', 'discovery_single'),
+        ("['record1', 'record2'] discovery.wmnet TTLs are correct", 'discovery'),
+    ))
+    def test_check_ttl_log_message(self, expected, name, caplog):
+        """The log message of check_ttl should reflect if a singular or multiple records matches."""
+        with caplog.at_level(logging.INFO):
+            getattr(self, name).check_ttl(10)
+        assert expected in caplog.text
 
     @mock.patch('spicerack.decorators.time.sleep')
     def test_check_ttl_ko(self, mocked_sleep):
@@ -199,5 +212,6 @@ class TestDiscovery:
             mock_obj('dcA', 'svcB', False),
             mock_obj('dcB', 'svcB', False)
         ]
-        self.discovery_dry_run.check_if_depoolable('dcB')
+        with caplog.at_level(logging.DEBUG):
+            self.discovery_dry_run.check_if_depoolable('dcB')
         assert 'cannot be depooled as they are only active in' in caplog.text
