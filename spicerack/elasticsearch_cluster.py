@@ -322,7 +322,8 @@ class ElasticsearchClusters:
         for cluster in self._clusters:
             cluster.reset_indices_to_read_write()
 
-    @retry(exceptions=ElasticsearchClusterCheckError, tries=60, delay=timedelta(seconds=60), backoff_mode='constant')
+    @retry(tries=60, delay=timedelta(seconds=60), backoff_mode='constant',
+           exceptions=(ElasticsearchClusterCheckError,))
     def wait_for_all_write_queues_empty(self) -> None:
         """Wait for all relevant CirrusSearch write queues to be empty.
 
