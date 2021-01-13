@@ -5,15 +5,13 @@ Maintainer: Riccardo Coccioli <rcoccioli@wikimedia.org>
 Standards-Version: 4.5.0
 Build-Depends:
   cumin,
-  debhelper (>= 10),
-  dh-python (>= 2.20160609~),
-  python3-all (>= 3.5),
+  debhelper (>= 12),
+  dh-python (>= 3.20190308~),
+  python3-all (>= 3.7),
   python3-conftool,
   python3-dnspython,
   python3-elasticsearch,
   python3-elasticsearch-curator,
-  python3-flake8,
-  python3-mock (>= 2.0.0),
   python3-pymysql,
   python3-pynetbox,
   python3-pytest,
@@ -27,7 +25,6 @@ Build-Depends:
   python3-sphinx,
   python3-sphinx-argparse,
   python3-sphinx-rtd-theme,
-  python3-urllib3 (<< 1.25),
   python3-wmflib,
 Homepage: https://github.com/wikimedia/operations-software-spicerack
 X-Python3-Version: >= 3.7

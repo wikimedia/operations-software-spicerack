@@ -1,3 +1,12 @@
+spicerack (0.0.47-1) buster-wikimedia; urgency=medium
+
+  * v0.0.47 upstream release.
+  * Removed temporary hack needed for python3-phabricator to run the tests.
+  * Removed leftover unnecessary Build-Depends packages.
+  * Updated Build-Depends constraints to Debian Buster versions.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Wed, 13 Jan 2021 10:17:01 -0000
+
 spicerack (0.0.46-1) buster-wikimedia; urgency=medium
 
   * v0.0.46 upstream release.
