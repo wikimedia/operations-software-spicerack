@@ -12,11 +12,11 @@ import curator
 
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
 from urllib3.exceptions import HTTPError
+from wmflib.prometheus import Prometheus
 
 from spicerack.administrative import Reason
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
-from spicerack.prometheus import Prometheus
 from spicerack.remote import Remote, RemoteHosts, RemoteHostsAdapter
 
 
@@ -65,7 +65,7 @@ def create_elasticsearch_clusters(clustergroup: str, write_queue_datacenters: Se
         clustergroup (str): name of cluster group.
         write_queue_datacenters (Sequence[str]): Sequence of which core DCs to query write queues for.
         remote (spicerack.remote.Remote): the Remote instance.
-        prometheus (spicerack.prometheus.Prometheus): the prometheus instance.
+        prometheus (wmflib.prometheus.Prometheus): the prometheus instance.
         dry_run (bool, optional):  whether this is a DRY-RUN.
 
     Raises:
@@ -170,7 +170,7 @@ class ElasticsearchClusters:
         Arguments:
             clusters (list): list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
             remote (spicerack.remote.Remote): the Remote instance.
-            prometheus (spicerack.prometheus.Prometheus): the prometheus instance.
+            prometheus (wmflib.prometheus.Prometheus): the prometheus instance.
             write_queue_datacenters (Sequence[str]): Sequence of which core DCs to query write queues for.
             dry_run (bool, optional): whether this is a DRY-RUN.
 
@@ -322,7 +322,8 @@ class ElasticsearchClusters:
         for cluster in self._clusters:
             cluster.reset_indices_to_read_write()
 
-    @retry(exceptions=ElasticsearchClusterCheckError, tries=60, delay=timedelta(seconds=60), backoff_mode='constant')
+    @retry(tries=60, delay=timedelta(seconds=60), backoff_mode='constant',
+           exceptions=(ElasticsearchClusterCheckError,))
     def wait_for_all_write_queues_empty(self) -> None:
         """Wait for all relevant CirrusSearch write queues to be empty.
 

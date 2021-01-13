@@ -9,6 +9,7 @@ from requests import Session
 from wmflib.actions import ActionsDict
 from wmflib.dns import Dns
 from wmflib.phabricator import Phabricator
+from wmflib.prometheus import Prometheus
 
 from spicerack import puppet, Spicerack
 from spicerack.administrative import Reason
@@ -24,7 +25,6 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox
-from spicerack.prometheus import Prometheus
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import get_fixture_path, SPICERACK_TEST_PARAMS

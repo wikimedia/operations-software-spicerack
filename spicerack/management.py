@@ -2,9 +2,10 @@
 import logging
 import re
 
+from wmflib.constants import ALL_DATACENTERS
 from wmflib.dns import Dns, DnsError
 
-from spicerack.constants import ALL_DATACENTERS, INTERNAL_TLD, MANAGEMENT_SUBDOMAIN
+from spicerack.constants import INTERNAL_TLD, MANAGEMENT_SUBDOMAIN
 from spicerack.exceptions import SpicerackError
 
 

@@ -404,11 +404,13 @@ class TestPuppetMaster:
 
         self.mocked_master_host.run_sync.assert_has_calls([
             mock.call(
-                r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+                'puppet ca --disable_warnings deprecations --render-as json '
+                r'list --all --subject "^test\.example\.com$"',
                 is_safe=True),
             mock.call('puppet cert --disable_warnings deprecations sign --no-allow-dns-alt-names test.example.com'),
             mock.call(
-                r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+                'puppet ca --disable_warnings deprecations --render-as json '
+                r'list --all --subject "^test\.example\.com$"',
                 is_safe=True),
         ])
 
@@ -424,11 +426,13 @@ class TestPuppetMaster:
 
         self.mocked_master_host.run_sync.assert_has_calls([
             mock.call(
-                r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+                'puppet ca --disable_warnings deprecations --render-as json '
+                r'list --all --subject "^test\.example\.com$"',
                 is_safe=True),
             mock.call('puppet cert --disable_warnings deprecations sign --allow-dns-alt-names test.example.com'),
             mock.call(
-                r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+                'puppet ca --disable_warnings deprecations --render-as json '
+                r'list --all --subject "^test\.example\.com$"',
                 is_safe=True),
         ])
 
@@ -477,7 +481,8 @@ class TestPuppetMaster:
         self.puppet_master.wait_for_csr('test.example.com')
 
         self.mocked_master_host.run_sync.assert_called_once_with(
-            r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+            'puppet ca --disable_warnings deprecations --render-as json '
+            r'list --all --subject "^test\.example\.com$"',
             is_safe=True)
 
     def test_wait_for_csr_fail(self):
@@ -510,7 +515,8 @@ class TestPuppetMaster:
 
         assert metadata == json.loads(PUPPET_CA_CERT_METADATA_SIGNED.decode())[0]
         self.mocked_master_host.run_sync.assert_called_once_with(
-            r'puppet ca --disable_warnings deprecations --render-as json list --all --subject "test\.example\.com"',
+            'puppet ca --disable_warnings deprecations --render-as json list '
+            r'--all --subject "^test\.example\.com$"',
             is_safe=True)
 
     @pytest.mark.parametrize('json_output, exception_message', (

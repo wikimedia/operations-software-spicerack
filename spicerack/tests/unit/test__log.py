@@ -21,38 +21,6 @@ def _assert_match_in_tmpdir(match, tmp_dir):
             assert match in f.read()
 
 
-def test_irc_socket_handler_init():
-    """An instance of IRCSocketHandler should set the address for the socket and the user."""
-    handler = log.IRCSocketHandler('host', 123, 'user')
-    assert handler.addr == ('host', 123)
-    assert handler.username == 'user'
-
-
-@mock.patch('spicerack._log.socket')
-def test_irc_socket_handler_emit_ok(mocked_socket):
-    """Calling emit() on an IRCSocketHandler instance should send the message to the socket."""
-    handler = log.IRCSocketHandler('host', 123, 'user')
-
-    handler.emit(GENERIC_LOG_RECORD)
-
-    mocked_socket.assert_has_calls([
-        mock.call.socket().connect(('host', 123)), mock.call.socket().close()], any_order=True)
-
-
-@mock.patch('spicerack._log.socket')
-def test_irc_socket_handler_emit_ko(mocked_socket):
-    """If an error occur while calling emit() on an IRCSocketHandler instance, it should call ."""
-    handler = log.IRCSocketHandler('host', 123, 'user')
-    handler.handleError = mock.MagicMock()
-    mocked_socket.socket.side_effect = OSError
-
-    handler.emit(GENERIC_LOG_RECORD)
-
-    assert mock.call.socket().connect(('host', 123)) not in mocked_socket.mock_calls
-    assert mock.call.socket().close() not in mocked_socket.mock_calls
-    handler.handleError.assert_called_once_with(GENERIC_LOG_RECORD)
-
-
 def test_cumin_filter_pass():
     """The FilterOutCumin filter() method should let a normal log record pass."""
     log_filter = log.FilterOutCumin()
@@ -76,7 +44,7 @@ def test_setup_logging_no_irc(tmpdir, caplog):
     _assert_match_in_tmpdir(message, tmpdir.strpath)
 
 
-@mock.patch('spicerack._log.socket')
+@mock.patch('wmflib.irc.socket')
 def test_setup_logging_with_irc(mocked_socket, tmpdir, caplog):
     """Calling setup_logging() with host and port should also setup the IRC logger."""
     log.setup_logging(tmpdir.strpath, 'task', 'user', host='host', port=123, dry_run=False)

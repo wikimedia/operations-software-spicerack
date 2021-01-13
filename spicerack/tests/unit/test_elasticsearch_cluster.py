@@ -7,11 +7,11 @@ import pytest
 
 from cumin import NodeSet
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
+from wmflib.prometheus import Prometheus
 
 from spicerack import elasticsearch_cluster as ec
 from spicerack.administrative import Reason
 from spicerack.elasticsearch_cluster import NodesGroup
-from spicerack.prometheus import Prometheus
 from spicerack.remote import Remote, RemoteHosts
 
 

@@ -438,7 +438,7 @@ class PuppetMaster:
 
         """
         response = self._run_json_command(
-            'puppet ca --disable_warnings deprecations --render-as json list --all --subject "{pattern}"'.format(
+            'puppet ca --disable_warnings deprecations --render-as json list --all --subject "^{pattern}$"'.format(
                 pattern=hostname.replace('.', r'\.')))
 
         if not response:

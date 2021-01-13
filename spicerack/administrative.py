@@ -60,6 +60,16 @@ class Reason:
         return ' - '.join(parts)
 
     @property
+    def reason(self) -> str:
+        """Getter for the reason property.
+
+        Returns:
+            str: the reason given to justify the administrative action.
+
+        """
+        return self._reason
+
+    @property
     def owner(self) -> str:
         """Getter for the owner property.
 
@@ -78,6 +88,16 @@ class Reason:
 
         """
         return self._hostname
+
+    @property
+    def task_id(self) -> Optional[str]:
+        """Getter for the task ID property.
+
+        Returns:
+            Optional[Str]: the task ID to mention in the reason, or None if none was given.
+
+        """
+        return self._task_id
 
     def quoted(self) -> str:
         """Quoted string representation of the instance, including all attributes.

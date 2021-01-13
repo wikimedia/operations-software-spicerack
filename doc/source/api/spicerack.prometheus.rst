@@ -1,4 +1,0 @@
-prometheus
-==========
-
-.. automodule:: spicerack.prometheus

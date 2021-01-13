@@ -1,6 +1,40 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.47`_ (2021-01-13)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* Use newly migrated code from wmflib:
+
+  * Some additional functionalites were moved to wmflib (>= 0.0.5), remove the duplicated code from Spicerack and use
+    the wmflib version instead.
+  * interactive: convert all imports to use the wmflib version, remove the duplicated code. The module is for now left
+    to hold the ``get_management_password()`` function.
+  * prometheus: moved entirely to wmflib.
+  * _log: use the SAL (!log) IRC handler from wmflib.
+  * The ``@retry`` decorator will be migrated in a separate patch to keep its dry-run awareness.
+
+Minor improvements
+""""""""""""""""""
+
+* administrative: Add getters for the other Reason fields.
+
+Bug fixes
+"""""""""
+
+* puppet: update ``get_certificate_metadata()`` so the pattern is more specific and prevent it to match other hosts.
+* elasticsearch_cluster: fix call to ``@retry``.
+
+Miscellanea
+"""""""""""
+
+* dnsdisc: improve test coverage
+* tests: fix deprecated pytest argument
+* tox: Remove ``--skip B322`` from Bandit config not supported by newer Bandit versions.
+
 `v0.0.46`_ (2020-12-10)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1007,3 +1041,4 @@ New features
 .. _`v0.0.44`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.44
 .. _`v0.0.45`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.45
 .. _`v0.0.46`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.46
+.. _`v0.0.47`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.47

@@ -1,8 +1,5 @@
 """Constants module."""
 
-ALL_DATACENTERS = ('eqiad', 'codfw', 'esams', 'ulsfo', 'eqsin')
-"""tuple: list of all datacenters."""
-
 CORE_DATACENTERS = ('eqiad', 'codfw')
 """tuple: list of core datacenters."""
 
