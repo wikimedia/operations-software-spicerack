@@ -380,9 +380,8 @@ def execute_cookbook(config: Dict[str, str], args: argparse.Namespace, cookbooks
         logger.error('Unable to find cookbook %s', args.cookbook)
         return cookbook.NOT_FOUND_RETCODE
 
-    cookbook_path, cookbook_name = os.path.split(cookbook_item.path.replace('.', os.sep))
-    base_path = os.path.join(config['logs_base_dir'], cookbook_path)
-    _log.setup_logging(base_path, cookbook_name, cookbooks.spicerack.username, dry_run=args.dry_run,
+    base_path = os.path.join(config['logs_base_dir'], cookbook_item.path.replace('.', os.sep))
+    _log.setup_logging(base_path, cookbook_item.name, cookbooks.spicerack.username, dry_run=args.dry_run,
                        host=config.get('tcpircbot_host', None), port=int(config.get('tcpircbot_port', 0)))
 
     logger.debug('Executing cookbook "%s" with args: %s', args.cookbook, args.cookbook_args)
