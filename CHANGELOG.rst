@@ -1,6 +1,17 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.48`_ (2021-01-18)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* logging: fix base path and name to setup logging.
+
+  * In the recent refactor to the new APIs, the paths passed to the setup_logging function were not anymore correct.
+    Now that the cookbook items have a proper Spicerack-formatted path and name, use them directly.
+
 `v0.0.47`_ (2021-01-13)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1042,3 +1053,4 @@ New features
 .. _`v0.0.45`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.45
 .. _`v0.0.46`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.46
 .. _`v0.0.47`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.47
+.. _`v0.0.48`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.48
