@@ -54,16 +54,22 @@ def setup_logging(
     logging.raiseExceptions = False
     os.makedirs(base_path, mode=0o755, exist_ok=True)
 
+    if dry_run:
+        dry_run_prefix = 'DRY-RUN '
+    else:
+        dry_run_prefix = ''
+
     # Default INFO logging
-    formatter = logging.Formatter(fmt='%(asctime)s {} %(process)d [%(levelname)s] %(message)s'.format(user))
+    formatter = logging.Formatter(fmt='%(asctime)s {dryrun}{user} %(process)d [%(levelname)s] %(message)s'.format(
+        dryrun=dry_run_prefix, user=user))
     handler = logging.FileHandler(os.path.join(base_path, '{name}.log'.format(name=name)))
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
 
     # Extended logging for detailed debugging
     formatter_extended = logging.Formatter(
-        fmt='%(asctime)s {} %(process)d [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] %(message)s'
-            .format(user))
+        fmt=('%(asctime)s {dryrun}{user} %(process)d [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] '
+             '%(message)s').format(dryrun=dry_run_prefix, user=user))
     handler_extended = logging.FileHandler(os.path.join(base_path, '{name}-extended.log'.format(name=name)))
     handler_extended.setFormatter(formatter_extended)
     handler_extended.setLevel(logging.DEBUG)

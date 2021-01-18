@@ -67,6 +67,7 @@ def test_setup_logging_dry_run(capsys, tmpdir, caplog):
     assert 'DRY-RUN' in err
     assert message in caplog.text
     _assert_match_in_tmpdir(message, tmpdir.strpath)
+    _assert_match_in_tmpdir('DRY-RUN', tmpdir.strpath)
 
 
 def test_log_task_start(capsys, tmpdir, caplog):
@@ -93,6 +94,7 @@ def test_log_task_start_dry_run(capsys, tmpdir, caplog):
     assert logged_message in err
     assert logged_message in caplog.text
     _assert_match_in_tmpdir(logged_message, tmpdir.strpath)
+    _assert_match_in_tmpdir('DRY-RUN', tmpdir.strpath)
 
 
 def test_log_task_end(capsys, tmpdir, caplog):

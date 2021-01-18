@@ -384,7 +384,7 @@ def execute_cookbook(config: Dict[str, str], args: argparse.Namespace, cookbooks
     _log.setup_logging(base_path, cookbook_item.name, cookbooks.spicerack.username, dry_run=args.dry_run,
                        host=config.get('tcpircbot_host', None), port=int(config.get('tcpircbot_port', 0)))
 
-    logger.debug('Executing cookbook "%s" with args: %s', args.cookbook, args.cookbook_args)
+    logger.debug('Executing cookbook with args: %s', args)
     return cookbook_item.run()
 
 
