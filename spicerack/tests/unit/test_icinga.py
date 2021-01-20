@@ -13,10 +13,10 @@ from spicerack.remote import RemoteHosts
 from spicerack.tests import get_fixture_path
 
 
-def set_mocked_icinga_host_output(mocked_icinga_host, output):
+def set_mocked_icinga_host_output(mocked_icinga_host, output, n_hosts=1):
     """Setup the mocked icinga_host return value with the given output."""
     out = MsgTreeElem(output.encode(), parent=MsgTreeElem())
-    mocked_icinga_host.run_sync.return_value = iter([(NodeSet('icinga-host'), out)])
+    mocked_icinga_host.run_sync.return_value = iter(n_hosts * [(NodeSet('icinga-host'), out)])
 
 
 class TestIcinga:
@@ -153,7 +153,7 @@ class TestIcinga:
 
     def test_get_status_ok(self):
         """It should parse the JSON payload and return an instance of HostsStatus."""
-        with open(get_fixture_path('icinga', 'status_valid.json')) as f:
+        with open(get_fixture_path('icinga', 'status_with_failed_services.json')) as f:
             set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
 
         status = self.icinga.get_status('host[1-2]')
@@ -183,6 +183,26 @@ class TestIcinga:
         self.mocked_icinga_host.run_sync.return_value = iter(())
         with pytest.raises(icinga.IcingaError, match='no output from icinga-status'):
             self.icinga.get_status('host[1-2]')
+
+    @mock.patch('spicerack.decorators.time.sleep', return_value=None)
+    def test_wait_for_icinga_optimal_ok(self, mocked_sleep):
+        """It should return immediately if host is optimal."""
+        with open(get_fixture_path('icinga', 'status_valid.json')) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+
+        self.icinga.wait_for_icinga_optimal('host1')
+        assert not mocked_sleep.called
+
+    @mock.patch('spicerack.decorators.time.sleep', return_value=None)
+    def test_wait_for_icinga_optimal_timeout(self, mocked_sleep):
+        """It should raise icinga.IcingaError if host is optimal in the required time."""
+        with open(get_fixture_path('icinga', 'status_with_failed_services.json')) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 20)
+
+        with pytest.raises(icinga.IcingaError, match='Not all services are recovered'):
+            self.icinga.wait_for_icinga_optimal('host1')
+
+        assert mocked_sleep.called
 
 
 def _get_hoststatus(hostname, down=False, failed=False):

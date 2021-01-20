@@ -7,9 +7,11 @@ from contextlib import contextmanager
 from datetime import timedelta
 from typing import Dict, Iterator, List, Mapping, Optional, Sequence
 
+from cumin import NodeSet
 from cumin.transports import Command
 
 from spicerack.administrative import Reason
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteHosts
 from spicerack.typing import TypeHosts
@@ -260,11 +262,11 @@ class Icinga:
         commands = [self._get_command_string(command, hostname, *args) for hostname in hostnames]
         self._icinga_host.run_sync(*commands)
 
-    def get_status(self, hosts: TypeHosts) -> HostsStatus:
+    def get_status(self, hosts: NodeSet) -> HostsStatus:
         """Get the current status of the given hosts from Icinga.
 
         Arguments:
-            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to iterate the command to.
+            hosts (cumin.NodeSet): the set of hostnames or FQDNs to iterate the command to.
 
         Returns:
             spicerack.icinga.HostsStatus: the instance that represents the status for the given hosts.
@@ -296,6 +298,22 @@ class Icinga:
             hosts_status[hostname] = HostStatus(**host_status)
 
         return hosts_status
+
+    @retry(tries=15, delay=timedelta(seconds=3), backoff_mode='linear', exceptions=(IcingaError,))
+    def wait_for_icinga_optimal(self, hosts: NodeSet) -> None:
+        """Waits for an icinga optimal status, else raises an exception.
+
+        Arguments:
+            hosts (cumin.NodeSet): the set of hostnames or FQDNs to iterate the command to.
+
+        Raises:
+            IcingaError
+
+        """
+        status = self.get_status(hosts)
+        if not status.optimal:
+            failed = ["{}:{}".format(k, ','.join(v)) for k, v in status.failed_services.items()]
+            raise IcingaError('Not all services are recovered: {}'.format(' '.join(failed)))
 
     def _get_command_string(self, *args: str) -> str:
         """Get the Icinga command to execute given the current arguments.

@@ -1,0 +1,29 @@
+{
+    "host1": {
+        "failed_services": [],
+        "name": "host1",
+        "optimal": true,
+        "state": "UP",
+        "downtimed": false,
+        "notifications_enabled": true
+    },
+    "host2": {
+        "failed_services": [
+            {
+                "host": "host2",
+                "name": "check_name1",
+                "status": {}
+            },
+            {
+                "host": "host2",
+                "name": "check_name2",
+                "status": {}
+            }
+        ],
+        "name": "host2",
+        "optimal": false,
+        "state": "UP",
+        "downtimed": false,
+        "notifications_enabled": true
+    }
+}
