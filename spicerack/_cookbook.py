@@ -400,7 +400,8 @@ def main(argv: Optional[List[str]] = None) -> Optional[int]:
     """
     args = argument_parser().parse_args(argv)
     config = load_yaml_config(args.config_file)
-    sys.path.append(config['cookbooks_base_dir'])
+    cookbooks_base_dir = os.path.expanduser(config['cookbooks_base_dir'])
+    sys.path.append(cookbooks_base_dir)
     params = config.get('instance_params', {})
     params.update({'verbose': args.verbose, 'dry_run': args.dry_run})
 
@@ -411,7 +412,7 @@ def main(argv: Optional[List[str]] = None) -> Optional[int]:
         return 1
 
     cookbooks = CookbookCollection(
-        config['cookbooks_base_dir'], args.cookbook_args, spicerack, path_filter=args.cookbook)
+        cookbooks_base_dir, args.cookbook_args, spicerack, path_filter=args.cookbook)
 
     if args.list:
         print(cookbooks.menu.get_tree(), end='')
