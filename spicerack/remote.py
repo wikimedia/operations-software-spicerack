@@ -280,22 +280,24 @@ class Remote:
         self._config = Config(config)
         self._dry_run = dry_run
 
-    def query(self, query_string: str) -> "RemoteHosts":
+    def query(self, query_string: str, use_sudo: bool = False) -> "RemoteHosts":
         """Execute a Cumin query and return the matching hosts.
 
         Arguments:
             query_string (str): the Cumin query string to execute.
+            use_sudo (bool): If True will prepend 'sudo -i' to every command.
 
         Returns:
             spicerack.remote.RemoteHosts: RemoteHosts instance matching the given query.
 
         """
+        # TODO: Revisit the current implementation of sudo once Cumin has native support for it.
         try:
             hosts = query.Query(self._config).execute(query_string)
         except CuminError as e:
             raise RemoteError("Failed to execute Cumin query") from e
 
-        return RemoteHosts(self._config, hosts, dry_run=self._dry_run)
+        return RemoteHosts(self._config, hosts, dry_run=self._dry_run, use_sudo=use_sudo)
 
     def query_confctl(self, conftool: ConftoolEntity, **tags: str) -> LBRemoteCluster:
         """Execute a conftool node query and return the matching hosts.
@@ -332,13 +334,14 @@ class RemoteHosts:
     `spicerack.remote.Remote.query`.
     """
 
-    def __init__(self, config: Config, hosts: NodeSet, dry_run: bool = True) -> None:
+    def __init__(self, config: Config, hosts: NodeSet, dry_run: bool = True, use_sudo: bool = False) -> None:
         """Initialize the instance.
 
         Arguments:
             config (cumin.Config): the configuration for Cumin.
             hosts (ClusterShell.NodeSet.NodeSet): the hosts to target for the remote execution.
             dry_run (bool, optional): whether this is a DRY-RUN.
+            use_sudo (bool, optional): if True will prepend 'sudo -i' to every command
 
         Raises:
             spicerack.remote.RemoteError: if no hosts were provided.
@@ -350,6 +353,7 @@ class RemoteHosts:
         self._config = config
         self._hosts = hosts
         self._dry_run = dry_run
+        self._use_sudo = use_sudo
 
     @property
     def hosts(self) -> NodeSet:
@@ -391,6 +395,17 @@ class RemoteHosts:
         """
         for nodeset in self._hosts.split(n_slices):
             yield RemoteHosts(self._config, nodeset, dry_run=self._dry_run)
+
+    @staticmethod
+    def _prepend_sudo(command: Union[str, Command]) -> Union[str, Command]:
+        if isinstance(command, str):
+            return "sudo -i " + command
+
+        return Command(
+            "sudo -i " + command.command,
+            timeout=command.timeout,
+            ok_codes=command.ok_codes,
+        )
 
     def run_async(
         self,
@@ -622,6 +637,9 @@ class RemoteHosts:
             parsed_batch_size = {"value": None, "ratio": None}
         else:
             parsed_batch_size = target_batch_size(str(batch_size))
+
+        if self._use_sudo:
+            commands = [self._prepend_sudo(command) for command in commands]
 
         target = transports.Target(
             self._hosts,

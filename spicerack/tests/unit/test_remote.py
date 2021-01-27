@@ -235,6 +235,17 @@ class TestRemote:
         assert str(remote_hosts) == "host[1-9]"
         assert len(remote_hosts) == 9
 
+    def test_query_accepts_sudo(self):
+        """Calling query() should return the matching hosts even if using sudo."""
+        query = "host[1-9]"
+        remote_hosts = self.remote.query(query, use_sudo=True)
+
+        assert isinstance(remote_hosts, remote.RemoteHosts)
+        assert remote_hosts.hosts == NodeSet(query)
+        assert str(remote_hosts) == "host[1-9]"
+        assert len(remote_hosts) == 9
+        assert remote_hosts._use_sudo  # pylint: disable=protected-access
+
     def test_query_invalid(self):
         """Calling query() with an invalid query should raise RemoteError."""
         with pytest.raises(remote.RemoteError, match="Failed to execute Cumin query"):
@@ -437,3 +448,48 @@ class TestRemoteHosts:
         for result in results:
             assert len(result) == 1
             assert result._dry_run is False  # pylint: disable=protected-access
+
+    @mock.patch("spicerack.remote.transport.Transport.new")
+    def test_using_sudo_prepends_when_command_is_string(self, mocked_transport_new):
+        """Test that using sudo prepends when command is string."""
+        nodes_a = "host1"
+        mock_cumin(self.mocked_transports, 0, retvals=[[(nodes_a, b"")]])
+        mocked_worker = mock.MagicMock()
+        mocked_worker.execute.return_value = 0
+        mocked_transport_new.return_value = mocked_worker
+
+        remote.RemoteHosts(self.config, NodeSet(nodes_a), dry_run=False, use_sudo=True).run_sync("command")
+
+        assert mocked_worker.commands == ["sudo -i command"]
+
+    @mock.patch("spicerack.remote.transport.Transport.new")
+    def test_using_sudo_prepends_when_command_is_commands(self, mocked_transport_new):
+        """Test that using sudo prepends when command is commands."""
+        expected_command = remote.Command("sudo -i command", ok_codes=[0])
+        nodes_a = "host1"
+        mock_cumin(self.mocked_transports, 0, retvals=[[(nodes_a, b"")]])
+        mocked_worker = mock.MagicMock()
+        mocked_worker.execute.return_value = 0
+        mocked_transport_new.return_value = mocked_worker
+
+        remote.RemoteHosts(self.config, NodeSet(nodes_a), dry_run=False, use_sudo=True).run_sync(
+            remote.Command("command")
+        )
+
+        assert mocked_worker.commands == [expected_command]
+
+    @mock.patch("spicerack.remote.transport.Transport.new")
+    def test_using_sudo_prepends_when_command_is_commands_and_str(self, mocked_transport_new):
+        """Test that using sudo prepends when command is commands and str."""
+        expected_command = remote.Command("sudo -i command", ok_codes=[0])
+        nodes_a = "host1"
+        mock_cumin(self.mocked_transports, 0, retvals=[[(nodes_a, b"")]])
+        mocked_worker = mock.MagicMock()
+        mocked_worker.execute.return_value = 0
+        mocked_transport_new.return_value = mocked_worker
+
+        remote.RemoteHosts(self.config, NodeSet(nodes_a), dry_run=False, use_sudo=True).run_sync(
+            remote.Command("command"), "command"
+        )
+
+        assert mocked_worker.commands == [expected_command, "sudo -i command"]
