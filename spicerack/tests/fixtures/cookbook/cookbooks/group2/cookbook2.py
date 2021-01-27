@@ -16,5 +16,5 @@ def argument_parser():
 
 def run(args, spicerack):
     """As required by spicerack._cookbook."""
-    print([args, spicerack.verbose, spicerack.dry_run])
+    print([dict(sorted(vars(args).items())), spicerack.verbose, spicerack.dry_run])
     return 0

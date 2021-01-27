@@ -34,6 +34,7 @@ pep257:
 pylint:
   disable:
     - pointless-string-statement  # used as documentation for class attributes
+    - unsubscriptable-object  # Breaks for latest pylint https://github.com/PyCQA/pylint/issues/3882
   options:
     good-names: handleError  # From logging.Handler, inline disable doesn't work, used in test_log.py
     ignore: vulture_whitelist.py

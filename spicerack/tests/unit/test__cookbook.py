@@ -134,7 +134,7 @@ COOKBOOKS_GROUP2_MENU = """#--- group2 args=[] ---#
 b - Back to parent menu
 h - Help
 """
-COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """[Namespace(argument=None, k=False), False, False]
+COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """[{'argument': None, 'k': False}, False, False]
 #--- group2 args=[] ---#
 [PASS] cookbook2: Group2 Cookbook2.
 [0/1] subgroup1: -
@@ -360,11 +360,11 @@ class TestCookbookCollection:
             '[0/3] group2', '[1/3] group2')),
         (True, ['group2', 'cookbook2 --argument value', 'b', 'q'],
          COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU
-         + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('argument=None', "argument='value'")
+         + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace("'argument': None", "'argument': 'value'")
          + COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
         (True, ['group2 -k', 'cookbook2', 'b', 'q'],
          COOKBOOKS_MENU_TTY + COOKBOOKS_GROUP2_MENU.replace('[]', "['-k']")
-         + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('[]', "['-k']").replace('k=False', 'k=True')
+         + COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN.replace('[]', "['-k']").replace("'k': False", "'k': True")
          + COOKBOOKS_MENU_TTY.replace('[0/3] group2', '[1/3] group2')),
         (True, 'h', COOKBOOKS_MENU_TTY
          + _menu.HELP_MESSAGE.format(statuses=_cookbook.CookbookItem.statuses) + '\n'
