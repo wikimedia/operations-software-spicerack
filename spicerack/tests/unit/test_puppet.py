@@ -320,6 +320,54 @@ class TestPuppetHosts:
             ('source /usr/local/share/bash/puppet-common.sh && last_run_success && awk /last_run/\'{ print $2 }\' '
              '"${PUPPET_SUMMARY}"'), is_safe=True)
 
+    def test_get_ca_servers_explodes_multihost_nodeset_into_single_hosts(self):
+        """Test that get ca servers explodes multihost nodeset into single hosts."""
+        expected_puppetmaster = 'dummy.puppetmast.er'
+        self.mocked_remote_hosts.run_sync.return_value = [
+            (
+                NodeSet('test[0-1].example.com'),
+                MsgTreeElem(expected_puppetmaster.encode(), parent=MsgTreeElem()),
+            ),
+        ]
+
+        result = self.puppet_hosts.get_ca_servers()
+
+        self.mocked_remote_hosts.run_sync.assert_called_once()
+        assert 'test0.example.com' in result
+        assert result['test0.example.com'] == expected_puppetmaster
+        assert 'test1.example.com' in result
+        assert result['test1.example.com'] == expected_puppetmaster
+
+    def test_get_ca_servers_handles_empty_result(self):
+        """Test that get ca servers handles empty result."""
+        self.mocked_remote_hosts.run_sync.return_value = []
+
+        result = self.puppet_hosts.get_ca_servers()
+
+        self.mocked_remote_hosts.run_sync.assert_called_once()
+        assert result == {}
+
+    def test_get_ca_servers_handles_multiple_results(self):
+        """Test test get ca servers handles multiple results."""
+        self.mocked_remote_hosts.run_sync.return_value = [
+            (
+                NodeSet('test0.example.com'),
+                MsgTreeElem(b'test0.puppetmast.er', parent=MsgTreeElem()),
+            ),
+            (
+                NodeSet('test1.example.com'),
+                MsgTreeElem(b'test1.puppetmast.er', parent=MsgTreeElem()),
+            ),
+        ]
+
+        result = self.puppet_hosts.get_ca_servers()
+
+        self.mocked_remote_hosts.run_sync.assert_called_once()
+        assert 'test0.example.com' in result
+        assert result['test0.example.com'] == 'test0.puppetmast.er'
+        assert 'test1.example.com' in result
+        assert result['test1.example.com'] == 'test1.puppetmast.er'
+
 
 class TestPuppetMaster:
     """Test class for the PuppetMaster class."""

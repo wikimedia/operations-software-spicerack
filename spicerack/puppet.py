@@ -77,6 +77,25 @@ class PuppetHosts(RemoteHostsAdapter):
         finally:
             self.enable(reason)
 
+    def get_ca_servers(self) -> Dict[str, str]:
+        """Retrieve the ca_servers of the nodes.
+
+        Returns:
+            Dict[str, str]: The mapping from host fqdn to its configured
+                ca_server
+
+        """
+        raw_results = self._remote_hosts.run_sync(
+            'puppet config --section agent print ca_server'
+        )
+
+        host_to_ca_server: Dict[str, str] = {}
+        for node_set, output in raw_results:
+            for hostname in node_set:
+                host_to_ca_server[hostname] = output.message().decode()
+
+        return host_to_ca_server
+
     def disable(self, reason: Reason) -> None:
         """Disable puppet with a specific reason.
 
