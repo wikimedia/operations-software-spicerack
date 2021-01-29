@@ -4,15 +4,14 @@ Multiline doc that will be cut to one-line in the __title__.
 """
 import argparse
 
-
 __title__ = __doc__
 
 
 def argument_parser():
     """As required by spicerack._cookbook."""
-    parser = argparse.ArgumentParser('Argparse')
-    parser.add_argument('-k', action='store_true')
-    parser.add_argument('--argument')
+    parser = argparse.ArgumentParser("Argparse")
+    parser.add_argument("-k", action="store_true")
+    parser.add_argument("--argument")
 
     return parser
 

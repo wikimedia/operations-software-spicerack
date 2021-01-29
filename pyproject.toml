@@ -1,0 +1,14 @@
+[tool.black]
+line-length = 120
+force-exclude = '''
+# A regex preceded with ^/ will apply only to files and directories
+# in the root of the project.
+^(
+  .*/invalid_subgroup/.*
+  | .*/invalid_syntax.py
+)
+'''
+
+[tool.isort]
+line_length = 120
+profile = 'black'

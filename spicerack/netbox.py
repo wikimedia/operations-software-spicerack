@@ -1,16 +1,13 @@
 """Netbox module."""
 import logging
-
 from typing import Dict
 
 import pynetbox
-
 from wmflib.requests import http_session
 
 from spicerack.exceptions import SpicerackError
 
-
-NETBOX_DOMAIN: str = 'netbox.wikimedia.org'
+NETBOX_DOMAIN: str = "netbox.wikimedia.org"
 logger = logging.getLogger(__name__)
 
 
@@ -39,7 +36,7 @@ class Netbox:
 
         """
         self._api = pynetbox.api(url, token=token)
-        self._api.http_session = http_session('.'.join((self.__module__, self.__class__.__name__)))
+        self._api.http_session = http_session(".".join((self.__module__, self.__class__.__name__)))
         self._dry_run = dry_run
 
     @property
@@ -74,7 +71,7 @@ class Netbox:
             host = self._api.dcim.devices.get(name=hostname)
         except pynetbox.RequestError as ex:
             # excepts on other errors
-            raise NetboxAPIError('Error retrieving Netbox host') from ex
+            raise NetboxAPIError("Error retrieving Netbox host") from ex
 
         if host is None:
             raise NetboxHostNotFoundError
@@ -99,7 +96,7 @@ class Netbox:
             host = self._api.virtualization.virtual_machines.get(name=hostname)
         except pynetbox.RequestError as ex:
             # excepts on other errors
-            raise NetboxAPIError('Error retrieving Netbox VM') from ex
+            raise NetboxAPIError("Error retrieving Netbox VM") from ex
 
         if host is None:
             raise NetboxHostNotFoundError
@@ -127,8 +124,12 @@ class Netbox:
         oldstatus = host.status
 
         if self._dry_run:
-            logger.info('Skipping Netbox status update in DRY-RUN mode for host %s %s -> %s',
-                        hostname, oldstatus, status)
+            logger.info(
+                "Skipping Netbox status update in DRY-RUN mode for host %s %s -> %s",
+                hostname,
+                oldstatus,
+                status,
+            )
             return
 
         host.status = status
@@ -136,14 +137,20 @@ class Netbox:
             save_result = host.save()
         except pynetbox.RequestError as ex:
             raise NetboxAPIError(
-                'Failed to save Netbox status for host {} {} -> {}'.format(hostname, oldstatus, status)
+                "Failed to save Netbox status for host {} {} -> {}".format(hostname, oldstatus, status)
             ) from ex
 
         if save_result:
-            logger.info('Netbox status updated for host %s %s -> %s', hostname, oldstatus, status)
+            logger.info(
+                "Netbox status updated for host %s %s -> %s",
+                hostname,
+                oldstatus,
+                status,
+            )
         else:
-            raise NetboxAPIError('Failed to update Netbox status for host {} {} -> {}'.format(
-                hostname, oldstatus, status))
+            raise NetboxAPIError(
+                "Failed to update Netbox status for host {} {} -> {}".format(hostname, oldstatus, status)
+            )
 
     def fetch_host_status(self, hostname: str) -> str:
         """Return the current status of a host as a string.
@@ -181,7 +188,7 @@ class Netbox:
 
         """
         is_virtual = False
-        vm_cluster = 'N/A'
+        vm_cluster = "N/A"
         try:
             host = self._fetch_host(hostname)
         except NetboxHostNotFoundError:
@@ -190,6 +197,6 @@ class Netbox:
             vm_cluster = host.cluster.name
 
         ret = host.serialize()
-        ret['is_virtual'] = is_virtual
-        ret['ganeti_cluster'] = vm_cluster
+        ret["is_virtual"] = is_virtual
+        ret["ganeti_cluster"] = vm_cluster
         return ret

@@ -2,11 +2,9 @@
 import logging
 
 import requests
-
 from wmflib.requests import http_session
 
 from spicerack.exceptions import SpicerackError
-
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +26,11 @@ class Debmonitor:
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
-        self._base_url: str = 'https://{host}'.format(host=host)
+        self._base_url: str = "https://{host}".format(host=host)
         self._cert = cert
         self._key = key
         self._dry_run = dry_run
-        self._http_session = http_session('.'.join((self.__module__, self.__class__.__name__)))
+        self._http_session = http_session(".".join((self.__module__, self.__class__.__name__)))
 
     def host_delete(self, hostname: str) -> None:
         """Remove a host and all its packages from Debmonitor.
@@ -46,16 +44,19 @@ class Debmonitor:
 
         """
         if self._dry_run:
-            logger.debug('Skip removing host %s from Debmonitor in DRY-RUN', hostname)
+            logger.debug("Skip removing host %s from Debmonitor in DRY-RUN", hostname)
             return
 
-        url = '{base}/hosts/{host}'.format(base=self._base_url, host=hostname)
+        url = "{base}/hosts/{host}".format(base=self._base_url, host=hostname)
         response = self._http_session.delete(url, cert=(self._cert, self._key))
 
-        if response.status_code == requests.codes['no_content']:
-            logger.info('Removed host %s from Debmonitor', hostname)
-        elif response.status_code == requests.codes['not_found']:
-            logger.info('Host %s already missing on Debmonitor', hostname)
+        if response.status_code == requests.codes["no_content"]:
+            logger.info("Removed host %s from Debmonitor", hostname)
+        elif response.status_code == requests.codes["not_found"]:
+            logger.info("Host %s already missing on Debmonitor", hostname)
         else:
-            raise DebmonitorError('Unable to remove host {host} from Debmonitor, got: {code} {msg}'.format(
-                host=hostname, code=response.status_code, msg=response.reason))
+            raise DebmonitorError(
+                "Unable to remove host {host} from Debmonitor, got: {code} {msg}".format(
+                    host=hostname, code=response.status_code, msg=response.reason
+                )
+            )

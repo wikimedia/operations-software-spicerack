@@ -1,6 +1,5 @@
 """DNS Discovery module."""
 import logging
-
 from collections import defaultdict
 from typing import Dict, Iterator, List, Optional
 
@@ -11,7 +10,6 @@ from spicerack.confctl import ConftoolEntity
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import Remote
-
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +25,13 @@ class DiscoveryCheckError(SpicerackCheckError):
 class Discovery:
     """Class to manage Confctl discovery objects."""
 
-    def __init__(self, conftool: ConftoolEntity, remote: Remote, records: List[str], dry_run: bool = True) -> None:
+    def __init__(
+        self,
+        conftool: ConftoolEntity,
+        remote: Remote,
+        records: List[str],
+        dry_run: bool = True,
+    ) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -46,13 +50,13 @@ class Discovery:
         self._dry_run = dry_run
 
         self._resolvers: Dict[str, resolver.Resolver] = {}
-        for nameserver in self._remote.query('A:dns-auth').hosts:
+        for nameserver in self._remote.query("A:dns-auth").hosts:
             self._resolvers[nameserver] = resolver.Resolver()
             self._resolvers[nameserver].port = 5353
             try:
                 self._resolvers[nameserver].nameservers = [rdata.address for rdata in resolver.query(nameserver)]
             except DNSException as e:
-                raise DiscoveryError('Unable to resolve {name}'.format(name=nameserver)) from e
+                raise DiscoveryError("Unable to resolve {name}".format(name=nameserver)) from e
 
     @property
     def _conftool_selector(self) -> str:
@@ -62,7 +66,7 @@ class Discovery:
             str: the Conftool selector.
 
         """
-        return '({regexp})'.format(regexp='|'.join(self._records))
+        return "({regexp})".format(regexp="|".join(self._records))
 
     @property
     def active_datacenters(self) -> defaultdict:
@@ -80,7 +84,7 @@ class Discovery:
         services = defaultdict(list)
         for obj in self._conftool.get(dnsdisc=self._conftool_selector):
             if obj.pooled:
-                service = obj.tags['dnsdisc']
+                service = obj.tags["dnsdisc"]
                 services[service].append(obj.name)
 
         return services
@@ -104,7 +108,7 @@ class Discovery:
         try:  # Querying the first resolver
             return next(iter(self._resolvers.values())).query(name)[0].address
         except DNSException as e:
-            raise DiscoveryError('Unable to resolve {name}'.format(name=name)) from e
+            raise DiscoveryError("Unable to resolve {name}".format(name=name)) from e
 
     def update_ttl(self, ttl: int) -> None:
         """Update the TTL for all registered records.
@@ -117,16 +121,20 @@ class Discovery:
 
         """
         # DRY-RUN handled by confctl
-        logger.debug('Updating the TTL of %s to %d seconds', self._conftool_selector, ttl)
-        self._conftool.set_and_verify('ttl', ttl, dnsdisc=self._conftool_selector)
+        logger.debug("Updating the TTL of %s to %d seconds", self._conftool_selector, ttl)
+        self._conftool.set_and_verify("ttl", ttl, dnsdisc=self._conftool_selector)
         try:
             self.check_ttl(ttl)
         except DiscoveryCheckError:
             if not self._dry_run:
                 raise
 
-    @retry(tries=10, backoff_mode='constant', exceptions=(DiscoveryCheckError,),
-           failure_message='Waiting for DNS TTL update...')
+    @retry(
+        tries=10,
+        backoff_mode="constant",
+        exceptions=(DiscoveryCheckError,),
+        failure_message="Waiting for DNS TTL update...",
+    )
     def check_ttl(self, ttl: int) -> None:
         """Check the TTL for all records.
 
@@ -137,19 +145,26 @@ class Discovery:
             DiscoveryError: if the expected TTL is not found.
 
         """
-        logger.debug('Checking that TTL=%d for %s discovery.wmnet records', ttl, self._records)
+        logger.debug("Checking that TTL=%d for %s discovery.wmnet records", ttl, self._records)
 
         for record in self.resolve():
             if record.ttl != ttl:
-                raise DiscoveryCheckError("Expected TTL '{expected}', got '{ttl}' for record {record}".format(
-                    expected=ttl, ttl=record.ttl, record=record[0].address))
+                raise DiscoveryCheckError(
+                    "Expected TTL '{expected}', got '{ttl}' for record {record}".format(
+                        expected=ttl, ttl=record.ttl, record=record[0].address
+                    )
+                )
         if len(self._records) == 1:
-            logger.info('%s.discovery.wmnet TTL is correct.', self._records[0])
+            logger.info("%s.discovery.wmnet TTL is correct.", self._records[0])
         else:
-            logger.info('%s discovery.wmnet TTLs are correct.', self._records)
+            logger.info("%s discovery.wmnet TTLs are correct.", self._records)
 
-    @retry(tries=10, backoff_mode='constant', exceptions=(DiscoveryError,),
-           failure_message='Waiting for DNS record update...')
+    @retry(
+        tries=10,
+        backoff_mode="constant",
+        exceptions=(DiscoveryError,),
+        failure_message="Waiting for DNS record update...",
+    )
     def check_record(self, name: str, expected_name: str) -> None:
         """Check that a Discovery record resolves on all authoritative resolvers to the correct IP.
 
@@ -171,18 +186,28 @@ class Discovery:
 
         """
         expected_address = self.resolve_address(expected_name)
-        logger.info('Checking that %s.discovery.wmnet records matches %s (%s)', name, expected_name, expected_address)
+        logger.info(
+            "Checking that %s.discovery.wmnet records matches %s (%s)",
+            name,
+            expected_name,
+            expected_address,
+        )
 
         failed = False
         for record in self.resolve(name=name):
             if not self._dry_run and record[0].address != expected_address:
                 failed = True
-                logger.error("Expected IP '%s', got '%s' for record %s", expected_address, record[0].address, name)
+                logger.error(
+                    "Expected IP '%s', got '%s' for record %s",
+                    expected_address,
+                    record[0].address,
+                    name,
+                )
 
         if failed:
-            raise DiscoveryError('Failed to check record {name}'.format(name=name))
+            raise DiscoveryError("Failed to check record {name}".format(name=name))
 
-        logger.info('%s.discovery.wmnet record is correct.', name)
+        logger.info("%s.discovery.wmnet record is correct.", name)
 
     def resolve(self, name: Optional[str] = None) -> Iterator[resolver.Answer]:
         """Generator that yields the resolved records.
@@ -208,13 +233,20 @@ class Discovery:
         for nameserver, dns_resolver in self._resolvers.items():
             for record in records:
                 try:
-                    record_name = '{record}.discovery.wmnet'.format(record=record)
+                    record_name = "{record}.discovery.wmnet".format(record=record)
                     answer = dns_resolver.query(record_name)
                 except DNSException as e:
                     raise DiscoveryError(
-                        'Unable to resolve {name} from {ns}'.format(name=record_name, ns=nameserver)) from e
+                        "Unable to resolve {name} from {ns}".format(name=record_name, ns=nameserver)
+                    ) from e
 
-                logger.debug('[%s] %s -> %s TTL %d', nameserver, record, answer[0].address, answer.ttl)
+                logger.debug(
+                    "[%s] %s -> %s TTL %d",
+                    nameserver,
+                    record,
+                    answer[0].address,
+                    answer.ttl,
+                )
                 yield answer
 
     def pool(self, datacenter: str) -> None:
@@ -225,7 +257,7 @@ class Discovery:
 
         """
         # DRY-RUN handled by confctl
-        self._conftool.set_and_verify('pooled', True, dnsdisc=self._conftool_selector, name=datacenter)
+        self._conftool.set_and_verify("pooled", True, dnsdisc=self._conftool_selector, name=datacenter)
 
     def depool(self, datacenter: str) -> None:
         """Set the records as depooled in the given datacenter.
@@ -236,7 +268,7 @@ class Discovery:
         """
         self.check_if_depoolable(datacenter)
         # DRY-RUN handled by confctl
-        self._conftool.set_and_verify('pooled', False, dnsdisc=self._conftool_selector, name=datacenter)
+        self._conftool.set_and_verify("pooled", False, dnsdisc=self._conftool_selector, name=datacenter)
 
     def check_if_depoolable(self, datacenter: str) -> None:
         """Determine if a datacenter can be depooled for all records.
@@ -253,7 +285,8 @@ class Discovery:
         non_depoolable = [svc for svc, dcs in self.active_datacenters.items() if dcs == [datacenter]]
         if non_depoolable:
             message = "Services {svcs} cannot be depooled as they are only active in {dc}".format(
-                svcs=", ".join(sorted(non_depoolable)), dc=datacenter)
+                svcs=", ".join(sorted(non_depoolable)), dc=datacenter
+            )
             if self._dry_run:
                 logger.debug(message)
             else:

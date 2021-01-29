@@ -1,9 +1,8 @@
 """Cookbook internal module."""
 import argparse
-
 from typing import Optional
 
-from spicerack import cookbook, Spicerack
+from spicerack import Spicerack, cookbook
 
 
 class CookbookModuleRunnerBase(cookbook.CookbookRunnerBase):
@@ -26,10 +25,10 @@ class CookbookModuleRunnerBase(cookbook.CookbookRunnerBase):
 class CookbooksModuleInterface:
     """Module interface to be used as type hint for the imported cookbooks that use the module API."""
 
-    __name__ = ''
+    __name__ = ""
     """str: the module name."""
 
-    __title__: str = ''
+    __title__: str = ""
     """str: the cookbook static title."""
 
     @staticmethod

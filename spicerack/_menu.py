@@ -3,13 +3,11 @@ import argparse
 import logging
 import shlex
 import sys
-
 from abc import abstractmethod
-from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
 
-from spicerack import _log, _module_api, cookbook, Spicerack
+from spicerack import Spicerack, _log, _module_api, cookbook
 from spicerack.exceptions import SpicerackError
-
 
 logger = logging.getLogger(__name__)
 HELP_MESSAGE = """Cookbooks interactive menu help
@@ -65,7 +63,7 @@ class MenuError(SpicerackError):
 class BaseItem:
     """Base class for any item collected by the CookbookCollection class."""
 
-    fallback_title: str = '-'
+    fallback_title: str = "-"
 
     def __init__(self, args: List[str], spicerack: Spicerack) -> None:
         """Base cookbooks's item constructor.
@@ -77,9 +75,9 @@ class BaseItem:
         """
         self.args = args
         self.spicerack = spicerack
-        self.name = ''
-        self.path = ''  # Path of the cookbook in Spicerack terms, relative to the base directory
-        self.full_name = ''  # Cookbook full_name in Spicerack terms
+        self.name = ""
+        self.path = ""  # Path of the cookbook in Spicerack terms, relative to the base directory
+        self.full_name = ""  # Cookbook full_name in Spicerack terms
         self.items: Dict[str, BaseItem] = {}
         self._status: str
 
@@ -134,13 +132,13 @@ class BaseItem:
             str: the line prefix to use.
 
         """
-        empty_sep = '    '
-        cont_sep = '|   '
+        empty_sep = "    "
+        cont_sep = "|   "
 
         if is_final:
-            base_sep = '`-- '
+            base_sep = "`-- "
         else:
-            base_sep = '|-- '
+            base_sep = "|-- "
 
         if level == 0:
             return base_sep
@@ -152,17 +150,27 @@ class BaseItem:
             else:
                 levels.append(empty_sep)
 
-        return ''.join(levels) + base_sep
+        return "".join(levels) + base_sep
 
 
 class CookbookItem(BaseItem):
     """Cookbook item class."""
 
-    fallback_title: str = 'UNKNOWN (unable to detect title)'
-    statuses: Tuple[str, str, str, str] = ('NOTRUN', 'PASS', 'FAIL', 'ERROR')  # Status labels
+    fallback_title: str = "UNKNOWN (unable to detect title)"
+    statuses: Tuple[str, str, str, str] = (
+        "NOTRUN",
+        "PASS",
+        "FAIL",
+        "ERROR",
+    )  # Status labels
     not_run, success, failed, error = statuses  # Valid statuses variables
 
-    def __init__(self, class_obj: Type[cookbook.CookbookBase], args: List[str], spicerack: Spicerack) -> None:
+    def __init__(
+        self,
+        class_obj: Type[cookbook.CookbookBase],
+        args: List[str],
+        spicerack: Spicerack,
+    ) -> None:
         """Override parent constructor to add cookbook-specific initialization.
 
         Arguments:
@@ -173,13 +181,13 @@ class CookbookItem(BaseItem):
         """
         super().__init__(args, spicerack)
         if not issubclass(class_obj, cookbook.CookbookBase):
-            raise MenuError('Class {obj} is not a subclass of CookbookBase'.format(obj=class_obj))
+            raise MenuError("Class {obj} is not a subclass of CookbookBase".format(obj=class_obj))
 
         self._status = CookbookItem.not_run
         self.name = class_obj.spicerack_name
         self.path = class_obj.spicerack_path
         if self.path:
-            self.full_name = '.'.join([self.path, self.name])
+            self.full_name = ".".join([self.path, self.name])
         else:
             self.full_name = self.name
 
@@ -210,17 +218,17 @@ class CookbookItem(BaseItem):
         try:
             runner = self.instance.get_runner(args)
         except BaseException:  # pylint: disable=broad-except
-            logger.exception('Exception raised while initializing the Cookbook %s:', self.full_name)
+            logger.exception("Exception raised while initializing the Cookbook %s:", self.full_name)
             return cookbook.CLASS_FAIL_INIT_RETCODE
 
         try:
             description = runner.runtime_description
         except BaseException:  # pylint: disable=broad-except
-            logger.exception('Failed to get runtime_description from Cookbook %s:', self.full_name)
-            description = ''
+            logger.exception("Failed to get runtime_description from Cookbook %s:", self.full_name)
+            description = ""
 
-        _log.log_task_start(' '.join(('Cookbook', self.full_name, description)).strip())
-        message = 'raised while executing cookbook'
+        _log.log_task_start(" ".join(("Cookbook", self.full_name, description)).strip())
+        message = "raised while executing cookbook"
 
         try:
             raw_ret = runner.run()
@@ -229,31 +237,37 @@ class CookbookItem(BaseItem):
             else:
                 ret = raw_ret
         except KeyboardInterrupt:
-            logger.error('Ctrl+c pressed')
+            logger.error("Ctrl+c pressed")
             self._status = CookbookItem.error
             ret = cookbook.INTERRUPTED_RETCODE
         except SystemExit as e:
             if isinstance(e.code, int):
                 ret = e.code
                 if e.code == 0:
-                    logger.info('SystemExit(0) %s %s, assuming success:', message, self.full_name)
+                    logger.info(
+                        "SystemExit(0) %s %s, assuming success:",
+                        message,
+                        self.full_name,
+                    )
                     self._status = CookbookItem.success
                 else:
-                    logger.exception('SystemExit(%d) %s %s:', e.code, message, self.full_name)
+                    logger.exception("SystemExit(%d) %s %s:", e.code, message, self.full_name)
                     self._status = CookbookItem.error
             else:
                 logger.exception("SystemExit('%s') %s %s:", e.code, message, self.full_name)
                 self._status = CookbookItem.error
                 ret = cookbook.EXCEPTION_RETCODE
         except BaseException:  # pylint: disable=broad-except
-            logger.exception('Exception %s %s:', message, self.full_name)
+            logger.exception("Exception %s %s:", message, self.full_name)
             self._status = CookbookItem.failed
             ret = cookbook.EXCEPTION_RETCODE
         else:
             self._status = CookbookItem.success if ret == 0 else CookbookItem.failed
 
-        _log.log_task_end(self.status, 'Cookbook {name} (exit_code={ret}) {desc}'.format(
-            name=self.full_name, ret=ret, desc=description).strip())
+        _log.log_task_end(
+            self.status,
+            "Cookbook {name} (exit_code={ret}) {desc}".format(name=self.full_name, ret=ret, desc=description).strip(),
+        )
 
         return ret
 
@@ -269,15 +283,23 @@ class CookbookItem(BaseItem):
         """
         args = argparse.Namespace()
         ret, parser = self._safe_call(
-            self.instance.argument_parser, [], {}, 'raised while getting argument parser for cookbook',
-            cookbook.GET_ARGS_PARSER_FAIL_RETCODE)
+            self.instance.argument_parser,
+            [],
+            {},
+            "raised while getting argument parser for cookbook",
+            cookbook.GET_ARGS_PARSER_FAIL_RETCODE,
+        )
 
         if ret >= 0 or parser is None:
             return ret, args
 
         return self._safe_call(
-            parser.parse_args, [self.args], {}, 'raised while parsing arguments for cookbook',
-            cookbook.PARSE_ARGS_FAIL_RETCODE)
+            parser.parse_args,
+            [self.args],
+            {},
+            "raised while parsing arguments for cookbook",
+            cookbook.PARSE_ARGS_FAIL_RETCODE,
+        )
 
     def _safe_call(self, func: Callable, args: List, kwargs: Dict, message: str, err_code: int) -> Tuple[int, Any]:
         """Run any callable explicitly catching all exceptions including SystemExit, parsing the code of the latter.
@@ -305,7 +327,7 @@ class CookbookItem(BaseItem):
                 logger.exception("SystemExit('%s') %s %s:", e.code, message, self.full_name)
                 ret_code = err_code
         except BaseException:  # pylint: disable=broad-except
-            logger.exception('Exception %s %s:', message, self.full_name)
+            logger.exception("Exception %s %s:", message, self.full_name)
             ret_code = err_code
 
         return ret_code, ret_value
@@ -314,17 +336,22 @@ class CookbookItem(BaseItem):
 class TreeItem(BaseItem):
     """Tree of cookbook items class."""
 
-    back_answer: str = 'b'
+    back_answer: str = "b"
     """str: interactive menu answer to go back to the parent menu."""
-    help_answer: str = 'h'
+    help_answer: str = "h"
     """str: interactive menu answer to print the generic TreeItem help message."""
-    quit_answer: str = 'q'
+    quit_answer: str = "q"
     """str: answer to quit the interactive menu."""
     help_message: str = HELP_MESSAGE.format(statuses=CookbookItem.statuses)
     """str: the generic TreeItem help message."""
 
-    def __init__(self, module: _module_api.CookbooksModuleInterface, args: List[str], spicerack: Spicerack,
-                 menu_title: str) -> None:
+    def __init__(
+        self,
+        module: _module_api.CookbooksModuleInterface,
+        args: List[str],
+        spicerack: Spicerack,
+        menu_title: str,
+    ) -> None:
         """Override parent constructor to add menu-specific initialization.
 
         Arguments:
@@ -339,13 +366,13 @@ class TreeItem(BaseItem):
         self.parent: Optional[TreeItem] = None
         self.menu_title = menu_title
 
-        if '.' in self.module.__name__:
-            self.full_name = self.module.__name__.split('.', 1)[1]
+        if "." in self.module.__name__:
+            self.full_name = self.module.__name__.split(".", 1)[1]
         else:
             self.full_name = self.module.__name__
 
-        if '.' in self.full_name:
-            self.path, self.name = self.full_name.rsplit('.', 1)
+        if "." in self.full_name:
+            self.path, self.name = self.full_name.rsplit(".", 1)
         else:
             self.name = self.full_name
 
@@ -359,9 +386,9 @@ class TreeItem(BaseItem):
         """
         completed, total = self.calculate_status()
         if completed == total:
-            message = 'DONE'
+            message = "DONE"
         else:
-            message = '{completed}/{total}'.format(completed=completed, total=total)
+            message = "{completed}/{total}".format(completed=completed, total=total)
 
         return message
 
@@ -397,14 +424,14 @@ class TreeItem(BaseItem):
         """Print the menu to stdout."""
         for name in sorted(self.items.keys()):
             item = self.items[name]
-            print('[{status}] {name}: {title}'.format(status=item.status, name=name, title=item.title))
+            print("[{status}] {name}: {title}".format(status=item.status, name=name, title=item.title))
 
         if self.parent is None:
-            print('{answer} - Quit'.format(answer=TreeItem.quit_answer))
+            print("{answer} - Quit".format(answer=TreeItem.quit_answer))
         else:
-            print('{answer} - Back to parent menu'.format(answer=TreeItem.back_answer))
+            print("{answer} - Back to parent menu".format(answer=TreeItem.back_answer))
 
-        print('{answer} - Help'.format(answer=TreeItem.help_answer))
+        print("{answer} - Help".format(answer=TreeItem.help_answer))
 
     def calculate_status(self) -> Tuple[int, int]:
         """Calculate the status of a menu, checking the status of all it's tasks recursively.
@@ -425,7 +452,7 @@ class TreeItem(BaseItem):
                 if item.status != CookbookItem.not_run:
                     completed += 1
             else:  # pragma: no cover | This should never happen
-                raise MenuError('Unknown item of type {type}'.format(type=type(item)))
+                raise MenuError("Unknown item of type {type}".format(type=type(item)))
 
         return completed, total
 
@@ -438,9 +465,9 @@ class TreeItem(BaseItem):
         """
         lines = self.get_menu_tree(0, [])
         if not lines:
-            return ''
+            return ""
 
-        return '{title}\n{lines}\n'.format(title=self.menu_title, lines='\n'.join(lines))
+        return "{title}\n{lines}\n".format(title=self.menu_title, lines="\n".join(lines))
 
     def get_menu_tree(self, level: int, cont_levels: List[bool]) -> List[str]:
         """Calculate the tree lines for a given menu.
@@ -456,16 +483,16 @@ class TreeItem(BaseItem):
         """
         lines: List[str] = []
         for i, key in enumerate(sorted(self.items.keys(), key=lambda x: self.items[x].full_name)):
-            is_final = (i == len(self.items) - 1)
+            is_final = i == len(self.items) - 1
             item = self.items[key]
             if isinstance(item, TreeItem) and not item.items:
                 continue
 
             prefix = self._get_line_prefix(level, cont_levels, is_final)
             if self.spicerack.verbose:
-                line = '{prefix}{name}: {title}'.format(prefix=prefix, name=item.full_name, title=item.title)
+                line = "{prefix}{name}: {title}".format(prefix=prefix, name=item.full_name, title=item.title)
             else:
-                line = '{prefix}{name}'.format(prefix=prefix, name=item.full_name)
+                line = "{prefix}{name}".format(prefix=prefix, name=item.full_name)
 
             lines.append(line)
 
@@ -481,17 +508,17 @@ class TreeItem(BaseItem):
             spicerack._menu.TreeItem: the current menu instance.
 
         """
-        print('#--- {title} args={args} ---#'.format(title=self.verbose_title, args=self.args))
+        print("#--- {title} args={args} ---#".format(title=self.verbose_title, args=self.args))
         self.show()
 
         if not sys.stdout.isatty():
-            print('Not a tty, exiting.')
+            print("Not a tty, exiting.")
             raise StopIteration
 
         try:
-            answer = input('>>> ')
+            answer = input(">>> ")
         except (EOFError, KeyboardInterrupt):
-            print('QUIT')
+            print("QUIT")
             raise StopIteration  # Ctrl+d or Ctrl+c pressed while waiting for input
 
         if not answer:
@@ -509,7 +536,7 @@ class TreeItem(BaseItem):
 
         name, *args = shlex.split(answer)
         if name not in self.items.keys():
-            print('==> Invalid input <==')
+            print("==> Invalid input <==")
             return
 
         item = self.items[name]
@@ -546,7 +573,7 @@ class TreeItem(BaseItem):
         try:
             title = self.module.__title__.splitlines()[0]
         except AttributeError as e:
-            logger.debug('Unable to detect title for module %s: %s', self.path, e)
+            logger.debug("Unable to detect title for module %s: %s", self.path, e)
             title = self.fallback_title
 
         return title

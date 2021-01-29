@@ -1,7 +1,6 @@
 """Ganeti module."""
 
 import logging
-
 from typing import Dict, Optional, Tuple
 
 from requests.auth import HTTPBasicAuth
@@ -12,22 +11,21 @@ from spicerack.constants import PUPPET_CA_PATH
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import Remote, RemoteHosts
 
-
 logger = logging.getLogger(__name__)
 
-RAPI_URL_FORMAT: str = 'https://{cluster}:5080'
+RAPI_URL_FORMAT: str = "https://{cluster}:5080"
 """:py:class:`str`: the template string to construct the Ganeti RAPI URL."""
 
 CLUSTERS_AND_ROWS: Dict[str, Tuple[str, ...]] = {
-    'ganeti01.svc.eqiad.wmnet': ('A', 'B', 'C', 'D'),
-    'ganeti01.svc.codfw.wmnet': ('A', 'B', 'C', 'D'),
-    'ganeti01.svc.esams.wmnet': ('OE',),
-    'ganeti01.svc.ulsfo.wmnet': ('1',),
-    'ganeti01.svc.eqsin.wmnet': ('1',)
+    "ganeti01.svc.eqiad.wmnet": ("A", "B", "C", "D"),
+    "ganeti01.svc.codfw.wmnet": ("A", "B", "C", "D"),
+    "ganeti01.svc.esams.wmnet": ("OE",),
+    "ganeti01.svc.ulsfo.wmnet": ("1",),
+    "ganeti01.svc.eqsin.wmnet": ("1",),
 }
 """:py:class:`dict`: the available Ganeti clusters with the set of available rows in each of them."""
 
-INSTANCE_LINKS: Tuple[str, ...] = ('public', 'private', 'analytics')
+INSTANCE_LINKS: Tuple[str, ...] = ("public", "private", "analytics")
 """:py:class:`tuple`: the list of possible instance link types."""
 
 
@@ -50,7 +48,7 @@ class GanetiRAPI:
 
         """
         self._url = cluster_url
-        self._http_session = http_session('.'.join((self.__module__, self.__class__.__name__)), timeout=timeout)
+        self._http_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=timeout)
         self._http_session.auth = HTTPBasicAuth(username, password)
         self._http_session.verify = ca_path
 
@@ -67,14 +65,14 @@ class GanetiRAPI:
            spicerack.ganeti.GanetiError: on non-200 responses
 
         """
-        full_url = '/'.join([self._url, '2'] + list(targets))
+        full_url = "/".join([self._url, "2"] + list(targets))
         try:
             result = self._http_session.get(full_url)
         except RequestException as ex:
-            raise GanetiError('Error while performing request to RAPI') from ex
+            raise GanetiError("Error while performing request to RAPI") from ex
 
         if result.status_code != 200:
-            raise GanetiError('Non-200 from API: {}: {}'.format(result.status_code, result.text))
+            raise GanetiError("Non-200 from API: {}: {}".format(result.status_code, result.text))
 
         return result.json()
 
@@ -89,7 +87,7 @@ class GanetiRAPI:
             spicerack.ganeti.GanetiError: API errors
 
         """
-        return self._api_get_request('info')
+        return self._api_get_request("info")
 
     @property
     def master(self) -> Optional[str]:
@@ -102,7 +100,7 @@ class GanetiRAPI:
             spicerack.ganeti.GanetiError: API errors
 
         """
-        return self.info.get('master')
+        return self.info.get("master")
 
     def fetch_instance(self, fqdn: str) -> Dict:
         """Return full information about an instance.
@@ -117,7 +115,7 @@ class GanetiRAPI:
            spicerack.ganeti.GanetiError: API errors
 
         """
-        return self._api_get_request('instances', fqdn)
+        return self._api_get_request("instances", fqdn)
 
     def fetch_instance_mac(self, fqdn: str) -> str:
         """Convenience method to return the 0th adapter's MAC address for an instance.
@@ -135,10 +133,10 @@ class GanetiRAPI:
 
         """
         instance_info = self.fetch_instance(fqdn)
-        if 'nic.macs' not in instance_info or not instance_info['nic.macs']:
+        if "nic.macs" not in instance_info or not instance_info["nic.macs"]:
             raise GanetiError("Can't find any MACs for instance")
 
-        return instance_info['nic.macs'][0]
+        return instance_info["nic.macs"][0]
 
 
 class GntInstance:
@@ -174,9 +172,10 @@ class GntInstance:
             timeout (int): time in minutes to wait for a clean shutdown before pulling the plug.
 
         """
-        logger.info('Shutting down VM %s in cluster %s', self._instance, self._cluster)
-        self._master.run_sync('gnt-instance shutdown --timeout={timeout} {instance}'.format(
-            timeout=timeout, instance=self._instance))
+        logger.info("Shutting down VM %s in cluster %s", self._instance, self._cluster)
+        self._master.run_sync(
+            "gnt-instance shutdown --timeout={timeout} {instance}".format(timeout=timeout, instance=self._instance)
+        )
 
     def remove(self, *, shutdown_timeout: int = 2) -> None:
         """Shutdown and remove the VM instance from the Ganeti cluster, including its disks.
@@ -188,9 +187,16 @@ class GntInstance:
             This action requires few minutes, inform the user about the waiting time when using this method.
 
         """
-        logger.info('Removing VM %s in cluster %s. This may take a few minutes.', self._instance, self._cluster)
-        self._master.run_sync('gnt-instance remove --shutdown-timeout={timeout} --force {instance}'.format(
-            timeout=shutdown_timeout, instance=self._instance))
+        logger.info(
+            "Removing VM %s in cluster %s. This may take a few minutes.",
+            self._instance,
+            self._cluster,
+        )
+        self._master.run_sync(
+            "gnt-instance remove --shutdown-timeout={timeout} --force {instance}".format(
+                timeout=shutdown_timeout, instance=self._instance
+            )
+        )
 
     def add(self, *, row: str, vcpus: int, memory: int, disk: int, link: str) -> None:
         """Create the VM for the instance in the Ganeti cluster with the specified characteristic.
@@ -211,33 +217,60 @@ class GntInstance:
 
         """
         if link not in INSTANCE_LINKS:
-            raise GanetiError("Invalid link '{link}', expected one of: {links}".format(
-                link=link, links=INSTANCE_LINKS))
+            raise GanetiError("Invalid link '{link}', expected one of: {links}".format(link=link, links=INSTANCE_LINKS))
 
         if row not in CLUSTERS_AND_ROWS[self._cluster]:
-            raise GanetiError("Invalid row '{row}' for cluster {cluster}, expected one of: {rows}".format(
-                row=row, cluster=self._cluster, rows=CLUSTERS_AND_ROWS[self._cluster]))
+            raise GanetiError(
+                "Invalid row '{row}' for cluster {cluster}, expected one of: {rows}".format(
+                    row=row,
+                    cluster=self._cluster,
+                    rows=CLUSTERS_AND_ROWS[self._cluster],
+                )
+            )
 
         local_vars = locals()
-        for var_label in ('vcpus', 'memory', 'disk'):
+        for var_label in ("vcpus", "memory", "disk"):
             if local_vars[var_label] <= 0:
-                raise GanetiError("Invalid value '{value}' for {label}, expected positive integer.".format(
-                    value=local_vars[var_label], label=var_label))
+                raise GanetiError(
+                    "Invalid value '{value}' for {label}, expected positive integer.".format(
+                        value=local_vars[var_label], label=var_label
+                    )
+                )
 
-        command = ('gnt-instance add'
-                   ' -t drbd'
-                   ' -I hail'
-                   ' --net 0:link={link}'
-                   ' --hypervisor-parameters=kvm:boot_order=network'
-                   ' -o debootstrap+default'
-                   ' --no-install'
-                   ' -g row_{row}'
-                   ' -B vcpus={vcpus},memory={memory}g'
-                   ' --disk 0:size={disk}g'
-                   ' {fqdn}').format(link=link, row=row, vcpus=vcpus, memory=memory, disk=disk, fqdn=self._instance)
+        command = (
+            "gnt-instance add"
+            " -t drbd"
+            " -I hail"
+            " --net 0:link={link}"
+            " --hypervisor-parameters=kvm:boot_order=network"
+            " -o debootstrap+default"
+            " --no-install"
+            " -g row_{row}"
+            " -B vcpus={vcpus},memory={memory}g"
+            " --disk 0:size={disk}g"
+            " {fqdn}"
+        ).format(
+            link=link,
+            row=row,
+            vcpus=vcpus,
+            memory=memory,
+            disk=disk,
+            fqdn=self._instance,
+        )
 
-        logger.info(('Creating VM %s in cluster %s with row=%s vcpus=%d memory=%dGB disk=%dGB link=%s. '
-                     'This may take a few minutes.'), self._instance, self._cluster, row, vcpus, memory, disk, link)
+        logger.info(
+            (
+                "Creating VM %s in cluster %s with row=%s vcpus=%d memory=%dGB disk=%dGB link=%s. "
+                "This may take a few minutes."
+            ),
+            self._instance,
+            self._cluster,
+            row,
+            vcpus,
+            memory,
+            disk,
+            link,
+        )
 
         results = self._master.run_sync(command)
         for _, output in results:
@@ -276,7 +309,7 @@ class Ganeti:
 
         """
         if cluster not in CLUSTERS_AND_ROWS:
-            raise GanetiError('Cannot find cluster {} (expected {}).'.format(cluster, tuple(CLUSTERS_AND_ROWS.keys())))
+            raise GanetiError("Cannot find cluster {} (expected {}).".format(cluster, tuple(CLUSTERS_AND_ROWS.keys())))
 
         cluster_url = RAPI_URL_FORMAT.format(cluster=cluster)
 
@@ -305,7 +338,7 @@ class Ganeti:
 
         raise GanetiError("Cannot find {} in any configured cluster.".format(fqdn))
 
-    def instance(self, instance: str, *, cluster: str = '') -> GntInstance:
+    def instance(self, instance: str, *, cluster: str = "") -> GntInstance:
         """Return an instance of GntInstance to perform RW operation on the given Ganeti VM instance.
 
         Arguments:
@@ -320,6 +353,6 @@ class Ganeti:
             cluster = self.fetch_cluster_for_instance(instance)
         master = self.rapi(cluster).master
         if master is None:
-            raise GanetiError('Master for cluster {cluster} is None'.format(cluster=cluster))
+            raise GanetiError("Master for cluster {cluster} is None".format(cluster=cluster))
 
         return GntInstance(self._remote.query(master), cluster, instance)

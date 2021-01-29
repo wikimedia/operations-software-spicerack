@@ -7,4 +7,4 @@ class GetRunnerRaise(CookbookBase):
 
     def get_runner(self, args):
         """As required by the parent class."""
-        raise RuntimeError('get_runner raise')
+        raise RuntimeError("get_runner raise")

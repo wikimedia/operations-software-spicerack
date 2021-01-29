@@ -4,7 +4,7 @@ __title__ = __doc__
 
 def argument_parser():
     """As required by spicerack._cookbook."""
-    raise RuntimeError('argument_parser() raise')
+    raise RuntimeError("argument_parser() raise")
 
 
 def run(_args, _spicerack):

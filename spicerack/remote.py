@@ -2,7 +2,6 @@
 import logging
 import math
 import time
-
 from datetime import datetime, timedelta
 from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
 
@@ -14,7 +13,6 @@ from cumin.transports import Command
 from spicerack.confctl import ConftoolEntity
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
-
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +30,18 @@ class RemoteExecutionError(RemoteError):
 
     def __init__(self, retcode: int, message: str) -> None:
         """Override parent constructor to add the return code attribute."""
-        super().__init__('{msg} (exit_code={ret})'.format(msg=message, ret=retcode))
+        super().__init__("{msg} (exit_code={ret})".format(msg=message, ret=retcode))
         self.retcode = retcode
 
 
 class RemoteClusterExecutionError(RemoteError):
     """Custom exception class for collecting multiple execution errors on a cluster."""
 
-    def __init__(self, results: List[Tuple[NodeSet, MsgTreeElem]], failures: List[RemoteExecutionError]):
+    def __init__(
+        self,
+        results: List[Tuple[NodeSet, MsgTreeElem]],
+        failures: List[RemoteExecutionError],
+    ):
         """Override the parent constructor to add failures and results as attributes."""
         super().__init__("{n} hosts have failed execution".format(n=len(failures)))
         self.failures = failures
@@ -55,7 +57,7 @@ class RemoteHostsAdapter:
     RemoteHosts instances should be orchestrated, it's ok to not extend this class and create a standalone one.
     """
 
-    def __init__(self, remote_hosts: 'RemoteHosts') -> None:
+    def __init__(self, remote_hosts: "RemoteHosts") -> None:
         """Initialize the instance.
 
         Arguments:
@@ -86,7 +88,7 @@ class RemoteHostsAdapter:
 class LBRemoteCluster(RemoteHostsAdapter):
     """Class usable to operate on a cluster of servers with pooling/depooling logic in conftool."""
 
-    def __init__(self, config: Config, remote_hosts: 'RemoteHosts', conftool: ConftoolEntity) -> None:
+    def __init__(self, config: Config, remote_hosts: "RemoteHosts", conftool: ConftoolEntity) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -100,13 +102,13 @@ class LBRemoteCluster(RemoteHostsAdapter):
         super().__init__(remote_hosts)
 
     def run(
-            self,
-            *commands: Union[str, Command],
-            svc_to_depool: Optional[List[str]] = None,
-            batch_size: int = 1,
-            batch_sleep: Optional[float] = None,
-            is_safe: bool = False,
-            max_failed_batches: int = 0
+        self,
+        *commands: Union[str, Command],
+        svc_to_depool: Optional[List[str]] = None,
+        batch_size: int = 1,
+        batch_sleep: Optional[float] = None,
+        is_safe: bool = False,
+        max_failed_batches: int = 0
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Run commands while depooling servers in groups of batch_size.
 
@@ -146,7 +148,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
         # (1 - depool_threshold) * pooled_hosts, but that would also need to know the current
         # state of the cluster.
         if batch_size <= 0 or batch_size >= n_hosts:
-            raise RemoteError('Values for batch_size must be 0 < x < {}, got {}'.format(n_hosts, batch_size))
+            raise RemoteError("Values for batch_size must be 0 < x < {}, got {}".format(n_hosts, batch_size))
 
         # If no service needs depooling, the standard behavior of remote_hosts.run_async is used
         # TODO: add the ability to select all services.
@@ -170,14 +172,14 @@ class LBRemoteCluster(RemoteHostsAdapter):
         for remotes_slice in self._remote_hosts.split(n_slices):
             # Select the pooled servers for the selected services, from the group we're operating on now.
             with self._conftool.change_and_revert(
-                    'pooled', 'yes', 'no',
-                    service='|'.join(svc_to_depool),
-                    name='|'.join(remotes_slice.hosts.striter())
+                "pooled",
+                "yes",
+                "no",
+                service="|".join(svc_to_depool),
+                name="|".join(remotes_slice.hosts.striter()),
             ):
                 try:
-                    for result in remotes_slice.run_async(
-                            *commands, is_safe=is_safe,
-                            success_threshold=1.0):
+                    for result in remotes_slice.run_async(*commands, is_safe=is_safe, success_threshold=1.0):
                         results.append(result)
                 except RemoteExecutionError as e:
                     failures.append(e)
@@ -192,12 +194,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
         return results
 
     def restart_services(
-            self,
-            services: List[str],
-            svc_to_depool: List[str],
-            *,
-            batch_size: int = 1,
-            batch_sleep: Optional[float] = None
+        self, services: List[str], svc_to_depool: List[str], *, batch_size: int = 1, batch_sleep: Optional[float] = None
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Restart services in batches, removing the host from all the affected services first.
 
@@ -215,21 +212,10 @@ class LBRemoteCluster(RemoteHostsAdapter):
                 returns a non-zero exit code.
 
         """
-        return self._act_on_services(
-            services,
-            svc_to_depool,
-            'restart',
-            batch_size,
-            batch_sleep
-        )
+        return self._act_on_services(services, svc_to_depool, "restart", batch_size, batch_sleep)
 
     def reload_services(
-            self,
-            services: List[str],
-            svc_to_depool: List[str],
-            *,
-            batch_size: int = 1,
-            batch_sleep: Optional[float] = None
+        self, services: List[str], svc_to_depool: List[str], *, batch_size: int = 1, batch_sleep: Optional[float] = None
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Reload services in batches, removing the host from all the affected services first.
 
@@ -247,21 +233,15 @@ class LBRemoteCluster(RemoteHostsAdapter):
                 returns a non-zero exit code.
 
         """
-        return self._act_on_services(
-            services,
-            svc_to_depool,
-            'reload',
-            batch_size,
-            batch_sleep
-        )
+        return self._act_on_services(services, svc_to_depool, "reload", batch_size, batch_sleep)
 
     def _act_on_services(
-            self,
-            services: List[str],
-            svc_to_depool: List[str],
-            what: str,
-            batch_size: int,
-            batch_sleep: Optional[float] = None
+        self,
+        services: List[str],
+        svc_to_depool: List[str],
+        what: str,
+        batch_size: int,
+        batch_sleep: Optional[float] = None,
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Act on services in batches, depooling the servers first.
 
@@ -282,11 +262,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
         """
         commands = ['systemctl {w} "{s}"'.format(w=what, s=svc) for svc in services]
         return self.run(
-            *commands,
-            svc_to_depool=svc_to_depool,
-            batch_size=batch_size,
-            batch_sleep=batch_sleep,
-            is_safe=False
+            *commands, svc_to_depool=svc_to_depool, batch_size=batch_size, batch_sleep=batch_sleep, is_safe=False
         )
 
 
@@ -304,7 +280,7 @@ class Remote:
         self._config = Config(config)
         self._dry_run = dry_run
 
-    def query(self, query_string: str) -> 'RemoteHosts':
+    def query(self, query_string: str) -> "RemoteHosts":
         """Execute a Cumin query and return the matching hosts.
 
         Arguments:
@@ -317,7 +293,7 @@ class Remote:
         try:
             hosts = query.Query(self._config).execute(query_string)
         except CuminError as e:
-            raise RemoteError('Failed to execute Cumin query') from e
+            raise RemoteError("Failed to execute Cumin query") from e
 
         return RemoteHosts(self._config, hosts, dry_run=self._dry_run)
 
@@ -338,9 +314,9 @@ class Remote:
         # get the list of hosts from confctl
         try:
             hosts_conftool = [obj.name for obj in conftool.get(**tags)]
-            query_string = ','.join(hosts_conftool)
+            query_string = ",".join(hosts_conftool)
         except SpicerackError as e:
-            raise RemoteError('Failed to execute the conftool query') from e
+            raise RemoteError("Failed to execute the conftool query") from e
 
         remote_hosts = self.query(query_string)
         host_diff = set(hosts_conftool) - set(remote_hosts.hosts)
@@ -369,7 +345,7 @@ class RemoteHosts:
 
         """
         if not hosts:
-            raise RemoteError('No hosts provided')
+            raise RemoteError("No hosts provided")
 
         self._config = config
         self._hosts = hosts
@@ -403,7 +379,7 @@ class RemoteHosts:
         """
         return len(self._hosts)
 
-    def split(self, n_slices: int) -> Iterator['RemoteHosts']:
+    def split(self, n_slices: int) -> Iterator["RemoteHosts"]:
         """Split the current remote in n_slices RemoteHosts instances.
 
         Arguments:
@@ -442,8 +418,14 @@ class RemoteHosts:
             RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
-        return self._execute(list(commands), mode='async', success_threshold=success_threshold, batch_size=batch_size,
-                             batch_sleep=batch_sleep, is_safe=is_safe)
+        return self._execute(
+            list(commands),
+            mode="async",
+            success_threshold=success_threshold,
+            batch_size=batch_size,
+            batch_sleep=batch_sleep,
+            is_safe=is_safe,
+        )
 
     def run_sync(
         self,
@@ -471,8 +453,14 @@ class RemoteHosts:
             RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
-        return self._execute(list(commands), mode='sync', success_threshold=success_threshold, batch_size=batch_size,
-                             batch_sleep=batch_sleep, is_safe=is_safe)
+        return self._execute(
+            list(commands),
+            mode="sync",
+            success_threshold=success_threshold,
+            batch_size=batch_size,
+            batch_sleep=batch_sleep,
+            is_safe=is_safe,
+        )
 
     def reboot(self, batch_size: int = 1, batch_sleep: Optional[float] = 180.0) -> None:
         """Reboot hosts.
@@ -485,16 +473,26 @@ class RemoteHosts:
         if len(self._hosts) == 1:  # Temporary workaround until T213296 is fixed.
             batch_sleep = None
 
-        logger.info('Rebooting %d hosts in batches of %d with %.1fs of sleep in between: %s',
-                    len(self._hosts),
-                    batch_size,
-                    batch_sleep if batch_sleep is not None else 0.0,
-                    self._hosts)
+        logger.info(
+            "Rebooting %d hosts in batches of %d with %.1fs of sleep in between: %s",
+            len(self._hosts),
+            batch_size,
+            batch_sleep if batch_sleep is not None else 0.0,
+            self._hosts,
+        )
 
-        self.run_sync(transports.Command('reboot-host', timeout=30), batch_size=batch_size, batch_sleep=batch_sleep)
+        self.run_sync(
+            transports.Command("reboot-host", timeout=30),
+            batch_size=batch_size,
+            batch_sleep=batch_sleep,
+        )
 
-    @retry(tries=25, delay=timedelta(seconds=10), backoff_mode='linear',
-           exceptions=(RemoteExecutionError, RemoteCheckError))
+    @retry(
+        tries=25,
+        delay=timedelta(seconds=10),
+        backoff_mode="linear",
+        exceptions=(RemoteExecutionError, RemoteCheckError),
+    )
     def wait_reboot_since(self, since: datetime) -> None:
         """Poll the host until is reachable and has an uptime lower than the provided datetime.
 
@@ -509,16 +507,20 @@ class RemoteHosts:
         delta = (datetime.utcnow() - since).total_seconds()
         for nodeset, uptime in self.uptime():
             if uptime >= delta:
-                raise RemoteCheckError('Uptime for {hosts} higher than threshold: {uptime} > {delta}'.format(
-                    hosts=nodeset, uptime=uptime, delta=delta))
+                raise RemoteCheckError(
+                    "Uptime for {hosts} higher than threshold: {uptime} > {delta}".format(
+                        hosts=nodeset, uptime=uptime, delta=delta
+                    )
+                )
 
             remaining.difference_update(nodeset)
 
         if remaining:
-            raise RemoteCheckError('Unable to check uptime from {num} hosts: {hosts}'.format(
-                num=len(remaining), hosts=remaining))
+            raise RemoteCheckError(
+                "Unable to check uptime from {num} hosts: {hosts}".format(num=len(remaining), hosts=remaining)
+            )
 
-        logger.info('Found reboot since %s for hosts %s', since, self._hosts)
+        logger.info("Found reboot since %s for hosts %s", since, self._hosts)
 
     def uptime(self) -> List[Tuple[NodeSet, float]]:
         """Get current uptime.
@@ -528,7 +530,7 @@ class RemoteHosts:
             as first item and :py:class:`float` uptime as second item.
 
         """
-        results = self.run_sync(transports.Command('cat /proc/uptime', timeout=10), is_safe=True)
+        results = self.run_sync(transports.Command("cat /proc/uptime", timeout=10), is_safe=True)
         # Callback to extract the uptime from /proc/uptime (i.e. getting 12345.67 from '12345.67 123456789.00').
         return RemoteHosts.results_to_list(results, callback=lambda output: float(output.split()[0]))
 
@@ -540,13 +542,13 @@ class RemoteHosts:
             init system :py:class:`str` as second.
 
         """
-        results = self.run_sync(transports.Command('ps --no-headers -o comm 1', timeout=10), is_safe=True)
+        results = self.run_sync(transports.Command("ps --no-headers -o comm 1", timeout=10), is_safe=True)
         return RemoteHosts.results_to_list(results)
 
     @staticmethod
     def results_to_list(
         results: Iterator[Tuple[NodeSet, MsgTreeElem]],
-        callback: Optional[Callable] = None
+        callback: Optional[Callable] = None,
     ) -> List[Tuple[NodeSet, Any]]:
         """Extract execution results into a list converting them with an optional callback.
 
@@ -574,8 +576,11 @@ class RemoteHosts:
                 try:
                     result = callback(result)
                 except Exception as e:
-                    raise RemoteError('Unable to extract data with {cb} for {hosts} from: {output}'.format(
-                        cb=callback.__name__, hosts=nodeset, output=result)) from e
+                    raise RemoteError(
+                        "Unable to extract data with {cb} for {hosts} from: {output}".format(
+                            cb=callback.__name__, hosts=nodeset, output=result
+                        )
+                    ) from e
 
             extracted.append((nodeset, result))
 
@@ -584,11 +589,11 @@ class RemoteHosts:
     def _execute(  # pylint: disable=too-many-arguments
         self,
         commands: Sequence[Union[str, Command]],
-        mode: str = 'sync',
+        mode: str = "sync",
         success_threshold: float = 1.0,
         batch_size: Optional[Union[int, str]] = None,
         batch_sleep: Optional[float] = None,
-        is_safe: bool = False
+        is_safe: bool = False,
     ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Lower level Cumin's execution of commands on the target nodes.
 
@@ -614,19 +619,27 @@ class RemoteHosts:
 
         """
         if batch_size is None:
-            parsed_batch_size = {'value': None, 'ratio': None}
+            parsed_batch_size = {"value": None, "ratio": None}
         else:
             parsed_batch_size = target_batch_size(str(batch_size))
 
         target = transports.Target(
-            self._hosts, batch_size=parsed_batch_size['value'], batch_size_ratio=parsed_batch_size['ratio'],
-            batch_sleep=batch_sleep)
+            self._hosts,
+            batch_size=parsed_batch_size["value"],
+            batch_size_ratio=parsed_batch_size["ratio"],
+            batch_sleep=batch_sleep,
+        )
         worker = transport.Transport.new(self._config, target)
         worker.commands = commands
         worker.handler = mode
         worker.success_threshold = success_threshold
 
-        logger.debug('Executing commands %s on %d hosts: %s', commands, len(target.hosts), str(target.hosts))
+        logger.debug(
+            "Executing commands %s on %d hosts: %s",
+            commands,
+            len(target.hosts),
+            str(target.hosts),
+        )
 
         if self._dry_run and not is_safe:
             return iter(())  # Empty generator
@@ -634,6 +647,6 @@ class RemoteHosts:
         ret = worker.execute()
 
         if ret != 0 and not self._dry_run:
-            raise RemoteExecutionError(ret, 'Cumin execution failed')
+            raise RemoteExecutionError(ret, "Cumin execution failed")
 
         return worker.get_results()

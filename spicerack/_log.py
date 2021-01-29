@@ -1,15 +1,13 @@
 """Log module."""
 import logging
 import os
-
 from pathlib import Path
 from typing import Optional, Union
 
 from wmflib.irc import SALSocketHandler
 
-
 root_logger = logging.getLogger()  # pylint: disable=invalid-name
-irc_logger = logging.getLogger('spicerack_irc_announce')  # pylint: disable=invalid-name
+irc_logger = logging.getLogger("spicerack_irc_announce")  # pylint: disable=invalid-name
 
 
 class FilterOutCumin(logging.Filter):
@@ -26,7 +24,7 @@ class FilterOutCumin(logging.Filter):
             According to Python's logging interface, see: https://docs.python.org/3/library/logging.html#filter-objects
 
         """
-        if record.name == 'cumin' or record.name.startswith('cumin.'):
+        if record.name == "cumin" or record.name.startswith("cumin."):
             return False  # Filter it out
 
         return True
@@ -38,7 +36,7 @@ def setup_logging(
     user: str,
     dry_run: bool = True,
     host: Optional[str] = None,
-    port: int = 0
+    port: int = 0,
 ) -> None:
     """Setup the root logger instance.
 
@@ -55,29 +53,35 @@ def setup_logging(
     os.makedirs(base_path, mode=0o755, exist_ok=True)
 
     if dry_run:
-        dry_run_prefix = 'DRY-RUN '
+        dry_run_prefix = "DRY-RUN "
     else:
-        dry_run_prefix = ''
+        dry_run_prefix = ""
 
     # Default INFO logging
-    formatter = logging.Formatter(fmt='%(asctime)s {dryrun}{user} %(process)d [%(levelname)s] %(message)s'.format(
-        dryrun=dry_run_prefix, user=user))
-    handler = logging.FileHandler(os.path.join(base_path, '{name}.log'.format(name=name)))
+    formatter = logging.Formatter(
+        fmt="%(asctime)s {dryrun}{user} %(process)d [%(levelname)s] %(message)s".format(
+            dryrun=dry_run_prefix, user=user
+        )
+    )
+    handler = logging.FileHandler(os.path.join(base_path, "{name}.log".format(name=name)))
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
 
     # Extended logging for detailed debugging
     formatter_extended = logging.Formatter(
-        fmt=('%(asctime)s {dryrun}{user} %(process)d [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] '
-             '%(message)s').format(dryrun=dry_run_prefix, user=user))
-    handler_extended = logging.FileHandler(os.path.join(base_path, '{name}-extended.log'.format(name=name)))
+        fmt=(
+            "%(asctime)s {dryrun}{user} %(process)d [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] "
+            "%(message)s"
+        ).format(dryrun=dry_run_prefix, user=user)
+    )
+    handler_extended = logging.FileHandler(os.path.join(base_path, "{name}-extended.log".format(name=name)))
     handler_extended.setFormatter(formatter_extended)
     handler_extended.setLevel(logging.DEBUG)
 
     # Stderr logging
     output_handler = logging.StreamHandler()
     if dry_run:
-        output_handler.setFormatter(logging.Formatter(fmt='DRY-RUN: %(message)s'))
+        output_handler.setFormatter(logging.Formatter(fmt="DRY-RUN: %(message)s"))
         output_handler.setLevel(logging.DEBUG)
     else:
         output_handler.setLevel(logging.INFO)
@@ -93,14 +97,14 @@ def setup_logging(
         irc_logger.setLevel(logging.INFO)
 
     # Silence external noisy loggers
-    logging.getLogger('urllib3').setLevel(logging.WARNING)
-    logging.getLogger('requests').setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
 
     # Elasticsearch lib is very noisy about HTTP level errors
     # ideally, we'd want to keep it at WARNING level for logs
     # sent to file, but ERROR for the console. Since this is
     # non trivial, let's raise level to ERROR for the moment.
-    logging.getLogger('elasticsearch').setLevel(logging.ERROR)
+    logging.getLogger("elasticsearch").setLevel(logging.ERROR)
 
 
 def log_task_start(message: str) -> None:
@@ -110,7 +114,7 @@ def log_task_start(message: str) -> None:
         message (str): the message to be logged.
 
     """
-    irc_logger.info('START - %s', message)
+    irc_logger.info("START - %s", message)
 
 
 def log_task_end(status: str, message: str) -> None:
@@ -121,4 +125,4 @@ def log_task_end(status: str, message: str) -> None:
         message (str): the message to be logged.
 
     """
-    irc_logger.info('END (%s) - %s', status, message)
+    irc_logger.info("END (%s) - %s", status, message)

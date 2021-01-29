@@ -1,13 +1,11 @@
 """Decorators module."""
 import logging
 import time
-
 from datetime import timedelta
 from functools import wraps
-from typing import Any, Callable, cast, Optional, Tuple, Type, Union
+from typing import Any, Callable, Optional, Tuple, Type, Union, cast
 
 from spicerack.exceptions import SpicerackError
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +18,7 @@ def ensure_wrap(func: Callable) -> Callable:
             that is also a callable is not supported.
 
     """
+
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Callable:
         """Decorator wrapper."""
@@ -40,7 +39,7 @@ def retry(
     func: Optional[Callable] = None,
     tries: int = 3,
     delay: timedelta = timedelta(seconds=3),
-    backoff_mode: str = 'exponential',
+    backoff_mode: str = "exponential",
     exceptions: Tuple[Type[Exception], ...] = (SpicerackError,),
     failure_message: Optional[str] = None,
 ) -> Callable:
@@ -79,20 +78,22 @@ def retry(
     """
     if not failure_message:
         failure_message = "Attempt to run '{module}.{qualname}' raised".format(
-            module=func.__module__, qualname=func.__qualname__)  # type: ignore
+            module=func.__module__, qualname=func.__qualname__  # type: ignore
+        )
 
     @wraps(func)  # type: ignore
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         """Decorator."""
-        if backoff_mode not in ('constant', 'linear', 'power', 'exponential'):
-            raise ValueError('Invalid backoff_mode: {mode}'.format(mode=backoff_mode))
+        if backoff_mode not in ("constant", "linear", "power", "exponential"):
+            raise ValueError("Invalid backoff_mode: {mode}".format(mode=backoff_mode))
 
-        if backoff_mode == 'exponential' and delay.total_seconds() < 1:
+        if backoff_mode == "exponential" and delay.total_seconds() < 1:
             raise ValueError(
-                'Delay must be greater than 1 if backoff_mode is exponential, got {delay}'.format(delay=delay))
+                "Delay must be greater than 1 if backoff_mode is exponential, got {delay}".format(delay=delay)
+            )
 
         if tries < 1:
-            raise ValueError('Tries must be a positive integer, got {tries}'.format(tries=tries))
+            raise ValueError("Tries must be a positive integer, got {tries}".format(tries=tries))
 
         effective_tries = _get_effective_tries(tries, args)
         attempt = 0
@@ -103,8 +104,14 @@ def retry(
                 return func(*args, **kwargs)  # type: ignore
             except exceptions as e:
                 sleep = get_backoff_sleep(backoff_mode, delay.total_seconds(), attempt)
-                logger.warning("[%d/%d, retrying in %.2fs] %s: %s",
-                               attempt, effective_tries, sleep, failure_message, _exception_message(e))
+                logger.warning(
+                    "[%d/%d, retrying in %.2fs] %s: %s",
+                    attempt,
+                    effective_tries,
+                    sleep,
+                    failure_message,
+                    _exception_message(e),
+                )
                 time.sleep(sleep)
 
         return func(*args, **kwargs)  # type: ignore
@@ -129,12 +136,12 @@ def _exception_message(exception: BaseException) -> str:
         # reverse order from the built-in handler (i.e. newest exception first) since we aren't following a
         # traceback.
         if exception.__cause__ is not None:
-            message_parts.append('Caused by: {chained_exc}'.format(chained_exc=exception.__cause__))
+            message_parts.append("Caused by: {chained_exc}".format(chained_exc=exception.__cause__))
             exception = exception.__cause__
         else:  # e.__context__ is not None, due to the while condition.
-            message_parts.append('Raised while handling: {chained_exc}'.format(chained_exc=exception.__context__))
+            message_parts.append("Raised while handling: {chained_exc}".format(chained_exc=exception.__context__))
             exception = cast(BaseException, exception.__context__)  # Casting away the Optional.
-    return '\n'.join(message_parts)
+    return "\n".join(message_parts)
 
 
 def get_backoff_sleep(backoff_mode: str, base: Union[int, float], index: int) -> Union[int, float]:
@@ -149,16 +156,16 @@ def get_backoff_sleep(backoff_mode: str, base: Union[int, float], index: int) ->
         int, float: the amount of sleep to perform for the backoff.
 
     """
-    if backoff_mode == 'constant':
+    if backoff_mode == "constant":
         sleep = base
-    elif backoff_mode == 'linear':
+    elif backoff_mode == "linear":
         sleep = base * index
-    elif backoff_mode == 'power':
+    elif backoff_mode == "power":
         sleep = base * 2 ** (index - 1)
-    elif backoff_mode == 'exponential':
+    elif backoff_mode == "exponential":
         sleep = base ** index
     else:
-        raise ValueError('Invalid backoff_mode: {mode}'.format(mode=backoff_mode))
+        raise ValueError("Invalid backoff_mode: {mode}".format(mode=backoff_mode))
 
     return sleep
 
@@ -176,12 +183,12 @@ def _get_effective_tries(tries: int, decorator_args: Tuple) -> int:
     """
     effective_tries = tries
     if not decorator_args:
-        logger.debug('Decorator called without args')
+        logger.debug("Decorator called without args")
         return effective_tries
 
     obj = decorator_args[0]
-    if getattr(obj, '_dry_run', False) or getattr(getattr(obj, '_remote_hosts', False), '_dry_run', False):
-        logger.warning('Reduce tries from %d to 1 in DRY-RUN mode', tries)
+    if getattr(obj, "_dry_run", False) or getattr(getattr(obj, "_remote_hosts", False), "_dry_run", False):
+        logger.warning("Reduce tries from %d to 1 in DRY-RUN mode", tries)
         effective_tries = 1
 
     return effective_tries

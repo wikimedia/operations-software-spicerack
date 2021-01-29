@@ -1,11 +1,9 @@
 """Cookbook module."""
 import argparse
-
 from abc import ABCMeta, abstractmethod
 from typing import Optional
 
 from spicerack import Spicerack
-
 
 CLASS_FAIL_INIT_RETCODE = 94
 """int: Reserved exit code: failed to initialize the cookbook."""
@@ -62,7 +60,7 @@ class CookbookBase(metaclass=ABCMeta):
 
         """
         if self.__doc__ is None:
-            return '-'
+            return "-"
 
         return self.__doc__.splitlines()[0]
 
@@ -79,7 +77,7 @@ class CookbookBase(metaclass=ABCMeta):
         return argparse.ArgumentParser(description=self.__doc__, formatter_class=ArgparseFormatter)
 
     @abstractmethod
-    def get_runner(self, args: argparse.Namespace) -> 'CookbookRunnerBase':
+    def get_runner(self, args: argparse.Namespace) -> "CookbookRunnerBase":
         """Return the runner object that will be used to execute the cookbook.
 
         Derived classes must override this method and can perform any initialization and validation of the parsed
@@ -119,7 +117,7 @@ class CookbookRunnerBase(metaclass=ABCMeta):
             str: the runtime description. If not overriden an empty string will be used.
 
         """
-        return ''
+        return ""
 
     @abstractmethod
     def run(self) -> Optional[int]:
