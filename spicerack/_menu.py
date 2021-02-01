@@ -544,7 +544,7 @@ class TreeItem(BaseItem):
 
         """
         try:
-            title = self.module.__title__
+            title = self.module.__title__.splitlines()[0]
         except AttributeError as e:
             logger.debug('Unable to detect title for module %s: %s', self.path, e)
             title = self.fallback_title

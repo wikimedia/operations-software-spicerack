@@ -1,4 +1,7 @@
-"""Group2 Cookbook2."""
+"""Group2 Cookbook2.
+
+Multiline doc that will be cut to one-line in the __title__.
+"""
 import argparse
 
 
