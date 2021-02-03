@@ -204,7 +204,7 @@ class ElasticsearchClusters:
 
     def __str__(self) -> str:
         """Class string method."""
-        return ", ".join(str(cluster) for cluster in self._clusters)
+        return str(self._clusters)
 
     def flush_markers(self, timeout: timedelta = timedelta(seconds=60)) -> None:
         """Flush markers on all clusters.
