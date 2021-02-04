@@ -31,6 +31,7 @@ from spicerack.netbox import NETBOX_DOMAIN, Netbox
 from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
+from spicerack.toolforge.etcdctl import EtcdctlController
 
 try:
     __version__: str = get_distribution("wikimedia-spicerack").version  # Must be the same used as 'name' in setup.py
@@ -493,3 +494,16 @@ class Spicerack:
         """
         name = "Spicerack/{version} {name}".format(version=__version__, name=name)
         return requests.http_session(name, timeout=timeout, tries=tries, backoff=backoff)
+
+    def etcdctl(self, *, remote_host: RemoteHosts) -> EtcdctlController:  # pylint: disable=no-self-use
+        """Add etcdctl control capabilities to the given RemoteHost.
+
+        Params:
+            remote_host: Single remote host (that should map one single host)
+                to add capabilities to.
+
+        Returns:
+            A wrapped RemoteHost with the etcdctl control related methods.
+
+        """
+        return EtcdctlController(remote_host=remote_host)

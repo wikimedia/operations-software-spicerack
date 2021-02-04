@@ -26,6 +26,7 @@ from spicerack.netbox import Netbox
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
+from spicerack.toolforge.etcdctl import EtcdctlController
 
 
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
@@ -69,6 +70,10 @@ def test_spicerack(mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.management(), Management)
     assert isinstance(spicerack.ganeti(), Ganeti)
     assert isinstance(spicerack.requests_session("name"), Session)
+    assert isinstance(
+        spicerack.etcdctl(remote_host=mock.MagicMock(spec_set=RemoteHosts)),
+        EtcdctlController,
+    )
     assert mocked_remote_query.called
 
 
