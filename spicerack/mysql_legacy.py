@@ -28,6 +28,7 @@ CORE_SECTIONS: Tuple[str, ...] = (
     "s7",
     "s8",
     "x1",
+    "x2",
     "es4",
     "es5",
 )
