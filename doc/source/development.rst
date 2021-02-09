@@ -24,6 +24,16 @@ following content:
 
 The ``pre-commit`` hook will be executed at every commit, while the ``pre-review`` one when running ``git review``.
 
+Git blame
+---------
+
+In order to have a cleaner git blame, it might be useful to exclude some specific commits were just cosmetic changes
+were made from the history. To do that use:
+
+.. code-block:: bash
+
+    git blame --ignore-revs-file .git-blame-ignore-revs <file>
+
 Running tests
 -------------
 
