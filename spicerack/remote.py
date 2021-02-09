@@ -503,9 +503,9 @@ class RemoteHosts:
         )
 
     @retry(
-        tries=25,
+        tries=360,
         delay=timedelta(seconds=10),
-        backoff_mode="linear",
+        backoff_mode="constant",
         exceptions=(RemoteExecutionError, RemoteCheckError),
     )
     def wait_reboot_since(self, since: datetime) -> None:
