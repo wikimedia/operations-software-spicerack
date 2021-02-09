@@ -424,7 +424,7 @@ class ElasticsearchCluster:
 
     def __str__(self) -> str:
         """Class string method."""
-        return str(self._elasticsearch.info()["cluster_name"])
+        return str(self._elasticsearch)
 
     def get_nodes(self) -> Dict:
         """Get all Elasticsearch Nodes.
