@@ -35,6 +35,10 @@ EXTRAS_REQUIRE = {
         "pytest-xdist>=1.26.1",
         "pytest>=3.10.1",
         "requests-mock>=1.5.2",
+        # This is required for flake8 to run proprely, as when running tox
+        # setuptools comes boundled is usally way older (debian sid has 44 as
+        # of writing this).
+        "setuptools>=53.0",
         "sphinx_rtd_theme>=0.4.3",
         "sphinx-argparse>=0.2.2",
         "Sphinx>=1.8.4",
