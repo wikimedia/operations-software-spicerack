@@ -47,7 +47,7 @@ class EtcdctlController(RemoteHostsAdapter):
     def get_cluster_info(self) -> Dict[str, Dict[str, SimpleType]]:
         """Gets the current etcd cluster information."""
         args = self._base_args + ["member", "list"]
-        raw_results = self._remote_hosts.run_sync(*args)
+        raw_results = self._remote_hosts.run_sync(" ".join(args))
         try:
             result = next(raw_results)[1].message().decode("utf8")
         except StopIteration:
@@ -129,7 +129,7 @@ class EtcdctlController(RemoteHostsAdapter):
         else:
             extra_args = ["member", "add", new_member_fqdn, member_peer_url]
 
-        self._remote_hosts.run_sync(*(self._base_args + extra_args))
+        self._remote_hosts.run_sync(" ".join(self._base_args + extra_args))
 
         if not current_entry:
             # unfortunately, etcdctl add does not give the member_id, but only the new
@@ -167,7 +167,7 @@ class EtcdctlController(RemoteHostsAdapter):
 
         logger.info("Removing etcd member %s.", member_fqdn)
         extra_args = ["member", "remove", str(current_entry["member_id"])]
-        self._remote_hosts.run_sync(*(self._base_args + extra_args))
+        self._remote_hosts.run_sync(" ".join(self._base_args + extra_args))
         return str(current_entry["member_id"])
 
     @staticmethod

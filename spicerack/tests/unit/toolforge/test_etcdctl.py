@@ -1,5 +1,5 @@
 """Toolforge etcdctl module tests."""
-from typing import Any, List, Optional
+from typing import List, Optional
 from unittest import TestCase, mock
 
 from ClusterShell.MsgTree import MsgTreeElem
@@ -13,8 +13,9 @@ def _assert_called_with_single_param(param: str, mock_obj: mock.MagicMock) -> No
     mock_obj.assert_called()
     call_count = 0
     for call in mock_obj.mock_calls:
-        if param in call[1]:
-            call_count += 1
+        for arg in call[1]:
+            if isinstance(arg, str) and param in arg:
+                call_count += 1
 
     assert (
         call_count == 1
@@ -24,20 +25,9 @@ def _assert_called_with_single_param(param: str, mock_obj: mock.MagicMock) -> No
 def _assert_not_called_with_single_param(param: str, mock_obj: mock.MagicMock) -> None:
     mock_obj.assert_called_once()
     for call in mock_obj.mock_calls:
-        if param in call[1]:
-            assert False, f"Parameter {param} was passed on a call to {mock_obj}: {call}"
-
-
-def _assert_called_with_double_param(param: str, value: Any, mock_obj: mock.MagicMock) -> None:
-    _assert_called_with_single_param(param, mock_obj)
-    args: List[Any] = []
-    for call in mock_obj.mock_calls:
-        if param in call[1]:
-            args = call[1]
-
-    first_param_pos = args.index(param) + 1
-    gotten_value = args[first_param_pos]
-    assert gotten_value == value
+        for arg in call[1]:
+            if isinstance(arg, str) and param in arg:
+                assert False, f"Parameter {param} was passed on a call to {mock_obj}: {call}"
 
 
 def _get_mock_run_sync(
@@ -85,9 +75,8 @@ class TestGetClusterInfo(TestCase):
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
             controller.get_cluster_info()
 
-        _assert_called_with_double_param(
-            param="--cert-file",
-            value=expected_cert_file,
+        _assert_called_with_single_param(
+            param=f"--cert-file {expected_cert_file}",
             mock_obj=mock_run_sync,
         )
 
@@ -102,9 +91,8 @@ class TestGetClusterInfo(TestCase):
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
             controller.get_cluster_info()
 
-        _assert_called_with_double_param(
-            param="--ca-file",
-            value=expected_ca_file,
+        _assert_called_with_single_param(
+            param=f"--ca-file {expected_ca_file}",
             mock_obj=mock_run_sync,
         )
 
@@ -119,9 +107,8 @@ class TestGetClusterInfo(TestCase):
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
             controller.get_cluster_info()
 
-        _assert_called_with_double_param(
-            param="--key-file",
-            value=expected_key_file,
+        _assert_called_with_single_param(
+            param=f"--key-file {expected_key_file}",
             mock_obj=mock_run_sync,
         )
 
@@ -136,9 +123,8 @@ class TestGetClusterInfo(TestCase):
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
             controller.get_cluster_info()
 
-        _assert_called_with_double_param(
-            param="--endpoints",
-            value=expected_endpoints,
+        _assert_called_with_single_param(
+            param=f"--endpoints {expected_endpoints}",
             mock_obj=mock_run_sync,
         )
 
