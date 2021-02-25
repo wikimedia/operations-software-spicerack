@@ -143,6 +143,33 @@ class EtcdctlController(RemoteHostsAdapter):
 
         return new_member_id
 
+    def ensure_node_does_not_exist(
+        self,
+        member_fqdn: str,
+    ) -> Optional[str]:
+        """Ensure the non existance of an etcd member, removing it if present.
+
+        Makes sure that the given member_fqdn member is not part of the etcd
+        cluster, returns its old member id or None if it was not there.
+        """
+        before_members = self.get_cluster_info()
+        current_entry = self._get_member_or_none(
+            members=before_members,
+            member_name=member_fqdn,
+        )
+
+        if not current_entry:
+            logger.info(
+                "Skipping removal of member %s as it does not exist.",
+                member_fqdn,
+            )
+            return None
+
+        logger.info("Removing etcd member %s.", member_fqdn)
+        extra_args = ["member", "remove", str(current_entry["member_id"])]
+        self._remote_hosts.run_sync(*(self._base_args + extra_args))
+        return str(current_entry["member_id"])
+
     @staticmethod
     def _to_simple_type(maybe_not_string: str) -> SimpleType:
         """Simple type interpolation, etcdctl member list does not return json."""
@@ -170,7 +197,7 @@ class EtcdctlController(RemoteHostsAdapter):
 
     @staticmethod
     def _get_member_or_none(
-        members: Dict[str, Dict[str, SimpleType]], member_name: str, member_peer_url: str
+        members: Dict[str, Dict[str, SimpleType]], member_name: str, member_peer_url: Optional[str] = None
     ) -> Dict[str, SimpleType]:
         return next(
             (

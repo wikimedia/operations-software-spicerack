@@ -9,14 +9,16 @@ from spicerack.remote import RemoteHosts
 from spicerack.toolforge.etcdctl import EtcdctlController, TooManyHosts, UnableToParseOutput
 
 
-def _assert_called_with_single_param(param: str, mock_obj: mock.MagicMock, num_calls: int = 1) -> None:
+def _assert_called_with_single_param(param: str, mock_obj: mock.MagicMock) -> None:
     mock_obj.assert_called()
-    assert len(mock_obj.call_args_list) == num_calls
+    call_count = 0
     for call in mock_obj.mock_calls:
         if param in call[1]:
-            return
+            call_count += 1
 
-    assert False, f"Parameter {param} was never passed to any call to {mock_obj}: {mock_obj.mock_calls}"
+    assert (
+        call_count == 1
+    ), f"Expected to have 1 call with param {param}, but got {call_count}, all calls: {mock_obj.mock_calls}"
 
 
 def _assert_not_called_with_single_param(param: str, mock_obj: mock.MagicMock) -> None:
@@ -309,7 +311,7 @@ class TestEnsureNodeExists(TestCase):
                 member_peer_url=existing_member_peer_url,
             )
 
-        _assert_called_with_single_param(param="update", mock_obj=mock_run_sync, num_calls=2)
+        _assert_called_with_single_param(param="update", mock_obj=mock_run_sync)
         assert gotten_member_id == expected_member_id
 
     def test_adds_the_member_if_not_there(self):
@@ -339,7 +341,7 @@ class TestEnsureNodeExists(TestCase):
                 member_peer_url=new_member_peer_url,
             )
 
-        _assert_called_with_single_param(param="add", mock_obj=mock_run_sync, num_calls=3)
+        _assert_called_with_single_param(param="add", mock_obj=mock_run_sync)
         assert gotten_member_id == expected_member_id
 
     def test_uses_default_member_url_if_not_passed(self):
@@ -362,4 +364,53 @@ class TestEnsureNodeExists(TestCase):
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
             controller.ensure_node_exists(new_member_fqdn=new_member_fqdn)
 
-        _assert_called_with_single_param(param=expected_peer_url, mock_obj=mock_run_sync, num_calls=3)
+        _assert_called_with_single_param(param=expected_peer_url, mock_obj=mock_run_sync)
+
+
+class TestEnsureNodeDoesNotExist(TestCase):
+    """TestEnsureNodeDoesNotExist."""
+
+    def test_skips_removal_if_member_does_not_exist(self):
+        """Test that skips removal if member does not exist."""
+        non_existing_member_fqdn = "i.dont.exist"
+        expected_result = None
+        mock_run_sync = _get_mock_run_sync(
+            return_value="""
+                415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
+            """.encode()  # noqa: E501
+        )
+        controller = EtcdctlController(
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+        )
+
+        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
+            gotten_result = controller.ensure_node_does_not_exist(
+                member_fqdn=non_existing_member_fqdn,
+            )
+
+        _assert_called_with_single_param(param="list", mock_obj=mock_run_sync)
+        _assert_not_called_with_single_param(param="remove", mock_obj=mock_run_sync)
+        assert gotten_result == expected_result
+
+    def test_removes_the_member_if_there_already(self):
+        """Test that it removes the member if there already."""
+        member_fqdn = "i.already.exist"
+        expected_member_id = "1234556789012345"
+        mock_run_sync = _get_mock_run_sync(
+            side_effect=[
+                f"""
+                    415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false
+                    {expected_member_id}: name={member_fqdn} peerURLs=http://some.url
+                """.encode(),  # noqa: E501
+                "Removed :)",
+            ]
+        )
+        controller = EtcdctlController(
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+        )
+
+        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
+            gotten_result = controller.ensure_node_does_not_exist(member_fqdn=member_fqdn)
+
+        _assert_called_with_single_param(param="remove", mock_obj=mock_run_sync)
+        assert gotten_result == expected_member_id
