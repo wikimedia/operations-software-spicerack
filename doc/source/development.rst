@@ -4,25 +4,31 @@ Development
 Code style
 ----------
 
-This project uses the Python automatic code formatter `black`_ and the tests will enforce that all the Python files are
-formatted according to black's format.
+This project uses the Python automatic code formatter `black`_ in conjunction with `isort`_ and the tests will enforce
+that all the Python files are formatted according to the defined style.
 
 In order to automatically format the code while developing, it's possible to integrate black either with the editor/IDE
 of choice or directly into the git workflow:
 
-For the editor/IDE integration see the `black's related`_ page.
+* For the editor/IDE integration see the `black's related`_ page and the `isort's related`_ one.
 
-For the git workflow integration, that can be done either at commit time or at review time. To do so create either a
-``pre-commit`` or a ``pre-review`` executable hook file inside the ``.git/hooks/`` directory of the project with the
-following content:
+* For the git workflow integration, that can be done either at commit time or at review time. To do so create either a
+  ``pre-commit`` or a ``pre-review`` executable hook file inside the ``.git/hooks/`` directory of the project with the
+  following content:
 
-.. code-block:: bash
+  .. code-block:: bash
 
-    #!/bin/bash
+      #!/bin/bash
 
-    tox -e py3-format
+      tox -e py3-format
 
-The ``pre-commit`` hook will be executed at every commit, while the ``pre-review`` one when running ``git review``.
+  The ``pre-commit`` hook will be executed at every commit, while the ``pre-review`` one when running ``git review``.
+
+* If not looking for an automated integration, it's always possible to just manually format the code running:
+
+  .. code-block:: bash
+
+      tox -e py3-format
 
 Git blame
 ---------
@@ -69,3 +75,5 @@ It's possible to pass extra arguments to the underlying environment:
 
 .. _`black`: https://github.com/psf/black
 .. _`black's related`: https://github.com/psf/black/blob/master/docs/editor_integration.md
+.. _`isort`: https://pycqa.github.io/isort/
+.. _`isort's related`: https://pycqa.github.io/isort/#installing-isorts-for-your-preferred-text-editor
