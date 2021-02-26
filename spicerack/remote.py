@@ -3,7 +3,7 @@ import logging
 import math
 import time
 from datetime import datetime, timedelta
-from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union, cast
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, CuminError, NodeSet, query, transport, transports
@@ -518,7 +518,7 @@ class RemoteHosts:
             spicerack.remote.RemoteCheckError: if unable to connect to the host or the uptime is higher than expected.
 
         """
-        remaining = self.hosts
+        remaining = cast(NodeSet, self.hosts)
         delta = (datetime.utcnow() - since).total_seconds()
         for nodeset, uptime in self.uptime():
             if uptime >= delta:
