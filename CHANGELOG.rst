@@ -1,6 +1,62 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.49`_ (2021-03-04)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* icinga: changed the type for the ``hosts`` parameter in the ``get_status()`` method from
+  ``spicerack.typing.TypeHosts`` to ``cumin.NodeSet``.
+
+New features
+""""""""""""
+
+* icinga: add ``Icinga.wait_for_optimal()`` method to pause while hosts converge to an optimal state.
+* puppet: add ``Puppet.get_ca_servers()`` method to retrieve the configured Puppet ``ca_server`` on the target hosts.
+* remote: allow prepending every command to execute on the target hosts with sudo. This is a first temporary iteration
+  until Cumin will support it natively.
+* toolforge.etcdctl: add new toolforge package with an etcdctl module to run etcdctl commands and retrieve a parsed
+  output. Focused on etcd member management only for now (`T267412`_).
+
+Minor improvements
+""""""""""""""""""
+
+* config: allow to use paths relative to the user's ``$HOME`` directory expanding ``~``.
+* logging: improve logging format
+
+  * Add the ``DRY-RUN`` prefix also to file logs to allow to distinguish dry-run executions from the real ones just
+    looking at the logs.
+  * Improve the execute cookbook log message including the whole arguments so that it includes also the global args
+    such as ``verbose`` and ``dry-run``.
+
+* remote: ``RemoteHosts.wait_reboot_since()`` is now using a constant backoff. Previously, a linear backoff with a base
+  delay of 10 seconds was used. Since we do expect the reboot of a server to take some time, by the time the server has
+  rebooted, the retry interval has already grown to multiple minutes. A constant backoff should be appropriate
+  and should increase the reactivity of this check significantly.
+* mysql_legacy.py: Add the new ``x2`` database core section (`T269324`_).
+
+Bug fixes
+"""""""""
+
+* cookbooks: force the title to be one line. When reading the title from the cookbooks, pick only the first line to
+  prevent the UI to be cluttered by a title erroneously set to multi-line.
+* tox: fix for when the system setuptools is too old.
+* elasticsearch: Revert the return the cluster name in ``ElasticsearchCluster.__str__`` change added in ``v0.0.32``.
+* remote: fix pylint typing confusion.
+
+Miscellanea
+"""""""""""
+
+* gitignore: add vim swap files.
+* tests: temporary force ``mypy`` upper version to avoid a regression in release 0.800.
+* tests: tox, enable python 3.9 support.
+* code style: introduced ``black`` and ``isort`` as autoformatters (`T211750`_).
+* documentation: add a development page to highlight how the code is formatted and how to integrate the code formatters
+  with an editor/IDE or in the git workflow (`T211750`_).
+* git: allow exclude code auto formatters refactor commit from git blame adding the ``.git-blame-ignore-revs`` file.
+
 `v0.0.48`_ (2021-01-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -993,6 +1049,7 @@ New features
 .. _`sre.hosts.decommission`: https://gerrit.wikimedia.org/r/plugins/gitiles/operations/cookbooks/+/cea161a91ec21dcd48fe0d3fa899c1f19fc4801b/cookbooks/sre/hosts/decommission.py#42
 
 .. _`T147074`: https://phabricator.wikimedia.org/T147074
+.. _`T211750`: https://phabricator.wikimedia.org/T211750
 .. _`T212783`: https://phabricator.wikimedia.org/T212783
 .. _`T213296`: https://phabricator.wikimedia.org/T213296
 .. _`T219640`: https://phabricator.wikimedia.org/T213296
@@ -1003,7 +1060,9 @@ New features
 .. _`T243935`: https://phabricator.wikimedia.org/T243935
 .. _`T257905`: https://phabricator.wikimedia.org/T257905
 .. _`T261239`: https://phabricator.wikimedia.org/T261239
+.. _`T267412`: https://phabricator.wikimedia.org/T267412
 .. _`T268779`: https://phabricator.wikimedia.org/T268779
+.. _`T269324`: https://phabricator.wikimedia.org/T269324
 .. _`T269672`: https://phabricator.wikimedia.org/T269672
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
@@ -1054,3 +1113,4 @@ New features
 .. _`v0.0.46`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.46
 .. _`v0.0.47`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.47
 .. _`v0.0.48`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.48
+.. _`v0.0.49`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.49
