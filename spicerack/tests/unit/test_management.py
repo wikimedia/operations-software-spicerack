@@ -2,7 +2,6 @@
 from unittest import mock
 
 import pytest
-
 from wmflib.constants import ALL_DATACENTERS
 from wmflib.dns import Dns, DnsError
 
@@ -27,44 +26,44 @@ class TestManagement:
 
     def test_get_management_internal_ok(self):
         """It should return the management interface for an internal hostname."""
-        hostname = 'host1.eqiad.wmnet'
-        mgmt = 'host1.mgmt.eqiad.wmnet'
-        self._setup_mocked_dns('127.0.0.1')
+        hostname = "host1.eqiad.wmnet"
+        mgmt = "host1.mgmt.eqiad.wmnet"
+        self._setup_mocked_dns("127.0.0.1")
         assert self.management.get_fqdn(hostname) == mgmt
 
     def test_get_management_internal_raise(self):
         """It should raise ManagementError for an internal hostname that doesn't resolve."""
-        hostname = 'host1.eqiad.wmnet'
+        hostname = "host1.eqiad.wmnet"
         self._setup_mocked_dns(DnsError)
-        with pytest.raises(ManagementError, match='Invalid management FQDN'):
+        with pytest.raises(ManagementError, match="Invalid management FQDN"):
             self.management.get_fqdn(hostname)
 
     def test_get_management_external_known_dc_ok(self):
         """It should return the management interface for an external hostname that matches naming conventions."""
-        hostname = 'host2001.example.com'
-        mgmt = 'host2001.mgmt.codfw.wmnet'
-        self._setup_mocked_dns('127.0.0.1')
+        hostname = "host2001.example.com"
+        mgmt = "host2001.mgmt.codfw.wmnet"
+        self._setup_mocked_dns("127.0.0.1")
         assert self.management.get_fqdn(hostname) == mgmt
 
     def test_get_management_external_known_dc_raise(self):
         """It should raise ManagementError for an external hostname that matches naming conventions."""
-        hostname = 'host2001.example.com'
+        hostname = "host2001.example.com"
         self._setup_mocked_dns(DnsError)
-        with pytest.raises(ManagementError, match='Unable to find management FQDN for host'):
+        with pytest.raises(ManagementError, match="Unable to find management FQDN for host"):
             self.management.get_fqdn(hostname)
 
-    @pytest.mark.parametrize('dc_index', range(len(ALL_DATACENTERS)))
+    @pytest.mark.parametrize("dc_index", range(len(ALL_DATACENTERS)))
     def test_get_management_external_guess_ok(self, dc_index):
         """It should find the management interface for an external hostname that doesn't match naming conventions."""
-        hostname = 'host1.example.com'
-        mgmt = 'host1.mgmt.{dc}.wmnet'.format(dc=ALL_DATACENTERS[dc_index])
-        ret_values = [DnsError] * dc_index + ['127.0.0.1']
+        hostname = "host1.example.com"
+        mgmt = "host1.mgmt.{dc}.wmnet".format(dc=ALL_DATACENTERS[dc_index])
+        ret_values = [DnsError] * dc_index + ["127.0.0.1"]
         self._setup_mocked_dns(*ret_values)
         assert self.management.get_fqdn(hostname) == mgmt
 
     def test_get_management_external_guess_raise(self):
         """It should raise ManagementError for an external hostname that doesn't match naming conventions."""
-        hostname = 'host1.example.com'
+        hostname = "host1.example.com"
         self._setup_mocked_dns(DnsError)
-        with pytest.raises(ManagementError, match='Unable to find management FQDN for host'):
+        with pytest.raises(ManagementError, match="Unable to find management FQDN for host"):
             self.management.get_fqdn(hostname)

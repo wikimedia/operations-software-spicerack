@@ -4,15 +4,13 @@ import importlib
 import logging
 import os
 import sys
-
-from typing import cast, Dict, List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Tuple, Type, cast
 
 from wmflib.config import load_yaml_config
 
-from spicerack import _log, _module_api, cookbook, Spicerack
+from spicerack import Spicerack, _log, _module_api, cookbook
 from spicerack._menu import BaseItem, CookbookItem, MenuError, TreeItem
 from spicerack.exceptions import SpicerackError
-
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +22,15 @@ class CookbookError(SpicerackError):
 class CookbookCollection:
     """Collect and represent available cookbooks."""
 
-    cookbooks_module_prefix: str = 'cookbooks'
+    cookbooks_module_prefix: str = "cookbooks"
 
-    def __init__(self, base_dir: str, args: List[str], spicerack: Spicerack, path_filter: str = '') -> None:
+    def __init__(
+        self,
+        base_dir: str,
+        args: List[str],
+        spicerack: Spicerack,
+        path_filter: str = "",
+    ) -> None:
         """Initialize the class and collect all the cookbook menu items.
 
         Arguments:
@@ -59,8 +63,8 @@ class CookbookCollection:
 
         """
         item: Optional[BaseItem] = None
-        parts = path.split('.')
-        multiple_class_name = '.'.join(parts[-2:])
+        parts = path.split(".")
+        multiple_class_name = ".".join(parts[-2:])
         for i, subpath in enumerate(parts):
             if i == 0:  # Initial menu
                 item = self.menu
@@ -90,13 +94,18 @@ class CookbookCollection:
             return item
 
         progressive_path = [self.cookbooks_module_prefix]
-        for subpath in path.split('.')[1:]:
+        for subpath in path.split(".")[1:]:
             progressive_path.append(subpath)
             if subpath in item.items.keys():
                 item = cast(TreeItem, item.items[subpath])
             else:
-                module_name = '.'.join(progressive_path)
-                submenu = TreeItem(import_module(module_name), self.args, self.spicerack, self.cookbooks_module_prefix)
+                module_name = ".".join(progressive_path)
+                submenu = TreeItem(
+                    import_module(module_name),
+                    self.args,
+                    self.spicerack,
+                    self.cookbooks_module_prefix,
+                )
                 # When collecting the cookbooks and creating the TreeItem instances, the relation to the parent
                 # menu should be skipped for those intermediate menus created for coherence but that should not be
                 # accessible by the user, like when using a path_filter.
@@ -119,12 +128,12 @@ class CookbookCollection:
 
         """
         try:
-            dirnames.remove('__pycache__')
+            dirnames.remove("__pycache__")
         except ValueError:
             pass
 
         for filename in filenames.copy():  # TODO: add support for cookbooks in __init__.py files
-            if filename == '__init__.py' or not filename.endswith('.py'):
+            if filename == "__init__.py" or not filename.endswith(".py"):
                 filenames.remove(filename)
 
         return dirnames, filenames
@@ -141,12 +150,12 @@ class CookbookCollection:
             filenames.sort()
 
             relpath = os.path.relpath(dirpath, start=self.base_dir)
-            if relpath == '.':
-                prefix = ''
+            if relpath == ".":
+                prefix = ""
                 module_prefix = self.cookbooks_module_prefix
             else:
-                prefix = relpath.replace('/', '.').rstrip('.')
-                module_prefix = '.'.join([self.cookbooks_module_prefix, prefix])
+                prefix = relpath.replace("/", ".").rstrip(".")
+                module_prefix = ".".join([self.cookbooks_module_prefix, prefix])
 
             if self._should_filter(prefix):
                 continue
@@ -158,7 +167,7 @@ class CookbookCollection:
                 continue
 
             for filename in filenames:
-                module_name = '.'.join((module_prefix, os.path.splitext(filename)[0]))
+                module_name = ".".join((module_prefix, os.path.splitext(filename)[0]))
                 self._collect_filename(module_name, menu)
 
     def _collect_filename(self, module_name: str, menu: TreeItem) -> None:
@@ -200,13 +209,14 @@ class CookbookCollection:
         if not self.path_filter:
             return False
 
-        if name.startswith(self.path_filter[:len(name)]):
+        if name.startswith(self.path_filter[: len(name)]):
             return False
 
         return True
 
     def _collect_module_cookbooks(
-            self, module: _module_api.CookbooksModuleInterface) -> List[Type[cookbook.CookbookBase]]:
+        self, module: _module_api.CookbooksModuleInterface
+    ) -> List[Type[cookbook.CookbookBase]]:
         """Collect all classes derived from CookbookBase in the given module.
 
         Arguments:
@@ -217,28 +227,31 @@ class CookbookCollection:
 
         """
         attrs = [getattr(module, attr) for attr in dir(module)]
-        classes = [attr for attr in attrs if isinstance(attr, type) and issubclass(attr, cookbook.CookbookBase)
-                   and attr.__module__ == module.__name__]
+        classes = [
+            attr
+            for attr in attrs
+            if isinstance(attr, type) and issubclass(attr, cookbook.CookbookBase) and attr.__module__ == module.__name__
+        ]
 
         if not classes:  # No class API cookbook found, convert a module API cookbook into a class
             classes.append(self._convert_module_in_cookbook(module))
         elif len(classes) == 1:  # Avoid the unnecessary further nested namespace
             class_obj = classes[0]
-            full_name = class_obj.__module__.split('.', 1)[1]
-            if '.' in full_name:
-                class_obj.spicerack_path, class_obj.spicerack_name = full_name.rsplit('.', 1)
+            full_name = class_obj.__module__.split(".", 1)[1]
+            if "." in full_name:
+                class_obj.spicerack_path, class_obj.spicerack_name = full_name.rsplit(".", 1)
             else:
-                class_obj.spicerack_path = ''
+                class_obj.spicerack_path = ""
                 class_obj.spicerack_name = full_name
         else:  # Inject the class module name as part of the class name and set the module as that of the parent
             for class_obj in classes:
-                full_name_prefix = class_obj.__module__.split('.', 1)[1]
-                if '.' in full_name_prefix:
-                    class_obj.spicerack_path, name_prefix = full_name_prefix.rsplit('.', 1)
-                    class_obj.spicerack_name = '.'.join([name_prefix, class_obj.__name__])
+                full_name_prefix = class_obj.__module__.split(".", 1)[1]
+                if "." in full_name_prefix:
+                    class_obj.spicerack_path, name_prefix = full_name_prefix.rsplit(".", 1)
+                    class_obj.spicerack_name = ".".join([name_prefix, class_obj.__name__])
                 else:
-                    class_obj.spicerack_path = ''
-                    class_obj.spicerack_name = '.'.join([full_name_prefix, class_obj.__name__])
+                    class_obj.spicerack_path = ""
+                    class_obj.spicerack_name = ".".join([full_name_prefix, class_obj.__name__])
 
         return classes
 
@@ -252,38 +265,43 @@ class CookbookCollection:
             type: a dynamically generated class derived from :py:class:`spicerack.cookbook.CookbookBase`.
 
         """
-        module_name, name = module.__name__.rsplit('.', 1)
+        module_name, name = module.__name__.rsplit(".", 1)
         try:
-            title = module.__title__
+            title = module.__title__.splitlines()[0]  # Force it to be one-line only
         except AttributeError as e:
-            logger.debug('Unable to detect title for module %s: %s', module.__name__, e)
+            logger.debug("Unable to detect title for module %s: %s", module.__name__, e)
             title = CookbookItem.fallback_title
 
         try:
             run = module.run
         except AttributeError as e:
-            raise CookbookError('Unable to find run function in module {name}'.format(name=module.__name__)) from e
+            raise CookbookError("Unable to find run function in module {name}".format(name=module.__name__)) from e
 
-        runner_name = '{name}Runner'.format(name=name)
-        runner = type(runner_name, (_module_api.CookbookModuleRunnerBase,), {'_run': staticmethod(run)})
+        runner_name = "{name}Runner".format(name=name)
+        runner = type(
+            runner_name,
+            (_module_api.CookbookModuleRunnerBase,),
+            {"_run": staticmethod(run)},
+        )
         runner.__module__ = module_name
 
         attributes = {
-            '__module__': module_name,
-            '__name__': name,
-            'spicerack_name': name,
-            'spicerack_path': module_name.split('.', 1)[1] if '.' in module_name else '',
-            'title': title,
-            'get_runner': lambda _, args: runner(args, self.spicerack),
+            "__module__": module_name,
+            "__name__": name,
+            "spicerack_name": name,
+            "spicerack_path": module_name.split(".", 1)[1] if "." in module_name else "",
+            "title": title,
+            "get_runner": lambda _, args: runner(args, self.spicerack),
         }
 
         try:
             args_parser = module.argument_parser
-            attributes['argument_parser'] = lambda _: args_parser()
+            attributes["argument_parser"] = lambda _: args_parser()
         except AttributeError:
             # The cookbook doesn't accept any argument, set a default empty parser
-            attributes['argument_parser'] = lambda _: argparse.ArgumentParser(
-                description=module.__doc__, formatter_class=cookbook.ArgparseFormatter)
+            attributes["argument_parser"] = lambda _: argparse.ArgumentParser(
+                description=module.__doc__, formatter_class=cookbook.ArgparseFormatter
+            )
 
         cookbook_class = type(name, (cookbook.CookbookBase,), attributes)
         return cookbook_class
@@ -298,23 +316,52 @@ def argument_parser() -> argparse.ArgumentParser:
         argparse.ArgumentParser: the argument parser instance.
 
     """
-    parser = argparse.ArgumentParser(description='Spicerack Cookbook Runner')
+    parser = argparse.ArgumentParser(description="Spicerack Cookbook Runner")
     parser.add_argument(
-        '-l', '--list', action='store_true',
-        help=('List all available cookbooks, if -v/--verbose is set print also their description. If a COOKBOOK is '
-              'also specified, it will be used as a prefix filter.'))
-    parser.add_argument('-c', '--config-file', default='/etc/spicerack/config.yaml',
-                        help='Path to the Spicerack configuration file to load.')
-    parser.add_argument('-d', '--dry-run', action='store_true', help='Set the DRY-RUN mode, also for the cookbook.')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output, also for the cookbook.')
+        "-l",
+        "--list",
+        action="store_true",
+        help=(
+            "List all available cookbooks, if -v/--verbose is set print also their description. If a COOKBOOK is "
+            "also specified, it will be used as a prefix filter."
+        ),
+    )
     parser.add_argument(
-        'cookbook', metavar='COOKBOOK', nargs='?', type=cookbook_path_type, default='',
-        help=('Either a relative path of the Python file to execute (group/cookbook.py) or the name of the Python '
-              'module to execute (group.cookbook). If the selected path/module is a directory or is not set, an '
-              'interactive menu will be shown.'))
+        "-c",
+        "--config-file",
+        default="/etc/spicerack/config.yaml",
+        help="Path to the Spicerack configuration file to load.",
+    )
     parser.add_argument(
-        'cookbook_args', metavar='COOKBOOK_ARGS', nargs=argparse.REMAINDER,
-        help='Collect all the remaining arguments to be passed to the cookbook or menu to execute.')
+        "-d",
+        "--dry-run",
+        action="store_true",
+        help="Set the DRY-RUN mode, also for the cookbook.",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Verbose output, also for the cookbook.",
+    )
+    parser.add_argument(
+        "cookbook",
+        metavar="COOKBOOK",
+        nargs="?",
+        type=cookbook_path_type,
+        default="",
+        help=(
+            "Either a relative path of the Python file to execute (group/cookbook.py) or the name of the Python "
+            "module to execute (group.cookbook). If the selected path/module is a directory or is not set, an "
+            "interactive menu will be shown."
+        ),
+    )
+    parser.add_argument(
+        "cookbook_args",
+        metavar="COOKBOOK_ARGS",
+        nargs=argparse.REMAINDER,
+        help="Collect all the remaining arguments to be passed to the cookbook or menu to execute.",
+    )
 
     return parser
 
@@ -330,8 +377,8 @@ def cookbook_path_type(path: str) -> str:
 
     """
     cookbook_path, ext = os.path.splitext(path)
-    if ext == '.py':
-        path = cookbook_path.replace('/', '.')
+    if ext == ".py":
+        path = cookbook_path.replace("/", ".")
 
     return path
 
@@ -353,7 +400,7 @@ def import_module(module_name: str) -> _module_api.CookbooksModuleInterface:
     try:
         module = importlib.import_module(module_name)
     except Exception as e:  # pylint: disable=broad-except
-        raise CookbookError('Failed to import module {name}: {msg}'.format(name=module_name, msg=e)) from e
+        raise CookbookError("Failed to import module {name}: {msg}".format(name=module_name, msg=e)) from e
 
     return cast(_module_api.CookbooksModuleInterface, module)
 
@@ -371,20 +418,26 @@ def execute_cookbook(config: Dict[str, str], args: argparse.Namespace, cookbooks
 
     """
     if args.cookbook:
-        path = '.'.join((CookbookCollection.cookbooks_module_prefix, args.cookbook))
+        path = ".".join((CookbookCollection.cookbooks_module_prefix, args.cookbook))
     else:
         path = CookbookCollection.cookbooks_module_prefix
 
     cookbook_item = cookbooks.get_item(path)
     if cookbook_item is None:
-        logger.error('Unable to find cookbook %s', args.cookbook)
+        logger.error("Unable to find cookbook %s", args.cookbook)
         return cookbook.NOT_FOUND_RETCODE
 
-    base_path = os.path.join(config['logs_base_dir'], cookbook_item.path.replace('.', os.sep))
-    _log.setup_logging(base_path, cookbook_item.name, cookbooks.spicerack.username, dry_run=args.dry_run,
-                       host=config.get('tcpircbot_host', None), port=int(config.get('tcpircbot_port', 0)))
+    base_path = os.path.join(config["logs_base_dir"], cookbook_item.path.replace(".", os.sep))
+    _log.setup_logging(
+        base_path,
+        cookbook_item.name,
+        cookbooks.spicerack.username,
+        dry_run=args.dry_run,
+        host=config.get("tcpircbot_host", None),
+        port=int(config.get("tcpircbot_port", 0)),
+    )
 
-    logger.debug('Executing cookbook "%s" with args: %s', args.cookbook, args.cookbook_args)
+    logger.debug("Executing cookbook with args: %s", args)
     return cookbook_item.run()
 
 
@@ -400,21 +453,25 @@ def main(argv: Optional[List[str]] = None) -> Optional[int]:
     """
     args = argument_parser().parse_args(argv)
     config = load_yaml_config(args.config_file)
-    sys.path.append(config['cookbooks_base_dir'])
-    params = config.get('instance_params', {})
-    params.update({'verbose': args.verbose, 'dry_run': args.dry_run})
+    cookbooks_base_dir = os.path.expanduser(config["cookbooks_base_dir"])
+    sys.path.append(cookbooks_base_dir)
+    params = config.get("instance_params", {})
+    params.update({"verbose": args.verbose, "dry_run": args.dry_run})
 
     try:
         spicerack = Spicerack(**params)
     except TypeError as e:
-        print('Unable to instantiate Spicerack, check your configuration:', e, file=sys.stderr)
+        print(
+            "Unable to instantiate Spicerack, check your configuration:",
+            e,
+            file=sys.stderr,
+        )
         return 1
 
-    cookbooks = CookbookCollection(
-        config['cookbooks_base_dir'], args.cookbook_args, spicerack, path_filter=args.cookbook)
+    cookbooks = CookbookCollection(cookbooks_base_dir, args.cookbook_args, spicerack, path_filter=args.cookbook)
 
     if args.list:
-        print(cookbooks.menu.get_tree(), end='')
+        print(cookbooks.menu.get_tree(), end="")
         return 0
 
     return execute_cookbook(config, args, cookbooks)

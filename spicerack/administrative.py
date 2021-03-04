@@ -42,7 +42,7 @@ class Reason:
 
         """
         if value is not None and '"' in value:
-            raise ReasonError('Property {name} cannot contain double quotes: {value}'.format(name=name, value=value))
+            raise ReasonError("Property {name} cannot contain double quotes: {value}".format(name=name, value=value))
 
         super().__setattr__(name, value)
 
@@ -57,7 +57,7 @@ class Reason:
         if self._task_id is not None:
             parts.append(self._task_id)
 
-        return ' - '.join(parts)
+        return " - ".join(parts)
 
     @property
     def reason(self) -> str:
@@ -77,7 +77,7 @@ class Reason:
             str: the origin (user@host) of the currently running code.
 
         """
-        return '{user}@{host}'.format(user=self._username, host=self._hostname)
+        return "{user}@{host}".format(user=self._username, host=self._hostname)
 
     @property
     def hostname(self) -> str:

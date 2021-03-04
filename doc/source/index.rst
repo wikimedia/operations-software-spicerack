@@ -11,6 +11,7 @@ Automation framework for the WMF production infrastructure.
    configuration
    cookbook
    api/index
+   development
 
 .. toctree::
    :maxdepth: 2

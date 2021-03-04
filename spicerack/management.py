@@ -8,8 +8,7 @@ from wmflib.dns import Dns, DnsError
 from spicerack.constants import INTERNAL_TLD, MANAGEMENT_SUBDOMAIN
 from spicerack.exceptions import SpicerackError
 
-
-DC_HOSTNAME_PATTERN: re.Pattern = re.compile(r'(?P<dc_id>[1-5])[0-9]{3}$')
+DC_HOSTNAME_PATTERN: re.Pattern = re.compile(r"(?P<dc_id>[1-5])[0-9]{3}$")
 logger = logging.getLogger(__name__)
 
 
@@ -43,12 +42,12 @@ class Management:
 
         """
         # TODO: replace this querying Netbox API
-        if hostname.split('.')[-1] == INTERNAL_TLD:
+        if hostname.split(".")[-1] == INTERNAL_TLD:
             mgmt = self._internal_mgmt_fqdn(hostname)
         else:
             mgmt = self._external_mgmt_fqdn(hostname)
 
-        logger.debug('Management FQDN for %s is %s', hostname, mgmt)
+        logger.debug("Management FQDN for %s is %s", hostname, mgmt)
         return mgmt
 
     def _is_valid_fqdn(self, fqdn: str) -> bool:
@@ -80,11 +79,11 @@ class Management:
             spicerack.management.ManagementError: if the generated management FQDN is invalid.
 
         """
-        parts = hostname.split('.')
+        parts = hostname.split(".")
         parts.insert(-2, MANAGEMENT_SUBDOMAIN)  # Direct injection of the management subdomain
-        mgmt = '.'.join(parts)
+        mgmt = ".".join(parts)
         if not self._is_valid_fqdn(mgmt):
-            raise ManagementError('Invalid management FQDN {mgmt} for {host}'.format(mgmt=mgmt, host=hostname))
+            raise ManagementError("Invalid management FQDN {mgmt} for {host}".format(mgmt=mgmt, host=hostname))
 
         return mgmt
 
@@ -101,22 +100,24 @@ class Management:
             spicerack.management.ManagementError: if unable to find a valid management FQDN across all DCs.
 
         """
-        parts = hostname.split('.')
+        parts = hostname.split(".")
         hostname_search = DC_HOSTNAME_PATTERN.search(parts[-3])
         if hostname_search is not None:
             # Detection of the datacenter from the hostname
-            datacenters = [ALL_DATACENTERS[int(hostname_search.groupdict()['dc_id']) - 1]]
+            datacenters = [ALL_DATACENTERS[int(hostname_search.groupdict()["dc_id"]) - 1]]
         else:
             datacenters = list(ALL_DATACENTERS)
 
         # Search the matching management valid hostname in all datacenters
         for dc in datacenters:
-            mgmt = '.'.join(parts[:-2] + [MANAGEMENT_SUBDOMAIN, dc, INTERNAL_TLD])
+            mgmt = ".".join(parts[:-2] + [MANAGEMENT_SUBDOMAIN, dc, INTERNAL_TLD])
             if self._is_valid_fqdn(mgmt):
                 break
         else:
             raise ManagementError(
-                'Unable to find management FQDN for host {host} in these datacenters: {dcs}'.format(
-                    host=hostname, dcs=datacenters))
+                "Unable to find management FQDN for host {host} in these datacenters: {dcs}".format(
+                    host=hostname, dcs=datacenters
+                )
+            )
 
         return mgmt

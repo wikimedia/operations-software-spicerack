@@ -1,7 +1,6 @@
 """Confctl module to abstract Conftool."""
 import logging
 import re
-
 from contextlib import contextmanager
 from typing import Dict, Iterable, Iterator, Union
 
@@ -9,7 +8,6 @@ from conftool import configuration, kvobject, loader
 from conftool.drivers import BackendError
 
 from spicerack.exceptions import SpicerackError
-
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +21,9 @@ class Confctl:
 
     def __init__(
         self,
-        config: str = '/etc/conftool/config.yaml',
-        schema: str = '/etc/conftool/schema.yaml',
-        dry_run: bool = True
+        config: str = "/etc/conftool/config.yaml",
+        schema: str = "/etc/conftool/schema.yaml",
+        dry_run: bool = True,
     ) -> None:
         """Initialize the instance.
 
@@ -39,7 +37,7 @@ class Confctl:
         self._schema = loader.Schema.from_file(schema)
         kvobject.KVObject.setup(configuration.get(config))
 
-    def entity(self, entity_name: str) -> 'ConftoolEntity':
+    def entity(self, entity_name: str) -> "ConftoolEntity":
         """Get the Conftool specific entity class.
 
         Arguments:
@@ -81,14 +79,14 @@ class ConftoolEntity:
         """
         selectors = {}
         for tag, expr in tags.items():
-            selectors[tag] = re.compile('^{}$'.format(expr))
+            selectors[tag] = re.compile("^{}$".format(expr))
 
         obj = None
         for obj in self._entity.query(selectors):
             yield obj
 
         if obj is None:
-            raise ConfctlError('No match found')
+            raise ConfctlError("No match found")
 
     def update(self, changed: Dict[str, Union[bool, str, int, float]], **tags: str) -> None:
         """Updates the value of conftool objects corresponding to the selection done with tags.
@@ -104,7 +102,7 @@ class ConftoolEntity:
             >>> confctl.update({'pooled': False}, service='appservers-.*', name='eqiad')
 
         """
-        logger.debug('Updating conftool matching tags: %s', tags)
+        logger.debug("Updating conftool matching tags: %s", tags)
         self.update_objects(changed, self._select(tags))
 
     def get(self, **tags: str) -> Iterator[kvobject.Entity]:
@@ -118,7 +116,7 @@ class ConftoolEntity:
 
         """
         for obj in self._select(tags):
-            logger.debug('Selected conftool object: %s', obj)
+            logger.debug("Selected conftool object: %s", obj)
             yield obj
 
     def set_and_verify(self, key: str, value: Union[bool, str, int, float], **tags: str) -> None:
@@ -133,19 +131,20 @@ class ConftoolEntity:
             spicerack.confctl.ConfctlError: on etcd or Conftool errors or failing to verify the changes.
 
         """
-        logger.info('Setting %s=%s for tags: %s', key, value, tags)
+        logger.info("Setting %s=%s for tags: %s", key, value, tags)
         self.update({key: value}, **tags)
 
         for obj in self.get(**tags):  # Verify the changes were applied
             new = getattr(obj, key)
             if new != value and not self._dry_run:
-                raise ConfctlError("Conftool key {key} has value '{new}', expecting '{value}' for tags: {tags}".format(
-                    key=key, new=new, value=value, tags=tags))
+                raise ConfctlError(
+                    "Conftool key {key} has value '{new}', expecting '{value}' for tags: {tags}".format(
+                        key=key, new=new, value=value, tags=tags
+                    )
+                )
 
     def filter_objects(
-            self,
-            filter_expr: Dict[str, Union[bool, str, int, float]],
-            **tags: str
+        self, filter_expr: Dict[str, Union[bool, str, int, float]], **tags: str
     ) -> Iterator[kvobject.Entity]:
         """Filters objects coming from conftool based on values.
 
@@ -175,10 +174,9 @@ class ConftoolEntity:
                 yield obj
 
     def update_objects(
-            self,
-            changed: Dict[str, Union[bool, str, int, float]],
-            objects: Iterable[kvobject.Entity]
-
+        self,
+        changed: Dict[str, Union[bool, str, int, float]],
+        objects: Iterable[kvobject.Entity],
     ) -> None:
         """Updates the value of the provided conftool objects.
 
@@ -197,29 +195,25 @@ class ConftoolEntity:
         # TODO: make the api nicer by returning an EntitiesCollection from filter_objects so we can allow to write
         # >>> inactive.update({'pooled': False})
         if self._dry_run:
-            message_prefix = 'Skipping conftool update on dry-run mode'
+            message_prefix = "Skipping conftool update on dry-run mode"
         else:
-            message_prefix = 'Updating conftool'
+            message_prefix = "Updating conftool"
 
         for obj in objects:
-            logger.debug('%s: %s -> %s', message_prefix, obj, changed)
+            logger.debug("%s: %s -> %s", message_prefix, obj, changed)
             if self._dry_run:
                 continue
 
             try:
                 obj.update(changed)
             except BackendError as e:
-                raise ConfctlError('Error writing to etcd') from e
+                raise ConfctlError("Error writing to etcd") from e
             except Exception as e:
-                raise ConfctlError('Generic error in conftool') from e
+                raise ConfctlError("Generic error in conftool") from e
 
     @contextmanager
     def change_and_revert(
-            self,
-            field: str,
-            original: Union[bool, str, int, float],
-            changed: Union[bool, str, int, float],
-            **tags: str
+        self, field: str, original: Union[bool, str, int, float], changed: Union[bool, str, int, float], **tags: str
     ) -> Iterator[Iterable[kvobject.Entity]]:
         """Context manager to perform actions with a changed value in conftool.
 

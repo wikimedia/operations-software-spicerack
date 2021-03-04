@@ -16,7 +16,7 @@ class ExampleRunner(CookbookRunnerBase):
     @property
     def runtime_description(self):
         """As defined by the parent class."""
-        return 'Runtime description'
+        return "Runtime description"
 
     def run(self):
         """As required by the parent class."""

@@ -9,7 +9,7 @@ class ExampleCookbook(CookbookBase):  # noqa: D101
 
     def argument_parser(self):
         """As defined by the parent class."""
-        return argparse.ArgumentParser('Argparse')
+        return argparse.ArgumentParser("Argparse")
 
     def get_runner(self, args):
         """As required by the parent class."""

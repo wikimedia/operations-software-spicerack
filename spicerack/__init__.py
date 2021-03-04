@@ -1,6 +1,5 @@
 """Spicerack package."""
 import os
-
 from logging import Logger
 from socket import gethostname
 from typing import Dict, Optional, Sequence
@@ -11,7 +10,7 @@ from wmflib.actions import ActionsDict
 from wmflib.config import load_ini_config, load_yaml_config
 from wmflib.dns import Dns
 from wmflib.interactive import get_username
-from wmflib.phabricator import create_phabricator, Phabricator
+from wmflib.phabricator import Phabricator, create_phabricator
 from wmflib.prometheus import Prometheus
 
 from spicerack._log import irc_logger
@@ -19,23 +18,23 @@ from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dnsdisc import Discovery
-from spicerack.elasticsearch_cluster import create_elasticsearch_clusters, ElasticsearchClusters
+from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
 from spicerack.ganeti import Ganeti
-from spicerack.icinga import Icinga, ICINGA_DOMAIN
+from spicerack.icinga import ICINGA_DOMAIN, Icinga
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
-from spicerack.netbox import Netbox, NETBOX_DOMAIN
-from spicerack.puppet import get_puppet_ca_hostname, PuppetHosts, PuppetMaster
+from spicerack.netbox import NETBOX_DOMAIN, Netbox
+from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
-
+from spicerack.toolforge.etcdctl import EtcdctlController
 
 try:
-    __version__: str = get_distribution('wikimedia-spicerack').version  # Must be the same used as 'name' in setup.py
+    __version__: str = get_distribution("wikimedia-spicerack").version  # Must be the same used as 'name' in setup.py
     """:py:class:`str`: the version of the current Spicerack module."""
 except DistributionNotFound:  # pragma: no cover - this should never happen during tests
     pass  # package is not installed
@@ -45,15 +44,16 @@ class Spicerack:
     """Spicerack service locator."""
 
     def __init__(
-        self, *,
+        self,
+        *,
         verbose: bool = False,
         dry_run: bool = True,
-        cumin_config: str = '/etc/cumin/config.yaml',
-        conftool_config: str = '/etc/conftool/config.yaml',
-        conftool_schema: str = '/etc/conftool/schema.yaml',
-        debmonitor_config: str = '/etc/debmonitor.conf',
-        spicerack_config_dir: str = '/etc/spicerack',
-        http_proxy: str = ''
+        cumin_config: str = "/etc/cumin/config.yaml",
+        conftool_config: str = "/etc/conftool/config.yaml",
+        conftool_schema: str = "/etc/conftool/schema.yaml",
+        debmonitor_config: str = "/etc/debmonitor.conf",
+        spicerack_config_dir: str = "/etc/spicerack",
+        http_proxy: str = ""
     ) -> None:
         """Initialize the service locator for the Spicerack library.
 
@@ -158,7 +158,7 @@ class Spicerack:
         if not self._http_proxy:
             return None
 
-        return {'http': self._http_proxy, 'https': self._http_proxy}
+        return {"http": self._http_proxy, "https": self._http_proxy}
 
     @property
     def irc_logger(self) -> Logger:
@@ -221,7 +221,11 @@ class Spicerack:
 
         """
         if self._confctl is None:
-            self._confctl = Confctl(config=self._conftool_config, schema=self._conftool_schema, dry_run=self._dry_run)
+            self._confctl = Confctl(
+                config=self._conftool_config,
+                schema=self._conftool_schema,
+                dry_run=self._dry_run,
+            )
 
         return self._confctl.entity(entity_name)
 
@@ -244,7 +248,12 @@ class Spicerack:
             spicerack.dnsdisc.Discovery: the pre-configured Discovery instance for the given records.
 
         """
-        return Discovery(self.confctl('discovery'), self.remote(), list(records), dry_run=self._dry_run)
+        return Discovery(
+            self.confctl("discovery"),
+            self.remote(),
+            list(records),
+            dry_run=self._dry_run,
+        )
 
     def mediawiki(self) -> MediaWiki:
         """Get a MediaWiki instance.
@@ -253,7 +262,12 @@ class Spicerack:
             spicerack.mediawiki.MediaWiki: the MediaWiki instance.
 
         """
-        return MediaWiki(self.confctl('mwconfig'), self.remote(), self._username, dry_run=self._dry_run)
+        return MediaWiki(
+            self.confctl("mwconfig"),
+            self.remote(),
+            self._username,
+            dry_run=self._dry_run,
+        )
 
     def mysql(self) -> Mysql:
         """Get a Mysql instance.
@@ -283,10 +297,15 @@ class Spicerack:
             spicerack.redis_cluster.RedisCluster: the cluster instance.
 
         """
-        return RedisCluster(cluster, os.path.join(self._spicerack_config_dir, 'redis_cluster'), dry_run=self._dry_run)
+        return RedisCluster(
+            cluster,
+            os.path.join(self._spicerack_config_dir, "redis_cluster"),
+            dry_run=self._dry_run,
+        )
 
-    def elasticsearch_clusters(self, clustergroup: str,
-                               write_queue_datacenters: Sequence[str]) -> ElasticsearchClusters:
+    def elasticsearch_clusters(
+        self, clustergroup: str, write_queue_datacenters: Sequence[str]
+    ) -> ElasticsearchClusters:
         """Get an ElasticsearchClusters instance.
 
         Arguments:
@@ -297,8 +316,13 @@ class Spicerack:
             spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
 
         """
-        return create_elasticsearch_clusters(clustergroup, write_queue_datacenters,
-                                             self.remote(), self.prometheus(), dry_run=self._dry_run)
+        return create_elasticsearch_clusters(
+            clustergroup,
+            write_queue_datacenters,
+            self.remote(),
+            self.prometheus(),
+            dry_run=self._dry_run,
+        )
 
     def admin_reason(self, reason: str, task_id: Optional[str] = None) -> Reason:
         """Get an administrative Reason instance.
@@ -365,7 +389,7 @@ class Spicerack:
 
         return ipmi
 
-    def phabricator(self, bot_config_file: str, section: str = 'phabricator_bot') -> Phabricator:
+    def phabricator(self, bot_config_file: str, section: str = "phabricator_bot") -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.
 
         Arguments:
@@ -408,7 +432,7 @@ class Spicerack:
 
         """
         options = load_ini_config(self._debmonitor_config).defaults()
-        return Debmonitor(options['server'], options['cert'], options['key'], dry_run=self._dry_run)
+        return Debmonitor(options["server"], options["cert"], options["key"], dry_run=self._dry_run)
 
     def management(self) -> Management:
         """Get a Management instance to interact with the management interfaces.
@@ -429,9 +453,14 @@ class Spicerack:
             KeyError: If the configuration file does not contain the correct keys.
 
         """
-        configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, 'ganeti', 'config.yaml'))
+        configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, "ganeti", "config.yaml"))
 
-        return Ganeti(configuration['username'], configuration['password'], configuration['timeout'], self.remote())
+        return Ganeti(
+            configuration["username"],
+            configuration["password"],
+            configuration["timeout"],
+            self.remote(),
+        )
 
     def netbox(self, *, read_write: bool = False) -> Netbox:
         """Get a Netbox instance to interact with Netbox's API.
@@ -443,16 +472,17 @@ class Spicerack:
             spicerack.netbox.Netbox: the instance
 
         """
-        config = load_yaml_config(os.path.join(self._spicerack_config_dir, 'netbox', 'config.yaml'))
+        config = load_yaml_config(os.path.join(self._spicerack_config_dir, "netbox", "config.yaml"))
         if read_write and not self._dry_run:
-            token = config['api_token_rw']
+            token = config["api_token_rw"]
         else:
-            token = config['api_token_ro']
+            token = config["api_token_ro"]
 
-        return Netbox(config['api_url'], token, dry_run=self._dry_run)
+        return Netbox(config["api_url"], token, dry_run=self._dry_run)
 
-    def requests_session(self, name: str, *, timeout: float = requests.DEFAULT_TIMEOUT,  # pylint: disable=no-self-use
-                         tries: int = 3, backoff: float = 1.0) -> requests.Session:
+    def requests_session(  # pylint: disable=no-self-use
+        self, name: str, *, timeout: float = requests.DEFAULT_TIMEOUT, tries: int = 3, backoff: float = 1.0
+    ) -> requests.Session:
         """Return a new requests Session with timeout and retry logic.
 
         Params:
@@ -462,5 +492,18 @@ class Spicerack:
             requests.Session: the pre-configured session.
 
         """
-        name = 'Spicerack/{version} {name}'.format(version=__version__, name=name)
+        name = "Spicerack/{version} {name}".format(version=__version__, name=name)
         return requests.http_session(name, timeout=timeout, tries=tries, backoff=backoff)
+
+    def etcdctl(self, *, remote_host: RemoteHosts) -> EtcdctlController:  # pylint: disable=no-self-use
+        """Add etcdctl control capabilities to the given RemoteHost.
+
+        Params:
+            remote_host: Single remote host (that should map one single host)
+                to add capabilities to.
+
+        Returns:
+            A wrapped RemoteHost with the etcdctl control related methods.
+
+        """
+        return EtcdctlController(remote_host=remote_host)

@@ -32,13 +32,16 @@ class Mysql:
         self._dry_run = dry_run
 
     @contextmanager
-    def connect(self, *,
-                read_only: bool = False,
-                charset: str = "utf8mb4",
-                read_default_file: Optional[str] = "",
-                read_default_group: Optional[str] = None,
-                ssl: Optional[Dict] = None,
-                **kwargs: Any) -> Generator:
+    def connect(
+        self,
+        *,
+        read_only: bool = False,
+        charset: str = "utf8mb4",
+        read_default_file: Optional[str] = "",
+        read_default_group: Optional[str] = None,
+        ssl: Optional[Dict] = None,
+        **kwargs: Any
+    ) -> Generator:
         """Context-manager for a mysql connection to a remote host.
 
         Caution:

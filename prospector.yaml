@@ -34,6 +34,10 @@ pep257:
 pylint:
   disable:
     - pointless-string-statement  # used as documentation for class attributes
+    - unsubscriptable-object  # Breaks for latest pylint https://github.com/PyCQA/pylint/issues/3882
+    # the following two from https://github.com/psf/black/blob/master/docs/compatible_configs.md#pylint
+    - C0330  # Wrong hanging indentation
+    - C0326  # Bad whitespace
   options:
     good-names: handleError  # From logging.Handler, inline disable doesn't work, used in test_log.py
     ignore: vulture_whitelist.py
