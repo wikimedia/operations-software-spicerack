@@ -1,3 +1,9 @@
+spicerack (0.0.49-1) buster-wikimedia; urgency=medium
+
+  * v0.0.49 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Thu, 04 Mar 2021 13:24:14 -0000
+
 spicerack (0.0.48-1) buster-wikimedia; urgency=medium
 
   * v0.0.48 upstream release.
