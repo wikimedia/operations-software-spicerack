@@ -203,22 +203,22 @@ class TestIcinga:
             self.icinga.get_status("host[1-2]")
 
     @mock.patch("spicerack.decorators.time.sleep", return_value=None)
-    def test_wait_for_icinga_optimal_ok(self, mocked_sleep):
+    def test_wait_for_optimal_ok(self, mocked_sleep):
         """It should return immediately if host is optimal."""
         with open(get_fixture_path("icinga", "status_valid.json")) as f:
             set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
 
-        self.icinga.wait_for_icinga_optimal("host1")
+        self.icinga.wait_for_optimal("host1")
         assert not mocked_sleep.called
 
     @mock.patch("spicerack.decorators.time.sleep", return_value=None)
-    def test_wait_for_icinga_optimal_timeout(self, mocked_sleep):
+    def test_wait_for_optimal_timeout(self, mocked_sleep):
         """It should raise icinga.IcingaError if host is optimal in the required time."""
         with open(get_fixture_path("icinga", "status_with_failed_services.json")) as f:
             set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 20)
 
         with pytest.raises(icinga.IcingaError, match="Not all services are recovered"):
-            self.icinga.wait_for_icinga_optimal("host1")
+            self.icinga.wait_for_optimal("host1")
 
         assert mocked_sleep.called
 

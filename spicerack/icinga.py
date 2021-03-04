@@ -311,7 +311,7 @@ class Icinga:
         backoff_mode="linear",
         exceptions=(IcingaError,),
     )
-    def wait_for_icinga_optimal(self, hosts: NodeSet) -> None:
+    def wait_for_optimal(self, hosts: NodeSet) -> None:
         """Waits for an icinga optimal status, else raises an exception.
 
         Arguments:
