@@ -168,9 +168,9 @@ class Netbox:
 
         """
         try:
-            return self._fetch_host(hostname).status
+            return str(self._fetch_host(hostname).status)
         except NetboxHostNotFoundError:
-            return self._fetch_virtual_machine(hostname).status
+            return str(self._fetch_virtual_machine(hostname).status)
 
     def fetch_host_detail(self, hostname: str) -> Dict:
         """Return a dict containing details about the host.
