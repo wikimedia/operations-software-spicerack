@@ -123,7 +123,7 @@ man_pages = [
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
-    "ClusterShell": ("http://clustershell.readthedocs.io/en/v1.8.1/", None),
+    "ClusterShell": ("https://clustershell.readthedocs.io/en/v1.8.1/", None),
     "cumin": ("https://doc.wikimedia.org/cumin/master/", None),
     "requests": ("https://requests.readthedocs.io/en/master/", None),
     "pymysql": ("https://pymysql.readthedocs.io/en/latest/", None),
