@@ -20,7 +20,7 @@ from spicerack.debmonitor import Debmonitor
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
 from spicerack.ganeti import Ganeti
-from spicerack.icinga import ICINGA_DOMAIN, Icinga
+from spicerack.icinga import ICINGA_DOMAIN, Icinga, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
@@ -32,6 +32,7 @@ from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.toolforge.etcdctl import EtcdctlController
+from spicerack.typing import TypeHosts
 
 try:
     __version__: str = get_distribution("wikimedia-spicerack").version  # Must be the same used as 'name' in setup.py
@@ -341,11 +342,30 @@ class Spicerack:
     def icinga(self) -> Icinga:
         """Get an Icinga instance.
 
+        .. deprecated:: v0.0.50
+            use :py:meth:`spicerack.Spicerack.icinga_hosts()` instead.
+
         Returns:
             spicerack.icinga.Icinga: Icinga instance.
 
         """
         return Icinga(self.icinga_master_host)
+
+    def icinga_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> IcingaHosts:
+        """Get an IcingaHosts instance.
+
+        Arguments:
+            target_hosts (spicerack.remote.RemoteHosts, Sequence[str]): the target hosts either as a RemoteHosts
+                instance or a sequence of strings.
+            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
+                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
+                be used in Icinga.
+
+        Returns:
+            spicerack.icinga.IcingaHosts: IcingaHosts instance.
+
+        """
+        return IcingaHosts(self.icinga_master_host, target_hosts, verbatim_hosts=verbatim_hosts)
 
     def puppet(self, remote_hosts: RemoteHosts) -> PuppetHosts:  # pylint: disable=no-self-use
         """Get a PuppetHosts instance for the given remote hosts.

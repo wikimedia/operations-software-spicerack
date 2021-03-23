@@ -24,6 +24,9 @@ whitelist_dnsdisc = Whitelist()
 whitelist_dnsdisc.pool
 whitelist_dnsdisc.depool
 
+whitelist_icinga = Whitelist()
+whitelist_icinga.CommandFile.__new__
+
 whitelist_mysql = Whitelist()
 whitelist_mysql.set_core_masters_readonly
 whitelist_mysql.set_core_masters_readwrite
