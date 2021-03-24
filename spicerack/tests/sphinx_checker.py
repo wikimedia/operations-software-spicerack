@@ -6,30 +6,37 @@
   Sphinx would raise a warning but not fail in this case.
 """
 import argparse
-import os
-import pkgutil
 import sys
+from pathlib import Path
+from pkgutil import iter_modules
+
+from setuptools import find_packages
 
 import spicerack
 
-DOC_API_BASE_PATH = "doc/source/api"
-DOC_API_INDEX_PATH = os.path.join(DOC_API_BASE_PATH, "index.rst")
-API_INDEX_PREFIX = "   spicerack."
-EXCLUDED_NAMES = ("_cookbook", "_log", "_menu", "_module_api")
+DOC_API_BASE_PATH = Path("doc/source/api")
+DOC_API_INDEX_PATH = DOC_API_BASE_PATH / "index.rst"
 
 
 def main(base_path):
     """Perform the check."""
-    spicerack_modules = {
-        name for _, name, ispkg in pkgutil.iter_modules(spicerack.__path__) if not ispkg and name not in EXCLUDED_NAMES
-    }
+    base_path = Path(spicerack.__path__[0]) / ".."
+    spicerack_modules = set()
+    for package in find_packages(base_path):
+        if package.startswith("spicerack.tests"):  # Skip all tests.
+            continue
 
-    doc_path = os.path.join(base_path, DOC_API_INDEX_PATH)
-    with open(doc_path) as f:
+        if package != "spicerack":  # Do not include the main spicerack package.
+            spicerack_modules.add(package)
+        package_path = base_path / package.replace(".", "/")
+        for module_info in iter_modules([package_path]):
+            if not module_info.ispkg and not module_info.name.startswith("_"):
+                spicerack_modules.add(f"{package}.{module_info.name}")
+
+    with open(DOC_API_INDEX_PATH) as f:
         api_index_lines = f.readlines()
 
-    doc_api_lines = [line.strip() for line in api_index_lines if line.startswith(API_INDEX_PREFIX)]
-    doc_api_modules = {line.split(".", 1)[1] for line in doc_api_lines}
+    doc_api_modules = {line.strip() for line in api_index_lines if line.strip().startswith("spicerack.")}
 
     ret = 0
     if spicerack_modules - doc_api_modules:
@@ -47,10 +54,8 @@ def main(base_path):
         )
         ret += 1
 
-    doc_api_files = ["spicerack.{name}.rst".format(name=name) for name in doc_api_modules]
-    missing_doc_api_files = [
-        file for file in doc_api_files if not os.path.isfile(os.path.join(DOC_API_BASE_PATH, file))
-    ]
+    doc_api_files = ["{name}.rst".format(name=name) for name in doc_api_modules]
+    missing_doc_api_files = [file_name for file_name in doc_api_files if not (DOC_API_BASE_PATH / file_name).is_file()]
     if missing_doc_api_files:
         print(
             "Missing documentation files in {doc}: {files}".format(doc=DOC_API_BASE_PATH, files=missing_doc_api_files)
