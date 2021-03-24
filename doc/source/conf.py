@@ -11,14 +11,11 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import importlib
 import os
 import sys
-import types
 
 import sphinx_rtd_theme
 from pkg_resources import get_distribution
-from sphinx import __version__ as sphinx_version
 
 # Adjust path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
@@ -95,9 +92,6 @@ todo_include_todos = True
 
 html_theme = "sphinx_rtd_theme"
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-sphinx_version_parts = [int(i) for i in sphinx_version.split(".")]
-if sphinx_version_parts[0] == 1 and sphinx_version_parts[1] < 6:
-    html_use_smartypants = False
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
