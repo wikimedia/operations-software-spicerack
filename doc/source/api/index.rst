@@ -32,6 +32,8 @@ Spicerack Python API autodoc.
    spicerack.puppet
    spicerack.redis_cluster
    spicerack.remote
+   spicerack.toolforge
+   spicerack.toolforge.etcdctl
    spicerack.typing
 
 .. The private modules spicerack._* are explicitely excluded from the public documentation as they should not be used
