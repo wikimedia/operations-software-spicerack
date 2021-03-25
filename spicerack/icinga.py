@@ -52,7 +52,7 @@ class CommandFile(str):
 
         try:
             # Get the command_file value in the Icinga configuration.
-            command = r"""awk '/^\s*command_file=/{split($0, a, "="); print a[2] }' """ + config_file
+            command = r"""awk -F= '$1=="command_file" {print $2}' """ + config_file
             command_file = ""
             for _, output in icinga_host.run_sync(command, is_safe=True):  # Read only operation
                 command_file = output.message().decode().strip()
