@@ -13,6 +13,7 @@ from spicerack import Spicerack, puppet
 from spicerack.administrative import Reason
 from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
+from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.ganeti import Ganeti
@@ -169,3 +170,12 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_dns, read
     mocked_pynetbox.reset_mock()
     mocked_pynetbox.return_value.dcim.devices.get.return_value.role.slug = "server"
     assert isinstance(spicerack.netbox_server("host1"), NetboxServer)
+
+
+def test_spicerack_dhcp():
+    """Test spicerack.dhcp. It should succeed if a host list with more than one member is passed."""
+    mock_hosts = mock.MagicMock()
+    mock_hosts.__len__.return_value = 1
+
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    assert isinstance(spicerack.dhcp(mock_hosts), DHCP)

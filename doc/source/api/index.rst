@@ -17,6 +17,7 @@ Spicerack Python API autodoc.
    spicerack.cookbook
    spicerack.debmonitor
    spicerack.decorators
+   spicerack.dhcp
    spicerack.dnsdisc
    spicerack.elasticsearch_cluster
    spicerack.exceptions
