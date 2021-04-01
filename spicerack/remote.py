@@ -394,7 +394,7 @@ class RemoteHosts:
 
         """
         for nodeset in self._hosts.split(n_slices):
-            yield RemoteHosts(self._config, nodeset, dry_run=self._dry_run)
+            yield RemoteHosts(self._config, nodeset, dry_run=self._dry_run, use_sudo=self._use_sudo)
 
     @staticmethod
     def _prepend_sudo(command: Union[str, Command]) -> Union[str, Command]:
