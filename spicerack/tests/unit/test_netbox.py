@@ -20,32 +20,59 @@ def _request_error():
 
 def _base_netbox_host(name):
     host = mock.MagicMock()
+    del host.keys  # Allow to call dict() on this object
     host.name = name
     host.__str__.return_value = name
     host.status.__str__.return_value = "Active"
     host.status.value = "active"
     host.role.slug = "server"
+    host.role.name = "Server"
     host.serialize.return_value = {"name": name}
     host.save.return_value = True
     host.primary_ip4.dns_name = "{name}.example.com".format(name=name)
     host.primary_ip6.dns_name = "{name}.example.com".format(name=name)
 
-    return host
+    dict_repr = {
+        "name": name,
+        "status": {"value": host.status.value, "label": str(host.status)},
+        "role": {"id": 1, "name": host.role.name, "slug": host.role.slug},
+        "primary_ip4": {
+            "id": 1,
+            "family": 4,
+            "address": "10.0.0.1/22",
+            "dns_name": host.primary_ip4.dns_name,
+        },
+        "primary_ip6": {
+            "id": 1,
+            "family": 6,
+            "address": "2620:0:861:103:10:0:0:1/64",
+            "dns_name": host.primary_ip6.dns_name,
+        },
+        "cluster": host.cluster,
+    }
+
+    return host, dict_repr
 
 
 @pytest.fixture(name="netbox_host")
 def _netbox_host():
     """Return a mocked Netbox physical device."""
-    host = _base_netbox_host("physical")
+    host, dict_repr = _base_netbox_host("physical")
+    host.cluster = None  # A physical server does not belong to a VM cluster
+    dict_repr["cluster"] = None
+    host.__iter__.return_value = dict_repr.items()
     return host
 
 
 @pytest.fixture(name="netbox_virtual_machine")
 def _netbox_virtual_machine():
     """Return a mocked Netbox virtual machine."""
-    host = _base_netbox_host("virtual")
+    host, dict_repr = _base_netbox_host("virtual")
     host.cluster.name = "testcluster"
+    dict_repr["cluster"] = {"id": 1, "name": host.cluster.name}
     del host.rack  # A virtual machine doesn't have a rack property
+    host.__iter__.return_value = dict_repr.items()
+
     return host
 
 
@@ -282,8 +309,14 @@ class TestNetboxServer:
 
     def test_as_dict_physical(self):
         """It should return the dictionary representation of the physical server."""
-        assert self.physical_server.as_dict() == {"ganeti_cluster": "N/A", "is_virtual": False, "name": "physical"}
+        as_dict = self.physical_server.as_dict()
+        assert as_dict["cluster"] is None
+        assert not as_dict["is_virtual"]
+        assert as_dict["name"] == "physical"
 
     def test_as_dict_virtual(self):
         """It should return the dictionary representation of the virtual machine."""
-        assert self.virtual_server.as_dict() == {"ganeti_cluster": "testcluster", "is_virtual": True, "name": "virtual"}
+        as_dict = self.virtual_server.as_dict()
+        assert as_dict["cluster"] == {"id": 1, "name": "testcluster"}
+        assert as_dict["is_virtual"]
+        assert as_dict["name"] == "virtual"

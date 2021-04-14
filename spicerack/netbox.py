@@ -395,8 +395,7 @@ class NetboxServer:
             dict: with the whole data about the server.
 
         """
-        ret = self._server.serialize()
+        ret = dict(self._server)
         ret["is_virtual"] = self.virtual
-        ret["ganeti_cluster"] = self._server.cluster.name if self.virtual else "N/A"
 
         return ret
