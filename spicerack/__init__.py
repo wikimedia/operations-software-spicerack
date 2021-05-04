@@ -20,18 +20,19 @@ from spicerack.debmonitor import Debmonitor
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
 from spicerack.ganeti import Ganeti
-from spicerack.icinga import ICINGA_DOMAIN, Icinga
+from spicerack.icinga import ICINGA_DOMAIN, Icinga, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
-from spicerack.netbox import NETBOX_DOMAIN, Netbox
+from spicerack.netbox import NETBOX_DOMAIN, Netbox, NetboxServer
 from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.toolforge.etcdctl import EtcdctlController
+from spicerack.typing import TypeHosts
 
 try:
     __version__: str = get_distribution("wikimedia-spicerack").version  # Must be the same used as 'name' in setup.py
@@ -341,11 +342,30 @@ class Spicerack:
     def icinga(self) -> Icinga:
         """Get an Icinga instance.
 
+        .. deprecated:: v0.0.50
+            use :py:meth:`spicerack.Spicerack.icinga_hosts()` instead.
+
         Returns:
             spicerack.icinga.Icinga: Icinga instance.
 
         """
         return Icinga(self.icinga_master_host)
+
+    def icinga_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> IcingaHosts:
+        """Get an IcingaHosts instance.
+
+        Arguments:
+            target_hosts (spicerack.remote.RemoteHosts, Sequence[str]): the target hosts either as a RemoteHosts
+                instance or a sequence of strings.
+            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
+                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
+                be used in Icinga.
+
+        Returns:
+            spicerack.icinga.IcingaHosts: IcingaHosts instance.
+
+        """
+        return IcingaHosts(self.icinga_master_host, target_hosts, verbatim_hosts=verbatim_hosts)
 
     def puppet(self, remote_hosts: RemoteHosts) -> PuppetHosts:  # pylint: disable=no-self-use
         """Get a PuppetHosts instance for the given remote hosts.
@@ -479,6 +499,22 @@ class Spicerack:
             token = config["api_token_ro"]
 
         return Netbox(config["api_url"], token, dry_run=self._dry_run)
+
+    def netbox_server(self, hostname: str, *, read_write: bool = False) -> NetboxServer:
+        """Get a NetboxServer instance to interact with a server in Netbox, both physical and virtual.
+
+        Arguments:
+            hostname (str): the hostname (not FQDN) of the server to manage.
+            read_write (bool, optional): whether to use a read-write token.
+
+        Raises:
+            spicerack.netbox.NetboxError: if unable to find or load the server.
+
+        Returns:
+            spicerack.netbox.NetboxServer: the NetboxServer instance.
+
+        """
+        return self.netbox(read_write=read_write).get_server(hostname)
 
     def requests_session(  # pylint: disable=no-self-use
         self, name: str, *, timeout: float = requests.DEFAULT_TIMEOUT, tries: int = 3, backoff: float = 1.0

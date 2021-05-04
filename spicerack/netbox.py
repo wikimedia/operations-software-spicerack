@@ -1,6 +1,7 @@
 """Netbox module."""
 import logging
-from typing import Dict
+import warnings
+from typing import Dict, Union
 
 import pynetbox
 from wmflib.requests import http_session
@@ -8,6 +9,8 @@ from wmflib.requests import http_session
 from spicerack.exceptions import SpicerackError
 
 NETBOX_DOMAIN: str = "netbox.wikimedia.org"
+MANAGEMENT_IFACE_NAME: str = "mgmt"
+SERVER_ROLE_SLUG: str = "server"
 logger = logging.getLogger(__name__)
 
 
@@ -106,6 +109,9 @@ class Netbox:
     def put_host_status(self, hostname: str, status: str) -> None:
         """Set the device status.
 
+        . deprecated:: v0.0.50
+            use :py:class:`spicerack.netbox.NetboxServer` instead.
+
         Note:
            This method does not operate on virtual machines since they are
            updated automatically from Ganeti into Netbox.
@@ -119,6 +125,7 @@ class Netbox:
             NetboxError: on parameter error.
 
         """
+        warnings.warn("Deprecated method, use spicearack.netbox_server() instead", DeprecationWarning)
         status = status.lower()
         host = self._fetch_host(hostname)
         oldstatus = host.status
@@ -155,6 +162,9 @@ class Netbox:
     def fetch_host_status(self, hostname: str) -> str:
         """Return the current status of a host as a string.
 
+        . deprecated:: v0.0.50
+            use :py:class:`spicerack.netbox.NetboxServer` instead.
+
         Arguments:
             hostname (str): the name of the host status
 
@@ -167,13 +177,17 @@ class Netbox:
             NetboxHostNotFoundError: if the host is not found
 
         """
+        warnings.warn("Deprecated method, use spicearack.netbox_server() instead", DeprecationWarning)
         try:
-            return self._fetch_host(hostname).status
+            return str(self._fetch_host(hostname).status)
         except NetboxHostNotFoundError:
-            return self._fetch_virtual_machine(hostname).status
+            return str(self._fetch_virtual_machine(hostname).status)
 
     def fetch_host_detail(self, hostname: str) -> Dict:
         """Return a dict containing details about the host.
+
+        . deprecated:: v0.0.50
+            use :py:class:`spicerack.netbox.NetboxServer` instead.
 
         Arguments:
             hostname (str): the name of the host to retrieve.
@@ -187,6 +201,7 @@ class Netbox:
             NetboxHostNotFoundError: if the host is not found
 
         """
+        warnings.warn("Deprecated method, use spicearack.netbox_server() instead", DeprecationWarning)
         is_virtual = False
         vm_cluster = "N/A"
         try:
@@ -199,4 +214,188 @@ class Netbox:
         ret = host.serialize()
         ret["is_virtual"] = is_virtual
         ret["ganeti_cluster"] = vm_cluster
+        return ret
+
+    def get_server(self, hostname: str) -> "NetboxServer":
+        """Return a NetboxServer instance for the given hostname.
+
+        Arguments:
+            hostname (str): the device hostname.
+
+        Raises:
+            spicerack.netbox.NetboxHostNotFoundError: if the device can't be found among physical or virtual devices.
+            spicerack.netbox.NetboxError: if the device is not a server.
+
+        Return:
+            spicerack.netbox.NetboxServer: the server instance.
+
+        """
+        try:
+            server = self._fetch_host(hostname)
+        except NetboxHostNotFoundError:
+            server = self._fetch_virtual_machine(hostname)
+
+        return NetboxServer(api=self._api, server=server, dry_run=self._dry_run)
+
+
+class NetboxServer:
+    """Represent a Netbox device of role server or a virtual machine."""
+
+    allowed_status_transitions = {
+        "spare": ("planned", "failed", "decommissioned"),
+        "planned": ("staged", "failed"),
+        "failed": ("spare", "planned", "staged", "decommissioned"),
+        "staged": ("failed", "active", "decommissioned"),
+        "active": ("staged", "decommissioned"),
+        "decommissioned": ("staged", "spare"),
+    }
+    """See https://wikitech.wikimedia.org/wiki/Server_Lifecycle#/media/File:Server_Lifecycle_Statuses.png"""
+
+    def __init__(
+        self,
+        *,
+        api: pynetbox.api,
+        server: Union[pynetbox.models.dcim.Devices, pynetbox.models.virtualization.VirtualMachines],
+        dry_run: bool = True,
+    ):
+        """Initialize the instance.
+
+        Arguments:
+            api (pynetbox.api): the API instance to connect to Netbox.
+            server (pynetbox.models.dcim.Devices, pynetbox.models.virtualization.VirtualMachines): the server object.
+
+        Raises:
+            spicerack.netbox.NetboxError: if the device is not of type server.
+
+        """
+        if server.role.slug != SERVER_ROLE_SLUG:
+            raise NetboxError(
+                "Object of type {t} has invalid role {r}, only server is allowed".format(
+                    t=type(server), r=server.role.slug
+                )
+            )
+
+        self._api = api
+        self._server = server
+        self._dry_run = dry_run
+        self._cached_mgmt_fqdn = ""  # Cache the management interface as it would require an API call each time
+
+    @property
+    def virtual(self) -> bool:
+        """Getter to check if the server is physical or virtual.
+
+        Returns:
+            bool: :py:data:`True` if the server is virtual, :py:data:`False` if physical.
+
+        """
+        return not hasattr(self._server, "rack")
+
+    @property
+    def status(self) -> str:
+        """Getter for the server status property.
+
+        Returns:
+            str: the status name.
+
+        """
+        return self._server.status.value
+
+    @status.setter
+    def status(self, value: str) -> None:
+        """Set the device status. Can be used only on physical devices and only between allowed transitions.
+
+        The allowed transitions are defined in :py:data:`spicerack.netbox.Netbox.allowed_status_transitions`.
+
+        Arguments:
+            value (str): the name of the status to be set. It will be lower cased automatically.
+
+        Raises:
+            spicerack.netbox.NetboxError: if used on a virtual device or the status transision is not allowed.
+
+        """
+        if self.virtual:
+            raise NetboxError(
+                "Server {name} is a virtual machine, its Netbox status is automatically synced from Ganeti.".format(
+                    name=self._server.name
+                )
+            )
+
+        current = self._server.status.value
+        new = value.lower()
+        allowed_transitions = NetboxServer.allowed_status_transitions.get(current, ())
+        if new not in allowed_transitions:
+            raise NetboxError(
+                (
+                    "Forbidden Netbox status transition between {curr} and {new} for device {device}. "
+                    "Possible values are: {trans}"
+                ).format(curr=current, new=new, device=self._server.name, trans=allowed_transitions)
+            )
+
+        if self._dry_run:
+            logger.info(
+                "Skipping Netbox status change from %s to %s for device %s in DRY-RUN.", current, new, self._server.name
+            )
+            return
+
+        self._server.status = value
+        self._server.save()
+        logger.debug("Updated Netbox status from %s to %s for device %s", current, new, self._server.name)
+
+    @property
+    def fqdn(self) -> str:
+        """Return the FQDN of the device.
+
+        Returns:
+            str: the FQDN.
+
+        Raises:
+            spicerack.netbox.NetboxError: if the server has no FQDN defined in Netbox.
+
+        """
+        # Until https://phabricator.wikimedia.org/T253173 is fixed we can't use the primary_ip attribute
+        for attr_name in ("primary_ip4", "primary_ip6"):
+            address = getattr(self._server, attr_name)
+            if address is not None and address.dns_name:
+                return address.dns_name
+
+        raise NetboxError("Server {s} does not have any primary IP with a DNS name set.".format(s=self._server.name))
+
+    @property
+    def mgmt_fqdn(self) -> str:
+        """Return the management FQDN of the device.
+
+        Returns:
+            str: the management FQDN.
+
+        Raises:
+            spicerack.netbox.NetboxError: for virtual servers or the server has no management FQDN defined in Netbox.
+
+        """
+        if self.virtual:
+            raise NetboxError(
+                "Server {s} is a virtual machine, does not have a management address.".format(s=self._server.name)
+            )
+
+        if self._cached_mgmt_fqdn:
+            return self._cached_mgmt_fqdn
+
+        address = self._api.ipam.ip_addresses.get(device=self._server.name, interface=MANAGEMENT_IFACE_NAME)
+        # TODO: check also that address.assigned_object.mgmt_only is True if it will not generate anymore an additional
+        #       API call to Netbox or the Netbox API become more efficient.
+        if address is not None and address.dns_name:
+            self._cached_mgmt_fqdn = address.dns_name
+            return self._cached_mgmt_fqdn
+
+        raise NetboxError("Server {s} has no management interface with a DNS name set.".format(s=self._server.name))
+
+    def as_dict(self) -> Dict:
+        """Return a dict containing details about the server.
+
+        Returns:
+            dict: with the whole data about the server.
+
+        """
+        ret = dict(self._server)
+        ret["is_virtual"] = self.virtual
+
         return ret

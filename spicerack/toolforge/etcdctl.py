@@ -1,6 +1,8 @@
 """Wrapper around etcdctl handling parameters and such."""
 # pylint: disable=unsubscriptable-object,too-many-arguments
 import logging
+from dataclasses import dataclass
+from enum import Enum, auto
 from typing import Dict, Optional, Tuple, Union, cast
 
 from spicerack.exceptions import SpicerackError
@@ -8,6 +10,21 @@ from spicerack.remote import RemoteHosts, RemoteHostsAdapter
 
 logger = logging.getLogger(__name__)
 SimpleType = Union[str, int, bool]
+
+
+class HealthStatus(Enum):
+    """Health status."""
+
+    healthy = auto()
+    unhealthy = auto()
+
+
+@dataclass(frozen=True)
+class EtcdClusterHealthStatus:
+    """Etcd cluster health status."""
+
+    global_status: HealthStatus
+    members_status: Dict[str, HealthStatus]
 
 
 class TooManyHosts(SpicerackError):
@@ -43,6 +60,37 @@ class EtcdctlController(RemoteHostsAdapter):
             "--key-file",
             key_file,
         ]
+
+    def get_cluster_health(self) -> EtcdClusterHealthStatus:
+        """Gets the current etcd cluster health status."""
+        args = self._base_args + ["cluster-health"]
+        raw_results = self._remote_hosts.run_sync(" ".join(args))
+        try:
+            result = next(raw_results)[1].message().decode("utf8")
+        except StopIteration:
+            raise UnableToParseOutput("Got no results when trying to retrieve the etcdctl cluster health.")
+
+        global_status = None
+        members_status = {}
+        for line in result.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            # member <memberid> is <healthy|unhealthy>: got <healthy|unhealthy> result from <member_url>
+            # ...
+            # cluster is <healthy|unhealthy>
+            if line.startswith("cluster is"):
+                global_status = HealthStatus[line.rsplit(" ", 1)[-1]]
+            else:
+                _, member_id, _, raw_health_status, _ = line.split(" ", 4)
+                # raw_health_status includes the ':'
+                members_status[member_id] = HealthStatus[raw_health_status[:-1]]
+
+        if global_status is None:
+            raise UnableToParseOutput(f"Can't find the global cluster status in the cluster-health output: {result}")
+
+        return EtcdClusterHealthStatus(global_status=cast(HealthStatus, global_status), members_status=members_status)
 
     def get_cluster_info(self) -> Dict[str, Dict[str, SimpleType]]:
         """Gets the current etcd cluster information."""

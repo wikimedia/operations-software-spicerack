@@ -16,13 +16,13 @@ from spicerack.debmonitor import Debmonitor
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.ganeti import Ganeti
-from spicerack.icinga import Icinga
+from spicerack.icinga import Icinga, IcingaHosts
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
-from spicerack.netbox import Netbox
+from spicerack.netbox import Netbox, NetboxServer
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
@@ -87,18 +87,22 @@ def test_spicerack_http_proxy():
 @mock.patch("spicerack.gethostname", return_value="test.example.com")
 @mock.patch("wmflib.dns.Dns.resolve_cname")
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
-def test_spicerack_icinga(mocked_remote_query, mocked_resolve_cname, mocked_hostname, monkeypatch):
-    """An instance of Spicerack should allow to get an Icinga instance."""
+@mock.patch("spicerack.icinga.CommandFile", autospec=True)
+def test_spicerack_icinga(mocked_command_file, mocked_remote_query, mocked_resolve_cname, mocked_hostname, monkeypatch):
+    """An instance of Spicerack should allow to get an Icinga and IcingaHosts instances."""
     monkeypatch.setenv("SUDO_USER", "user1")
     icinga_server = mock.MagicMock(spec_set=RemoteHosts)
     icinga_server.hosts = "icinga-server.example.com"
+    icinga_server.__len__.return_value = 1
     mocked_remote_query.return_value = icinga_server
     mocked_resolve_cname.return_value = "icinga-server.example.com"
+    mocked_command_file.return_value = "/var/lib/icinga/rw/icinga.cmd"
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
     assert spicerack.icinga_master_host.hosts == "icinga-server.example.com"
     assert isinstance(spicerack.icinga(), Icinga)
+    assert isinstance(spicerack.icinga_hosts(["host1", "host2"]), IcingaHosts)
     mocked_hostname.assert_called_once_with()
 
 
@@ -159,3 +163,7 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_resolve_c
     # Values from fixtures/netbox/config.yaml
     mocked_pynetbox.assert_called_once_with("https://netbox.example.com", token=token)
     assert spicerack.netbox_master_host.hosts == "netbox-server.example.com"
+
+    mocked_pynetbox.reset_mock()
+    mocked_pynetbox.return_value.dcim.devices.get.return_value.role.slug = "server"
+    assert isinstance(spicerack.netbox_server("host1"), NetboxServer)

@@ -10,8 +10,8 @@ INSTALL_REQUIRES = [
     "conftool>=1.0.1",
     "cumin>=3.0.2",
     "dnspython>=1.16.0",
-    "elasticsearch>=5.0.0,<6.0.0",
-    "elasticsearch-curator>=5.0.0,<5.4.0",
+    "elasticsearch>=5.0.0,<8.0.0",
+    "elasticsearch-curator>=5.0.0",
     "pymysql>=0.9.3",
     "pynetbox>=5.0.7",
     "redis>=3.2.1",
@@ -27,21 +27,24 @@ EXTRAS_REQUIRE = {
         "black",
         "flake8>=3.6.0",
         "flake8-import-order>=0.18.1",
-        # TODO: uncomment once https://github.com/tox-dev/tox/issues/1558 is fixed. Already included by pytest
-        # "isort",
+        "isort",
         "mypy>=0.670,<0.800",
-        "prospector[with_everything]>=0.12.4",
         "pytest-cov>=2.6.0",
         "pytest-xdist>=1.26.1",
         "pytest>=3.10.1",
         "requests-mock>=1.5.2",
         # This is required for flake8 to run proprely, as when running tox
-        # setuptools comes boundled is usally way older (debian sid has 44 as
+        # setuptools comes boundled is usually way older (debian sid has 44 as
         # of writing this).
         "setuptools>=53.0",
         "sphinx_rtd_theme>=0.4.3",
         "sphinx-argparse>=0.2.2",
         "Sphinx>=1.8.4",
+    ],
+    "prospector": [
+        "prospector[with_everything]>=0.12.4",
+        "pytest>=3.10.1",
+        "requests-mock>=1.5.2",
     ],
 }
 
@@ -63,6 +66,7 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3 :: Only",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: System :: Clustering",

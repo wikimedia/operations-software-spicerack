@@ -22,21 +22,26 @@ STAGED_FILES=(
 
 if are_we_in_ci; then
     echo "CI: Using files changed in the current commit too."
-    COMMITED_FILES=(
+    COMMITTED_FILES=(
         $(git diff HEAD^ --name-only | grep '\.py$' || true)
     )
 else
-    COMMITED_FILES=()
+    COMMITTED_FILES=()
+fi
+
+if [[ "${#UNSTAGED_FILES[@]}" -eq "0" && "${#STAGED_FILES[@]}" -eq "0" && "${#COMMITTED_FILES[@]}" -eq "0" ]]; then
+    echo "No Python file modified, skipping black and isort checks."
+    exit 0
 fi
 
 black \
     --check \
     --diff \
-    "${UNSTAGED_FILES[@]}" "${STAGED_FILES[@]}" "${COMMITED_FILES[@]}" \
+    "${UNSTAGED_FILES[@]}" "${STAGED_FILES[@]}" "${COMMITTED_FILES[@]}" \
 || fail
 
 isort \
     --check-only \
     --diff \
-    "${UNSTAGED_FILES[@]}" "${STAGED_FILES[@]}" "${COMMITED_FILES[@]}" \
+    "${UNSTAGED_FILES[@]}" "${STAGED_FILES[@]}" "${COMMITTED_FILES[@]}" \
 || fail
