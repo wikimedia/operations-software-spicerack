@@ -51,7 +51,7 @@ class Discovery:
 
         self._resolvers: Dict[str, resolver.Resolver] = {}
         for nameserver in self._remote.query("A:dns-auth").hosts:
-            self._resolvers[nameserver] = resolver.Resolver()
+            self._resolvers[nameserver] = resolver.Resolver(configure=False)
             self._resolvers[nameserver].port = 5353
             try:
                 self._resolvers[nameserver].nameservers = [rdata.address for rdata in resolver.query(nameserver)]

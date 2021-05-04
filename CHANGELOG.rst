@@ -1,6 +1,21 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.51`_ (2021-05-04)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* dnsdisc: do not configure DNS resolver. As the module is injecting the nameservers of the authoritative DNS, do not
+  let the DNS module auto-configure itself with ``/etc/resolv.conf``.
+
+Bug fixes
+"""""""""
+
+* tests: fix mock of the DNS module that was not in some cases properly mocked and the tests were relying on a properly
+  configured ``/etc/resolv.conf``.
+
 `v0.0.50`_ (2021-05-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1215,3 +1230,4 @@ New features
 .. _`v0.0.48`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.48
 .. _`v0.0.49`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.49
 .. _`v0.0.50`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.50
+.. _`v0.0.51`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.51
