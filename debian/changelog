@@ -1,3 +1,10 @@
+spicerack (0.0.50-1) unstable; urgency=medium
+
+  * v0.0.50 upstream release.
+  * Bump debian/compat to 12
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Tue, 04 May 2021 09:42:58 -0000
+
 spicerack (0.0.49-1) buster-wikimedia; urgency=medium
 
   * v0.0.49 upstream release.
