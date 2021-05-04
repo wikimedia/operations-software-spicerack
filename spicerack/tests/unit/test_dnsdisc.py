@@ -66,7 +66,7 @@ class TestDiscovery:
     def test_init(self):
         """Creating a Discovery instance should initialize the resolvers based on a cumin query."""
         self.mocked_remote.query.assert_has_calls([mock.call("A:dns-auth")] * 2)
-        self.mocked_resolver.Resolver.assert_called_with()
+        self.mocked_resolver.Resolver.assert_called_with(configure=False)
         assert self.mocked_resolver.Resolver.call_count == 6
         self.mocked_resolver.query.assert_has_calls(
             [mock.call(self.nameservers[0]), mock.call(self.nameservers[1])],
