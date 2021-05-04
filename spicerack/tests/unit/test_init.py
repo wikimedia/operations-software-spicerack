@@ -30,7 +30,8 @@ from spicerack.toolforge.etcdctl import EtcdctlController
 
 
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
-def test_spicerack(mocked_remote_query, monkeypatch):
+@mock.patch("wmflib.dns.resolver", autospec=True)
+def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
     """An instance of Spicerack should allow to access all the library features."""
     monkeypatch.setenv("SUDO_USER", "user1")
     verbose = True
@@ -75,6 +76,7 @@ def test_spicerack(mocked_remote_query, monkeypatch):
         EtcdctlController,
     )
     assert mocked_remote_query.called
+    assert mocked_dns_resolver.Resolver.called
 
 
 def test_spicerack_http_proxy():
@@ -85,17 +87,17 @@ def test_spicerack_http_proxy():
 
 
 @mock.patch("spicerack.gethostname", return_value="test.example.com")
-@mock.patch("wmflib.dns.Dns.resolve_cname")
+@mock.patch("spicerack.Dns", autospec=True)
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
 @mock.patch("spicerack.icinga.CommandFile", autospec=True)
-def test_spicerack_icinga(mocked_command_file, mocked_remote_query, mocked_resolve_cname, mocked_hostname, monkeypatch):
+def test_spicerack_icinga(mocked_command_file, mocked_remote_query, mocked_dns, mocked_hostname, monkeypatch):
     """An instance of Spicerack should allow to get an Icinga and IcingaHosts instances."""
     monkeypatch.setenv("SUDO_USER", "user1")
     icinga_server = mock.MagicMock(spec_set=RemoteHosts)
     icinga_server.hosts = "icinga-server.example.com"
     icinga_server.__len__.return_value = 1
     mocked_remote_query.return_value = icinga_server
-    mocked_resolve_cname.return_value = "icinga-server.example.com"
+    mocked_dns.return_value.resolve_cname.return_value = "icinga-server.example.com"
     mocked_command_file.return_value = "/var/lib/icinga/rw/icinga.cmd"
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
@@ -146,15 +148,15 @@ def test_spicerack_ipmi_cached(monkeypatch):
         (True, "rw_token"),
     ),
 )
-@mock.patch("wmflib.dns.Dns.resolve_cname")
+@mock.patch("spicerack.Dns", autospec=True)
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
 @mock.patch("pynetbox.api")
-def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_resolve_cname, read_write, token):
+def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_dns, read_write, token):
     """Test instantiating Netbox abstraction."""
     netbox_server = mock.MagicMock(spec_set=RemoteHosts)
     netbox_server.hosts = "netbox-server.example.com"
     mocked_remote_query.return_value = netbox_server
-    mocked_resolve_cname.return_value = "netbox-server.example.com"
+    mocked_dns.return_value.resolve_cname.return_value = "netbox-server.example.com"
     mocked_pynetbox.reset_mock()
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
