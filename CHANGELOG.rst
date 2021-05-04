@@ -1,6 +1,100 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.50`_ (2021-05-04)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Dependencies breaking changes
+"""""""""""""""""""""""""""""
+
+* setup.py: relax elasticsearch dependencies:
+
+  * In order to be able to build spicerack for Debian bullseye that ships ``python3-elasticsearch`` ``7.1.0`` and
+    ``python3-elasticsearch-curator`` ``5.8.1``, relax the related dependency constraints in ``setup.py``.
+  * Elasticsearch requires to bump the version above the suggested compatibility matrix, we'll test if all works as
+    expected. See the `elasticsearch compatibility matrix`_.
+  * Elasticsearch curator matches upstream compatibility matrix, see the `elasticsearch curator compatibility matrix`.
+  * As Spicerack is released via debian packages this will not affect the buster builds.
+
+API breaking changes
+""""""""""""""""""""
+
+* netbox: improve ``as_dict()``:
+
+  * Instead of calling ``serialize()`` for the conversion to dictionary, just calling ``dict()`` on the object gives a
+    more useful representation of the object because all the nested properties are converted to string or
+    sub-dictionaries with useful values instead of just the IDs.
+  * As a result any usage of ``as_dict()`` that relied on the format of specific fields might break. At the moment no
+    cookbook is using it.
+  * See also the "Casting the object as a dictionary" example in `pynetbox.core.response.Record`_.
+
+New features
+""""""""""""
+
+* netbox: add ``NetboxServer`` class:
+
+  * Add a ``NetboxServer`` class in the netbox module to give a higher level abstraction across physical servers and
+    virtual machines.
+  * This is particularly useful to finally have an authoritative way to convert a hostname into a FQDN or get the
+    managment FQDN of a host given its hostname (`T240176`_).
+  * The class also allow to update the device status only if it's a physical host and the status transition is approved.
+  * Those new features will be used by the cookbook that will replace the reimage script and then the current usage of
+    some of the existing methods in the ``Netbox`` class should be converted to use this class instead.
+
+* icinga: add new ``IcingaHosts`` class (`T277740`_):
+
+  * Implements the TODO that wanted to move the ``Icinga`` class into a class that is initialized with the target hosts
+    so that it's not necessary anymore to pass them to each method.
+  * Keep the existing ``Icinga`` class for now, but mark it as deprecated, both in the documentation of
+    ``spicerack.Spicerack.icinga()`` and ``icinga.Icinga()`` and emit also a ``DeprecationWarning`` when instantiated.
+    It will be removed in the next release once all the cookbooks have been migrated to the new
+    ``spicerack.Spicerack.icinga_hosts()`` accessor.
+  * Move the detection of the Icinga command file to its own class to allow to cache it across different instances,
+    making the instantiation of multiple ``IcingaHosts`` class free after the first one.
+  * Allow to manage also non-servers that are defined as Icinga hosts passing the ``verbatim_hosts`` parameter, that
+    will not extract the hostname from the given hosts assuming that they are already FQDNs.
+
+* toolforge.etcdctl: Allow getting the cluster health. This opens up being able to wait/stop if the cluster status is
+  not what's expected when doing operations (`T276338`_).
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: use a bash command wrapper to allow sudo, otherwise the echo command will fail to output to the file.
+* icinga: use a sudo-friendly command to detect the Icinga ``command_file``.
+* netbox: improve ``as_dict()``:
+
+  * Instead of calling ``serialize()`` for the conversion to dictionary, just calling ``dict()`` on the object gives a
+    more useful representation of the object because all the nested properties are converted to string or
+    sub-dictionaries with useful values instead of just the IDs.
+  * See also the "Casting the object as a dictionary" example in `pynetbox.core.response.Record`_.
+
+Bug fixes
+"""""""""
+
+* remote: fix ``use_sudo`` on ``split()``.
+* netbox: fix object type returned for status. The status should be returned as string and not as a Netbox object.
+* doc: add documentation for the toolforge package.
+* doc: remove obsolete configuration
+* setup.py: add missing tag for Python 3.9, already supported.
+* tests: fix pip backtracking separating the prospector tests into its own virtualenv.
+* tests: fix format checking
+
+  * If no Python files were modified at all, the latest isort would bail out. Skipping the checks if no Python files
+    were modified at all.
+
+* doc: fix documentation checker for sub-packages
+
+  * The existing checker was assuming a flat space of modules inside spicerack, while now we have also subpackages.
+    Adapt the checker to detect those too.
+  * Convert file operations to pathlib.
+
+Miscellanea
+"""""""""""
+
+* doc: move ClusterShell URL to HTTPS
+* netbox: refactor unit tests
+
 `v0.0.49`_ (2021-03-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1047,6 +1141,9 @@ New features
 
 .. _`I4d4ade351493a548e9e7a578bf9a7acbb45a5c0`: https://gerrit.wikimedia.org/r/q/I4d4ade351493a548e9e7a578bf9a7acbb45a5c0
 .. _`sre.hosts.decommission`: https://gerrit.wikimedia.org/r/plugins/gitiles/operations/cookbooks/+/cea161a91ec21dcd48fe0d3fa899c1f19fc4801b/cookbooks/sre/hosts/decommission.py#42
+.. _`pynetbox.core.response.Record`: https://pynetbox.readthedocs.io/en/latest/response.html#pynetbox.core.response.Record
+.. _`elasticsearch compatibility matrix`: https://elasticsearch-py.readthedocs.io/en/stable/#compatibility
+.. _`elasticsearch curator compatibility matrix`: https://www.elastic.co/guide/en/elasticsearch/client/curator/current/version-compatibility.html
 
 .. _`T147074`: https://phabricator.wikimedia.org/T147074
 .. _`T211750`: https://phabricator.wikimedia.org/T211750
@@ -1057,6 +1154,7 @@ New features
 .. _`T226704`: https://phabricator.wikimedia.org/T226704
 .. _`T229792`: https://phabricator.wikimedia.org/T229792
 .. _`T231068`: https://phabricator.wikimedia.org/T231068
+.. _`T240176`: https://phabricator.wikimedia.org/T240176
 .. _`T243935`: https://phabricator.wikimedia.org/T243935
 .. _`T257905`: https://phabricator.wikimedia.org/T257905
 .. _`T261239`: https://phabricator.wikimedia.org/T261239
@@ -1064,6 +1162,8 @@ New features
 .. _`T268779`: https://phabricator.wikimedia.org/T268779
 .. _`T269324`: https://phabricator.wikimedia.org/T269324
 .. _`T269672`: https://phabricator.wikimedia.org/T269672
+.. _`T276338`: https://phabricator.wikimedia.org/T276338
+.. _`T277740`: https://phabricator.wikimedia.org/T277740
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -1114,3 +1214,4 @@ New features
 .. _`v0.0.47`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.47
 .. _`v0.0.48`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.48
 .. _`v0.0.49`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.49
+.. _`v0.0.50`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.50
