@@ -391,8 +391,8 @@ class IcingaHosts:
 
         Arguments:
             icinga_host (spicerack.remote.RemoteHosts): the RemoteHosts instance for the Icinga server.
-            target_hosts (spicerack.remote.RemoteHosts, Sequence[str]): the target hosts either as a RemoteHosts
-                instance or a sequence of strings.
+            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence of
+                strings.
             verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
                 :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
                 be used in Icinga.
