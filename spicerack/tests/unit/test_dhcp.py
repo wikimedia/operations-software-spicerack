@@ -1,0 +1,364 @@
+"""DHCP Module Tests."""
+
+import base64
+from hashlib import sha256
+from ipaddress import IPv4Address
+from unittest import mock
+
+import pytest
+
+from spicerack import dhcp
+from spicerack.remote import RemoteExecutionError
+
+
+def get_mock_hosts():
+    """Return a `spicerack.remote.Hosts` mock."""
+    hosts = mock.MagicMock()
+    hosts.__len__.return_value = 1
+    hosts.run_sync.return_value = "some value"
+    return hosts
+
+
+def get_mock_fail_hosts():
+    """Return a `spicerack.remote.Hosts` mock where execution fails."""
+    hosts = get_mock_hosts()
+    hosts.run_sync.side_effect = RemoteExecutionError("mock error", 1)
+    return hosts
+
+
+def get_mock_suc_fail_hosts():
+    """Return a `spicerack.remote.Hosts` mock where execution succeeds and then fails."""
+    hosts = get_mock_hosts()
+    hosts.run_sync.side_effect = ["some value", RemoteExecutionError("mock error", 1)]
+    return hosts
+
+
+def get_mock_config():
+    """Return a `spicerack.dhcp.Configuration` mock."""
+    config = mock.MagicMock()
+    config.__str__.return_value = "test configuration"
+    config.config_base64 = base64.b64encode(b"test configuration").decode()
+    config.filename = "test.conf"
+    return config
+
+
+# Test Configuration Generator Objects
+configuration_generator_data = (
+    # dhcpconfopt82 tests
+    # - basic check of functionality
+    (
+        dhcp.DHCPConfOpt82,
+        {
+            "hostname": "testhost0",
+            "fqdn": "testhost0.eqiad.wmnet",
+            "switch_hostname": "asw2-d-eqiad",
+            "switch_port": "ge-0/0/0",
+            "vlan": 1021,
+        },
+        (
+            "\nhost testhost0 {\n"
+            '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
+            "    fixed-address testhost0.eqiad.wmnet;\n"
+            "\n"
+            "}\n"
+        ),
+        "opt82-entries.ttyS1-115200/testhost0.eqiad.wmnet.conf",
+    ),
+    # - tty argument should change the filename
+    (
+        dhcp.DHCPConfOpt82,
+        {
+            "hostname": "testhost0",
+            "fqdn": "testhost0.eqiad.wmnet",
+            "switch_hostname": "asw2-d-eqiad",
+            "switch_port": "ge-0/0/0",
+            "vlan": 1021,
+            "ttys": 0,
+        },
+        (
+            "\nhost testhost0 {\n"
+            '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
+            "    fixed-address testhost0.eqiad.wmnet;\n"
+            "\n"
+            "}\n"
+        ),
+        "opt82-entries.ttyS0-115200/testhost0.eqiad.wmnet.conf",
+    ),
+    # - distro argument should add a pxelinux pathprefix to the output
+    (
+        dhcp.DHCPConfOpt82,
+        {
+            "hostname": "testhost0",
+            "fqdn": "testhost0.eqiad.wmnet",
+            "switch_hostname": "asw2-d-eqiad",
+            "switch_port": "ge-0/0/0",
+            "vlan": 1021,
+            "ttys": 0,
+            "distro": "stretch",
+        },
+        (
+            "\nhost testhost0 {\n"
+            '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
+            "    fixed-address testhost0.eqiad.wmnet;\n"
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/'
+            'tftpboot/stretch-installer/";\n'
+            "}\n"
+        ),
+        "opt82-entries.ttyS0-115200/testhost0.eqiad.wmnet.conf",
+    ),
+    # dhcpconfmgmt tests
+    # - basic check of functionality
+    (
+        dhcp.DHCPConfMgmt,
+        {
+            "datacenter": "eqiad",
+            "serial": "TEST",
+            "fqdn": "test1001.mgmt.eqiad.wmnet",
+            "ip_address": IPv4Address("10.0.0.1"),
+        },
+        (
+            '\nclass "test1001.mgmt.eqiad.wmnet" {\n'
+            '    match if (option host-name = "iDRAC-TEST")\n'
+            "}\npool {\n"
+            '    allow members of "test1001.mgmt.eqiad.wmnet";\n'
+            "    range 10.0.0.1 10.0.0.1;\n"
+            "}\n"
+        ),
+        "mgmt-eqiad/test1001.mgmt.eqiad.wmnet.conf",
+    ),
+)
+"""`tuple[class, tuple[dict[str, str], str]]`: Parameters for test_configuration_generator."""
+
+
+@pytest.mark.parametrize("generator,kw_arguments,expected,expected_filename", configuration_generator_data)
+def test_configuration_generator(generator, kw_arguments, expected, expected_filename):
+    """Test configuration generators producing expected outputs with various parameters."""
+    confobj = generator(**kw_arguments)
+    assert str(confobj) == expected
+    assert confobj.filename == expected_filename
+
+
+def test_dhcp_mgmt_fail():
+    """A DHCPConfMgmt object should fail to create if invalid parameters are passed to its init."""
+    with pytest.raises(dhcp.DHCPError):
+        # data center must be a value in ALL_DATACENTERS
+        dhcp.DHCPConfMgmt(datacenter="not-a-real-datacenter", serial="", fqdn="", ip_address=None)
+
+    with pytest.raises(dhcp.DHCPError):
+        # hostname must be in the correct format
+        dhcp.DHCPConfMgmt(datacenter="eqiad", serial="", fqdn="not-a-real-hostname", ip_address=None)
+
+
+def test_create_dhcp_fail():
+    """Test fail (hosts parameter has no hosts) DHCP instance creation."""
+    hosts_mock = get_mock_hosts()
+    hosts_mock.__len__.return_value = 0
+    with pytest.raises(dhcp.DHCPError):
+        dhcp.DHCP(hosts_mock)
+
+
+class TestDHCP:
+    """Test various other aspects of DHCP module."""
+
+    def setup_method(self):
+        """Do any one time setup for the tests."""
+        remotehosts_mock = get_mock_hosts()
+        # pylint: disable=attribute-defined-outside-init
+        self.dhcp = dhcp.DHCP(remotehosts_mock)
+
+    def _setup_dhcp_mocks(self, hosts=None):
+        """Setup the DHCP's hosts remote as new mocks."""
+        if hosts is None:
+            hosts = get_mock_hosts()
+
+        self.dhcp._hosts = hosts  # pylint: disable=protected-access
+        return hosts
+
+    # test DHCP._refresh_dhcp
+    # - does it deal with them running as expected
+    def test_refresh_dhcp(self):
+        """Test refresh_dhcp method for correct execution."""
+        hosts = self._setup_dhcp_mocks()
+        self.dhcp.refresh_dhcp()
+        hosts.run_sync.assert_called_with("/usr/local/sbin/dhcpincludes -r commit")
+
+    # - does it deal with them failing as expected
+    def test_refresh_dhcp_dhcpincludes_fail(self):
+        """Test refresh_dhcp method for execution where the include compilation fails."""
+        hosts = get_mock_fail_hosts()
+        self._setup_dhcp_mocks(hosts=hosts)
+        pytest.raises(dhcp.DHCPRestartError, self.dhcp.refresh_dhcp)
+        hosts.run_sync.assert_called_with("/usr/local/sbin/dhcpincludes -r commit")
+
+    # test DHCP.push_configuration
+    # - does it attempt to execute commands expected
+    # - does it deal correctly with succeeding commands
+    def test_push_configuration(self):
+        """Test push_configuration success."""
+        config = get_mock_config()
+        hosts = self._setup_dhcp_mocks()
+
+        self.dhcp.push_configuration(config)
+
+        call_test = mock.call(
+            "/usr/bin/test '!' '-e'  {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True
+        )
+        call_write = mock.call(
+            "/bin/echo '{}' | /usr/bin/base64 -d > {}/{}".format(
+                config.config_base64, dhcp.DHCP_TARGET_PATH, config.filename
+            )
+        )
+        hosts.run_sync.assert_has_calls([call_test, call_write])
+
+    # - does it deal correctly with failure from test command (e.g. file exists)
+    def test_push_configuration_test_fail(self):
+        """Test push_configuration where the file apparently exists."""
+        config = get_mock_config()
+        self._setup_dhcp_mocks(hosts=get_mock_fail_hosts())
+
+        with pytest.raises(dhcp.DHCPError) as exc:
+            self.dhcp.push_configuration(config)
+        assert str(exc.value) == "target file {} exists".format(config.filename)
+
+    # - does it deal correctly with echo command failing
+    def test_push_configuration_echo_fail(self):
+        """Test push_configuration, where writing to the file fails."""
+        config = get_mock_config()
+        self._setup_dhcp_mocks(hosts=get_mock_suc_fail_hosts())
+
+        with pytest.raises(dhcp.DHCPError) as exc:
+            self.dhcp.push_configuration(config)
+        assert str(exc.value) == "target file {} failed to be created.".format(config.filename)
+
+    # test DHCP.remove_configuration
+    # - does it deal correctly with succeeding commands
+    def test_remove_config(self):
+        """Test remove_configuration where everything succeeds."""
+        config = get_mock_config()
+        hosts = self._setup_dhcp_mocks()
+        with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
+            configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            self.dhcp.remove_configuration(config)
+
+        call_sha256 = mock.call("sha256sum {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True)
+        call_rm = mock.call("/bin/rm -v {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename))
+        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
+
+        hosts.run_sync.assert_has_calls([call_sha256, call_rm, call_refresh])
+
+    # - does it deal with sha256 not outputting anything
+    def test_remove_config_sha256_noresult(self):
+        """Test remove_configuration where sha256sum returns nothing."""
+        config = get_mock_config()
+        self._setup_dhcp_mocks()
+        with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
+            mock_remotehosts.results_to_list.return_value = []
+
+            with pytest.raises(dhcp.DHCPError) as exc:
+                self.dhcp.remove_configuration(config)
+            assert str(exc.value) == "Did not get any result trying to get SHA256, refusing to attempt to remove."
+
+    # - does it deal with sha256sum failing
+    def test_remove_config_sha256_fail(self):
+        """Test remove_configuration where sha256sum fails to run."""
+        config = get_mock_config()
+        self._setup_dhcp_mocks(hosts=get_mock_fail_hosts())
+
+        with pytest.raises(dhcp.DHCPError) as exc:
+            self.dhcp.remove_configuration(config)
+        assert str(exc.value) == "Can't test {} for removal.".format(config.filename)
+
+    # - does it deal with sha256sum mismatch
+    def test_remove_config_sha256_mismatch(self):
+        """Test remove_configuration where sha256sum and the locally computed sum mismatch."""
+        config = get_mock_config()
+        self._setup_dhcp_mocks()
+        configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+        config.__str__.return_value = "different test configuration"
+
+        with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
+            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            with pytest.raises(dhcp.DHCPError) as exc:
+                self.dhcp.remove_configuration(config)
+            assert str(exc.value) == "Remote {} has a mismatched SHA256, refusing to remove.".format(config.filename)
+
+    # - does it deal with sha256sum mismatch (but force)
+    def test_remove_config_sha256_mismatch_force(self):
+        """Test remove_configuration where there is a sha256 mismatch but we pass force=True."""
+        config = get_mock_config()
+        hosts = self._setup_dhcp_mocks()
+        configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+        config.__str__.return_value = "different test configuration"
+
+        with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
+            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            self.dhcp.remove_configuration(config, force=True)
+
+        call_rm = mock.call("/bin/rm -v {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename))
+        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
+
+        hosts.run_sync.assert_has_calls([call_rm, call_refresh])
+
+    # - does it deal with rm failing
+    def test_remove_config_rm_fail(self):
+        """Test remove_configuration where rm fails."""
+        config = get_mock_config()
+        self._setup_dhcp_mocks(hosts=get_mock_suc_fail_hosts())
+
+        with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
+            configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+
+            with pytest.raises(dhcp.DHCPError) as exc:
+                self.dhcp.remove_configuration(config)
+            assert str(exc.value) == "Can't remove {}.".format(config.filename)
+
+    # test DHCP.dhcp_push context manager
+    # - startup works?
+    # - teardown works?
+    def test_push_context_manager(self):
+        """Test push context manager success."""
+        config = get_mock_config()
+        hosts = self._setup_dhcp_mocks()
+        call_sha256 = mock.call("sha256sum {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True)
+        call_rm = mock.call("/bin/rm -v {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename))
+        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
+
+        with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
+            configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+
+            with self.dhcp.dhcp_push(config):
+                ...
+
+        hosts.run_sync.assert_has_calls([call_sha256, call_rm, call_refresh])
+
+    # - does it still teardown when an error occurs
+    def test_push_context_manager_raise(self):
+        """Test push context manager where internal code raises."""
+        # pylint: disable=protected-access
+        config = get_mock_config()
+        hosts = self._setup_dhcp_mocks()
+
+        call_test = mock.call(
+            "/usr/bin/test '!' '-e'  {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True
+        )
+        call_write = mock.call(
+            "/bin/echo '{}' | /usr/bin/base64 -d > {}/{}".format(
+                config.config_base64, dhcp.DHCP_TARGET_PATH, config.filename
+            )
+        )
+
+        call_sha256 = mock.call("sha256sum {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True)
+        call_rm = mock.call("/bin/rm -v {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename))
+        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
+
+        with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
+            configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            with pytest.raises(Exception):
+                with self.dhcp.dhcp_push(config):
+                    raise Exception()
+
+        hosts.run_sync.assert_has_calls([call_test, call_write, call_refresh, call_sha256, call_rm, call_refresh])

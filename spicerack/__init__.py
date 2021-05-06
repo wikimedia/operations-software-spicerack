@@ -17,6 +17,7 @@ from spicerack._log import irc_logger
 from spicerack.administrative import Reason
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.debmonitor import Debmonitor
+from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
 from spicerack.ganeti import Ganeti
@@ -54,7 +55,7 @@ class Spicerack:
         conftool_schema: str = "/etc/conftool/schema.yaml",
         debmonitor_config: str = "/etc/debmonitor.conf",
         spicerack_config_dir: str = "/etc/spicerack",
-        http_proxy: str = ""
+        http_proxy: str = "",
     ) -> None:
         """Initialize the service locator for the Spicerack library.
 
@@ -229,6 +230,18 @@ class Spicerack:
             )
 
         return self._confctl.entity(entity_name)
+
+    def dhcp(self, remote_hosts: RemoteHosts) -> DHCP:  # pylint: disable=no-self-use
+        """Return a DHCP configuration manager for specified site.
+
+        Arguments:
+            remote_hosts (RemoteHosts instance): Hosts to operate on, which are normally install servers with dhcp.
+
+        Returns:
+            spicerack.dhcp.DHCP : A DHCP configuration instance
+
+        """
+        return DHCP(remote_hosts)
 
     def dns(self) -> Dns:  # pylint: disable=no-self-use
         """Get a Dns instance.

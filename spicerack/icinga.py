@@ -391,8 +391,8 @@ class IcingaHosts:
 
         Arguments:
             icinga_host (spicerack.remote.RemoteHosts): the RemoteHosts instance for the Icinga server.
-            target_hosts (spicerack.remote.RemoteHosts, Sequence[str]): the target hosts either as a RemoteHosts
-                instance or a sequence of strings.
+            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence of
+                strings.
             verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
                 :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
                 be used in Icinga.
@@ -411,6 +411,7 @@ class IcingaHosts:
 
         self._command_file = CommandFile(icinga_host)  # This validates also that icinga_host matches a single server.
         self._icinga_host = icinga_host
+        self._verbatim_hosts = verbatim_hosts
 
     @contextmanager
     def hosts_downtimed(
@@ -497,7 +498,11 @@ class IcingaHosts:
 
         """
         # icinga-status exits with non-zero exit code on missing and non-optimal hosts.
-        command = Command('/usr/local/bin/icinga-status -j "{hosts}"'.format(hosts=self._target_hosts), ok_codes=[])
+        verbatim = " --verbatim-hosts" if self._verbatim_hosts else ""
+        command = Command(
+            '/usr/local/bin/icinga-status -j{verbatim} "{hosts}"'.format(verbatim=verbatim, hosts=self._target_hosts),
+            ok_codes=[],
+        )
         for _, output in self._icinga_host.run_sync(command, is_safe=True):  # icinga-status is a read-only script
             json_status = output.message().decode()
             break
