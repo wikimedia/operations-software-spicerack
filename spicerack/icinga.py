@@ -411,6 +411,7 @@ class IcingaHosts:
 
         self._command_file = CommandFile(icinga_host)  # This validates also that icinga_host matches a single server.
         self._icinga_host = icinga_host
+        self._verbatim_hosts = verbatim_hosts
 
     @contextmanager
     def hosts_downtimed(
@@ -497,7 +498,11 @@ class IcingaHosts:
 
         """
         # icinga-status exits with non-zero exit code on missing and non-optimal hosts.
-        command = Command('/usr/local/bin/icinga-status -j "{hosts}"'.format(hosts=self._target_hosts), ok_codes=[])
+        verbatim = " --verbatim-hosts" if self._verbatim_hosts else ""
+        command = Command(
+            '/usr/local/bin/icinga-status -j{verbatim} "{hosts}"'.format(verbatim=verbatim, hosts=self._target_hosts),
+            ok_codes=[],
+        )
         for _, output in self._icinga_host.run_sync(command, is_safe=True):  # icinga-status is a read-only script
             json_status = output.message().decode()
             break
