@@ -1,6 +1,27 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.52`_ (2021-05-06)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* dhcp: Add module for manipulating dynamic DHCP entries on target data centers and restarting the DHCP server
+  (`T269855`_).
+* icinga: pass ``verbatim_hosts`` option to the ``icinga-status`` script when using verbatim Icinga hostnames that
+  are not real hosts.
+
+Bug fixes
+"""""""""
+
+*  netbox: fix check for server role.
+
+  * The physical devices and virtual machines objects in Netbox have different names for the role property
+    (``device_role`` vs ``role``). Use the correct property each time.
+
+* icinga: fix typo in docstring.
+
 `v0.0.51`_ (2021-05-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1177,6 +1198,7 @@ New features
 .. _`T268779`: https://phabricator.wikimedia.org/T268779
 .. _`T269324`: https://phabricator.wikimedia.org/T269324
 .. _`T269672`: https://phabricator.wikimedia.org/T269672
+.. _`T269855`: https://phabricator.wikimedia.org/T269855
 .. _`T276338`: https://phabricator.wikimedia.org/T276338
 .. _`T277740`: https://phabricator.wikimedia.org/T277740
 
@@ -1231,3 +1253,4 @@ New features
 .. _`v0.0.49`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.49
 .. _`v0.0.50`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.50
 .. _`v0.0.51`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.51
+.. _`v0.0.52`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.52
