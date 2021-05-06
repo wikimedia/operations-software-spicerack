@@ -268,17 +268,16 @@ class NetboxServer:
             spicerack.netbox.NetboxError: if the device is not of type server.
 
         """
-        if server.role.slug != SERVER_ROLE_SLUG:
-            raise NetboxError(
-                "Object of type {t} has invalid role {r}, only server is allowed".format(
-                    t=type(server), r=server.role.slug
-                )
-            )
-
-        self._api = api
         self._server = server
+        self._api = api
         self._dry_run = dry_run
         self._cached_mgmt_fqdn = ""  # Cache the management interface as it would require an API call each time
+
+        role = server.role.slug if self.virtual else server.device_role.slug
+        if role != SERVER_ROLE_SLUG:
+            raise NetboxError(
+                "Object of type {t} has invalid role {r}, only server is allowed".format(t=type(server), r=role)
+            )
 
     @property
     def virtual(self) -> bool:

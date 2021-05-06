@@ -25,8 +25,6 @@ def _base_netbox_host(name):
     host.__str__.return_value = name
     host.status.__str__.return_value = "Active"
     host.status.value = "active"
-    host.role.slug = "server"
-    host.role.name = "Server"
     host.serialize.return_value = {"name": name}
     host.save.return_value = True
     host.primary_ip4.dns_name = "{name}.example.com".format(name=name)
@@ -59,6 +57,8 @@ def _netbox_host():
     """Return a mocked Netbox physical device."""
     host, dict_repr = _base_netbox_host("physical")
     host.cluster = None  # A physical server does not belong to a VM cluster
+    host.device_role.slug = "server"
+    host.device_role.name = "Server"
     dict_repr["cluster"] = None
     host.__iter__.return_value = dict_repr.items()
     return host
@@ -69,6 +69,8 @@ def _netbox_virtual_machine():
     """Return a mocked Netbox virtual machine."""
     host, dict_repr = _base_netbox_host("virtual")
     host.cluster.name = "testcluster"
+    host.role.slug = "server"
+    host.role.name = "Server"
     dict_repr["cluster"] = {"id": 1, "name": host.cluster.name}
     del host.rack  # A virtual machine doesn't have a rack property
     host.__iter__.return_value = dict_repr.items()
@@ -231,7 +233,7 @@ class TestNetboxServer:
 
     def test_init_not_a_server(self):
         """It should raise a NetboxError if the device doesn't have a server role."""
-        self.netbox_host.role.slug = "not-server"
+        self.netbox_host.device_role.slug = "not-server"
         with pytest.raises(NetboxError, match="has invalid role not-server"):
             NetboxServer(api=self.mocked_api, server=self.netbox_host)
 
