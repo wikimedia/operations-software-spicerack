@@ -1,6 +1,20 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.53`_ (2021-06-10)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* icinga: use bash wrapper to allow sudo in the ``IcingaHosts`` class.
+
+Miscellanea
+"""""""""""
+
+* doc: use ``add_css_file()`` instead of ``add_stylesheet()``.
+* doc: fix parameter type in docstring.
+
 `v0.0.52`_ (2021-05-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1254,3 +1268,4 @@ New features
 .. _`v0.0.50`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.50
 .. _`v0.0.51`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.51
 .. _`v0.0.52`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.52
+.. _`v0.0.53`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.53
