@@ -304,7 +304,9 @@ class TestIcingaHosts:
         instance = icinga.IcingaHosts(self.mocked_icinga_host, target_hosts, verbatim_hosts=verbatim_hosts)
         instance.host_command("TEST_COMMAND", "arg1", "arg2")
         calls = [
-            'echo -n "[1514764800] TEST_COMMAND;{host};arg1;arg2" > /var/lib/icinga/rw/icinga.cmd'.format(host=host)
+            (
+                "bash -c 'echo -n \"[1514764800] TEST_COMMAND;{host};arg1;arg2\" > /var/lib/icinga/rw/icinga.cmd '"
+            ).format(host=host)
             for host in effective_hosts
         ]
 
@@ -321,7 +323,12 @@ class TestIcingaHosts:
             self.mocked_icinga_host.run_sync.reset_mock()
 
         self.mocked_icinga_host.run_sync.assert_has_calls(
-            [mock.call('echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1" > /var/lib/icinga/rw/icinga.cmd')]
+            [
+                mock.call(
+                    'bash -c \'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1" > '
+                    "/var/lib/icinga/rw/icinga.cmd '"
+                )
+            ]
         )
         assert mocked_time.called
 
@@ -369,7 +376,7 @@ class TestIcingaHosts:
     def test_host_command(self, mocked_time):
         """It should run the specified command for all the hosts on the Icinga server."""
         self.icinga.host_command("TEST_COMMAND", "arg1", "arg2")
-        call = 'echo -n "[1514764800] TEST_COMMAND;host1;arg1;arg2" > /var/lib/icinga/rw/icinga.cmd'
+        call = "bash -c 'echo -n \"[1514764800] TEST_COMMAND;host1;arg1;arg2\" > /var/lib/icinga/rw/icinga.cmd '"
 
         self.mocked_icinga_host.run_sync.assert_called_once_with(call)
         assert mocked_time.called
@@ -379,7 +386,8 @@ class TestIcingaHosts:
         """It should force a recheck of all services for the hosts on the Icinga server."""
         self.icinga.recheck_all_services()
         self.mocked_icinga_host.run_sync.assert_called_once_with(
-            'echo -n "[1514764800] SCHEDULE_FORCED_HOST_SVC_CHECKS;host1;1514764800" > /var/lib/icinga/rw/icinga.cmd'
+            'bash -c \'echo -n "[1514764800] SCHEDULE_FORCED_HOST_SVC_CHECKS;host1;1514764800" > '
+            "/var/lib/icinga/rw/icinga.cmd '"
         )
         assert mocked_time.called
 
@@ -388,7 +396,7 @@ class TestIcingaHosts:
         """It should remove the downtime for the hosts on the Icinga server."""
         self.icinga.remove_downtime()
         self.mocked_icinga_host.run_sync.assert_called_once_with(
-            'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1" > /var/lib/icinga/rw/icinga.cmd'
+            "bash -c 'echo -n \"[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1\" > /var/lib/icinga/rw/icinga.cmd '"
         )
         assert mocked_time.called
 

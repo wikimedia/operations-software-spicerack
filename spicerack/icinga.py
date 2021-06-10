@@ -551,6 +551,6 @@ class IcingaHosts:
             str: the command line to execute on the Icinga host.
 
         """
-        return 'echo -n "[{now}] {args}" > {command_file}'.format(
+        return "bash -c 'echo -n \"[{now}] {args}\" > {command_file} '".format(
             now=int(time.time()), args=";".join(args), command_file=self._command_file
         )
