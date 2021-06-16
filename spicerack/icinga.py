@@ -414,7 +414,7 @@ class IcingaHosts:
         self._verbatim_hosts = verbatim_hosts
 
     @contextmanager
-    def hosts_downtimed(
+    def downtimed(
         self, reason: Reason, *, duration: timedelta = timedelta(hours=4), remove_on_error: bool = False
     ) -> Iterator[None]:
         """Context manager to perform actions while the hosts are downtimed on Icinga.
@@ -429,7 +429,7 @@ class IcingaHosts:
             getting back the control.
 
         """
-        self.downtime_hosts(reason, duration=duration)
+        self.downtime(reason, duration=duration)
         try:
             yield
         except BaseException:
@@ -439,7 +439,7 @@ class IcingaHosts:
         else:
             self.remove_downtime()
 
-    def downtime_hosts(self, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> None:
+    def downtime(self, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> None:
         """Downtime hosts on the Icinga server for the given time with a message.
 
         Arguments:
@@ -465,14 +465,19 @@ class IcingaHosts:
 
     def recheck_all_services(self) -> None:
         """Force recheck of all services associated with a set of hosts."""
-        self.host_command("SCHEDULE_FORCED_HOST_SVC_CHECKS", str(int(time.time())))
+        self.run_icinga_command("SCHEDULE_FORCED_HOST_SVC_CHECKS", str(int(time.time())))
 
     def remove_downtime(self) -> None:
         """Remove a downtime from a set of hosts."""
-        self.host_command("DEL_DOWNTIME_BY_HOST_NAME")
+        self.run_icinga_command("DEL_DOWNTIME_BY_HOST_NAME")
 
-    def host_command(self, command: str, *args: str) -> None:
-        """Execute a host-specific Icinga command on the Icinga server for a set of hosts.
+    def run_icinga_command(self, command: str, *args: str) -> None:
+        """Execute an Icinga command on the Icinga server for all the current hosts.
+
+        This lower level API is meant to be used when the higher level API exposed in this class does not cover a
+        given use case. The arguments passed to the underlying Icinga command will be the hostname plus all the
+        arguments passed to this method. Hence it can be used only with Icinga commands that require a hostname.
+        See the link below for more details on the available Icinga commands and their arguments.
 
         Arguments:
             command (str): the Icinga command to execute.
