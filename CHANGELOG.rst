@@ -1,6 +1,21 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.54`_ (2021-06-21)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* icinga: rename some ``IcingaHosts`` methods:
+
+  * This is an API breaking change, but the newly introduced ``IcingaHosts`` API is not yet used widely, just one
+    Cookbook uses it so far.
+  * Rename some methods of the ``IcingaHosts`` class to be more dry and explicit. Namely:
+    * ``hosts_downtimed`` -> ``downtimed`` (context manager)
+    * ``downtime_hosts`` -> ``downtime``
+    * ``host_command`` -> ``run_icinga_command``
+
 `v0.0.53`_ (2021-06-10)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1269,3 +1284,4 @@ New features
 .. _`v0.0.51`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.51
 .. _`v0.0.52`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.52
 .. _`v0.0.53`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.53
+.. _`v0.0.54`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.54
