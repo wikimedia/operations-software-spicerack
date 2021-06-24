@@ -19,7 +19,7 @@ class TestMediaWiki:
         self.mocked_remote = mock.MagicMock()
         self.mocked_remote.query.return_value.hosts = ["host1"]
         self.username = "user1"
-        self.siteinfo_url = "http://api.svc.eqiad.wmnet/w/api.php"
+        self.siteinfo_url = "https://api.svc.eqiad.wmnet/w/api.php"
         self.siteinfo_rw = {
             "batchcomplete": True,
             "query": {
@@ -199,22 +199,29 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    def test_check_cronjobs_enabled(self):
-        """It should ensure that the cronjobs are present and not commented out."""
-        self.mediawiki.check_cronjobs_enabled("dc1")
+    def test_check_periodic_jobs_enabled(self):
+        """It should ensure that the periodic are present and not commented out."""
+        self.mediawiki.check_periodic_jobs_enabled("dc1")
+        self.mocked_remote.query.assert_called_with("A:mw-maintenance and A:dc1")
+        assert "systemctl list-units" in self.mocked_remote.query.return_value.run_sync.call_args[0][0]
+
+    def test_check_cronjobs_disabled(self):
+        """It should ensure that the cronjobs are empty."""
+        self.mediawiki.check_cronjobs_disabled("dc1")
         self.mocked_remote.query.assert_called_once_with("A:mw-maintenance and A:dc1")
         assert "crontab -u www-data -l" in self.mocked_remote.query.return_value.run_sync.call_args[0][0]
 
-    def test_stop_cronjobs(self):
-        """It should ensure that the cronjobs are present and not commented out."""
-        self.mediawiki.stop_cronjobs("dc1")
+    def test_stop_periodic_jobs(self):
+        """It should ensure that the periodic jobs are present and not commented out."""
+        self.mediawiki.stop_periodic_jobs("dc1")
         self.mocked_remote.query.assert_called_with("A:mw-maintenance and A:dc1")
-        assert "crontab -u www-data -r" in self.mocked_remote.query.return_value.run_async.call_args[0][0].command
+        assert (
+            "crontab -u www-data -r" in self.mocked_remote.query.return_value.run_async.call_args_list[1][0][0].command
+        )
 
-    def test_stop_cronjobs_stray_procs(self):
+    def test_stop_periodic_jobs_stray_procs(self):
         """It should not fail is there are leftover php stray processes."""
         self.mocked_remote.query.return_value.run_sync.side_effect = [
-            0,
             RemoteExecutionError(10, "failed"),
         ]
-        self.mediawiki.stop_cronjobs("dc1")
+        self.mediawiki.stop_periodic_jobs("dc1")

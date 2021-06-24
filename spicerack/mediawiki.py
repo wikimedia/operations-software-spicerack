@@ -26,7 +26,7 @@ class MediaWiki:
     """Class to manage MediaWiki-specific resources."""
 
     _list_cronjobs_command: str = "\"$(crontab -u www-data -l | sed -r '/^(#|$)/d')\""
-    _siteinfo_url: str = "http://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
+    _siteinfo_url: str = "https://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
 
     def __init__(self, conftool: ConftoolEntity, remote: Remote, user: str, dry_run: bool = True) -> None:
         """Initialize the instance.
@@ -85,7 +85,7 @@ class MediaWiki:
 
         """
         url = MediaWiki._siteinfo_url.format(dc=datacenter)
-        headers = {"X-Forwarded-Proto": "https", "Host": "en.wikipedia.org"}
+        headers = {"Host": "en.wikipedia.org"}
 
         response = self._http_session.get(url, headers=headers, timeout=3)
         response.raise_for_status()
@@ -198,20 +198,8 @@ class MediaWiki:
         """
         return self._remote.query("A:mw-maintenance and A:" + datacenter)
 
-    def check_cronjobs_enabled(self, datacenter: str) -> None:
-        """Check that MediaWiki cronjobs are set in the given DC.
-
-        Arguments:
-            datacenter (str): the name of the datacenter to work on.
-
-        Raises:
-            spicerack.remote.RemoteExecutionError: on failure.
-
-        """
-        self.get_maintenance_host(datacenter).run_sync("test " + MediaWiki._list_cronjobs_command, is_safe=True)
-
     def check_cronjobs_disabled(self, datacenter: str) -> None:
-        """Check that MediaWiki cronjobs are not set in the given DC.
+        """Check that MediaWiki cronjobs are disabled in the given DC.
 
         Arguments:
             datacenter (str): the name of the datacenter to work on.
@@ -222,8 +210,43 @@ class MediaWiki:
         """
         self.get_maintenance_host(datacenter).run_sync("test -z " + MediaWiki._list_cronjobs_command, is_safe=True)
 
-    def stop_cronjobs(self, datacenter: str) -> None:
-        """Remove and ensure MediaWiki cronjobs are not present in the given DC.
+    def check_systemd_timers_enabled(self, datacenter: str) -> None:
+        """Check that MediaWiki systemd timers are enabled in the given DC.
+
+        Arguments:
+            datacenter (str): the name of the datacenter to work on.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: on failure.
+
+        """
+        self.get_maintenance_host(datacenter).run_sync(
+            # List all timers that start with mediawiki_job_
+            "systemctl list-units 'mediawiki_job_*' --no-legend "
+            # Just get the timer name
+            "| awk '{print $1}' "
+            # For each, check `systemd is-enabled`, which will fail if
+            # the unit is disabled. xargs will exit with failure if
+            # any of the is-enabled checks fail
+            "| xargs -n 1 sh -c 'systemctl is-enabled $0'",
+            is_safe=True,
+        )
+
+    def check_periodic_jobs_enabled(self, datacenter: str) -> None:
+        """Check that MediaWiki periodic jobs are enabled in the given DC.
+
+        Arguments:
+            datacenter (str): the name of the datacenter to work on.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: on failure.
+
+        """
+        self.get_maintenance_host(datacenter).run_sync("test " + MediaWiki._list_cronjobs_command, is_safe=True)
+        self.check_systemd_timers_enabled(datacenter)
+
+    def check_periodic_jobs_disabled(self, datacenter: str) -> None:
+        """Check that MediaWiki periodic jobs are not enabled in the given DC.
 
         Arguments:
             datacenter (str): the name of the datacenter to work on.
@@ -233,11 +256,46 @@ class MediaWiki:
 
         """
         targets = self.get_maintenance_host(datacenter)
-        logger.info("Disabling MediaWiki cronjobs in %s", datacenter)
+        targets.run_async(
+            Command("test -z " + MediaWiki._list_cronjobs_command),
+            Command(
+                # List all timers that start with mediawiki_job_
+                "systemctl list-units 'mediawiki_job_*' --no-legend "
+                # Just get the timer name
+                "| awk '{print $1}' "
+                # For each, check `systemd is-enabled`, which will pass if
+                # the unit is enabled. Invert the status code so only disabled
+                # pass. 255 instructs xargs to immediately abort.
+                "| xargs -n 1 sh -c 'systemctl is-enabled $0 && exit 255 || exit 0'",
+            ),
+            is_safe=True,
+        )
+
+    def stop_periodic_jobs(self, datacenter: str) -> None:
+        """Remove and ensure MediaWiki periodic jobs are disabled in the given DC.
+
+        Arguments:
+            datacenter (str): the name of the datacenter to work on.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: on failure.
+
+        """
+        targets = self.get_maintenance_host(datacenter)
+        logger.info("Disabling MediaWiki periodic jobs in %s", datacenter)
 
         pkill_ok_codes = [0, 1]  # Accept both matches and no matches
         targets.run_async(
-            Command("crontab -u www-data -r", ok_codes=[]),  # Cleanup the crontab
+            # Stop all systemd job units
+            Command("systemctl stop mediawiki_job_*"),
+            # Disable all systemd job timers
+            Command(
+                "systemctl list-units 'mediawiki_job_*' --no-legend " "| awk '{print $1}' | xargs systemctl disable"
+            ),
+        )
+        targets.run_async(
+            # Cleanup the crontab
+            Command("crontab -u www-data -r", ok_codes=[]),
             # Kill all processes created by CRON for the www-data user
             Command("pkill -U www-data sh", ok_codes=pkill_ok_codes),
             # Kill MediaWiki wrappers, see modules/scap/manifests/scripts.pp in the Puppet repo
@@ -255,13 +313,13 @@ class MediaWiki:
             "sleep 1",
             Command("systemctl start php7.2-fpm"),  # Restart the PHP-FPM services that killed above
         )
-        self.check_cronjobs_disabled(datacenter)
+        self.check_periodic_jobs_disabled(datacenter)
 
         try:
             targets.run_sync("! pgrep -c php", is_safe=True)
         except RemoteExecutionError:
             # We just log an error, don't actually report a failure to the system. We can live with this.
-            logger.error("Stray php processes still present on the maintenance host, please check")
+            logger.error("Stray php processes still present on the %s maintenance host, please check", datacenter)
 
     @retry(
         tries=5,
