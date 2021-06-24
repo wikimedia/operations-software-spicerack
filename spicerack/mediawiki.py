@@ -26,7 +26,7 @@ class MediaWiki:
     """Class to manage MediaWiki-specific resources."""
 
     _list_cronjobs_command: str = "\"$(crontab -u www-data -l | sed -r '/^(#|$)/d')\""
-    _siteinfo_url: str = "https://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
+    _siteinfo_url: str = "http://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
 
     def __init__(self, conftool: ConftoolEntity, remote: Remote, user: str, dry_run: bool = True) -> None:
         """Initialize the instance.
@@ -85,7 +85,7 @@ class MediaWiki:
 
         """
         url = MediaWiki._siteinfo_url.format(dc=datacenter)
-        headers = {"Host": "en.wikipedia.org"}
+        headers = {"X-Forwarded-Proto": "https", "Host": "en.wikipedia.org"}
 
         response = self._http_session.get(url, headers=headers, timeout=3)
         response.raise_for_status()
