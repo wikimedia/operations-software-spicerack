@@ -1,6 +1,24 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.55`_ (2021-06-24)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* mediawiki: Update cronjob code now that most are systemd timers.
+
+  * Removed ``check_cronjobs_enabled()``.
+  * Renamed ``stop_cronjobs()`` to ``stop_periodic_jobs()``.
+  * Added ``check_periodic_jobs_disabled()``, ``check_periodic_jobs_enabled()`` and
+    ``check_systemd_timers_enabled()``.
+
+Bug fixes
+"""""""""
+
+* mediawiki: Make siteinfo API request over HTTPS.
+
 `v0.0.54`_ (2021-06-21)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1285,3 +1303,4 @@ New features
 .. _`v0.0.52`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.52
 .. _`v0.0.53`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.53
 .. _`v0.0.54`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.54
+.. _`v0.0.55`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.55
