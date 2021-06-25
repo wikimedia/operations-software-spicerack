@@ -285,14 +285,8 @@ class MediaWiki:
         logger.info("Disabling MediaWiki periodic jobs in %s", datacenter)
 
         pkill_ok_codes = [0, 1]  # Accept both matches and no matches
-        targets.run_async(
-            # Stop all systemd job units
-            Command("systemctl stop mediawiki_job_*"),
-            # Disable all systemd job timers
-            Command(
-                "systemctl list-units 'mediawiki_job_*' --no-legend " "| awk '{print $1}' | xargs systemctl disable"
-            ),
-        )
+        # Stop all systemd job units and timers
+        targets.run_async("systemctl stop mediawiki_job_*")
         targets.run_async(
             # Cleanup the crontab
             Command("crontab -u www-data -r", ok_codes=[]),
