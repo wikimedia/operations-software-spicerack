@@ -1,3 +1,9 @@
+spicerack (0.0.56-1) unstable; urgency=medium
+
+  * v0.0.56 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Sat, 26 Jun 2021 21:07:44 -0000
+
 spicerack (0.0.55-1) unstable; urgency=medium
 
   * v0.0.55 upstream release.
