@@ -10,9 +10,6 @@ from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import get_fixture_path
 from spicerack.tests.unit.test_remote import mock_cumin
 
-EQIAD_CORE_MASTERS_QUERY = "db10[01-12]"
-CODFW_CORE_MASTERS_QUERY = "db20[01-12]"
-
 
 class TestMysqlLegacyRemoteHosts:
     """Test class for the MysqlLegacyRemoteHosts class."""
@@ -65,7 +62,7 @@ class TestMysqlLegacy:
             (
                 {"replication_role": "master"},
                 "A:db-core and A:db-role-master",
-                ",".join([EQIAD_CORE_MASTERS_QUERY, CODFW_CORE_MASTERS_QUERY]),
+                "db10[01-11],db20[01-11]",
             ),
             (
                 {"datacenter": "eqiad", "section": "s1"},
@@ -75,7 +72,7 @@ class TestMysqlLegacy:
             (
                 {"datacenter": "eqiad", "replication_role": "master"},
                 "A:db-core and A:eqiad and A:db-role-master",
-                EQIAD_CORE_MASTERS_QUERY,
+                "db10[01-11]",
             ),
             (
                 {"section": "s1", "replication_role": "master"},
@@ -114,7 +111,7 @@ class TestMysqlLegacy:
     def test_get_core_dbs_fail_sanity_check(self):
         """It should raise MysqlLegacyError if matching an invalid number of hosts when looking for masters."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet("db1001"))
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Matched 1 masters, expected 12"):
+        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Matched 1 masters, expected 11"):
             self.mysql.get_core_dbs(datacenter="eqiad", replication_role="master")
 
         assert self.mocked_remote.query.called
@@ -122,26 +119,26 @@ class TestMysqlLegacy:
     @pytest.mark.parametrize("mode, value", (("readonly", b"1"), ("readwrite", b"0")))
     def test_set_core_masters_readonly(self, mode, value, caplog):
         """It should set the masters as read-only/read-write."""
-        self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet(EQIAD_CORE_MASTERS_QUERY))
-        mock_cumin(self.mocked_transports, 0, retvals=[[(EQIAD_CORE_MASTERS_QUERY, value)]])
+        self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet("db10[01-11]"))
+        mock_cumin(self.mocked_transports, 0, retvals=[[("db10[01-11]", value)]])
         getattr(self.mysql, "set_core_masters_" + mode)("eqiad")
         assert "SET GLOBAL read_only=" + value.decode() in caplog.text
 
     @pytest.mark.parametrize("readonly, reply", ((True, b"1"), (False, b"0")))
     def test_verify_core_masters_readonly_ok(self, readonly, reply, caplog):
         """Should verify that the masters have the intended read-only value."""
-        self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet(EQIAD_CORE_MASTERS_QUERY))
-        mock_cumin(self.mocked_transports, 0, retvals=[[(EQIAD_CORE_MASTERS_QUERY, reply)]])
+        self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet("db10[01-11]"))
+        mock_cumin(self.mocked_transports, 0, retvals=[[("db10[01-11]", reply)]])
         self.mysql.verify_core_masters_readonly("eqiad", readonly)
         assert "SELECT @@global.read_only" in caplog.text
 
     def test_verify_core_masters_readonly_fail(self):
         """Should raise MysqlLegacyError if some masters do not have the intended read-only value."""
-        self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet(EQIAD_CORE_MASTERS_QUERY))
+        self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet("db10[01-11]"))
         mock_cumin(
             self.mocked_transports,
             0,
-            retvals=[[("db1001", b"0"), ("db10[02-12]", b"1")]],
+            retvals=[[("db1001", b"0"), ("db10[02-11]", b"1")]],
         )
         with pytest.raises(
             mysql_legacy.MysqlLegacyError,
@@ -152,7 +149,7 @@ class TestMysqlLegacy:
     @mock.patch("spicerack.decorators.time.sleep", return_value=None)
     def test_check_core_masters_in_sync_ok(self, mocked_sleep):
         """Should check that all core masters are in sync with the master in the other DC."""
-        hosts = NodeSet(EQIAD_CORE_MASTERS_QUERY)
+        hosts = NodeSet("db10[01-11]")
         self.mocked_remote.query.side_effect = [RemoteHosts(self.config, NodeSet(host)) for host in hosts] * 2
         retvals = [[(host, b"2018-09-06T10:00:00.000000")] for host in hosts]  # first heartbeat
         retvals += [[(host, b"2018-09-06T10:00:01.000000")] for host in hosts]  # second heartbeat
@@ -172,7 +169,7 @@ class TestMysqlLegacy:
     @mock.patch("spicerack.decorators.time.sleep", return_value=None)
     def test_check_core_masters_in_sync_not_in_sync(self, mocked_sleep):
         """Should raise MysqlLegacyError if a master is not in sync with the one in the other DC."""
-        hosts = NodeSet(EQIAD_CORE_MASTERS_QUERY)
+        hosts = NodeSet("db10[01-11]")
         self.mocked_remote.query.side_effect = [RemoteHosts(self.config, NodeSet(host)) for host in hosts] + [
             RemoteHosts(self.config, NodeSet("db1001"))
         ] * 3

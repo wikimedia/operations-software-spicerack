@@ -26,7 +26,7 @@ class MediaWiki:
     """Class to manage MediaWiki-specific resources."""
 
     _list_cronjobs_command: str = "\"$(crontab -u www-data -l | sed -r '/^(#|$)/d')\""
-    _siteinfo_url: str = "https://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
+    _siteinfo_url: str = "http://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
 
     def __init__(self, conftool: ConftoolEntity, remote: Remote, user: str, dry_run: bool = True) -> None:
         """Initialize the instance.
@@ -85,7 +85,7 @@ class MediaWiki:
 
         """
         url = MediaWiki._siteinfo_url.format(dc=datacenter)
-        headers = {"Host": "en.wikipedia.org"}
+        headers = {"X-Forwarded-Proto": "https", "Host": "en.wikipedia.org"}
 
         response = self._http_session.get(url, headers=headers, timeout=3)
         response.raise_for_status()
@@ -285,14 +285,8 @@ class MediaWiki:
         logger.info("Disabling MediaWiki periodic jobs in %s", datacenter)
 
         pkill_ok_codes = [0, 1]  # Accept both matches and no matches
-        targets.run_async(
-            # Stop all systemd job units
-            Command("systemctl stop mediawiki_job_*"),
-            # Disable all systemd job timers
-            Command(
-                "systemctl list-units 'mediawiki_job_*' --no-legend " "| awk '{print $1}' | xargs systemctl disable"
-            ),
-        )
+        # Stop all systemd job units and timers
+        targets.run_async("systemctl stop mediawiki_job_*")
         targets.run_async(
             # Cleanup the crontab
             Command("crontab -u www-data -r", ok_codes=[]),

@@ -19,7 +19,7 @@ class TestMediaWiki:
         self.mocked_remote = mock.MagicMock()
         self.mocked_remote.query.return_value.hosts = ["host1"]
         self.username = "user1"
-        self.siteinfo_url = "https://api.svc.eqiad.wmnet/w/api.php"
+        self.siteinfo_url = "http://api.svc.eqiad.wmnet/w/api.php"
         self.siteinfo_rw = {
             "batchcomplete": True,
             "query": {

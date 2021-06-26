@@ -1,6 +1,16 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.56`_ (2021-06-26)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* mediawiki: reverted the change of v0.0.55 to make siteinfo API request over HTTPS.
+* mediawiki: remove unnecessary and broken disable of systemd timers added in version v0.0.55.
+* mysql_legacy: reverted the change of v0.0.49 to add the new ``x2`` database core section (`T285519`_).
+
 `v0.0.55`_ (2021-06-24)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1248,6 +1258,7 @@ New features
 .. _`T269855`: https://phabricator.wikimedia.org/T269855
 .. _`T276338`: https://phabricator.wikimedia.org/T276338
 .. _`T277740`: https://phabricator.wikimedia.org/T277740
+.. _`T285519`: https://phabricator.wikimedia.org/T285519
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -1304,3 +1315,4 @@ New features
 .. _`v0.0.53`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.53
 .. _`v0.0.54`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.54
 .. _`v0.0.55`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.55
+.. _`v0.0.56`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.56
