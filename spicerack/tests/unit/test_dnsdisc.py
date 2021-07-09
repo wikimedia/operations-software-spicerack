@@ -139,7 +139,7 @@ class TestDiscovery:
         """Calling check_record() should raise DiscoveryError if unable to check the records."""
         with pytest.raises(
             DiscoveryError,
-            match="Failed to check record {record}".format(record=self.records[0]),
+            match="Resolved record {record} with the wrong IP".format(record=self.records[0]),
         ):
             self.discovery.check_record(self.records[0], "fail.svc.eqiad.wmnet")
 
