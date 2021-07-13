@@ -107,7 +107,7 @@ def test_wait_for_elasticsearch_does_no_check_when_in_dry_run():
     assert not node_group.check_all_nodes_up.called
 
 
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_wait_for_elasticsearch_up_fails_if_one_node_is_down(mocked_sleep):
     """Test that elasticsearch instance is called when wait for instance to come up."""
     node_group1 = mock.Mock(spec_set=NodesGroup)
@@ -123,7 +123,7 @@ def test_wait_for_elasticsearch_up_fails_if_one_node_is_down(mocked_sleep):
     assert mocked_sleep.called
 
 
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_wait_for_elasticsearch_up_retries_on_failures(mocked_sleep):
     """Test that elasticsearch instance is called when wait for instance to come up."""
     node_group = mock.Mock(spec_set=NodesGroup)
@@ -515,7 +515,7 @@ class TestElasticsearchClusters:
         elasticsearch_clusters.wait_for_green(timedelta(seconds=4))
         assert retry.call_args[1]["tries"] == 1
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_green_retry_test(self, mocked_sleep):
         """Test that the retry is called again when cluster health request throws an exception."""
         self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError(500, "test"))

@@ -302,7 +302,7 @@ class TestIcinga:
         with pytest.raises(icinga.IcingaError, match="no output from icinga-status"):
             self.icinga.get_status("host[1-2]")
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_optimal_ok(self, mocked_sleep):
         """It should return immediately if host is optimal."""
         with open(get_fixture_path("icinga", "status_valid.json")) as f:
@@ -311,7 +311,7 @@ class TestIcinga:
         self.icinga.wait_for_optimal("host1")
         assert not mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_optimal_timeout(self, mocked_sleep):
         """It should raise icinga.IcingaError if host is optimal in the required time."""
         with open(get_fixture_path("icinga", "status_with_failed_services.json")) as f:
@@ -511,7 +511,7 @@ class TestIcingaHosts:
         with pytest.raises(icinga.IcingaError, match="no output from icinga-status"):
             self.icinga_hosts.get_status()
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_optimal_ok(self, mocked_sleep):
         """It should return immediately if host is optimal."""
         with open(get_fixture_path("icinga", "status_valid.json")) as f:
@@ -520,7 +520,7 @@ class TestIcingaHosts:
         self.icinga_hosts.wait_for_optimal()
         assert not mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_optimal_timeout(self, mocked_sleep):
         """It should raise icinga.IcingaError if host is optimal in the required time."""
         with open(get_fixture_path("icinga", "status_with_failed_services.json")) as f:

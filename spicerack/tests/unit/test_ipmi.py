@@ -163,7 +163,7 @@ class TestIpmi:
 
         assert mocked_run.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @mock.patch("spicerack.ipmi.run")
     def test_force_pxe_ok(self, mocked_run, mocked_sleep):
         """Should set the PXE boot mode for the next boot."""
@@ -195,7 +195,7 @@ class TestIpmi:
             ]
         )
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @mock.patch("spicerack.ipmi.run")
     def test_force_pxe_retried(self, mocked_run, mocked_sleep):
         """Should retry to set the PXE mode on failure."""

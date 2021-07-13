@@ -3,8 +3,9 @@ from datetime import timedelta
 from unittest import mock
 
 import pytest
+from wmflib.exceptions import WmflibError
 
-from spicerack.decorators import get_backoff_sleep, retry
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 
 
@@ -36,7 +37,7 @@ def _generate_mocked_function(calls):
         ([SpicerackError("error1"), SpicerackError("error2"), True], [3.0, 9.0]),
     ),
 )
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_retry_pass_no_args(mocked_sleep, calls, sleep_calls):
     """Using @retry with no arguments should use the default values."""
     func = _generate_mocked_function(calls)
@@ -47,7 +48,7 @@ def test_retry_pass_no_args(mocked_sleep, calls, sleep_calls):
 
 
 @pytest.mark.parametrize("dry_run", (True, False))
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_retry_pass_no_args_dry_run(mocked_sleep, dry_run):
     """Using @retry with no arguments should use the default values but set tries to 1 if in DRY-RUN."""
     obj = DryRunRetry(dry_run=dry_run)
@@ -60,6 +61,21 @@ def test_retry_pass_no_args_dry_run(mocked_sleep, dry_run):
     assert mocked_sleep.call_count == sleep_call_count
 
 
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
+def test_retry_pass_no_args_dry_run_func(mocked_sleep):
+    """Using @retry with no arguments should use the default values but set tries to 1 if in DRY-RUN."""
+
+    @retry
+    def a_func(dry_run=True):
+        print(dry_run)
+        raise SpicerackError
+
+    with pytest.raises(SpicerackError):
+        a_func()
+
+    assert not mocked_sleep.called
+
+
 @pytest.mark.parametrize(
     "exc, calls, sleep_calls",
     (
@@ -67,7 +83,7 @@ def test_retry_pass_no_args_dry_run(mocked_sleep, dry_run):
         (Exception, [Exception("error")], []),
     ),
 )
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_retry_fail_no_args(mocked_sleep, exc, calls, sleep_calls):
     """Using @retry with no arguments should raise the exception raised by the decorated function if not cathced."""
     func = _generate_mocked_function(calls)
@@ -107,7 +123,7 @@ def test_retry_fail_no_args(mocked_sleep, exc, calls, sleep_calls):
         ),
     ),
 )
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_retry_pass_args(mocked_sleep, calls, sleep_calls, kwargs):
     """Using @retry with arguments should use the soecified values."""
     func = _generate_mocked_function(calls)
@@ -125,7 +141,7 @@ def test_retry_pass_args(mocked_sleep, calls, sleep_calls, kwargs):
         (RuntimeError, {"exceptions": (KeyError, ValueError)}),
     ),
 )
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_retry_fail_args(mocked_sleep, exc, kwargs):
     """Using @retry with arguments should raise the exception raised by the decorated function if not cathced."""
     func = _generate_mocked_function([exc("error")])
@@ -135,43 +151,6 @@ def test_retry_fail_args(mocked_sleep, exc, kwargs):
 
     func.assert_called_once_with()
     assert not mocked_sleep.called
-
-
-@pytest.mark.parametrize(
-    "failure_message, expected_log",
-    (
-        (None, "Attempt to run 'unittest.mock.mocked' raised:"),
-        ("custom failure message", "custom failure message"),
-    ),
-)
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
-def test_retry_failure_message(mocked_sleep, failure_message, expected_log, caplog):
-    """Using @retry with a failure_message should log that message when an exception is caught."""
-    func = _generate_mocked_function([SpicerackError("error1"), True])
-    ret = retry(failure_message=failure_message)(func)()
-
-    assert ret
-    assert expected_log in caplog.text
-    assert "error1" in caplog.text
-    assert mocked_sleep.call_count == 1
-
-
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
-def test_retry_fail_chained_exceptions(mocked_sleep, caplog):
-    """When @retry catches a chained exception, it should log exception messages all the way down the chain."""
-
-    def side_effect():
-        try:
-            raise SpicerackError("error2") from SpicerackError("error3")
-        except SpicerackError:
-            raise SpicerackError("error1")  # pylint: disable=raise-missing-from
-
-    func = _generate_mocked_function(side_effect)
-    with pytest.raises(SpicerackError, match="error1"):
-        retry(func)()
-
-    assert "error1\nRaised while handling: error2\nCaused by: error3" in caplog.text
-    assert mocked_sleep.call_count == 2
 
 
 @pytest.mark.parametrize(
@@ -186,35 +165,6 @@ def test_retry_fail_chained_exceptions(mocked_sleep, caplog):
     ),
 )
 def test_retry_invalid(kwargs, message):
-    """Using @retry with invalid arguments should raise ValueError."""
-    with pytest.raises(ValueError, match=message):
+    """Using @retry with invalid arguments should raise WmflibError."""
+    with pytest.raises(WmflibError, match=message):
         retry(**kwargs)(lambda: True)()
-
-
-@pytest.mark.parametrize(
-    "mode, base, values",
-    (
-        ("constant", 0, (0,) * 5),
-        ("constant", 0.5, (0.5,) * 5),
-        ("constant", 3, (3,) * 5),
-        ("linear", 0, (0,) * 5),
-        ("linear", 0.5, (0.5, 1.0, 1.5, 2.0, 2.5)),
-        ("linear", 3, (3, 6, 9, 12, 15)),
-        ("power", 0, (0,) * 5),
-        ("power", 0.5, (0.5, 1, 2, 4, 8)),
-        ("power", 3, (3, 6, 12, 24, 48)),
-        ("exponential", 1, (1,) * 5),
-        ("exponential", 1.5, (1.5, 2.25, 3.375, 5.0625, 7.59375)),
-        ("exponential", 3, (3, 9, 27, 81, 243)),
-    ),
-)
-def test_get_backoff_sleep(mode, base, values):
-    """Calling get_backoff_sleep() should return the proper backoff based on the arguments."""
-    for i, val in enumerate(values, start=1):
-        assert get_backoff_sleep(mode, base, i) == pytest.approx(val)
-
-
-def test_get_backoff_sleep_raise():
-    """Calling get_backoff_sleep() with an invalid backoff_mode should raise ValueError."""
-    with pytest.raises(ValueError, match="Invalid backoff_mode: invalid"):
-        get_backoff_sleep("invalid", 1, 5)

@@ -306,7 +306,7 @@ class TestPuppetHosts:
 
     # TODO: check why the following test_wait_since_* tests take longer (~4s each) when running the whole suite but are
     # quick if running only tests in this module (tox -e py34-unit -- -k test_puppet)
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_timeout(self, mocked_sleep):
         """It should raise PuppetHostsCheckError if the successful Puppet run is too old within the timeout."""
         last_run = datetime.utcnow()
@@ -324,7 +324,7 @@ class TestPuppetHosts:
 
         assert mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_failed_execution(self, mocked_sleep):
         """It should raise PuppetHostsCheckError if fails to get the successful Puppet run within the timeout."""
         self.mocked_remote_hosts.run_sync.side_effect = RemoteExecutionError(1, "fail")
@@ -335,7 +335,7 @@ class TestPuppetHosts:
 
         assert mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_missing_host(self, mocked_sleep):
         """It should raise PuppetHostsCheckError unable to get the result from some host."""
         last_run = datetime.utcnow()
@@ -714,7 +714,7 @@ class TestPuppetMaster:
         ):
             self.puppet_master.wait_for_csr("test.example.com")
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_csr_timeout(self, mocked_sleep):
         """It should raise PuppetMasterCheckError if the certificate request doesn't appear."""
         results = [

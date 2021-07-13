@@ -358,7 +358,7 @@ class TestRemoteHosts:
         self.remote_hosts.wait_reboot_since(since)
         mocked_uptime.assert_called_once_with()
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
     def test_wait_reboot_since_remaining_hosts(self, mocked_uptime, mocked_sleep):
         """It should raise RemoteCheckError if unable to get the uptime from all hosts."""
@@ -370,10 +370,11 @@ class TestRemoteHosts:
         ):
             self.remote_hosts.wait_reboot_since(since)
 
-        mocked_uptime.assert_called_with()
+        # wait_reboot_since() sets tries to 360 and dry_run is False.
+        assert mocked_uptime.call_count == 360
         assert mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
     def test_wait_reboot_since_uptime_too_big(self, mocked_uptime, mocked_sleep):
         """It should raise RemoteCheckError if any host doesn't have a small-enough uptime."""

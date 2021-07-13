@@ -79,7 +79,7 @@ class TestMediaWiki:
             },
         )
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_siteinfo_raise_check(self, mocked_sleep, requests_mock):
         """It should retry if it doesn't match and raise MediaWikiCheckError after all retries have failed."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
@@ -91,7 +91,7 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_siteinfo_raise_error(self, mocked_sleep, requests_mock):
         """It should retry if it fails and raise MediaWikiError after all retries have failed."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
@@ -100,7 +100,7 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_siteinfo_key_error(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiError if the key is not present in siteinfo."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
@@ -109,7 +109,7 @@ class TestMediaWiki:
 
         assert mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_siteinfo_timeout(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiError if it fails to get siteinfo."""
         requests_mock.get(self.siteinfo_url, exc=requests.exceptions.ConnectTimeout)
@@ -136,7 +136,7 @@ class TestMediaWiki:
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
         self.mediawiki_dry_run.set_readonly("eqiad", "invalid")
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_set_readonly_raise(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiCheckError if unable to check the value has changed and not in dry_run."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
@@ -156,7 +156,7 @@ class TestMediaWiki:
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
         self.mediawiki_dry_run.set_readwrite("eqiad")
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_set_readwrite_raise(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiCheckError if unable to check the value has changed and not in dry_run."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
@@ -186,7 +186,7 @@ class TestMediaWiki:
         )
         self.mediawiki_dry_run.set_master_datacenter("codfw")
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_set_master_datacenter_raise(self, mocked_sleep, requests_mock):
         """It should raise MediaWikiCheckError if unable to check the value has changed and not in dry_run."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))
