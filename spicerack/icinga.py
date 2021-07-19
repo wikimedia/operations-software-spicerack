@@ -16,7 +16,6 @@ from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteHosts
 from spicerack.typing import TypeHosts
 
-DOWNTIME_COMMAND: str = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
 ICINGA_DOMAIN: str = "icinga.wikimedia.org"
 MIN_DOWNTIME_SECONDS: int = 60  # Minimum time in seconds the downtime can be set
 logger = logging.getLogger(__name__)
@@ -78,7 +77,19 @@ class IcingaStatusParseError(IcingaError):
 
 
 class IcingaStatusNotFoundError(IcingaError):
-    """Custom exception class for errors while parsing the Icinga status."""
+    """Custom exception class for a host missing from the Icinga status."""
+
+    def __init__(self, hostnames: Sequence[str]):
+        """Initializes an IcingaStatusNotFoundError instance.
+
+        Arguments:
+            hostnames (sequence): The hostnames not found in the Icinga status.
+
+        """
+        if len(hostnames) == 1:
+            super().__init__("Host {host} was not found in Icinga status".format(host=hostnames[0]))
+        else:
+            super().__init__("Hosts {hosts} were not found in Icinga status".format(hosts=", ".join(hostnames)))
 
 
 class HostsStatus(dict):
@@ -251,8 +262,9 @@ class Icinga:
             raise IcingaError("Got empty hosts list to downtime")
 
         hostnames = Icinga._get_hostnames(hosts)
+        downtime_command: str = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
         commands = [
-            DOWNTIME_COMMAND.format(hostname=name, duration=duration_seconds, reason=reason.quoted())
+            downtime_command.format(hostname=name, duration=duration_seconds, reason=reason.quoted())
             for name in hostnames
         ]
 
@@ -325,14 +337,11 @@ class Icinga:
         except json.JSONDecodeError as e:
             raise IcingaStatusParseError("Unable to parse Icinga status") from e
 
-        hosts_status = HostsStatus()
-        for hostname, host_status in status.items():
-            if host_status is None:
-                raise IcingaStatusNotFoundError("Host {host} was not found in Icinga status".format(host=hostname))
+        missing_hosts = [hostname for hostname, host_status in status.items() if host_status is None]
+        if missing_hosts:
+            raise IcingaStatusNotFoundError(missing_hosts)
 
-            hosts_status[hostname] = HostStatus(**host_status)
-
-        return hosts_status
+        return HostsStatus({hostname: HostStatus(**host_status) for hostname, host_status in status.items()})
 
     @retry(
         tries=15,
@@ -451,17 +460,44 @@ class IcingaHosts:
         if duration_seconds < MIN_DOWNTIME_SECONDS:
             raise IcingaError("Downtime duration must be at least 1 minute, got: {duration}".format(duration=duration))
 
-        commands = [
-            DOWNTIME_COMMAND.format(hostname=name, duration=duration_seconds, reason=reason.quoted())
-            for name in self._target_hosts
-        ]
+        try:
+            self.get_status()  # Ensure all hosts are known to Icinga, ignoring the return value.
+        except IcingaStatusNotFoundError as e:
+            raise IcingaError("{e} - no hosts have been downtimed.".format(e=e))
 
         logger.info(
             "Scheduling downtime on Icinga server %s for hosts: %s",
             self._icinga_host,
             self._target_hosts,
         )
-        self._icinga_host.run_sync(*commands)
+        start_time = str(int(time.time()))
+        end_time = str(int(time.time() + duration_seconds))
+        # fixed="1": Start at the start_time and end at the end_time.
+        # trigger_id="0": Not triggered by another downtime.
+        # TODO: SCHEDULE_HOST_DOWNTIME may not be needed, since a quick look at the Icinga source code suggests that
+        #  SCHEDULE_HOST_SVC_DOWNTIME also downtimes the host itself, not just the services. But if it does so, that's
+        #  an undocumented extra feature. For now we're keeping this call for consistency with the older icinga-downtime
+        #  script, even though it may be redundant, and in the future we can evaluate whether it's unnecessary.
+        self.run_icinga_command(
+            "SCHEDULE_HOST_DOWNTIME",
+            start_time,
+            end_time,
+            "1",  # Start at the start_time and end at the end_time.
+            "0",  # Not triggered by another downtime.
+            str(duration_seconds),
+            reason.owner,
+            reason.reason,
+        )
+        self.run_icinga_command(
+            "SCHEDULE_HOST_SVC_DOWNTIME",
+            start_time,
+            end_time,
+            "1",  # Start at the start_time and end at the end_time.
+            "0",  # Not triggered by another downtime.
+            str(duration_seconds),
+            reason.owner,
+            reason.reason,
+        )
 
     def recheck_all_services(self) -> None:
         """Force recheck of all services associated with a set of hosts."""
@@ -519,14 +555,11 @@ class IcingaHosts:
         except json.JSONDecodeError as e:
             raise IcingaStatusParseError("Unable to parse Icinga status") from e
 
-        hosts_status = HostsStatus()
-        for hostname, host_status in status.items():
-            if host_status is None:
-                raise IcingaStatusNotFoundError("Host {host} was not found in Icinga status".format(host=hostname))
+        missing_hosts = [hostname for hostname, host_status in status.items() if host_status is None]
+        if missing_hosts:
+            raise IcingaStatusNotFoundError(missing_hosts)
 
-            hosts_status[hostname] = HostStatus(**host_status)
-
-        return hosts_status
+        return HostsStatus({hostname: HostStatus(**host_status) for hostname, host_status in status.items()})
 
     @retry(
         tries=15,

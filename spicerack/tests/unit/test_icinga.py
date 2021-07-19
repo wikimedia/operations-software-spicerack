@@ -1,5 +1,6 @@
 """Icinga module tests."""
 from datetime import timedelta
+from typing import Sequence
 from unittest import mock
 
 import pytest
@@ -16,6 +17,39 @@ def set_mocked_icinga_host_output(mocked_icinga_host, output, n_hosts=1):
     """Setup the mocked icinga_host return value with the given output."""
     out = MsgTreeElem(output.encode(), parent=MsgTreeElem())
     mocked_icinga_host.run_sync.return_value = iter(n_hosts * [(NodeSet("icinga-host"), out)])
+
+
+def set_mocked_icinga_host_outputs(mocked_icinga_host, outputs):
+    """Setup the mocked icinga_host side effect to return the given outputs, one after another."""
+    outs = [MsgTreeElem(output.encode(), parent=MsgTreeElem()) for output in outputs]
+    mocked_icinga_host.run_sync.side_effect = [iter([(NodeSet("icinga-host"), out)]) for out in outs]
+
+
+def assert_has_downtime_calls(
+    mocked_icinga_host: mock.MagicMock,
+    hosts: Sequence[str],
+    reason: Reason,
+    start: int = 1514764800,
+    duration: int = 14400,
+):
+    """Assert that the mocked icinga_host was called correctly to downtime the given hosts."""
+    end = start + duration
+    args = "{start};{end};1;0;{duration};{owner};{reason}".format(
+        start=start, end=end, duration=duration, owner=reason.owner, reason=reason.reason
+    )
+    downtime_calls = [
+        [
+            'bash -c \'echo -n "[{start}] SCHEDULE_HOST_DOWNTIME;{host};{args}" '
+            "> /var/lib/icinga/rw/icinga.cmd '".format(start=start, host=host, args=args)
+            for host in hosts
+        ],
+        [
+            'bash -c \'echo -n "[{start}] SCHEDULE_HOST_SVC_DOWNTIME;{host};{args}" '
+            "> /var/lib/icinga/rw/icinga.cmd '".format(start=start, host=host, args=args)
+            for host in hosts
+        ],
+    ]
+    mocked_icinga_host.run_sync.assert_has_calls([mock.call(*call) for call in downtime_calls])
 
 
 class TestCommandFile:
@@ -74,6 +108,18 @@ class TestCommandFile:
         assert icinga.CommandFile(mocked_other_icinga_host) == "/var/lib/icinga/rw/icinga_other.cmd"
         self.mocked_icinga_host.run_sync.assert_not_called()
         mocked_other_icinga_host.run_sync.assert_called_once()
+
+
+def test_status_not_found_error_one_host():
+    """Test initializing IcingaStatusNotFoundError with a single host."""
+    e = icinga.IcingaStatusNotFoundError(["host1"])
+    assert str(e) == "Host host1 was not found in Icinga status"
+
+
+def test_status_not_found_error_multiple_hosts():
+    """Test initializing IcingaStatusNotFoundError with multiple hosts."""
+    e = icinga.IcingaStatusNotFoundError(["host1", "host2", "host3"])
+    assert str(e) == "Hosts host1, host2, host3 were not found in Icinga status"
 
 
 class TestIcinga:
@@ -316,10 +362,10 @@ class TestIcingaHosts:
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtimed(self, mocked_time):
         """It should downtime the hosts on Icinga, yield and delete the downtime once done."""
-        call = 'icinga-downtime -h "host1" -d 14400 -r {reason}'.format(reason=self.reason.quoted())
-
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
         with self.icinga_hosts.downtimed(self.reason):
-            self.mocked_icinga_host.run_sync.assert_called_once_with(call)
+            assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
             self.mocked_icinga_host.run_sync.reset_mock()
 
         self.mocked_icinga_host.run_sync.assert_has_calls(
@@ -332,45 +378,58 @@ class TestIcingaHosts:
         )
         assert mocked_time.called
 
-    def test_downtime_is_kept_when_exception_is_raised(self):
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_downtime_is_kept_when_exception_is_raised(self, _mocked_time):
         """Downtime should not be removed if an exception is raised."""
-        call = 'icinga-downtime -h "host1" -d 14400 -r {reason}'.format(reason=self.reason.quoted())
-
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
         with pytest.raises(ValueError):
             with self.icinga_hosts.downtimed(self.reason):
-                self.mocked_icinga_host.run_sync.assert_called_once_with(call)
+                assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
                 self.mocked_icinga_host.run_sync.reset_mock()
                 raise ValueError()
         assert not self.mocked_icinga_host.run_sync.called
 
-    def test_downtime_is_removed_when_exception_is_raised(self):
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_downtime_is_removed_when_exception_is_raised(self, _mocked_time):
         """Downtime should not be removed if an exception is raised."""
-        call = 'icinga-downtime -h "host1" -d 14400 -r {reason}'.format(reason=self.reason.quoted())
-
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
         with pytest.raises(ValueError):
             with self.icinga_hosts.downtimed(self.reason, remove_on_error=True):
-                self.mocked_icinga_host.run_sync.assert_called_once_with(call)
+                assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
                 self.mocked_icinga_host.run_sync.reset_mock()
                 raise ValueError()
         assert self.mocked_icinga_host.run_sync.called
 
-    def test_downtime_default_params(self):
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_downtime_default_params(self, _mocked_time):
         """It should downtime the hosts on the Icinga server with the default params."""
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
         self.icinga_hosts.downtime(self.reason)
-        call = 'icinga-downtime -h "host1" -d 14400 -r {reason}'.format(reason=self.reason.quoted())
-        self.mocked_icinga_host.run_sync.assert_called_once_with(call)
+        assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
 
-    def test_downtime_custom_duration(self):
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_downtime_custom_duration(self, _mocked_time):
         """It should downtime the hosts for the given duration on the Icinga server."""
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
         self.icinga_hosts.downtime(self.reason, duration=timedelta(minutes=30))
-        self.mocked_icinga_host.run_sync.assert_called_once_with(
-            ('icinga-downtime -h "host1" -d 1800 -r {reason}'.format(reason=self.reason.quoted()))
-        )
+        assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason, duration=1800)
 
     def test_downtime_invalid_duration(self):
         """It should raise IcingaError if the duration is too short."""
         with pytest.raises(icinga.IcingaError, match="Downtime duration must be at least 1 minute"):
             self.icinga_hosts.downtime(self.reason, duration=timedelta(seconds=59))
+
+    def test_downtime_unknown_host(self):
+        """It should raise IcingaError if any host is not known to Icinga."""
+        set_mocked_icinga_host_output(self.mocked_icinga_host, '{"host1": null}')
+        with pytest.raises(
+            icinga.IcingaError, match="Host host1 was not found in Icinga status - no hosts have been downtimed"
+        ):
+            self.icinga_hosts.downtime(self.reason)
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_run_icinga_command(self, mocked_time):
