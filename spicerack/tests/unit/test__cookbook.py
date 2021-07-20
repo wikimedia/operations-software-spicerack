@@ -15,6 +15,8 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |   |-- class_api.get_runner_raise
 |   |-- class_api.multiple.CookbookA
 |   |-- class_api.multiple.CookbookB
+|   |-- class_api.rollback
+|   |-- class_api.rollback_raise
 |   |-- class_api.runtime_description
 |   `-- class_api.runtime_description_raise
 |-- cookbook
@@ -48,6 +50,8 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |-- class_api.get_runner_raise: Class API get_runner raise cookbook.
 |   |-- class_api.multiple.CookbookA: Multiple cookbook classes.
 |   |-- class_api.multiple.CookbookB: Multiple cookbook classes.
+|   |-- class_api.rollback: Class API rollback cookbook.
+|   |-- class_api.rollback_raise: Class API rollback_raise cookbook.
 |   |-- class_api.runtime_description: Class API cookbook that overrides runtime_description.
 |   `-- class_api.runtime_description_raise: Class API runtime_description raise cookbook.
 |-- cookbook: Top level class cookbook.
@@ -96,7 +100,7 @@ LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
         `-- group3.subgroup3.cookbook4
 """
 COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
-[0/6] class_api: Class API Test Cookbooks.
+[0/8] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -108,7 +112,7 @@ q - Quit
 h - Help
 """
 COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
-[0/6] class_api: Class API Test Cookbooks.
+[0/8] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -357,6 +361,29 @@ class TestCookbookCollection:
                 0,
                 [],
             ),
+            (
+                "class_api.rollback",
+                [
+                    "START - Cookbook class_api.rollback",
+                    "run has raised",
+                    "rollback called",
+                    "END (FAIL) - Cookbook class_api.rollback (exit_code=99)",
+                ],
+                [],
+                cookbook.EXCEPTION_RETCODE,
+                [],
+            ),
+            (
+                "class_api.rollback_raise",
+                [
+                    "START - Cookbook class_api.rollback_raise",
+                    "rollback has raised",
+                    "END (FAIL) - Cookbook class_api.rollback_raise (exit_code=93)",
+                ],
+                [],
+                cookbook.ROLLBACK_FAIL_RETCODE,
+                [],
+            ),
         ),
     )  # pylint: disable=too-many-arguments
     def test_main_execute_cookbook(self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args):
@@ -431,7 +458,7 @@ class TestCookbookCollection:
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack)
         menu = cookbooks.get_item(cookbooks.cookbooks_module_prefix)
-        assert menu.status == "0/25"
+        assert menu.status == "0/27"
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a TreeItem with all tasks completed should return DONE."""

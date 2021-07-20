@@ -264,6 +264,13 @@ class CookbookItem(BaseItem):
         else:
             self._status = CookbookItem.success if ret == 0 else CookbookItem.failed
 
+        if ret != 0:
+            try:
+                runner.rollback()
+            except BaseException:  # pylint: disable=broad-except
+                logger.exception("Exception %s %s rollback() (exit_code=%d):", message, self.full_name, ret)
+                ret = cookbook.ROLLBACK_FAIL_RETCODE
+
         _log.log_task_end(
             self.status,
             "Cookbook {name} (exit_code={ret}) {desc}".format(name=self.full_name, ret=ret, desc=description).strip(),
