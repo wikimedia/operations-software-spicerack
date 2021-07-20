@@ -327,7 +327,7 @@ class Icinga:
 
         hosts_status = HostsStatus()
         for hostname, host_status in status.items():
-            if not host_status:
+            if host_status is None:
                 raise IcingaStatusNotFoundError("Host {host} was not found in Icinga status".format(host=hostname))
 
             hosts_status[hostname] = HostStatus(**host_status)
@@ -521,7 +521,7 @@ class IcingaHosts:
 
         hosts_status = HostsStatus()
         for hostname, host_status in status.items():
-            if not host_status:
+            if host_status is None:
                 raise IcingaStatusNotFoundError("Host {host} was not found in Icinga status".format(host=hostname))
 
             hosts_status[hostname] = HostStatus(**host_status)

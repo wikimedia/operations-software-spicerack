@@ -7,5 +7,5 @@
         "downtimed": false,
         "notifications_enabled": true
     },
-    "host2": false
+    "host2": null
 }
