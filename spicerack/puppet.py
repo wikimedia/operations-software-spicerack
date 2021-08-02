@@ -235,8 +235,10 @@ class PuppetHosts(RemoteHostsAdapter):
 
         fingerprints = {}
         errors = []
-        # Puppet exits with 1 when generating the CSR
-        command = Command("puppet agent --test --color=false", ok_codes=[1])
+        # The return codes for the cert generation are not well defined, we'll
+        # check if it worked by searching for the fingerprint and parsing the
+        # output.
+        command = Command("puppet agent --test --color=false", ok_codes=[])
         logger.info("Generating a new Puppet certificate on %d hosts: %s", len(self), self)
         for nodeset, output in self._remote_hosts.run_sync(command):
             for line in output.message().decode().splitlines():

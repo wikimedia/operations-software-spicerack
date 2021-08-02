@@ -26,7 +26,6 @@ EXTRAS_REQUIRE = {
         "bandit>=1.5.1",
         "black",
         "flake8>=3.6.0",
-        "flake8-import-order>=0.18.1",
         "isort",
         "mypy>=0.670,<0.800",
         "pytest-cov>=2.6.0",

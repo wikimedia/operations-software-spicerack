@@ -28,10 +28,14 @@ CORE_SECTIONS: Tuple[str, ...] = (
     "s7",
     "s8",
     "x1",
+    "x2",
     "es4",
     "es5",
 )
 """tuple: list of valid MySQL RW section names (external storage RO sections are not included here)."""
+ACTIVE_ACTIVE_SECTIONS: Tuple[str] = ("x2",)
+"""tuple: active/active sections that should not go read-only"""
+
 logger = logging.getLogger(__name__)
 
 
@@ -115,7 +119,12 @@ class MysqlLegacy:
         return MysqlLegacyRemoteHosts(self._remote.query(query))
 
     def get_core_dbs(
-        self, *, datacenter: Optional[str] = None, section: Optional[str] = None, replication_role: Optional[str] = None
+        self,
+        *,
+        datacenter: Optional[str] = None,
+        section: Optional[str] = None,
+        replication_role: Optional[str] = None,
+        excludes: Tuple[str, ...] = ()
     ) -> MysqlLegacyRemoteHosts:
         """Find the core databases matching the parameters.
 
@@ -126,6 +135,7 @@ class MysqlLegacy:
                 :py:data:`spicerack.mysql_legacy.REPLICATION_ROLES`.
             section (str, optional): a specific section to filter for, accepted values are those specified in
                 :py:data:`spicerack.mysql_legacy.CORE_SECTIONS`.
+            excludes (Tuple[str, ...]): sections to exclude from getting
 
         Raises:
             spicerack.mysql_legacy.MysqlLegacyError: on invalid data or unexpected matching hosts.
@@ -148,6 +158,16 @@ class MysqlLegacy:
                 )
 
             query_parts.append("A:" + datacenter)
+
+        for exclude in excludes:
+            if exclude not in CORE_SECTIONS:
+                raise MysqlLegacyError(
+                    "Got invalid excludes {section}, accepted values are: {sections}".format(
+                        section=exclude, sections=CORE_SECTIONS
+                    )
+                )
+            section_multiplier -= 1
+            query_parts.append("not A:db-section-{section}".format(section=exclude))
 
         if section is not None:
             section_multiplier = 1
@@ -194,7 +214,7 @@ class MysqlLegacy:
 
         """
         logger.debug("Setting core DB masters in %s to be read-only", datacenter)
-        target = self.get_core_dbs(datacenter=datacenter, replication_role="master")
+        target = self.get_core_dbs(datacenter=datacenter, replication_role="master", excludes=ACTIVE_ACTIVE_SECTIONS)
         target.run_query("SET GLOBAL read_only=1")
         self.verify_core_masters_readonly(datacenter, True)
 
@@ -210,7 +230,7 @@ class MysqlLegacy:
 
         """
         logger.debug("Setting core DB masters in %s to be read-write", datacenter)
-        target = self.get_core_dbs(datacenter=datacenter, replication_role="master")
+        target = self.get_core_dbs(datacenter=datacenter, replication_role="master", excludes=ACTIVE_ACTIVE_SECTIONS)
         target.run_query("SET GLOBAL read_only=0")
         self.verify_core_masters_readonly(datacenter, False)
 
@@ -230,7 +250,7 @@ class MysqlLegacy:
             datacenter,
             is_read_only,
         )
-        target = self.get_core_dbs(datacenter=datacenter, replication_role="master")
+        target = self.get_core_dbs(datacenter=datacenter, replication_role="master", excludes=ACTIVE_ACTIVE_SECTIONS)
         expected = str(int(is_read_only))  # Convert it to the returned value from MySQL: 1 or 0.
         failed = False
 

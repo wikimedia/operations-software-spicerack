@@ -246,7 +246,7 @@ class TestPuppetHosts:
         self.mocked_remote_hosts.run_sync.assert_has_calls(
             [
                 mock.call("rm -rfv /var/lib/puppet/ssl"),
-                mock.call(puppet.Command("puppet agent --test --color=false", ok_codes=[1])),
+                mock.call(puppet.Command("puppet agent --test --color=false", ok_codes=[])),
             ]
         )
         assert fingerprints == {"test.example.com": "00:FF"}

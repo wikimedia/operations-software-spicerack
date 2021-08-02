@@ -1,6 +1,37 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.57`_ (2021-08-02)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* dnsdisc: improved message logged explicitely saying what was checked and what didn't match when checking that a
+  discovery record has been updated (`T285706`_).
+* icinga: adapt to the newer API of the ``icinga-status`` output.
+* icinga: write directly to the Icinga command file instead of calling the ``icinga-downtime`` wrapper script where
+  it was used so that the whole module now interacts directly with the Icinga command file. This opens up the route
+  for further improvements (`T285803`_).
+* ganeti: add ganeti test cluster to the possible Ganeti locations (`T286206`_).
+* mysql_legacy: re-add ``x2`` database section and add support for active/active core sections (`T285519`_).
+
+  * ``get_core_dbs()`` now supports excluding sections from its cumin query. All of the functions that call it in
+    the context of setting the database read-only or read-write will now exclude sections listed in
+    ``ACTIVE_ACTIVE_SECTIONS``.
+
+Bug fixes
+"""""""""
+
+* puppet: when regenerating the client certificate, do not rely on the exit code of the Puppet command as it might be
+  misleading. It already relies on successfully finding the certificate fingerprint.
+
+Miscellanea
+"""""""""""
+
+* tox: remove ``flake8-import-order`` plugin as dependency now that the import order is ensured by ``black`` and
+  ``isort``.
+
 `v0.0.56`_ (2021-06-26)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1259,6 +1290,9 @@ New features
 .. _`T276338`: https://phabricator.wikimedia.org/T276338
 .. _`T277740`: https://phabricator.wikimedia.org/T277740
 .. _`T285519`: https://phabricator.wikimedia.org/T285519
+.. _`T285706`: https://phabricator.wikimedia.org/T285706
+.. _`T285803`: https://phabricator.wikimedia.org/T285803
+.. _`T286206`: https://phabricator.wikimedia.org/T286206
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -1316,3 +1350,4 @@ New features
 .. _`v0.0.54`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.54
 .. _`v0.0.55`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.55
 .. _`v0.0.56`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.56
+.. _`v0.0.57`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.57

@@ -205,7 +205,7 @@ class Discovery:
                 )
 
         if failed:
-            raise DiscoveryError("Failed to check record {name}".format(name=name))
+            raise DiscoveryError("Resolved record {name} with the wrong IP".format(name=name))
 
         logger.info("%s.discovery.wmnet record is correct.", name)
 
