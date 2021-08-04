@@ -301,16 +301,19 @@ class MediaWiki:
             Command('pkill --full "/usr/local/bin/expanddblist"', ok_codes=pkill_ok_codes),
             Command('pkill --full "/usr/local/bin/mwscript"', ok_codes=pkill_ok_codes),
             Command('pkill --full "/usr/local/bin/mwscriptwikiset"', ok_codes=pkill_ok_codes),
-            Command("killall -r php", ok_codes=[]),  # Kill all remaining PHP processes for all users
+            # Kill all remaining PHP (but not php-fpm) processes for all users
+            Command("killall -r 'php$'", ok_codes=[]),
             "sleep 5",
-            Command("killall -9 -r php", ok_codes=[]),  # No more time to be gentle
+            # No more time to be gentle
+            Command("killall -9 -r 'php$'", ok_codes=[]),
             "sleep 1",
-            Command("systemctl start php7.2-fpm"),  # Restart the PHP-FPM services that killed above
         )
         self.check_periodic_jobs_disabled(datacenter)
 
         try:
-            targets.run_sync("! pgrep -c php", is_safe=True)
+            # Look for remaining PHP (but not php-fpm) processes. php-fpm is used for
+            # serving noc.wikimedia.org, which is independent of periodic jobs
+            targets.run_sync("! pgrep -c 'php$'", is_safe=True)
         except RemoteExecutionError:
             # We just log an error, don't actually report a failure to the system. We can live with this.
             logger.error("Stray php processes still present on the %s maintenance host, please check", datacenter)
