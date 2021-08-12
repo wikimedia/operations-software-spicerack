@@ -1,6 +1,7 @@
 """Icinga module."""
 import json
 import logging
+import shlex
 import time
 import warnings
 from contextlib import contextmanager
@@ -472,8 +473,6 @@ class IcingaHosts:
         )
         start_time = str(int(time.time()))
         end_time = str(int(time.time() + duration_seconds))
-        # fixed="1": Start at the start_time and end at the end_time.
-        # trigger_id="0": Not triggered by another downtime.
         # TODO: SCHEDULE_HOST_DOWNTIME may not be needed, since a quick look at the Icinga source code suggests that
         #  SCHEDULE_HOST_SVC_DOWNTIME also downtimes the host itself, not just the services. But if it does so, that's
         #  an undocumented extra feature. For now we're keeping this call for consistency with the older icinga-downtime
@@ -589,6 +588,7 @@ class IcingaHosts:
             str: the command line to execute on the Icinga host.
 
         """
-        return "bash -c 'echo -n \"[{now}] {args}\" > {command_file} '".format(
+        bash_cmd = 'echo -n "[{now}] {args}" > {command_file} '.format(
             now=int(time.time()), args=";".join(args), command_file=self._command_file
         )
+        return "bash -c " + shlex.quote(bash_cmd)

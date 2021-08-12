@@ -1,4 +1,5 @@
 """Icinga module tests."""
+import shlex
 from datetime import timedelta
 from typing import Sequence
 from unittest import mock
@@ -39,13 +40,19 @@ def assert_has_downtime_calls(
     )
     downtime_calls = [
         [
-            'bash -c \'echo -n "[{start}] SCHEDULE_HOST_DOWNTIME;{host};{args}" '
-            "> /var/lib/icinga/rw/icinga.cmd '".format(start=start, host=host, args=args)
+            "bash -c "
+            + shlex.quote(
+                'echo -n "[{start}] SCHEDULE_HOST_DOWNTIME;{host};{args}" '
+                "> /var/lib/icinga/rw/icinga.cmd ".format(start=start, host=host, args=args)
+            )
             for host in hosts
         ],
         [
-            'bash -c \'echo -n "[{start}] SCHEDULE_HOST_SVC_DOWNTIME;{host};{args}" '
-            "> /var/lib/icinga/rw/icinga.cmd '".format(start=start, host=host, args=args)
+            "bash -c "
+            + shlex.quote(
+                'echo -n "[{start}] SCHEDULE_HOST_SVC_DOWNTIME;{host};{args}" '
+                "> /var/lib/icinga/rw/icinga.cmd ".format(start=start, host=host, args=args)
+            )
             for host in hosts
         ],
     ]
@@ -409,6 +416,15 @@ class TestIcingaHosts:
             set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
         self.icinga_hosts.downtime(self.reason)
         assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
+
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_downtime_with_apostrophe_in_reason(self, _mocked_time):
+        """It should correctly quote the apostrophe in the reason string."""
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        reason = Reason("An apostrophe's here", "user1", "orchestration-host", task_id="T12345")
+        self.icinga_hosts.downtime(reason)
+        assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], reason)
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtime_custom_duration(self, _mocked_time):
