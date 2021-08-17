@@ -25,7 +25,6 @@ class MediaWikiCheckError(SpicerackCheckError):
 class MediaWiki:
     """Class to manage MediaWiki-specific resources."""
 
-    _list_cronjobs_command: str = "\"$(crontab -u www-data -l | sed -r '/^(#|$)/d')\""
     _siteinfo_url: str = "http://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
 
     def __init__(self, conftool: ConftoolEntity, remote: Remote, user: str, dry_run: bool = True) -> None:
@@ -198,20 +197,8 @@ class MediaWiki:
         """
         return self._remote.query("A:mw-maintenance and A:" + datacenter)
 
-    def check_cronjobs_disabled(self, datacenter: str) -> None:
-        """Check that MediaWiki cronjobs are disabled in the given DC.
-
-        Arguments:
-            datacenter (str): the name of the datacenter to work on.
-
-        Raises:
-            spicerack.remote.RemoteExecutionError: on failure.
-
-        """
-        self.get_maintenance_host(datacenter).run_sync("test -z " + MediaWiki._list_cronjobs_command, is_safe=True)
-
-    def check_systemd_timers_enabled(self, datacenter: str) -> None:
-        """Check that MediaWiki systemd timers are enabled in the given DC.
+    def check_periodic_jobs_enabled(self, datacenter: str) -> None:
+        """Check that MediaWiki periodic jobs are enabled in the given DC.
 
         Arguments:
             datacenter (str): the name of the datacenter to work on.
@@ -232,19 +219,6 @@ class MediaWiki:
             is_safe=True,
         )
 
-    def check_periodic_jobs_enabled(self, datacenter: str) -> None:
-        """Check that MediaWiki periodic jobs are enabled in the given DC.
-
-        Arguments:
-            datacenter (str): the name of the datacenter to work on.
-
-        Raises:
-            spicerack.remote.RemoteExecutionError: on failure.
-
-        """
-        self.get_maintenance_host(datacenter).run_sync("test " + MediaWiki._list_cronjobs_command, is_safe=True)
-        self.check_systemd_timers_enabled(datacenter)
-
     def check_periodic_jobs_disabled(self, datacenter: str) -> None:
         """Check that MediaWiki periodic jobs are not enabled in the given DC.
 
@@ -257,7 +231,6 @@ class MediaWiki:
         """
         targets = self.get_maintenance_host(datacenter)
         targets.run_async(
-            Command("test -z " + MediaWiki._list_cronjobs_command),
             Command(
                 # List all timers that start with mediawiki_job_
                 "systemctl list-units 'mediawiki_job_*' --no-legend "
@@ -288,11 +261,8 @@ class MediaWiki:
         # Stop all systemd job units and timers
         targets.run_async("systemctl stop mediawiki_job_*")
         targets.run_async(
-            # Cleanup the crontab
-            Command("crontab -u www-data -r", ok_codes=[]),
-            # Kill all processes created by CRON for the www-data user
-            Command("pkill -U www-data sh", ok_codes=pkill_ok_codes),
-            # Kill MediaWiki wrappers, see modules/scap/manifests/scripts.pp in the Puppet repo
+            # Kill MediaWiki wrappers, in case someone has started one manually. See modules/scap/manifests/scripts.pp
+            # in the Puppet repo.
             Command('pkill --full "/usr/local/bin/foreachwiki"', ok_codes=pkill_ok_codes),
             Command(
                 'pkill --full "/usr/local/bin/foreachwikiindblist"',
