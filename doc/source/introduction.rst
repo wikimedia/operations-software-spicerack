@@ -51,13 +51,20 @@ Class interface
 A more integrated class-based API interface. Each cookbook must define two classes that extends
 :py:class:`spicerack.cookbook.CookbookBase` and :py:class:`spicerack.cookbook.CookbookRunnerBase` respectively,
 defining the required abstract methods and optionally overriding the default implementation of the concrete ones.
+
 The Spicerack framework will instantiate the class derived from ``CookbookBase`` passing to it an initialized
 :py:class:`spicerack.Spicerack` instance. Then it will call its ``argument_parser`` method to get the ``argparse``
 instance and with that parse the CLI arguments. After that it will call the ``get_runner`` method that must return
 an instance of a class derived from ``CookbookRunnerBase``. The ``runtime_description`` property will be used to
 customize the default ``START``/``STOP`` IRC messages. Up to this point any exception raised will be considered a
 pre-failure and make the cookbook fail before IRC-logging its start.
+
 Then the ``run`` method will be called to actually run the cookbook.
+
+If the ``run`` method returns a non-zero exit code or raises any exception the optional ``rollback`` method will be
+called to allow the cookbook to perform any cleanup action. Any exception raised by the ``rollback`` method will be
+logged and the cookbook will exit with a reserved exit code.
+
 The derived classes can have any name and multiple cookbooks in the same module are supported.
 
 Module interface

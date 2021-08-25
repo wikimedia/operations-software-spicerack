@@ -1,6 +1,37 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.58`_ (2021-08-25)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* Class API: add ``rollback()`` method
+
+  * Add a new ``rollback()`` method to the ``CookbookRunnerBase`` base class that by default does nothing.
+  * The method is called by Spicerack when a cookbook exits with a non-zero exit code or raises an un-caught exception.
+  * This allows cookbooks to define their own cleanup strategy in case of errors, for example to restore a previously
+    coherent state.
+  * Any exception raised by the ``rollback()`` method will be caught and logged by Spicerack with its original exit
+    code and will then exit with a reserved exit code for a failed rollback.
+
+Minor improvements
+""""""""""""""""""
+
+* mediawiki: remove cron-specific maintenance implementation details, replaced by systemd timers (`T289078`_).
+
+Bug fixes
+"""""""""
+
+* icinga: use shlex to quote the command string for bash (`T288558`_).
+
+  * This fixes the downtiming that would fail if the admin reason contains an apostrophe, due to lack of escaping.
+
+* mediawiki: ignore php-fpm when stopping cronjobs (`T285804`_).
+
+  * On mwmaint, php-fpm is used to serve noc.wikimedia.org so we want to keep it running even when stopping cronjobs.
+
 `v0.0.57`_ (2021-08-02)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1292,7 +1323,10 @@ New features
 .. _`T285519`: https://phabricator.wikimedia.org/T285519
 .. _`T285706`: https://phabricator.wikimedia.org/T285706
 .. _`T285803`: https://phabricator.wikimedia.org/T285803
+.. _`T285804`: https://phabricator.wikimedia.org/T285804
 .. _`T286206`: https://phabricator.wikimedia.org/T286206
+.. _`T288558`: https://phabricator.wikimedia.org/T288558
+.. _`T289078`: https://phabricator.wikimedia.org/T289078
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -1351,3 +1385,4 @@ New features
 .. _`v0.0.55`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.55
 .. _`v0.0.56`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.56
 .. _`v0.0.57`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.57
+.. _`v0.0.58`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.58

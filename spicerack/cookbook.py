@@ -5,6 +5,8 @@ from typing import Optional
 
 from spicerack import Spicerack
 
+ROLLBACK_FAIL_RETCODE = 93
+"""int: Reserved exit code: the cookbook had failed and raised an exception while executing the rollback() method."""
 CLASS_FAIL_INIT_RETCODE = 94
 """int: Reserved exit code: failed to initialize the cookbook."""
 GET_ARGS_PARSER_FAIL_RETCODE = 95
@@ -132,4 +134,17 @@ class CookbookRunnerBase(metaclass=ABCMeta):
             BaseException: any exception raised in the ``run()`` method will be catched by Spicerack and the Cookbook
                 execution will be considered failed.
 
+        """
+
+    def rollback(self) -> None:
+        """Called by Spicerack when the cookbook fails the execution.
+
+        This method by default does nothing. Cookbooks classes that inherit from this one can override it to add their
+        own custom actions to perform on error to rollback to a previous state.
+        The method will be called if the cookbook raises any un-caught exception or exits with a non-zero exit code.
+        For example it can be used to cleanup any left-over unconsistent state as if the cookbook was never run.
+
+        Any un-caught exception raised by this method will be caught by Spicerack and logged, along with the original
+        exit code of the cookbook. The final exit code will be the reserved
+        :py:const:`cookbooks.ROLLBACK_FAIL_RETCODE`.
         """

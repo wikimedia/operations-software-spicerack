@@ -200,24 +200,18 @@ class TestMediaWiki:
         assert mocked_sleep.called
 
     def test_check_periodic_jobs_enabled(self):
-        """It should ensure that the periodic are present and not commented out."""
+        """It should ensure that the periodic jobs are present and not commented out."""
         self.mediawiki.check_periodic_jobs_enabled("dc1")
         self.mocked_remote.query.assert_called_with("A:mw-maintenance and A:dc1")
         assert "systemctl list-units" in self.mocked_remote.query.return_value.run_sync.call_args[0][0]
 
-    def test_check_cronjobs_disabled(self):
-        """It should ensure that the cronjobs are empty."""
-        self.mediawiki.check_cronjobs_disabled("dc1")
-        self.mocked_remote.query.assert_called_once_with("A:mw-maintenance and A:dc1")
-        assert "crontab -u www-data -l" in self.mocked_remote.query.return_value.run_sync.call_args[0][0]
-
     def test_stop_periodic_jobs(self):
-        """It should ensure that the periodic jobs are present and not commented out."""
+        """It should ensure that the periodic jobs are stopped and remaining processes are killed."""
         self.mediawiki.stop_periodic_jobs("dc1")
         self.mocked_remote.query.assert_called_with("A:mw-maintenance and A:dc1")
-        assert (
-            "crontab -u www-data -r" in self.mocked_remote.query.return_value.run_async.call_args_list[1][0][0].command
-        )
+        assert "systemctl stop" in self.mocked_remote.query.return_value.run_async.call_args_list[0][0][0]
+        assert "killall" in self.mocked_remote.query.return_value.run_async.call_args_list[1][0][-2].command
+        assert "systemctl list-units" in self.mocked_remote.query.return_value.run_async.call_args_list[2][0][0].command
 
     def test_stop_periodic_jobs_stray_procs(self):
         """It should not fail is there are leftover php stray processes."""
