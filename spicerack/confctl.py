@@ -166,8 +166,10 @@ class ConftoolEntity:
             for key, desired in filter_expr.items():
                 try:
                     value = getattr(obj, key)
-                except AttributeError:
-                    raise ConfctlError('Could not find property "{k}" in object {o}'.format(k=key, o=obj.pprint()))
+                except AttributeError as e:
+                    raise ConfctlError(
+                        'Could not find property "{k}" in object {o}'.format(k=key, o=obj.pprint())
+                    ) from e
                 if value != desired:
                     matching = False
             if matching:

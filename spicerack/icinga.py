@@ -464,7 +464,7 @@ class IcingaHosts:
         try:
             self.get_status()  # Ensure all hosts are known to Icinga, ignoring the return value.
         except IcingaStatusNotFoundError as e:
-            raise IcingaError("{e} - no hosts have been downtimed.".format(e=e))
+            raise IcingaError("{e} - no hosts have been downtimed.".format(e=e)) from e
 
         logger.info(
             "Scheduling downtime on Icinga server %s for hosts: %s",

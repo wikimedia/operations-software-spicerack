@@ -164,7 +164,7 @@ def test_retry_fail_chained_exceptions(mocked_sleep, caplog):
         try:
             raise SpicerackError("error2") from SpicerackError("error3")
         except SpicerackError:
-            raise SpicerackError("error1")
+            raise SpicerackError("error1")  # pylint: disable=raise-missing-from
 
     func = _generate_mocked_function(side_effect)
     with pytest.raises(SpicerackError, match="error1"):

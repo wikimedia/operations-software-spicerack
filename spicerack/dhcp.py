@@ -3,7 +3,7 @@
 import base64
 import re
 import textwrap
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import sha256
@@ -38,7 +38,8 @@ class DHCPConfiguration(ABC):
     def __str__(self) -> str:
         """Return a string of this configuration rendered."""
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def filename(self) -> str:
         """Return a string of the proposed filename for this configuration, from the automation directory."""
 

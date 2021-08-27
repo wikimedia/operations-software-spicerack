@@ -524,9 +524,9 @@ class TreeItem(BaseItem):
 
         try:
             answer = input(">>> ")
-        except (EOFError, KeyboardInterrupt):
+        except (EOFError, KeyboardInterrupt) as e:
             print("QUIT")
-            raise StopIteration  # Ctrl+d or Ctrl+c pressed while waiting for input
+            raise StopIteration from e  # Ctrl+d or Ctrl+c pressed while waiting for input
 
         if not answer:
             return

@@ -161,12 +161,12 @@ class Ipmi:
                 try:
                     value = line.split(":")[1].strip(" \n")
                     break
-                except IndexError:
+                except IndexError as e:
                     raise IpmiError(
                         "Unable to extract value for parameter '{label}' from line: {line}".format(
                             label=param_label, line=line
                         )
-                    )
+                    ) from e
         else:
             raise IpmiError(
                 "Unable to find the boot parameter '{label}' in: {output}".format(label=param_label, output=bootparams)

@@ -79,8 +79,8 @@ def create_elasticsearch_clusters(
     """
     try:
         endpoints = ELASTICSEARCH_CLUSTERS["search"][clustergroup].values()
-    except KeyError:
-        raise ElasticsearchClusterError("No cluster group named {name}".format(name=clustergroup))
+    except KeyError as e:
+        raise ElasticsearchClusterError("No cluster group named {name}".format(name=clustergroup)) from e
 
     clusters = [Elasticsearch(endpoint) for endpoint in endpoints]
     elasticsearch_clusters = [ElasticsearchCluster(cluster, remote, dry_run=dry_run) for cluster in clusters]
