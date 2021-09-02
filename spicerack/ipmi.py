@@ -43,9 +43,7 @@ class Ipmi:
         self.env: Dict[str, str] = {"IPMITOOL_PASSWORD": password}
         self._dry_run = dry_run
 
-    def command(  # pylint: disable=no-self-use
-        self, mgmt_hostname: str, command_parts: List[str], is_safe: bool = False
-    ) -> str:
+    def command(self, mgmt_hostname: str, command_parts: List[str], is_safe: bool = False) -> str:
         """Run an ipmitool command for a remote management console hostname.
 
         Arguments:

@@ -188,7 +188,7 @@ def test_retry_fail_chained_exceptions(mocked_sleep, caplog):
 def test_retry_invalid(kwargs, message):
     """Using @retry with invalid arguments should raise ValueError."""
     with pytest.raises(ValueError, match=message):
-        retry(**kwargs)(lambda: True)()  # pylint: disable=not-callable
+        retry(**kwargs)(lambda: True)()
 
 
 @pytest.mark.parametrize(

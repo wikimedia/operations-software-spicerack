@@ -6,8 +6,8 @@ from typing import Optional, Union
 
 from wmflib.irc import SALSocketHandler
 
-root_logger = logging.getLogger()  # pylint: disable=invalid-name
-irc_logger = logging.getLogger("spicerack_irc_announce")  # pylint: disable=invalid-name
+root_logger = logging.getLogger()
+irc_logger = logging.getLogger("spicerack_irc_announce")
 
 
 class FilterOutCumin(logging.Filter):

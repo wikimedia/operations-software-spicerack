@@ -1,5 +1,4 @@
 """Wrapper around etcdctl handling parameters and such."""
-# pylint: disable=unsubscriptable-object,too-many-arguments
 import logging
 from dataclasses import dataclass
 from enum import Enum, auto

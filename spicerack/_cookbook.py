@@ -399,7 +399,7 @@ def import_module(module_name: str) -> _module_api.CookbooksModuleInterface:
     """
     try:
         module = importlib.import_module(module_name)
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:
         raise CookbookError("Failed to import module {name}: {msg}".format(name=module_name, msg=e)) from e
 
     return cast(_module_api.CookbooksModuleInterface, module)

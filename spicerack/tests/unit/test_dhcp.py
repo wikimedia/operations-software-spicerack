@@ -337,7 +337,6 @@ class TestDHCP:
     # - does it still teardown when an error occurs
     def test_push_context_manager_raise(self):
         """Test push context manager where internal code raises."""
-        # pylint: disable=protected-access
         config = get_mock_config()
         hosts = self._setup_dhcp_mocks()
 

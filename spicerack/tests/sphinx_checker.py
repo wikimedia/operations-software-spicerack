@@ -69,10 +69,8 @@ def main(base_path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(  # pylint: disable=invalid-name
-        description="Check that all Spicerack modules are documented"
-    )
+    parser = argparse.ArgumentParser(description="Check that all Spicerack modules are documented")
     parser.add_argument("base_path", help="Path to the root of the spicerack repository")
-    args = parser.parse_args()  # pylint: disable=invalid-name
+    args = parser.parse_args()
 
     sys.exit(main(args.base_path))

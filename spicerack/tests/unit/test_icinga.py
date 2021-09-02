@@ -94,7 +94,7 @@ class TestCommandFile:
         """It should raise IcingaError if failing to get the configuration value."""
         set_mocked_icinga_host_output(self.mocked_icinga_host, output)
         with pytest.raises(icinga.IcingaError, match="Unable to read command_file configuration"):
-            icinga.CommandFile(self.mocked_icinga_host)  # pylint: disable=pointless-statement
+            icinga.CommandFile(self.mocked_icinga_host)
 
     def test_cached(self):
         """It should return the already cached value of the command_file if accessed again."""
