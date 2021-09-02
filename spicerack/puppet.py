@@ -4,7 +4,7 @@ import logging
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from subprocess import CalledProcessError, check_output
-from typing import Dict, Iterator, List, Optional, Union, cast
+from typing import Dict, Iterator, List, Optional, Tuple, Union, cast
 
 from cumin import NodeSet
 from cumin.transports import Command
@@ -194,7 +194,7 @@ class PuppetHosts(RemoteHostsAdapter):
         logger.info("Running Puppet with args %s on %d hosts: %s", args_string, len(self), self)
         self._remote_hosts.run_sync(Command(command, timeout=timeout), batch_size=batch_size)
 
-    def first_run(self, has_systemd: bool = True) -> None:
+    def first_run(self, has_systemd: bool = True) -> Iterator[Tuple]:
         """Perform the first Puppet run on a clean host without using custom wrappers.
 
         Arguments:
@@ -220,8 +220,9 @@ class PuppetHosts(RemoteHostsAdapter):
         ]
 
         logger.info("Starting first Puppet run (sit back, relax, and enjoy the wait)")
-        self._remote_hosts.run_sync(*commands)
+        results = self._remote_hosts.run_sync(*commands)
         logger.info("First Puppet run completed")
+        return results
 
     def regenerate_certificate(self) -> Dict[str, str]:
         """Delete the local Puppet certificate and generate a new CSR.
@@ -363,6 +364,11 @@ class PuppetMaster:
             )
 
         self._master_host = master_host
+
+    @property
+    def master_host(self) -> RemoteHosts:
+        """Accessor for the master_host property."""
+        return self._master_host
 
     def delete(self, hostname: str) -> None:
         """Remove the host from the Puppet master and PuppetDB.

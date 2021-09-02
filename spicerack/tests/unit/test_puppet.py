@@ -450,6 +450,10 @@ class TestPuppetMaster:
         ):
             puppet.PuppetMaster(self.mocked_master_host)
 
+    def test_master_host(self):
+        """It should return the master host RemoteHosts instance."""
+        assert self.puppet_master.master_host is self.mocked_master_host
+
     def test_delete(self):
         """It should delete the host from Puppet master and PuppetDB."""
         self.puppet_master.delete("test.example.com")
