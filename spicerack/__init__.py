@@ -42,7 +42,7 @@ except DistributionNotFound:  # pragma: no cover - this should never happen duri
     pass  # package is not installed
 
 
-class Spicerack:
+class Spicerack:  # pylint: disable=too-many-instance-attributes
     """Spicerack service locator."""
 
     def __init__(
@@ -51,6 +51,7 @@ class Spicerack:
         verbose: bool = False,
         dry_run: bool = True,
         cumin_config: str = "/etc/cumin/config.yaml",
+        cumin_installer_config: str = "/etc/cumin/config-installer.yaml",
         conftool_config: str = "/etc/conftool/config.yaml",
         conftool_schema: str = "/etc/conftool/schema.yaml",
         debmonitor_config: str = "/etc/debmonitor.conf",
@@ -63,6 +64,7 @@ class Spicerack:
             verbose (bool, optional): whether to set the verbose mode.
             dry_run (bool, optional): whether this is a DRY-RUN.
             cumin_config (str, optional): the path to Cumin's configuration file.
+            cumin_installer_config (str, optional): the path to Cumin's configuration file for the Debian installer.
             conftool_config (str, optional): the path to Conftool's configuration file.
             conftool_schema (str, optional): the path to Conftool's schema file.
             debmonitor_config (str, optional): the path to Debmonitor's INI configuration file. It must have at least
@@ -83,6 +85,7 @@ class Spicerack:
         self._dry_run = dry_run
         self._http_proxy = http_proxy
         self._cumin_config = cumin_config
+        self._cumin_installer_config = cumin_installer_config
         self._conftool_config = conftool_config
         self._conftool_schema = conftool_schema
         self._debmonitor_config = debmonitor_config
@@ -202,14 +205,18 @@ class Spicerack:
         """
         return self.remote().query(self.dns().resolve_cname(NETBOX_DOMAIN))
 
-    def remote(self) -> Remote:
+    def remote(self, installer: bool = False) -> Remote:
         """Get a Remote instance.
+
+        Arguments:
+            installer (bool, optional): whether to use the special configuration to connect to a Debian installer
+                or freshly re-imaged host prior to its first Puppet run.
 
         Returns:
             spicerack.remote.Remote: the Remote instance.
 
         """
-        return Remote(self._cumin_config, dry_run=self._dry_run)
+        return Remote(self._cumin_installer_config if installer else self._cumin_config, dry_run=self._dry_run)
 
     def confctl(self, entity_name: str) -> ConftoolEntity:
         """Access a Conftool specific entity instance.

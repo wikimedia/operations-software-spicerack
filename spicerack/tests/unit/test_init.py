@@ -49,6 +49,7 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.irc_logger, logging.Logger)
     assert isinstance(spicerack.actions, ActionsDict)
     assert isinstance(spicerack.remote(), Remote)
+    assert isinstance(spicerack.remote(installer=True), Remote)
     assert isinstance(spicerack.confctl("discovery"), ConftoolEntity)
     assert isinstance(spicerack.confctl("mwconfig"), ConftoolEntity)
     assert isinstance(spicerack.dns(), Dns)
