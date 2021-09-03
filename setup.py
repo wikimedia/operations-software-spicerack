@@ -31,9 +31,6 @@ EXTRAS_REQUIRE = {
         "pytest-cov>=2.6.0",
         "pytest-xdist>=1.26.1",
         "pytest>=3.10.1",
-        # Makes black segfault with the latest version. Forcing older version, see:
-        # https://bitbucket.org/mrabarnett/mrab-regex/issues/421/2021827-results-in-fatal-python-error
-        "regex<2021.8.27",
         "requests-mock>=1.5.2",
         # This is required for flake8 to run proprely, as when running tox
         # setuptools comes boundled is usually way older (debian sid has 44 as
