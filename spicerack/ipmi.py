@@ -32,22 +32,23 @@ class IpmiCheckError(SpicerackCheckError):
 class Ipmi:
     """Class to manage remote IPMI via ipmitool."""
 
-    def __init__(self, password: str, dry_run: bool = True) -> None:
+    def __init__(self, mgmt_fqdn: str, password: str, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
+            mgmt_fqdn (str): the management console FQDN to target.
             password (str): the password to use to connect via IPMI.
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
         self.env: Dict[str, str] = {"IPMITOOL_PASSWORD": password}
+        self._mgmt_fqdn = mgmt_fqdn
         self._dry_run = dry_run
 
-    def command(self, mgmt_hostname: str, command_parts: List[str], is_safe: bool = False) -> str:
-        """Run an ipmitool command for a remote management console hostname.
+    def command(self, command_parts: List[str], is_safe: bool = False) -> str:
+        """Run an ipmitool command for a remote management console FQDN.
 
         Arguments:
-            mgmt_hostname (str): the FQDN of the management interface of the host to target.
             command_parts (list): a list of :py:class:`str` with the IPMI command components to execute.
             is_safe (bool, optional): if this is a safe command to run also in DRY RUN mode.
 
@@ -63,7 +64,7 @@ class Ipmi:
             "-I",
             "lanplus",
             "-H",
-            mgmt_hostname,
+            self._mgmt_fqdn,
             "-U",
             "root",
             "-E",
@@ -78,7 +79,7 @@ class Ipmi:
         except CalledProcessError as e:
             raise IpmiError(
                 "Remote IPMI for {mgmt} failed (exit={code}): {output}".format(
-                    mgmt=mgmt_hostname, code=e.returncode, output=e.output
+                    mgmt=self._mgmt_fqdn, code=e.returncode, output=e.output
                 )
             ) from e
 
@@ -86,31 +87,25 @@ class Ipmi:
 
         return output
 
-    def check_connection(self, mgmt_hostname: str) -> None:
-        """Ensure that remote IPMI is working for the management console hostname.
-
-        Arguments:
-            mgmt_hostname (str): the FQDN of the management interface of the host to target.
+    def check_connection(self) -> None:
+        """Ensure that remote IPMI is working for the management console FQDN.
 
         Raises:
             spicerack.ipmi.IpmiError: if unable to connect or execute a test command.
 
         """
-        status = self.command(mgmt_hostname, ["chassis", "power", "status"], is_safe=True)
+        status = self.command(["chassis", "power", "status"], is_safe=True)
         if not status.startswith("Chassis Power is"):
             raise IpmiError("Unexpected chassis status: {status}".format(status=status))
 
-    def check_bootparams(self, mgmt_hostname: str) -> None:
+    def check_bootparams(self) -> None:
         """Check if the BIOS boot parameters are back to normal values.
-
-        Arguments:
-            mgmt_hostname (str): the FQDN of the management interface of the host to target.
 
         Raises:
             spicerack.ipmi.IpmiCheckError: if the BIOS boot parameters are incorrect.
 
         """
-        param = self._get_boot_parameter(mgmt_hostname, "Boot parameter data")
+        param = self._get_boot_parameter("Boot parameter data")
         if param not in IPMI_SAFE_BOOT_PARAMS:
             raise IpmiCheckError(
                 "Expected BIOS boot params in {accepted} got: {param}".format(
@@ -124,26 +119,22 @@ class Ipmi:
         backoff_mode="linear",
         exceptions=(IpmiCheckError,),
     )
-    def force_pxe(self, mgmt_hostname: str) -> None:
+    def force_pxe(self) -> None:
         """Force PXE for the next boot and verify that the setting was applied.
-
-        Arguments:
-            mgmt_hostname (str): the FQDN of the management interface of the host to target.
 
         Raises:
             spicerack.ipmi.IpmiCheckError: if unable to verify the PXE mode within the retries.
 
         """
-        self.command(mgmt_hostname, ["chassis", "bootdev", "pxe"])
-        boot_device = self._get_boot_parameter(mgmt_hostname, "Boot Device Selector")
+        self.command(["chassis", "bootdev", "pxe"])
+        boot_device = self._get_boot_parameter("Boot Device Selector")
         if boot_device != "Force PXE":
             raise IpmiCheckError("Unable to verify that Force PXE is set. The host might reboot in the current OS")
 
-    def _get_boot_parameter(self, mgmt_hostname: str, param_label: str) -> str:
+    def _get_boot_parameter(self, param_label: str) -> str:
         """Get a specific boot parameter of the host.
 
         Arguments:
-            mgmt_hostname (str): the FQDN of the management interface of the host to target.
             param_label (str): the label of the boot parameter to lookout for.
 
         Raises:
@@ -153,7 +144,7 @@ class Ipmi:
             str: the value of the parameter.
 
         """
-        bootparams = self.command(mgmt_hostname, ["chassis", "bootparam", "get", "5"], is_safe=True)
+        bootparams = self.command(["chassis", "bootparam", "get", "5"], is_safe=True)
         for line in bootparams.splitlines():
             if param_label in line:
                 try:
@@ -198,11 +189,10 @@ class Ipmi:
             return IPMI_PASSWORD_MIN_LEN
         raise IpmiError("New passwords must be {min_len} bytes minimum".format(min_len=IPMI_PASSWORD_MIN_LEN))
 
-    def reset_password(self, mgmt_hostname: str, username: str, password: str) -> None:
+    def reset_password(self, username: str, password: str) -> None:
         """Reset the given usernames password to the one provided.
 
         Arguments:
-            mgmt_hostname (str): the FQDN of the management interface of the host to target.
             username (str): The username who's password will be reset must not be empty
             password (str): The new password must have length between {min_len} and {max_len} bytes
 
@@ -218,17 +208,14 @@ class Ipmi:
         password_store_size = str(Ipmi._get_password_store_size(password))
 
         try:
-            user_id = self._get_user_id(mgmt_hostname, username)
+            user_id = self._get_user_id(username)
         except IpmiError:
             # some systems (HP?) use channel 2
             logger.info("unable to find user in channel 1 testing channel 2")
-            user_id = self._get_user_id(mgmt_hostname, username, 2)
+            user_id = self._get_user_id(username, 2)
 
         success = "Set User Password command successful (user {user_id})\n".format(user_id=user_id)
-        result = self.command(
-            mgmt_hostname,
-            ["user", "set", "password", user_id, password, password_store_size],
-        )
+        result = self.command(["user", "set", "password", user_id, password, password_store_size])
 
         if self._dry_run:
             return
@@ -240,16 +227,15 @@ class Ipmi:
             current_password = self.env["IPMITOOL_PASSWORD"]
             self.env["IPMITOOL_PASSWORD"] = password
             try:
-                self.check_connection(mgmt_hostname)
+                self.check_connection()
             except IpmiError as error:
                 self.env["IPMITOOL_PASSWORD"] = current_password
                 raise IpmiError("Password reset failed for username: root") from error
 
-    def _get_user_id(self, mgmt_hostname: str, username: str, channel: int = 1) -> str:
+    def _get_user_id(self, username: str, channel: int = 1) -> str:
         """Get the user ID associated with a given username.
 
         Arguments:
-            mgmt_hostname (str): the FQDN of the management interface of the host to target.
             username (str): The username to search for
             channel (int): The channel number for the user list; Default: 1
 
@@ -260,7 +246,7 @@ class Ipmi:
             str: the user ID associated with the username
 
         """
-        userlist = self.command(mgmt_hostname, ["user", "list", str(channel)], is_safe=True)
+        userlist = self.command(["user", "list", str(channel)], is_safe=True)
         for line in userlist.splitlines():
             words = line.split()
             if words[0] == "ID":

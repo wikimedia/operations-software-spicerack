@@ -128,7 +128,7 @@ def test_spicerack_ipmi(monkeypatch):
     """Should instantiate an instance of Ipmi."""
     monkeypatch.setenv("MGMT_PASSWORD", "env_password")
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-    assert isinstance(spicerack.ipmi(), Ipmi)
+    assert isinstance(spicerack.ipmi("test-mgmt.example.com"), Ipmi)
 
 
 def test_spicerack_ipmi_cached(monkeypatch):
@@ -136,11 +136,10 @@ def test_spicerack_ipmi_cached(monkeypatch):
     monkeypatch.setenv("MGMT_PASSWORD", "first_password")
     expected_cached = {"IPMITOOL_PASSWORD": "first_password"}
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-    assert spicerack.ipmi(cached=True).env == expected_cached
+    assert spicerack.ipmi("test-mgmt.example.com").env == expected_cached
     monkeypatch.setenv("MGMT_PASSWORD", "second_password")
 
-    assert spicerack.ipmi(cached=True).env == expected_cached
-    assert spicerack.ipmi().env == {"IPMITOOL_PASSWORD": "second_password"}
+    assert spicerack.ipmi("test-mgmt.example.com").env == expected_cached
 
 
 @pytest.mark.parametrize(
