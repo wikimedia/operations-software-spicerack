@@ -94,9 +94,21 @@ class Ipmi:
             spicerack.ipmi.IpmiError: if unable to connect or execute a test command.
 
         """
+        self.power_status()
+
+    def power_status(self) -> str:
+        """Get the current power status for the management console FQDN.
+
+        Raises:
+            spicerack.ipmi.IpmiError: if unable to get the power status.
+
+        """
+        identifier = "Chassis Power is "
         status = self.command(["chassis", "power", "status"], is_safe=True)
-        if not status.startswith("Chassis Power is"):
+        if not status.startswith(identifier):
             raise IpmiError("Unexpected chassis status: {status}".format(status=status))
+
+        return status[len(identifier) :].strip()
 
     def check_bootparams(self) -> None:
         """Check if the BIOS boot parameters are back to normal values.
@@ -130,6 +142,16 @@ class Ipmi:
         boot_device = self._get_boot_parameter("Boot Device Selector")
         if boot_device != "Force PXE":
             raise IpmiCheckError("Unable to verify that Force PXE is set. The host might reboot in the current OS")
+
+    def reboot(self) -> None:
+        """Reboot a host via IPMI, either performing a power cycle or a power on based on the power status."""
+        status = self.power_status()
+        if status == "off":
+            operation = "on"
+        else:
+            operation = "cycle"
+
+        self.command(["chassis", "power", operation])
 
     def _get_boot_parameter(self, param_label: str) -> str:
         """Get a specific boot parameter of the host.

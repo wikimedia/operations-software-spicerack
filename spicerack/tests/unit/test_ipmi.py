@@ -99,13 +99,45 @@ class TestIpmi:
             check=True,
         )
 
+    @mock.patch(
+        "spicerack.ipmi.run",
+        return_value=CompletedProcess((), 0, stdout=b"Chassis Power is on\n"),
+    )
+    def test_power_status_ok(self, mocked_run):
+        """It should return the current power status of the target host."""
+        status = self.ipmi_dry_run.power_status()
+        assert status == "on"
+        mocked_run.assert_called_once_with(
+            IPMITOOL_BASE + ["chassis", "power", "status"],
+            env=ENV,
+            stdout=PIPE,
+            check=True,
+        )
+
     @mock.patch("spicerack.ipmi.run", return_value=CompletedProcess((), 0, stdout=b"failed"))
-    def test_check_connection_raise(self, mocked_run):
-        """It should raise IpmiError if unable to execute remote IPMI commands."""
+    def test_power_status_raise(self, mocked_run):
+        """It should raise IpmiError if unable to get the power status."""
         with pytest.raises(ipmi.IpmiError, match="Unexpected chassis status: failed"):
-            self.ipmi.check_connection()
+            self.ipmi.power_status()
 
         assert mocked_run.called
+
+    @pytest.mark.parametrize("status, operation", (("on", "cycle"), ("off", "on")))
+    @mock.patch("spicerack.ipmi.run")
+    def test_reboot(self, mocked_run, status, operation):
+        """It issue the proper reboot command based on the current power status."""
+        mocked_run.return_value = CompletedProcess(
+            (),
+            0,
+            stdout=f"Chassis Power is {status}\n".encode(),
+        )
+        self.ipmi.reboot()
+        mocked_run.has_call(
+            IPMITOOL_BASE + ["chassis", "power", operation],
+            env=ENV,
+            stdout=PIPE,
+            check=True,
+        )
 
     @mock.patch("spicerack.ipmi.run")
     def test_check_bootparams_ok(self, mocked_run):
