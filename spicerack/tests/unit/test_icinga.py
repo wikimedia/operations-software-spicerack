@@ -1,7 +1,9 @@
 """Icinga module tests."""
+import logging
+import re
 import shlex
 from datetime import timedelta
-from typing import Sequence
+from typing import Sequence, Tuple
 from unittest import mock
 
 import pytest
@@ -54,6 +56,28 @@ def assert_has_downtime_calls(
                 "> /var/lib/icinga/rw/icinga.cmd ".format(start=start, host=host, args=args)
             )
             for host in hosts
+        ],
+    ]
+    mocked_icinga_host.run_sync.assert_has_calls([mock.call(*call) for call in downtime_calls])
+
+
+def assert_has_service_downtime_calls(
+    mocked_icinga_host: mock.MagicMock,
+    host_services: Sequence[Tuple[str, str]],
+    reason: Reason,
+    start: int = 1514764800,
+    duration: int = 14400,
+):
+    """Assert that the mocked icinga_host was called correctly to downtime the given services."""
+    end = start + duration
+    args = "{start};{end};1;0;{duration};{owner};{reason}".format(
+        start=start, end=end, duration=duration, owner=reason.owner, reason=reason.reason
+    )
+    downtime_calls = [
+        [
+            'bash -c \'echo -n "[{start}] SCHEDULE_SVC_DOWNTIME;{host};{service};{args}" '
+            "> /var/lib/icinga/rw/icinga.cmd '".format(start=start, host=host, service=service, args=args)
+            for host, service in host_services
         ],
     ]
     mocked_icinga_host.run_sync.assert_has_calls([mock.call(*call) for call in downtime_calls])
@@ -254,6 +278,48 @@ class TestIcingaHosts:
             self.icinga_hosts.downtime(self.reason)
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_downtime_services_default_params(self, _mocked_time, caplog):
+        """It should downtime the services on the Icinga server with the default params."""
+        caplog.set_level(logging.INFO)
+        with open(get_fixture_path("icinga", "status_with_services.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        self.icinga_hosts.downtime_services(r"service\d", self.reason)
+        assert_has_service_downtime_calls(
+            self.mocked_icinga_host, [("host1", "service1"), ("host1", "service2")], self.reason
+        )
+        assert r'for services "service\d" for host: host1 (matched 2 unique service names on 1 host)' in caplog.text
+
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_downtime_services_custom_duration(self, _mocked_time):
+        """It should downtime the services for the given duration on the Icinga server."""
+        with open(get_fixture_path("icinga", "status_with_services.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        self.icinga_hosts.downtime_services(r"service\d", self.reason, duration=timedelta(minutes=30))
+        assert_has_service_downtime_calls(
+            self.mocked_icinga_host, [("host1", "service1"), ("host1", "service2")], self.reason, duration=1800
+        )
+
+    def test_downtime_services_invalid_duration(self):
+        """It should raise IcingaError if the duration is too short."""
+        with pytest.raises(icinga.IcingaError, match="Downtime duration must be at least 1 minute"):
+            self.icinga_hosts.downtime_services(r"service\d", self.reason, duration=timedelta(seconds=59))
+
+    def test_downtime_services_unknown_host(self):
+        """It should raise IcingaError if any host is not known to Icinga."""
+        set_mocked_icinga_host_output(self.mocked_icinga_host, '{"host1": null}')
+        with pytest.raises(
+            icinga.IcingaError, match="Host host1 was not found in Icinga status - no hosts have been downtimed"
+        ):
+            self.icinga_hosts.downtime_services(r"service\d", self.reason)
+
+    def test_downtime_services_unknown_service(self):
+        """It should raise IcingaError if no services match the regex."""
+        with open(get_fixture_path("icinga", "status_with_no_matching_services.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        with pytest.raises(icinga.IcingaError, match=r'No services on host1 matched "service\\d"'):
+            self.icinga_hosts.downtime_services(r"service\d", self.reason)
+
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_run_icinga_command(self, mocked_time):
         """It should run the specified command for all the hosts on the Icinga server."""
         self.icinga_hosts.run_icinga_command("TEST_COMMAND", "arg1", "arg2")
@@ -281,6 +347,35 @@ class TestIcingaHosts:
         )
         assert mocked_time.called
 
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_remove_service_downtimes(self, mocked_time):
+        """It should remove the downtime for the hosts on the Icinga server."""
+        with open(get_fixture_path("icinga", "status_with_services_downtimed.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        self.icinga_hosts.remove_service_downtimes(r"service\d")
+        self.mocked_icinga_host.run_sync.assert_called_with(
+            *[
+                'bash -c \'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1;{service}" '
+                "> /var/lib/icinga/rw/icinga.cmd '".format(service=service)
+                for service in ["service1", "service2"]
+            ]
+        )
+        assert mocked_time.called
+
+    def test_remove_service_downtimes_not_downtimed(self):
+        """It should do nothing if the services exist but aren't downtimed."""
+        with open(get_fixture_path("icinga", "status_with_services.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        self.icinga_hosts.remove_service_downtimes(r"service\d")
+        self.mocked_icinga_host.run_sync.assert_called_once()  # Only the icinga-status call, no downtimes.
+
+    def test_remove_service_downtimes_unknown_service(self):
+        """It should raise IcingaError if no services match the regex."""
+        with open(get_fixture_path("icinga", "status_with_no_matching_services.json")) as f:
+            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        with pytest.raises(icinga.IcingaError, match=r'No services on host1 matched "service\\d"'):
+            self.icinga_hosts.remove_service_downtimes(r"service\d")
+
     def test_get_status_ok(self):
         """It should parse the JSON payload and return an instance of HostsStatus."""
         with open(get_fixture_path("icinga", "status_with_failed_services.json")) as f:
@@ -288,6 +383,7 @@ class TestIcingaHosts:
 
         status = self.icinga_hosts.get_status()
 
+        assert "--services" not in self.mocked_icinga_host.run_sync.call_args[0][0].command
         assert not status.optimal
         assert status.non_optimal_hosts == ["host2"]
         assert status.failed_services == {"host2": ["check_name1", "check_name2"]}
@@ -316,6 +412,23 @@ class TestIcingaHosts:
         self.mocked_icinga_host.run_sync.return_value = iter(())
         with pytest.raises(icinga.IcingaError, match="no output from icinga-status"):
             self.icinga_hosts.get_status()
+
+    def test_get_status_with_services(self):
+        """It should parse the JSON payload and return an instance of HostsStatus with service status."""
+        with open(get_fixture_path("icinga", "status_with_services.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+
+        status = self.icinga_hosts.get_status(service_re=r"service\d")
+
+        assert r"--services 'service\d'" in self.mocked_icinga_host.run_sync.call_args[0][0].command
+        assert status.optimal
+        assert {service["name"] for service in status["host1"].services} == {"service1", "service2"}
+        assert status.failed_hosts == []
+
+    def test_get_status_with_invalid_services_re(self):
+        """It should raise re.error if the services regex is invalid."""
+        with pytest.raises(re.error, match="nothing to repeat at position 0"):
+            self.icinga_hosts.get_status(service_re="+")
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_optimal_ok(self, mocked_sleep):

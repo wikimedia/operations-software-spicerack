@@ -1,11 +1,12 @@
 """Icinga module."""
 import json
 import logging
+import re
 import shlex
 import time
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Dict, Iterator, List, Mapping, Sequence, Tuple, cast
+from typing import Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, cast
 
 from cumin import NodeSet
 from cumin.transports import Command
@@ -151,27 +152,33 @@ class HostStatus:
         name: str,
         state: str,
         optimal: bool,
-        failed_services: Sequence[Mapping],
         downtimed: bool,
         notifications_enabled: bool,
+        failed_services: Optional[Sequence[Mapping]] = None,
+        services: Optional[Sequence[Mapping]] = None,
     ):
         """Initialize the instance.
+
+        Either `services` or `failed_services` may be present, depending on the flags passed to icinga-status.
 
         Arguments:
             name (str): the hostname.
             state (str): the Icinga state for the host, one of ``UP``, ``DOWN``, UNREACHABLE``.
             optimal (bool): whether the host is in optimal state (all green).
-            failed_services (list): a list of dictionaries representing the failed services.
             downtimed (bool): whether the host is currently downtimed.
             notifications_enabled: (bool): whether the host has notifications enabled.
+            failed_services (list, optional): a list of dictionaries representing the failed services.
+            services (list, optional): a list of dictionaries giving detailed service status.
 
         """
         self.name = name
         self.state = state
         self.optimal = optimal
-        self.failed_services_raw = failed_services  # TODO: could be improved creating a ServiceStatus class
         self.downtimed = downtimed
         self.notifications_enabled = notifications_enabled
+        # TODO: could be improved creating a ServiceStatus class
+        self.services = services if services is not None else []
+        self.failed_services_raw = failed_services if failed_services is not None else []
 
     @property
     def failed_services(self) -> List[str]:
@@ -289,6 +296,80 @@ class IcingaHosts:
             reason.reason,
         )
 
+    def downtime_services(self, service_re: str, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> None:
+        """Downtime services on the Icinga server for the given time with a message.
+
+        If there are multiple target_hosts, the set of matching services may vary from host to host (e.g. because a
+        hostname, DB section, or other unique fact is included in the service name) and downtime_services will downtime
+        each service on the correct target_host. If some hosts happen to have no matching services, they will be safely
+        skipped. But if *no* hosts have matching services, IcingaError is raised (because the regex is probably wrong).
+
+        Arguments:
+            service_re (str): the regular expression matching service names to downtime.
+            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
+            duration (datetime.timedelta, optional): the length of the downtime period.
+
+        Raises:
+            re.error: if service_re is an invalid regular expression.
+            IcingaError: if no services on any target host match the regular expression.
+
+        """
+        duration_seconds = int(duration.total_seconds())
+        if duration_seconds < MIN_DOWNTIME_SECONDS:
+            raise IcingaError("Downtime duration must be at least 1 minute, got: {duration}".format(duration=duration))
+
+        try:
+            # This also validates the regular expression syntax and ensures all hosts are known to Icinga.
+            status = self.get_status(service_re)
+        except IcingaStatusNotFoundError as e:
+            raise IcingaError("{e} - no hosts have been downtimed.".format(e=e)) from e
+
+        unique_services = set()
+        for host_status in status.values():
+            for service in host_status.services:
+                unique_services.add(service["name"])
+        unique_service_count = len(unique_services)
+        matched_host_count = sum(1 if host_status.services else 0 for host_status in status.values())
+
+        if not unique_services:
+            raise IcingaError('No services on {hosts} matched "{re}"'.format(hosts=self._target_hosts, re=service_re))
+
+        logger.info(
+            'Scheduling downtime on Icinga server %s for services "%s" for host%s: %s '
+            "(matched %d unique service name%s on %d host%s)",
+            self._icinga_host,
+            service_re,
+            "" if len(self._target_hosts) == 1 else "s",
+            self._target_hosts,
+            unique_service_count,
+            "" if unique_service_count == 1 else "s",
+            matched_host_count,
+            "" if matched_host_count == 1 else "s",
+        )
+        start_time = str(int(time.time()))
+        end_time = str(int(time.time() + duration_seconds))
+        # This doesn't use self.run_icinga_command because if the service names are different, we'll set different
+        # downtimes (and therefore run different Icinga commands) for each target_host.
+        commands = []
+        for hostname, host_status in status.items():
+            for service in host_status.services:
+                logger.debug('Downtiming "%s" on %s', service["name"], hostname)
+                commands.append(
+                    self._get_command_string(
+                        "SCHEDULE_SVC_DOWNTIME",
+                        hostname,
+                        service["name"],
+                        start_time,
+                        end_time,
+                        "1",  # Start at the start_time and end at the end_time.
+                        "0",  # Not triggered by another downtime.
+                        str(duration_seconds),
+                        reason.owner,
+                        reason.reason,
+                    )
+                )
+        self._icinga_host.run_sync(*commands)
+
     def recheck_all_services(self) -> None:
         """Force recheck of all services associated with a set of hosts."""
         self.run_icinga_command("SCHEDULE_FORCED_HOST_SVC_CHECKS", str(int(time.time())))
@@ -296,6 +377,45 @@ class IcingaHosts:
     def remove_downtime(self) -> None:
         """Remove a downtime from a set of hosts."""
         self.run_icinga_command("DEL_DOWNTIME_BY_HOST_NAME")
+
+    def remove_service_downtimes(self, service_re: str) -> None:
+        """Remove downtimes for services from a set of hosts.
+
+        If there are multiple target_hosts, this method has the same behavior as downtime_services. If any matching
+        service is not downtimed, it's silently skipped. (If one or more services exist matching the regex, but none of
+        them is downtimed, this method does nothing.)
+
+        Arguments:
+            service_re (str): the regular expression matching service names to un-downtime.
+
+        Raises:
+            re.error: if service_re is an invalid regular expression.
+            IcingaError: if no services on any target host match the regular expression.
+
+        """
+        status = self.get_status(service_re)  # This also validates the regular expression syntax.
+        if not any(host_status.services for host_status in status.values()):
+            raise IcingaError('No services on {hosts} matched "{re}"'.format(hosts=self._target_hosts, re=service_re))
+
+        logger.info(
+            'Removing downtime on Icinga server %s for services "%s" for hosts: %s',
+            self._icinga_host,
+            service_re,
+            self._target_hosts,
+        )
+
+        commands = []
+        for hostname, host_status in status.items():
+            for service in host_status.services:
+                if not service["status"]["scheduled_downtime_depth"]:  # Skip if not downtimed.
+                    continue
+                logger.debug('Removing downtime for "%s" on %s', service["name"], hostname)
+                # DEL_DOWNTIME_BY_HOST_NAME is misleadingly named -- it also accepts an optional service name argument.
+                commands.append(self._get_command_string("DEL_DOWNTIME_BY_HOST_NAME", hostname, service["name"]))
+        if commands:
+            self._icinga_host.run_sync(*commands)
+        else:
+            logger.info("No services downtimed, nothing to do.")
 
     def run_icinga_command(self, command: str, *args: str) -> None:
         """Execute an Icinga command on the Icinga server for all the current hosts.
@@ -316,8 +436,11 @@ class IcingaHosts:
         commands = [self._get_command_string(command, target_host, *args) for target_host in self._target_hosts]
         self._icinga_host.run_sync(*commands)
 
-    def get_status(self) -> HostsStatus:
+    def get_status(self, service_re: str = "") -> HostsStatus:
         """Get the current status of the given hosts from Icinga.
+
+        Arguments:
+            service_re (str): if non-empty, the regular expression matching service names
 
         Returns:
             spicerack.icinga.HostsStatus: the instance that represents the status for the given hosts.
@@ -326,12 +449,20 @@ class IcingaHosts:
             IcingaError: if unable to get the status.
             IcingaStatusParseError: when failing to parse the status.
             IcingaStatusNotFoundError: if a host is not found in the Icinga status.
+            re.error: if service_re is an invalid regular expression.
 
         """
+        if service_re:
+            # Compile the regex and ignore the result, in order to raise re.error if it's malformed.
+            re.compile(service_re)
+
         # icinga-status exits with non-zero exit code on missing and non-optimal hosts.
         verbatim = " --verbatim-hosts" if self._verbatim_hosts else ""
+        services = (" --services " + shlex.quote(service_re)) if service_re else ""
         command = Command(
-            '/usr/local/bin/icinga-status -j{verbatim} "{hosts}"'.format(verbatim=verbatim, hosts=self._target_hosts),
+            '/usr/local/bin/icinga-status -j{verbatim}{services} "{hosts}"'.format(
+                verbatim=verbatim, services=services, hosts=self._target_hosts
+            ),
             ok_codes=[],
         )
         for _, output in self._icinga_host.run_sync(command, is_safe=True):  # icinga-status is a read-only script
