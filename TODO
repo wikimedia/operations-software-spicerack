@@ -1,0 +1,7 @@
+- better logging (per module from interactive menu)
+- how to get the help of a group? does it makes sense?
+- apt/debdeploy module
+
+- Mysql module, possibly async
+- Tab completion and up arrow in interactive menu, see prompt toolkit
+- Skipif decorator for feature?
