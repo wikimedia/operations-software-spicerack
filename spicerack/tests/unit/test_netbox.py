@@ -23,6 +23,7 @@ def _base_netbox_host(name):
     del host.keys  # Allow to call dict() on this object
     host.name = name
     host.__str__.return_value = name
+    host.asset_tag = "ASSET1234"
     host.status.__str__.return_value = "Active"
     host.status.value = "active"
     host.serialize.return_value = {"name": name}
@@ -32,6 +33,7 @@ def _base_netbox_host(name):
 
     dict_repr = {
         "name": name,
+        "asset_tag": "ASSET1234",
         "status": {"value": host.status.value, "label": str(host.status)},
         "role": {"id": 1, "name": host.role.name, "slug": host.role.slug},
         "primary_ip4": {
@@ -308,6 +310,10 @@ class TestNetboxServer:
             NetboxError, match="Server virtual is a virtual machine, does not have a management address"
         ):
             self.virtual_server.mgmt_fqdn  # pylint: disable=pointless-statement
+
+    def test_asset_tag_fqdn_getter(self):
+        """It should return the management FQDN of the asset tag of the device."""
+        assert self.physical_server.asset_tag_fqdn == "asset1234.mgmt.local"
 
     def test_as_dict_physical(self):
         """It should return the dictionary representation of the physical server."""

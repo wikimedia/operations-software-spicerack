@@ -249,7 +249,7 @@ class NetboxServer:
         "active": ("staged", "decommissioned"),
         "decommissioned": ("staged", "spare"),
     }
-    """See https://wikitech.wikimedia.org/wiki/Server_Lifecycle#/media/File:Server_Lifecycle_Statuses.png"""
+    """dict: See https://wikitech.wikimedia.org/wiki/Server_Lifecycle#/media/File:Server_Lifecycle_Statuses.png"""
 
     def __init__(
         self,
@@ -386,6 +386,21 @@ class NetboxServer:
             return self._cached_mgmt_fqdn
 
         raise NetboxError("Server {s} has no management interface with a DNS name set.".format(s=self._server.name))
+
+    @property
+    def asset_tag_fqdn(self) -> str:
+        """Return the management FQDN for the asset tag of the device.
+
+        Return:
+            str: the asset tag management FQDN.
+
+        Raises:
+            spicerack.netbox.NetboxError: for virtual servers or the server has no management FQDN defined in Netbox.
+
+        """
+        parts = self.mgmt_fqdn.split(".")
+        parts[0] = self._server.asset_tag.lower()
+        return ".".join(parts)
 
     def as_dict(self) -> Dict:
         """Return a dict containing details about the server.
