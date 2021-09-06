@@ -21,6 +21,8 @@ pep8:
   full: true
   options:
     max-line-length: 120
+  disable:
+    - E203  # Apparently not PEP8 compliant, clashes with black, see https://github.com/psf/black/issues/315
 
 pep257:
   explain: true
