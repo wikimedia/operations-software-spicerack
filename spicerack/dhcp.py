@@ -46,20 +46,32 @@ class DHCPConfiguration(ABC):
 
 @dataclass
 class DHCPConfOpt82(DHCPConfiguration):
-    """A configuration generator for host installation DHCP entries."""
+    """A configuration generator for host installation DHCP entries.
+
+    Arguments:
+        hostname (str): the hostname to generate the DHCP matching block for.
+        fqdn (str): the FQDN of the same host.
+        switch_hostname (str): the hostname of the switch the host is connected to.
+        switch_iface (str): the name of the switch interface the host is connected to.
+        vlan (str): the name of the VLAN the host is configured for.
+        ttys (int): which ttyS to use for this host, accepted values are 0 and 1.
+        distro (str, optional): the codename of the Debian distribution to use for the PXE installer, if different
+            from the default distribution configured by Puppet globally.
+
+    """
 
     hostname: str
     fqdn: str
     switch_hostname: str
-    switch_port: str
+    switch_iface: str
     vlan: str
     ttys: int = 1
     distro: Optional[str] = None
 
     _template = """
-    host {hostname} {{
-        host-identifier option agent.circuit-id "{switch_hostname}:{switch_port}:{vlan}";
-        fixed-address {fqdn};
+    host {s.hostname} {{
+        host-identifier option agent.circuit-id "{s.switch_hostname}:{s.switch_iface}:{s.vlan}";
+        fixed-address {s.fqdn};
         {pathprefix}
     }}
     """
@@ -69,16 +81,8 @@ class DHCPConfOpt82(DHCPConfiguration):
         pathprefix = ""
         if self.distro is not None:
             pathprefix = f"""option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{self.distro}-installer/";"""
-        return textwrap.dedent(
-            self._template.format(
-                hostname=self.hostname,
-                switch_hostname=self.switch_hostname,
-                switch_port=self.switch_port,
-                vlan=self.vlan,
-                fqdn=self.fqdn,
-                pathprefix=pathprefix,
-            )
-        )
+
+        return textwrap.dedent(self._template.format(s=self, pathprefix=pathprefix))
 
     @property
     def filename(self) -> str:
@@ -88,7 +92,15 @@ class DHCPConfOpt82(DHCPConfiguration):
 
 @dataclass
 class DHCPConfMgmt(DHCPConfiguration):
-    """A configuration for management network DHCP entries."""
+    """A configuration for management network DHCP entries.
+
+    Arguments:
+        datacenter (str): the name of the Datacenter the host is.
+        serial (str): the vendor serial of the host.
+        fqdn (str): the management console FQDN to use for this host.
+        ip_address (ipaddress.IPv4Address): the IP address to give the management interface.
+
+    """
 
     datacenter: str
     serial: str
@@ -96,12 +108,12 @@ class DHCPConfMgmt(DHCPConfiguration):
     ip_address: IPv4Address
 
     _template = """
-    class "{fqdn}" {{
-        match if (option host-name = "iDRAC-{serial}")
+    class "{s.fqdn}" {{
+        match if (option host-name = "iDRAC-{s.serial}")
     }}
     pool {{
-        allow members of "{fqdn}";
-        range {ip_address} {ip_address};
+        allow members of "{s.fqdn}";
+        range {s.ip_address} {s.ip_address};
     }}
     """
 
@@ -114,7 +126,7 @@ class DHCPConfMgmt(DHCPConfiguration):
 
     def __str__(self) -> str:
         """Return the rendered DHCP configuration snippet."""
-        return textwrap.dedent(self._template.format(fqdn=self.fqdn, serial=self.serial, ip_address=self.ip_address))
+        return textwrap.dedent(self._template.format(s=self))
 
     @property
     def filename(self) -> str:
@@ -129,7 +141,7 @@ class DHCP:
         """Create a DHCP instance.
 
         Arguments:
-            hosts (`spicerack.remote.RemoteHosts`): The target datacenter's install servers.
+            hosts (spicerack.remote.RemoteHosts): The target datacenter's install servers.
 
         """
         if len(hosts) < 1:
@@ -147,8 +159,8 @@ class DHCP:
         """Push a specified file with specified content to DHCP server and call refresh_dhcp.
 
         Arguments:
-            configuration (`spicerack.dhcp.DHCPConfiguration`): An instance which provides content and filename for a
-                                                                configuration.
+            configuration (spicerack.dhcp.DHCPConfiguration): An instance which provides content and filename for a
+                configuration.
 
         """
         filename = configuration.filename
@@ -198,11 +210,11 @@ class DHCP:
         self.refresh_dhcp()
 
     @contextmanager
-    def dhcp_push(self, dhcp_config: DHCPConfiguration) -> Iterator[None]:
-        """Adapt the DHCP configuration manager to context manager.
+    def config(self, dhcp_config: DHCPConfiguration) -> Iterator[None]:
+        """A context manager to perform actions while the given DHCP config is valid.
 
         Arguments:
-             dhcp_config (spicerack.dhcp.DHCPConfiguration intance): The configuration instance to operate with.
+             dhcp_config (spicerack.dhcp.DHCPConfiguration): The DHCP configuration to use.
 
         """
         self.push_configuration(dhcp_config)

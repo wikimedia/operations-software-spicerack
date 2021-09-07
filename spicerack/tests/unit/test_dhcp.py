@@ -52,7 +52,7 @@ configuration_generator_data = (
             "hostname": "testhost0",
             "fqdn": "testhost0.eqiad.wmnet",
             "switch_hostname": "asw2-d-eqiad",
-            "switch_port": "ge-0/0/0",
+            "switch_iface": "ge-0/0/0",
             "vlan": 1021,
         },
         (
@@ -71,7 +71,7 @@ configuration_generator_data = (
             "hostname": "testhost0",
             "fqdn": "testhost0.eqiad.wmnet",
             "switch_hostname": "asw2-d-eqiad",
-            "switch_port": "ge-0/0/0",
+            "switch_iface": "ge-0/0/0",
             "vlan": 1021,
             "ttys": 0,
         },
@@ -91,7 +91,7 @@ configuration_generator_data = (
             "hostname": "testhost0",
             "fqdn": "testhost0.eqiad.wmnet",
             "switch_hostname": "asw2-d-eqiad",
-            "switch_port": "ge-0/0/0",
+            "switch_iface": "ge-0/0/0",
             "vlan": 1021,
             "ttys": 0,
             "distro": "stretch",
@@ -314,9 +314,6 @@ class TestDHCP:
                 self.dhcp.remove_configuration(config)
             assert str(exc.value) == "Can't remove {}.".format(config.filename)
 
-    # test DHCP.dhcp_push context manager
-    # - startup works?
-    # - teardown works?
     def test_push_context_manager(self):
         """Test push context manager success."""
         config = get_mock_config()
@@ -329,8 +326,8 @@ class TestDHCP:
             configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
             mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
 
-            with self.dhcp.dhcp_push(config):
-                ...
+            with self.dhcp.config(config):
+                pass
 
         hosts.run_sync.assert_has_calls([call_sha256, call_rm, call_refresh])
 
@@ -357,7 +354,7 @@ class TestDHCP:
             configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
             mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
             with pytest.raises(Exception):
-                with self.dhcp.dhcp_push(config):
+                with self.dhcp.config(config):
                     raise Exception()
 
         hosts.run_sync.assert_has_calls([call_test, call_write, call_refresh, call_sha256, call_rm, call_refresh])
