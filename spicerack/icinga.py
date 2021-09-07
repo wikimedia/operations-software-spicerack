@@ -296,6 +296,38 @@ class IcingaHosts:
             reason.reason,
         )
 
+    @contextmanager
+    def services_downtimed(
+        self,
+        service_re: str,
+        reason: Reason,
+        *,
+        duration: timedelta = timedelta(hours=4),
+        remove_on_error: bool = False,
+    ) -> Iterator[None]:
+        """Context manager to perform actions while services are downtimed on Icinga.
+
+        Arguments:
+            service_re (str): the regular expression matching service names to downtime.
+            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
+            duration (datetime.timedelta, optional): the length of the downtime period.
+            remove_on_error (bool, optional): should the downtime be removed even if an exception was raised.
+
+        Yields:
+            None: it just yields control to the caller once Icinga has been downtimed and deletes the downtime once
+            getting back the control.
+
+        """
+        self.downtime_services(service_re, reason, duration=duration)
+        try:
+            yield
+        except BaseException:
+            if remove_on_error:
+                self.remove_service_downtimes(service_re)
+            raise
+        else:
+            self.remove_service_downtimes(service_re)
+
     def downtime_services(self, service_re: str, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> None:
         """Downtime services on the Icinga server for the given time with a message.
 
