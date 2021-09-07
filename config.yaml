@@ -1,3 +1,0 @@
-cookbooks_base_dir: /Users/riccardo/WMF/gerrit/spicerack/spicerack/tests/fixtures/cookbook
-#cookbooks_base_dir: /Users/riccardo/WMF/gerrit/cookbooks
-logs_base_dir: /Users/riccardo/WMF/gerrit/spicerack/logs
