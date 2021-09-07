@@ -17,7 +17,7 @@ from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.ganeti import Ganeti
-from spicerack.icinga import Icinga, IcingaHosts
+from spicerack.icinga import IcingaHosts
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
@@ -105,7 +105,6 @@ def test_spicerack_icinga(mocked_command_file, mocked_remote_query, mocked_dns, 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
     assert spicerack.icinga_master_host.hosts == "icinga-server.example.com"
-    assert isinstance(spicerack.icinga(), Icinga)
     assert isinstance(spicerack.icinga_hosts(["host1", "host2"]), IcingaHosts)
     mocked_hostname.assert_called_once_with()
 

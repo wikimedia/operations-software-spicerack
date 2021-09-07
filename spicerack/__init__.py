@@ -21,7 +21,7 @@ from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
 from spicerack.ganeti import Ganeti
-from spicerack.icinga import ICINGA_DOMAIN, Icinga, IcingaHosts
+from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
@@ -358,18 +358,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         """
         return Reason(reason, self._username, self._current_hostname, task_id=task_id)
-
-    def icinga(self) -> Icinga:
-        """Get an Icinga instance.
-
-        .. deprecated:: v0.0.50
-            use :py:meth:`spicerack.Spicerack.icinga_hosts()` instead.
-
-        Returns:
-            spicerack.icinga.Icinga: Icinga instance.
-
-        """
-        return Icinga(self.icinga_master_host)
 
     def icinga_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> IcingaHosts:
         """Get an IcingaHosts instance.
