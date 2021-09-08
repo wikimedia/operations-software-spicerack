@@ -29,7 +29,7 @@ class TestGaneti:
             cluster: RAPI_URL_FORMAT.format(cluster=cluster) + "/2" for cluster in CLUSTERS_AND_ROWS
         }
         self.base_url = self.cluster_base_url[self.cluster]
-        self.instance_url = "{base_url}/instances/{instance}".format(base_url=self.base_url, instance=self.instance)
+        self.instance_url = f"{self.base_url}/instances/{self.instance}"
 
         # load test fixtures
         with open(get_fixture_path("ganeti", "info.json"), encoding="utf-8") as info_json:
@@ -48,9 +48,7 @@ class TestGaneti:
                 requests_mock.get(self.instance_url, text=self.instance_info)
             else:
                 requests_mock.get(
-                    "{base_url}/instances/{instance}".format(
-                        base_url=self.cluster_base_url[cluster], instance=self.instance
-                    ),
+                    f"{self.cluster_base_url[cluster]}/instances/{self.instance}",
                     text=self.fourohfour,
                     status_code=requests.codes["not_found"],
                 )
@@ -148,7 +146,7 @@ class TestGaneti:
         instance.shutdown(**kwargs)
         timeout = kwargs["timeout"] if "timeout" in kwargs else 2
         self.remote.query.return_value.run_sync.assert_called_once_with(
-            "gnt-instance shutdown --timeout={timeout} test.example.com".format(timeout=timeout)
+            f"gnt-instance shutdown --timeout={timeout} test.example.com"
         )
 
     @pytest.mark.parametrize("kwargs", ({}, {"shutdown_timeout": 0}))
@@ -160,7 +158,7 @@ class TestGaneti:
         instance.remove(**kwargs)
         timeout = kwargs["shutdown_timeout"] if "shutdown_timeout" in kwargs else 2
         self.remote.query.return_value.run_sync.assert_called_once_with(
-            "gnt-instance remove --shutdown-timeout={timeout} --force test.example.com".format(timeout=timeout)
+            f"gnt-instance remove --shutdown-timeout={timeout} --force test.example.com"
         )
 
     def test_instance_add_ok(self, requests_mock):

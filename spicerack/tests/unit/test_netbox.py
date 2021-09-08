@@ -28,8 +28,8 @@ def _base_netbox_host(name):
     host.status.value = "active"
     host.serialize.return_value = {"name": name}
     host.save.return_value = True
-    host.primary_ip4.dns_name = "{name}.example.com".format(name=name)
-    host.primary_ip6.dns_name = "{name}.example.com".format(name=name)
+    host.primary_ip4.dns_name = f"{name}.example.com"
+    host.primary_ip6.dns_name = f"{name}.example.com"
 
     dict_repr = {
         "name": name,

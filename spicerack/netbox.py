@@ -143,9 +143,7 @@ class Netbox:
         try:
             save_result = host.save()
         except pynetbox.RequestError as ex:
-            raise NetboxAPIError(
-                "Failed to save Netbox status for host {} {} -> {}".format(hostname, oldstatus, status)
-            ) from ex
+            raise NetboxAPIError(f"Failed to save Netbox status for host {hostname} {oldstatus} -> {status}") from ex
 
         if save_result:
             logger.info(
@@ -155,9 +153,7 @@ class Netbox:
                 status,
             )
         else:
-            raise NetboxAPIError(
-                "Failed to update Netbox status for host {} {} -> {}".format(hostname, oldstatus, status)
-            )
+            raise NetboxAPIError(f"Failed to update Netbox status for host {hostname} {oldstatus} -> {status}")
 
     def fetch_host_status(self, hostname: str) -> str:
         """Return the current status of a host as a string.
@@ -275,9 +271,7 @@ class NetboxServer:
 
         role = server.role.slug if self.virtual else server.device_role.slug
         if role != SERVER_ROLE_SLUG:
-            raise NetboxError(
-                "Object of type {t} has invalid role {r}, only server is allowed".format(t=type(server), r=role)
-            )
+            raise NetboxError(f"Object of type {type(server)} has invalid role {role}, only server is allowed")
 
     @property
     def virtual(self) -> bool:
@@ -314,9 +308,8 @@ class NetboxServer:
         """
         if self.virtual:
             raise NetboxError(
-                "Server {name} is a virtual machine, its Netbox status is automatically synced from Ganeti.".format(
-                    name=self._server.name
-                )
+                f"Server {self._server.name} is a virtual machine, its Netbox status is automatically synced from "
+                f"Ganeti."
             )
 
         current = self._server.status.value
@@ -324,10 +317,8 @@ class NetboxServer:
         allowed_transitions = NetboxServer.allowed_status_transitions.get(current, ())
         if new not in allowed_transitions:
             raise NetboxError(
-                (
-                    "Forbidden Netbox status transition between {curr} and {new} for device {device}. "
-                    "Possible values are: {trans}"
-                ).format(curr=current, new=new, device=self._server.name, trans=allowed_transitions)
+                f"Forbidden Netbox status transition between {current} and {new} for device {self._server.name}. "
+                f"Possible values are: {allowed_transitions}"
             )
 
         if self._dry_run:
@@ -357,7 +348,7 @@ class NetboxServer:
             if address is not None and address.dns_name:
                 return address.dns_name
 
-        raise NetboxError("Server {s} does not have any primary IP with a DNS name set.".format(s=self._server.name))
+        raise NetboxError(f"Server {self._server.name} does not have any primary IP with a DNS name set.")
 
     @property
     def mgmt_fqdn(self) -> str:
@@ -371,9 +362,7 @@ class NetboxServer:
 
         """
         if self.virtual:
-            raise NetboxError(
-                "Server {s} is a virtual machine, does not have a management address.".format(s=self._server.name)
-            )
+            raise NetboxError(f"Server {self._server.name} is a virtual machine, does not have a management address.")
 
         if self._cached_mgmt_fqdn:
             return self._cached_mgmt_fqdn
@@ -385,7 +374,7 @@ class NetboxServer:
             self._cached_mgmt_fqdn = address.dns_name
             return self._cached_mgmt_fqdn
 
-        raise NetboxError("Server {s} has no management interface with a DNS name set.".format(s=self._server.name))
+        raise NetboxError(f"Server {self._server.name} has no management interface with a DNS name set.")
 
     @property
     def asset_tag_fqdn(self) -> str:

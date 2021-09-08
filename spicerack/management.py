@@ -83,7 +83,7 @@ class Management:
         parts.insert(-2, MANAGEMENT_SUBDOMAIN)  # Direct injection of the management subdomain
         mgmt = ".".join(parts)
         if not self._is_valid_fqdn(mgmt):
-            raise ManagementError("Invalid management FQDN {mgmt} for {host}".format(mgmt=mgmt, host=hostname))
+            raise ManagementError(f"Invalid management FQDN {mgmt} for {hostname}")
 
         return mgmt
 
@@ -115,9 +115,7 @@ class Management:
                 break
         else:
             raise ManagementError(
-                "Unable to find management FQDN for host {host} in these datacenters: {dcs}".format(
-                    host=hostname, dcs=datacenters
-                )
+                f"Unable to find management FQDN for host {hostname} in these datacenters: {datacenters}"
             )
 
         return mgmt

@@ -200,13 +200,9 @@ class TestDHCP:
 
         self.dhcp.push_configuration(config)
 
-        call_test = mock.call(
-            "/usr/bin/test '!' '-e'  {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True
-        )
+        call_test = mock.call(f"/usr/bin/test '!' '-e'  {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
         call_write = mock.call(
-            "/bin/echo '{}' | /usr/bin/base64 -d > {}/{}".format(
-                config.config_base64, dhcp.DHCP_TARGET_PATH, config.filename
-            )
+            f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}"
         )
         hosts.run_sync.assert_has_calls([call_test, call_write])
 
@@ -218,7 +214,7 @@ class TestDHCP:
 
         with pytest.raises(dhcp.DHCPError) as exc:
             self.dhcp.push_configuration(config)
-        assert str(exc.value) == "target file {} exists".format(config.filename)
+        assert str(exc.value) == f"target file {config.filename} exists"
 
     # - does it deal correctly with echo command failing
     def test_push_configuration_echo_fail(self):
@@ -228,7 +224,7 @@ class TestDHCP:
 
         with pytest.raises(dhcp.DHCPError) as exc:
             self.dhcp.push_configuration(config)
-        assert str(exc.value) == "target file {} failed to be created.".format(config.filename)
+        assert str(exc.value) == f"target file {config.filename} failed to be created."
 
     # test DHCP.remove_configuration
     # - does it deal correctly with succeeding commands
@@ -238,11 +234,11 @@ class TestDHCP:
         hosts = self._setup_dhcp_mocks()
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
             configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
-            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             self.dhcp.remove_configuration(config)
 
-        call_sha256 = mock.call("sha256sum {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True)
-        call_rm = mock.call("/bin/rm -v {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename))
+        call_sha256 = mock.call(f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
+        call_rm = mock.call(f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}")
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
 
         hosts.run_sync.assert_has_calls([call_sha256, call_rm, call_refresh])
@@ -267,7 +263,7 @@ class TestDHCP:
 
         with pytest.raises(dhcp.DHCPError) as exc:
             self.dhcp.remove_configuration(config)
-        assert str(exc.value) == "Can't test {} for removal.".format(config.filename)
+        assert str(exc.value) == f"Can't test {config.filename} for removal."
 
     # - does it deal with sha256sum mismatch
     def test_remove_config_sha256_mismatch(self):
@@ -278,10 +274,10 @@ class TestDHCP:
         config.__str__.return_value = "different test configuration"
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
-            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             with pytest.raises(dhcp.DHCPError) as exc:
                 self.dhcp.remove_configuration(config)
-            assert str(exc.value) == "Remote {} has a mismatched SHA256, refusing to remove.".format(config.filename)
+            assert str(exc.value) == f"Remote {config.filename} has a mismatched SHA256, refusing to remove."
 
     # - does it deal with sha256sum mismatch (but force)
     def test_remove_config_sha256_mismatch_force(self):
@@ -292,10 +288,10 @@ class TestDHCP:
         config.__str__.return_value = "different test configuration"
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
-            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             self.dhcp.remove_configuration(config, force=True)
 
-        call_rm = mock.call("/bin/rm -v {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename))
+        call_rm = mock.call(f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}")
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
 
         hosts.run_sync.assert_has_calls([call_rm, call_refresh])
@@ -308,23 +304,23 @@ class TestDHCP:
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
             configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
-            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
 
             with pytest.raises(dhcp.DHCPError) as exc:
                 self.dhcp.remove_configuration(config)
-            assert str(exc.value) == "Can't remove {}.".format(config.filename)
+            assert str(exc.value) == f"Can't remove {config.filename}."
 
     def test_push_context_manager(self):
         """Test push context manager success."""
         config = get_mock_config()
         hosts = self._setup_dhcp_mocks()
-        call_sha256 = mock.call("sha256sum {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True)
-        call_rm = mock.call("/bin/rm -v {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename))
+        call_sha256 = mock.call(f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
+        call_rm = mock.call(f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}")
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
             configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
-            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
 
             with self.dhcp.config(config):
                 pass
@@ -337,22 +333,18 @@ class TestDHCP:
         config = get_mock_config()
         hosts = self._setup_dhcp_mocks()
 
-        call_test = mock.call(
-            "/usr/bin/test '!' '-e'  {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True
-        )
+        call_test = mock.call(f"/usr/bin/test '!' '-e'  {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
         call_write = mock.call(
-            "/bin/echo '{}' | /usr/bin/base64 -d > {}/{}".format(
-                config.config_base64, dhcp.DHCP_TARGET_PATH, config.filename
-            )
+            f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}"
         )
 
-        call_sha256 = mock.call("sha256sum {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename), is_safe=True)
-        call_rm = mock.call("/bin/rm -v {}/{}".format(dhcp.DHCP_TARGET_PATH, config.filename))
+        call_sha256 = mock.call(f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
+        call_rm = mock.call(f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}")
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
             configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
-            mock_remotehosts.results_to_list.return_value = [[None, "{} {}".format(configsha256, config.filename)]]
+            mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             with pytest.raises(Exception):
                 with self.dhcp.config(config):
                     raise Exception()

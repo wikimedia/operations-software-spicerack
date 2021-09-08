@@ -49,7 +49,7 @@ class TestDiscovery:
         """Initialize the test environment for Discovery."""
         # pylint: disable=attribute-defined-outside-init
         self.records = ["record1", "record2"]
-        self.conftool_records = "({records})".format(records="|".join(self.records))
+        self.conftool_records = "(" + "|".join(self.records) + ")"
         self.nameservers = ["authdns1", "authdns2"]
 
         self.mocked_confctl = mock.MagicMock()
@@ -139,7 +139,7 @@ class TestDiscovery:
         """Calling check_record() should raise DiscoveryError if unable to check the records."""
         with pytest.raises(
             DiscoveryError,
-            match="Resolved record {record} with the wrong IP".format(record=self.records[0]),
+            match=f"Resolved record {self.records[0]} with the wrong IP",
         ):
             self.discovery.check_record(self.records[0], "fail.svc.eqiad.wmnet")
 

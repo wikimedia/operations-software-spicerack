@@ -530,7 +530,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             requests.Session: the pre-configured session.
 
         """
-        name = "Spicerack/{version} {name}".format(version=__version__, name=name)
+        name = f"Spicerack/{__version__} {name}"
         return requests.http_session(name, timeout=timeout, tries=tries, backoff=backoff)
 
     def etcdctl(self, *, remote_host: RemoteHosts) -> EtcdctlController:  # pylint: disable=no-self-use

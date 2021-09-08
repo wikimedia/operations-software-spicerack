@@ -74,9 +74,7 @@ class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
             RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
-        command = 'mysql --skip-ssl --skip-column-names --batch -e "{query}" {database}'.format(
-            query=query, database=database
-        ).strip()
+        command = f'mysql --skip-ssl --skip-column-names --batch -e "{query}" {database}'.strip()
         return self._remote_hosts.run_sync(
             command,
             success_threshold=success_threshold,
@@ -124,7 +122,7 @@ class MysqlLegacy:
         datacenter: Optional[str] = None,
         section: Optional[str] = None,
         replication_role: Optional[str] = None,
-        excludes: Tuple[str, ...] = ()
+        excludes: Tuple[str, ...] = (),
     ) -> MysqlLegacyRemoteHosts:
         """Find the core databases matching the parameters.
 
@@ -151,54 +149,36 @@ class MysqlLegacy:
         if datacenter is not None:
             dc_multipler = 1
             if datacenter not in CORE_DATACENTERS:
-                raise MysqlLegacyError(
-                    "Got invalid datacenter {dc}, accepted values are: {dcs}".format(
-                        dc=datacenter, dcs=CORE_DATACENTERS
-                    )
-                )
+                raise MysqlLegacyError(f"Got invalid datacenter {datacenter}, accepted values are: {CORE_DATACENTERS}")
 
             query_parts.append("A:" + datacenter)
 
         for exclude in excludes:
             if exclude not in CORE_SECTIONS:
-                raise MysqlLegacyError(
-                    "Got invalid excludes {section}, accepted values are: {sections}".format(
-                        section=exclude, sections=CORE_SECTIONS
-                    )
-                )
+                raise MysqlLegacyError(f"Got invalid excludes {exclude}, accepted values are: {CORE_SECTIONS}")
             section_multiplier -= 1
-            query_parts.append("not A:db-section-{section}".format(section=exclude))
+            query_parts.append(f"not A:db-section-{exclude}")
 
         if section is not None:
             section_multiplier = 1
             if section not in CORE_SECTIONS:
-                raise MysqlLegacyError(
-                    "Got invalid section {section}, accepted values are: {sections}".format(
-                        section=section, sections=CORE_SECTIONS
-                    )
-                )
+                raise MysqlLegacyError(f"Got invalid section {section}, accepted values are: {CORE_SECTIONS}")
 
-            query_parts.append("A:db-section-{section}".format(section=section))
+            query_parts.append(f"A:db-section-{section}")
 
         if replication_role is not None:
             if replication_role not in REPLICATION_ROLES:
                 raise MysqlLegacyError(
-                    "Got invalid replication_role {role}, accepted values are: {roles}".format(
-                        role=replication_role, roles=REPLICATION_ROLES
-                    )
+                    f"Got invalid replication_role {replication_role}, accepted values are: {REPLICATION_ROLES}"
                 )
 
-            query_parts.append("A:db-role-{role}".format(role=replication_role))
+            query_parts.append(f"A:db-role-{replication_role}")
 
         mysql_hosts = MysqlLegacyRemoteHosts(self._remote.query(" and ".join(query_parts)))
 
         # Sanity check of matched hosts in case of master selection
         if replication_role == "master" and len(mysql_hosts) != dc_multipler * section_multiplier:
-            raise MysqlLegacyError(
-                "Matched {matched} masters, expected {expected}".format(
-                    matched=len(mysql_hosts), expected=dc_multipler * section_multiplier
-                )
-            )
+            raise MysqlLegacyError(f"Matched {len(mysql_hosts)} masters, expected {dc_multipler * section_multiplier}")
 
         return mysql_hosts
 
@@ -267,9 +247,7 @@ class MysqlLegacy:
 
         if failed and not self._dry_run:
             raise MysqlLegacyError(
-                "Verification failed that core DB masters in {dc} have read-only={ro}".format(
-                    dc=datacenter, ro=is_read_only
-                )
+                f"Verification failed that core DB masters in {datacenter} have read-only={is_read_only}"
             )
 
     def check_core_masters_in_sync(self, dc_from: str, dc_to: str) -> None:
@@ -361,16 +339,8 @@ class MysqlLegacy:
         if local_heartbeat <= parent_heartbeat:
             delta = (local_heartbeat - parent_heartbeat).total_seconds()
             raise MysqlLegacyError(
-                (
-                    "Heartbeat from master {host} for section {section} not yet in sync: "
-                    "{hb} <= {master_hb} (delta={delta})"
-                ).format(
-                    host=core_dbs,
-                    section=section,
-                    hb=local_heartbeat,
-                    master_hb=parent_heartbeat,
-                    delta=delta,
-                )
+                f"Heartbeat from master {core_dbs} for section {section} not yet in sync: "
+                f"{local_heartbeat} <= {parent_heartbeat} (delta={delta})"
             )
 
     @staticmethod
@@ -397,14 +367,8 @@ class MysqlLegacy:
                 heartbeat = datetime.strptime(heartbeat_str, "%Y-%m-%dT%H:%M:%S.%f")
                 break
             except (TypeError, ValueError) as e:
-                raise MysqlLegacyError(
-                    "Unable to convert heartbeat '{hb}' into datetime".format(hb=heartbeat_str)
-                ) from e
+                raise MysqlLegacyError(f"Unable to convert heartbeat '{heartbeat_str}' into datetime") from e
         else:
-            raise MysqlLegacyError(
-                "Unable to get heartbeat from master {host} for section {section}".format(
-                    host=mysql_hosts, section=section
-                )
-            )
+            raise MysqlLegacyError(f"Unable to get heartbeat from master {mysql_hosts} for section {section}")
 
         return heartbeat

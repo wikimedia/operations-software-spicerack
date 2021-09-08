@@ -37,23 +37,17 @@ def assert_has_downtime_calls(
 ):
     """Assert that the mocked icinga_host was called correctly to downtime the given hosts."""
     end = start + duration
-    args = "{start};{end};1;0;{duration};{owner};{reason}".format(
-        start=start, end=end, duration=duration, owner=reason.owner, reason=reason.reason
-    )
+    args = f"{start};{end};1;0;{duration};{reason.owner};{reason.reason}"
     downtime_calls = [
         [
             "bash -c "
-            + shlex.quote(
-                'echo -n "[{start}] SCHEDULE_HOST_DOWNTIME;{host};{args}" '
-                "> /var/lib/icinga/rw/icinga.cmd ".format(start=start, host=host, args=args)
-            )
+            + shlex.quote(f'echo -n "[{start}] SCHEDULE_HOST_DOWNTIME;{host};{args}" > /var/lib/icinga/rw/icinga.cmd ')
             for host in hosts
         ],
         [
             "bash -c "
             + shlex.quote(
-                'echo -n "[{start}] SCHEDULE_HOST_SVC_DOWNTIME;{host};{args}" '
-                "> /var/lib/icinga/rw/icinga.cmd ".format(start=start, host=host, args=args)
+                f'echo -n "[{start}] SCHEDULE_HOST_SVC_DOWNTIME;{host};{args}" > /var/lib/icinga/rw/icinga.cmd '
             )
             for host in hosts
         ],
@@ -70,13 +64,11 @@ def assert_has_service_downtime_calls(
 ):
     """Assert that the mocked icinga_host was called correctly to downtime the given services."""
     end = start + duration
-    args = "{start};{end};1;0;{duration};{owner};{reason}".format(
-        start=start, end=end, duration=duration, owner=reason.owner, reason=reason.reason
-    )
+    args = f"{start};{end};1;0;{duration};{reason.owner};{reason.reason}"
     downtime_calls = [
         [
-            'bash -c \'echo -n "[{start}] SCHEDULE_SVC_DOWNTIME;{host};{service};{args}" '
-            "> /var/lib/icinga/rw/icinga.cmd '".format(start=start, host=host, service=service, args=args)
+            f'bash -c \'echo -n "[{start}] SCHEDULE_SVC_DOWNTIME;{host};{service};{args}" '
+            f"> /var/lib/icinga/rw/icinga.cmd '"
             for host, service in host_services
         ],
     ]
@@ -187,9 +179,7 @@ class TestIcingaHosts:
         instance = icinga.IcingaHosts(self.mocked_icinga_host, target_hosts, verbatim_hosts=verbatim_hosts)
         instance.run_icinga_command("TEST_COMMAND", "arg1", "arg2")
         calls = [
-            (
-                "bash -c 'echo -n \"[1514764800] TEST_COMMAND;{host};arg1;arg2\" > /var/lib/icinga/rw/icinga.cmd '"
-            ).format(host=host)
+            f"bash -c 'echo -n \"[1514764800] TEST_COMMAND;{host};arg1;arg2\" > /var/lib/icinga/rw/icinga.cmd '"
             for host in effective_hosts
         ]
 
@@ -404,8 +394,8 @@ class TestIcingaHosts:
         self.icinga_hosts.remove_service_downtimes(r"service\d")
         self.mocked_icinga_host.run_sync.assert_called_with(
             *[
-                'bash -c \'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1;{service}" '
-                "> /var/lib/icinga/rw/icinga.cmd '".format(service=service)
+                f'bash -c \'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1;{service}" '
+                f"> /var/lib/icinga/rw/icinga.cmd '"
                 for service in ["service1", "service2"]
             ]
         )
@@ -554,19 +544,19 @@ class TestHostsStatus:
         }
 
         for i in range(1, 4):
-            hostname = "host{i}".format(i=i)
+            hostname = f"host{i}"
             self.status["ok"][hostname] = _get_hoststatus(hostname)
             self.status["down"][hostname] = _get_hoststatus(hostname)
             self.status["failed"][hostname] = _get_hoststatus(hostname)
             self.status["down_failed"][hostname] = _get_hoststatus(hostname)
 
         for i in range(4, 6):
-            hostname = "host{i}".format(i=i)
+            hostname = f"host{i}"
             self.status["down"][hostname] = _get_hoststatus(hostname, down=True)
             self.status["down_failed"][hostname] = _get_hoststatus(hostname, down=True)
 
         for i in range(6, 8):
-            hostname = "host{i}".format(i=i)
+            hostname = f"host{i}"
             self.status["failed"][hostname] = _get_hoststatus(hostname, failed=True)
             self.status["down_failed"][hostname] = _get_hoststatus(hostname, failed=True)
 

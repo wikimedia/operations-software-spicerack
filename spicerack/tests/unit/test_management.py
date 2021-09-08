@@ -56,7 +56,8 @@ class TestManagement:
     def test_get_management_external_guess_ok(self, dc_index):
         """It should find the management interface for an external hostname that doesn't match naming conventions."""
         hostname = "host1.example.com"
-        mgmt = "host1.mgmt.{dc}.wmnet".format(dc=ALL_DATACENTERS[dc_index])
+        dc = ALL_DATACENTERS[dc_index]
+        mgmt = f"host1.mgmt.{dc}.wmnet"
         ret_values = [DnsError] * dc_index + ["127.0.0.1"]
         self._setup_mocked_dns(*ret_values)
         assert self.management.get_fqdn(hostname) == mgmt

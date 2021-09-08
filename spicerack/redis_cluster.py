@@ -54,7 +54,7 @@ class RedisCluster:
         """
         if master_datacenter == datacenter:
             raise RedisClusterError(
-                "Master datacenter must be different from the current datacenter, got {dc}".format(dc=datacenter)
+                f"Master datacenter must be different from the current datacenter, got {datacenter}"
             )
 
         for shard, instance in sorted(self._shards[datacenter].items()):
@@ -95,11 +95,7 @@ class RedisCluster:
             instance.start_replica(master)
 
         if not self._dry_run and instance.master_info != master.info:
-            raise RedisClusterError(
-                "Replica on {instance} is not correctly configured: {parent}".format(
-                    instance=instance, parent=instance.master_info
-                )
-            )
+            raise RedisClusterError(f"Replica on {instance} is not correctly configured: {instance.master_info}")
 
     def _stop_instance_replica(self, instance: "RedisInstance") -> None:
         """Stop the replica in a specific instance.
@@ -122,11 +118,7 @@ class RedisCluster:
             instance.stop_replica()
 
         if not self._dry_run and not instance.is_master:
-            raise RedisClusterError(
-                "Instance {instance} is still a slave of {parent}, aborting".format(
-                    instance=instance, parent=instance.master_info
-                )
-            )
+            raise RedisClusterError(f"Instance {instance} is still a slave of {instance.master_info}, aborting")
 
 
 class RedisInstance:
@@ -198,4 +190,4 @@ class RedisInstance:
             str: the host or IP and port of the instance.
 
         """
-        return "{0.host}:{0.port}".format(self)
+        return f"{self.host}:{self.port}"

@@ -5,7 +5,7 @@ import requests
 from spicerack import debmonitor
 
 DEBMONITOR_HOST = "debmonitor.example.com"
-HOST1_URL = "https://{host}/hosts/host1.example.com".format(host=DEBMONITOR_HOST)
+HOST1_URL = f"https://{DEBMONITOR_HOST}/hosts/host1.example.com"
 
 
 class TestDebmonitor:

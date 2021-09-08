@@ -79,7 +79,7 @@ class ConftoolEntity:
         """
         selectors = {}
         for tag, expr in tags.items():
-            selectors[tag] = re.compile("^{}$".format(expr))
+            selectors[tag] = re.compile(f"^{expr}$")
 
         obj = None
         for obj in self._entity.query(selectors):
@@ -137,11 +137,7 @@ class ConftoolEntity:
         for obj in self.get(**tags):  # Verify the changes were applied
             new = getattr(obj, key)
             if new != value and not self._dry_run:
-                raise ConfctlError(
-                    "Conftool key {key} has value '{new}', expecting '{value}' for tags: {tags}".format(
-                        key=key, new=new, value=value, tags=tags
-                    )
-                )
+                raise ConfctlError(f"Conftool key {key} has value '{new}', expecting '{value}' for tags: {tags}")
 
     def filter_objects(
         self, filter_expr: Dict[str, Union[bool, str, int, float]], **tags: str
@@ -167,9 +163,7 @@ class ConftoolEntity:
                 try:
                     value = getattr(obj, key)
                 except AttributeError as e:
-                    raise ConfctlError(
-                        'Could not find property "{k}" in object {o}'.format(k=key, o=obj.pprint())
-                    ) from e
+                    raise ConfctlError(f'Could not find property "{key}" in object {obj.pprint()}') from e
                 if value != desired:
                     matching = False
             if matching:

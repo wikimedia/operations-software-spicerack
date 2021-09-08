@@ -275,9 +275,9 @@ class CookbookCollection:
         try:
             run = module.run
         except AttributeError as e:
-            raise CookbookError("Unable to find run function in module {name}".format(name=module.__name__)) from e
+            raise CookbookError(f"Unable to find run function in module {module.__name__}") from e
 
-        runner_name = "{name}Runner".format(name=name)
+        runner_name = f"{name}Runner"
         runner = type(
             runner_name,
             (_module_api.CookbookModuleRunnerBase,),
@@ -400,7 +400,7 @@ def import_module(module_name: str) -> _module_api.CookbooksModuleInterface:
     try:
         module = importlib.import_module(module_name)
     except Exception as e:
-        raise CookbookError("Failed to import module {name}: {msg}".format(name=module_name, msg=e)) from e
+        raise CookbookError(f"Failed to import module {module_name}: {e}") from e
 
     return cast(_module_api.CookbooksModuleInterface, module)
 

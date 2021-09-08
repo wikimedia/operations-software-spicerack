@@ -763,7 +763,7 @@ def json_node(
 ) -> Dict:
     """Used to mock the elasticsearch node API."""
     hostname = fqdn.split(".", 1)[0]
-    node_name = "{hostname}-{cluster_name}".format(hostname=hostname, cluster_name=cluster_name)
+    node_name = f"{hostname}-{cluster_name}"
     return {
         "name": node_name,
         "attributes": {
@@ -785,7 +785,7 @@ def mock_node_info(values):
     clusters = []
     port = 9200
     for nodes in values:
-        elasticsearch = Elasticsearch("localhost:{port}".format(port=port))
+        elasticsearch = Elasticsearch(f"localhost:{port}")
         port += 1
         elasticsearch.nodes.info = mock.Mock(return_value={"nodes": nodes})
         cluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=False)

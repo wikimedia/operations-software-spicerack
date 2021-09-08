@@ -111,7 +111,8 @@ class TestMysqlLegacy:
     )
     def test_get_core_dbs_fail(self, kwargs):
         """It should raise MysqlLegacyError if called with invalid parameters."""
-        message = "Got invalid {key}".format(key=list(kwargs.keys())[0])
+        key = list(kwargs.keys())[0]
+        message = f"Got invalid {key}"
         with pytest.raises(mysql_legacy.MysqlLegacyError, match=message):
             self.mysql.get_core_dbs(**kwargs)
 

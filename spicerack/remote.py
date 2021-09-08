@@ -30,7 +30,7 @@ class RemoteExecutionError(RemoteError):
 
     def __init__(self, retcode: int, message: str) -> None:
         """Override parent constructor to add the return code attribute."""
-        super().__init__("{msg} (exit_code={ret})".format(msg=message, ret=retcode))
+        super().__init__(f"{message} (exit_code={retcode})")
         self.retcode = retcode
 
 
@@ -43,7 +43,7 @@ class RemoteClusterExecutionError(RemoteError):
         failures: List[RemoteExecutionError],
     ):
         """Override the parent constructor to add failures and results as attributes."""
-        super().__init__("{n} hosts have failed execution".format(n=len(failures)))
+        super().__init__(f"{len(failures)} hosts have failed execution")
         self.failures = failures
         self.results = results
 
@@ -108,7 +108,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
         batch_size: int = 1,
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
-        max_failed_batches: int = 0
+        max_failed_batches: int = 0,
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Run commands while depooling servers in groups of batch_size.
 
@@ -148,7 +148,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
         # (1 - depool_threshold) * pooled_hosts, but that would also need to know the current
         # state of the cluster.
         if batch_size <= 0 or batch_size >= n_hosts:
-            raise RemoteError("Values for batch_size must be 0 < x < {}, got {}".format(n_hosts, batch_size))
+            raise RemoteError(f"Values for batch_size must be 0 < x < {n_hosts}, got {batch_size}")
 
         # If no service needs depooling, the standard behavior of remote_hosts.run_async is used
         # TODO: add the ability to select all services.
@@ -159,7 +159,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
                     success_threshold=(1.0 - (max_failed_batches * batch_size) / n_hosts),
                     batch_size=batch_size,
                     batch_sleep=batch_sleep,
-                    is_safe=is_safe
+                    is_safe=is_safe,
                 )
             )
 
@@ -260,7 +260,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
                 returns a non-zero exit code.
 
         """
-        commands = ['systemctl {w} "{s}"'.format(w=what, s=svc) for svc in services]
+        commands = [f'systemctl {what} "{svc}"' for svc in services]
         return self.run(
             *commands, svc_to_depool=svc_to_depool, batch_size=batch_size, batch_sleep=batch_sleep, is_safe=False
         )
@@ -413,7 +413,7 @@ class RemoteHosts:
         success_threshold: float = 1.0,
         batch_size: Optional[Union[int, str]] = None,
         batch_sleep: Optional[float] = None,
-        is_safe: bool = False
+        is_safe: bool = False,
     ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Execute commands on hosts matching a query via Cumin in async mode.
 
@@ -448,7 +448,7 @@ class RemoteHosts:
         success_threshold: float = 1.0,
         batch_size: Optional[Union[int, str]] = None,
         batch_sleep: Optional[float] = None,
-        is_safe: bool = False
+        is_safe: bool = False,
     ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Execute commands on hosts matching a query via Cumin in sync mode.
 
@@ -522,18 +522,12 @@ class RemoteHosts:
         delta = (datetime.utcnow() - since).total_seconds()
         for nodeset, uptime in self.uptime():
             if uptime >= delta:
-                raise RemoteCheckError(
-                    "Uptime for {hosts} higher than threshold: {uptime} > {delta}".format(
-                        hosts=nodeset, uptime=uptime, delta=delta
-                    )
-                )
+                raise RemoteCheckError(f"Uptime for {nodeset} higher than threshold: {uptime} > {delta}")
 
             remaining.difference_update(nodeset)
 
         if remaining:
-            raise RemoteCheckError(
-                "Unable to check uptime from {num} hosts: {hosts}".format(num=len(remaining), hosts=remaining)
-            )
+            raise RemoteCheckError(f"Unable to check uptime from {len(remaining)} hosts: {remaining}")
 
         logger.info("Found reboot since %s for hosts %s", since, self._hosts)
 
@@ -592,9 +586,7 @@ class RemoteHosts:
                     result = callback(result)
                 except Exception as e:
                     raise RemoteError(
-                        "Unable to extract data with {cb} for {hosts} from: {output}".format(
-                            cb=callback.__name__, hosts=nodeset, output=result
-                        )
+                        f"Unable to extract data with {callback.__name__} for {nodeset} from: {result}"
                     ) from e
 
             extracted.append((nodeset, result))

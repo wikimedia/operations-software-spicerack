@@ -77,11 +77,7 @@ class Ipmi:
         try:
             output = run(command, env=self.env.copy(), stdout=PIPE, check=True).stdout.decode()
         except CalledProcessError as e:
-            raise IpmiError(
-                "Remote IPMI for {mgmt} failed (exit={code}): {output}".format(
-                    mgmt=self._mgmt_fqdn, code=e.returncode, output=e.output
-                )
-            ) from e
+            raise IpmiError(f"Remote IPMI for {self._mgmt_fqdn} failed (exit={e.returncode}): {e.output}") from e
 
         logger.debug(output)
 
@@ -106,7 +102,7 @@ class Ipmi:
         identifier = "Chassis Power is "
         status = self.command(["chassis", "power", "status"], is_safe=True)
         if not status.startswith(identifier):
-            raise IpmiError("Unexpected chassis status: {status}".format(status=status))
+            raise IpmiError(f"Unexpected chassis status: {status}")
 
         return status[len(identifier) :].strip()
 
@@ -119,11 +115,7 @@ class Ipmi:
         """
         param = self._get_boot_parameter("Boot parameter data")
         if param not in IPMI_SAFE_BOOT_PARAMS:
-            raise IpmiCheckError(
-                "Expected BIOS boot params in {accepted} got: {param}".format(
-                    accepted=IPMI_SAFE_BOOT_PARAMS, param=param
-                )
-            )
+            raise IpmiCheckError(f"Expected BIOS boot params in {IPMI_SAFE_BOOT_PARAMS} got: {param}")
 
     @retry(
         tries=3,
@@ -173,15 +165,9 @@ class Ipmi:
                     value = line.split(":")[1].strip(" \n")
                     break
                 except IndexError as e:
-                    raise IpmiError(
-                        "Unable to extract value for parameter '{label}' from line: {line}".format(
-                            label=param_label, line=line
-                        )
-                    ) from e
+                    raise IpmiError(f"Unable to extract value for parameter '{param_label}' from line: {line}") from e
         else:
-            raise IpmiError(
-                "Unable to find the boot parameter '{label}' in: {output}".format(label=param_label, output=bootparams)
-            )
+            raise IpmiError(f"Unable to find the boot parameter '{param_label}' in: {bootparams}")
         return value
 
     @staticmethod
@@ -202,28 +188,25 @@ class Ipmi:
 
         """
         if len(password) > IPMI_PASSWORD_MAX_LEN:
-            raise IpmiError(
-                "New passwords is greater then the {max_len} byte limit".format(max_len=IPMI_PASSWORD_MAX_LEN)
-            )
+            raise IpmiError(f"New passwords is greater then the {IPMI_PASSWORD_MAX_LEN} byte limit")
         if len(password) > IPMI_PASSWORD_MIN_LEN:
             return IPMI_PASSWORD_MAX_LEN
         if len(password) == IPMI_PASSWORD_MIN_LEN:
             return IPMI_PASSWORD_MIN_LEN
-        raise IpmiError("New passwords must be {min_len} bytes minimum".format(min_len=IPMI_PASSWORD_MIN_LEN))
+        raise IpmiError(f"New passwords must be {IPMI_PASSWORD_MIN_LEN} bytes minimum")
 
     def reset_password(self, username: str, password: str) -> None:
         """Reset the given usernames password to the one provided.
 
         Arguments:
             username (str): The username who's password will be reset must not be empty
-            password (str): The new password must have length between {min_len} and {max_len} bytes
+            password (str): The new password, length between :py:const:`spicerack.ipmi.IPMI_PASSWORD_MIN_LEN` and
+             :py:const:`spicerack.ipmi.IPMI_PASSWORD_MAX_LEN` bytes
 
         Raises:
             spicerack.ipmi.IpmiError: if unable reset password or arguments invalid
 
-        """.format(
-            min_len=IPMI_PASSWORD_MIN_LEN, max_len=IPMI_PASSWORD_MAX_LEN
-        )
+        """
         if not username:
             raise IpmiError("Username can not be an empty string")
 
@@ -236,14 +219,14 @@ class Ipmi:
             logger.info("unable to find user in channel 1 testing channel 2")
             user_id = self._get_user_id(username, 2)
 
-        success = "Set User Password command successful (user {user_id})\n".format(user_id=user_id)
+        success = f"Set User Password command successful (user {user_id})\n"
         result = self.command(["user", "set", "password", user_id, password, password_store_size])
 
         if self._dry_run:
             return
 
         if result != success:
-            raise IpmiError("Password reset failed for username: {username}".format(username=username))
+            raise IpmiError(f"Password reset failed for username: {username}")
 
         if username == "root":
             current_password = self.env["IPMITOOL_PASSWORD"]
@@ -275,4 +258,4 @@ class Ipmi:
                 continue
             if words[1] == username:
                 return words[0]
-        raise IpmiError("Unable to find ID for username: {username}".format(username=username))
+        raise IpmiError(f"Unable to find ID for username: {username}")

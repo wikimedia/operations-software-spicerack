@@ -33,9 +33,7 @@ def get_puppet_ca_hostname() -> str:
             check_output(["puppet", "config", "print", "--section", "agent", "ca_server"]).decode().strip()  # nosec
         )
     except CalledProcessError as e:
-        raise PuppetMasterError(
-            "Get Puppet ca_server failed (exit={code}): {output}".format(code=e.returncode, output=e.output)
-        ) from e
+        raise PuppetMasterError(f"Get Puppet ca_server failed (exit={e.returncode}): {e.output}") from e
 
     if not output:
         raise PuppetMasterError("Got empty ca_server from Puppet agent")
@@ -110,7 +108,7 @@ class PuppetHosts(RemoteHostsAdapter):
             len(self),
             self,
         )
-        self._remote_hosts.run_sync("disable-puppet {reason}".format(reason=reason.quoted()))
+        self._remote_hosts.run_sync(f"disable-puppet {reason.quoted()}")
 
     def enable(self, reason: Reason) -> None:
         """Enable Puppet with a specific reason, it must be the same used to disable it.
@@ -128,7 +126,7 @@ class PuppetHosts(RemoteHostsAdapter):
             len(self),
             self,
         )
-        self._remote_hosts.run_sync("enable-puppet {reason}".format(reason=reason.quoted()))
+        self._remote_hosts.run_sync(f"enable-puppet {reason.quoted()}")
 
     def check_enabled(self) -> None:
         """Check if Puppet is enabled on all hosts.
@@ -139,7 +137,7 @@ class PuppetHosts(RemoteHostsAdapter):
         """
         disabled = self._get_disabled()[True]
         if disabled:
-            raise PuppetHostsCheckError("Puppet is not enabled on those hosts: {hosts}".format(hosts=disabled))
+            raise PuppetHostsCheckError(f"Puppet is not enabled on those hosts: {disabled}")
 
     def check_disabled(self) -> None:
         """Check if Puppet is disabled on all hosts.
@@ -150,7 +148,7 @@ class PuppetHosts(RemoteHostsAdapter):
         """
         enabled = self._get_disabled()[False]
         if enabled:
-            raise PuppetHostsCheckError("Puppet is not disabled on those hosts: {hosts}".format(hosts=enabled))
+            raise PuppetHostsCheckError(f"Puppet is not disabled on those hosts: {enabled}")
 
     def run(  # pylint: disable=too-many-arguments
         self,
@@ -190,7 +188,7 @@ class PuppetHosts(RemoteHostsAdapter):
             args += ["--attempts", str(attempts)]
 
         args_string = " ".join(args)
-        command = "run-puppet-agent {args}".format(args=args_string)
+        command = f"run-puppet-agent {args_string}"
         logger.info("Running Puppet with args %s on %d hosts: %s", args_string, len(self), self)
         self._remote_hosts.run_sync(Command(command, timeout=timeout), batch_size=batch_size)
 
@@ -259,11 +257,9 @@ class PuppetHosts(RemoteHostsAdapter):
                     fingerprints[host] = fingerprint
 
         if len(fingerprints) != len(self):
-            formatted_errors = "\n".join("{}: {}".format(*error) for error in errors)
             raise PuppetHostsError(
-                "Unable to find CSR fingerprints for all hosts, detected errors are:\n{errors}".format(
-                    errors=formatted_errors
-                )
+                "Unable to find CSR fingerprints for all hosts, detected errors are:\n"
+                + "\n".join(f"{nodeset}: {line}" for nodeset, line in errors)
             )
 
         return fingerprints
@@ -290,19 +286,16 @@ class PuppetHosts(RemoteHostsAdapter):
         """
         remaining_nodes = self._remote_hosts.hosts
         command = (
-            "source {file} && last_run_success && " "awk /last_run/'{{ print $2 }}' \"${{PUPPET_SUMMARY}}\""
-        ).format(file=PUPPET_COMMON_SCRIPT)
+            f"source {PUPPET_COMMON_SCRIPT} && last_run_success && "
+            "awk /last_run/'{ print $2 }' \"${PUPPET_SUMMARY}\""
+        )
 
         logger.info("Polling the completion of a successful Puppet run")
         try:
             for nodeset, output in self._remote_hosts.run_sync(command, is_safe=True):
                 last_run = datetime.utcfromtimestamp(int(output.message().decode()))
                 if last_run <= start:
-                    raise PuppetHostsCheckError(
-                        "Successful Puppet run too old ({run} <= {start}) on: {nodes}".format(
-                            run=last_run, start=start, nodes=nodeset
-                        )
-                    )
+                    raise PuppetHostsCheckError(f"Successful Puppet run too old ({last_run} <= {start}) on: {nodeset}")
 
                 remaining_nodes.difference_update(nodeset, strict=False)
 
@@ -310,9 +303,7 @@ class PuppetHosts(RemoteHostsAdapter):
             raise PuppetHostsCheckError("Unable to find a successful Puppet run") from e
 
         if remaining_nodes:
-            raise PuppetHostsCheckError(
-                "Unable to get successful Puppet run from: {nodes}".format(nodes=remaining_nodes)
-            )
+            raise PuppetHostsCheckError(f"Unable to get successful Puppet run from: {remaining_nodes}")
 
         logger.info("Successful Puppet run found")
 
@@ -325,9 +316,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
         """
         results = self._remote_hosts.run_sync(
-            'source {file} && test -f "${{PUPPET_DISABLEDLOCK}}" && echo "1" || echo "0"'.format(
-                file=PUPPET_COMMON_SCRIPT
-            ),
+            f'source {PUPPET_COMMON_SCRIPT} && test -f "${{PUPPET_DISABLEDLOCK}}" && echo "1" || echo "0"',
             is_safe=True,
         )
 
@@ -358,9 +347,7 @@ class PuppetMaster:
         """
         if len(master_host) != 1:
             raise PuppetMasterError(
-                "The master_host instance must target only one host, got {num}: {hosts}".format(
-                    num=len(master_host), hosts=master_host
-                )
+                f"The master_host instance must target only one host, got {len(master_host)}: {master_host}"
             )
 
         self._master_host = master_host
@@ -380,9 +367,7 @@ class PuppetMaster:
             hostname (str): the FQDN of the host for which to remove the certificate.
 
         """
-        commands = [
-            "puppet node {action} {host}".format(action=action, host=hostname) for action in ("clean", "deactivate")
-        ]
+        commands = [f"puppet node {action} {hostname}" for action in ("clean", "deactivate")]
         self._master_host.run_sync(*commands)
 
     def destroy(self, hostname: str) -> None:
@@ -395,7 +380,7 @@ class PuppetMaster:
             hostname (str): the FQDN of the host for which to remove the certificate.
 
         """
-        self._master_host.run_sync("puppet ca --disable_warnings deprecations destroy {host}".format(host=hostname))
+        self._master_host.run_sync(f"puppet ca --disable_warnings deprecations destroy {hostname}")
 
     def verify(self, hostname: str) -> None:
         """Verify that there is a valid certificate signed by the Puppet CA for the given hostname.
@@ -409,15 +394,11 @@ class PuppetMaster:
         """
         response = cast(
             Dict,
-            self._run_json_command(
-                "puppet ca --disable_warnings deprecations --render-as json verify {host}".format(host=hostname)
-            ),
+            self._run_json_command(f"puppet ca --disable_warnings deprecations --render-as json verify {hostname}"),
         )
 
         if not response["valid"]:
-            raise PuppetMasterError(
-                "Invalid certificate for {host}: {error}".format(host=hostname, error=response["error"])
-            )
+            raise PuppetMasterError(f"Invalid certificate for {hostname}: {response['error']}")
 
     def sign(self, hostname: str, fingerprint: str, allow_alt_names: bool = False) -> None:
         """Sign a CSR on the Puppet CA for the given host checking its fingerprint.
@@ -433,15 +414,12 @@ class PuppetMaster:
         """
         cert = self.get_certificate_metadata(hostname)
         if cert["state"] != PuppetMaster.PUPPET_CERT_STATE_REQUESTED:
-            raise PuppetMasterError(
-                "Certificate for {host} not in requested state, got: {state}".format(host=hostname, state=cert["state"])
-            )
+            raise PuppetMasterError(f"Certificate for {hostname} not in requested state, got: {cert['state']}")
 
         if cert["fingerprint"] != fingerprint:
             raise PuppetMasterError(
-                "CSR fingerprint {csr} for {host} does not match provided fingerprint {expected}".format(
-                    csr=cert["fingerprint"], host=hostname, expected=fingerprint
-                )
+                f"CSR fingerprint {cert['fingerprint']} for {hostname} does not match provided fingerprint "
+                f"{fingerprint}"
             )
 
         if allow_alt_names:
@@ -449,9 +427,7 @@ class PuppetMaster:
         else:
             dns_option = "--no-allow-dns-alt-names"
 
-        command = "puppet cert --disable_warnings deprecations sign {dns_option} {host}".format(
-            dns_option=dns_option, host=hostname
-        )
+        command = f"puppet cert --disable_warnings deprecations sign {dns_option} {hostname}"
         logger.info("Signing CSR for %s with fingerprint %s", hostname, fingerprint)
         executed = self._master_host.run_sync(command)
 
@@ -460,9 +436,7 @@ class PuppetMaster:
             for _, output in executed:
                 logger.error(output.message().decode())
 
-            raise PuppetMasterError(
-                "Expected certificate for {host} to be signed, got: {state}".format(host=hostname, state=cert["state"])
-            )
+            raise PuppetMasterError(f"Expected certificate for {hostname} to be signed, got: {cert['state']}")
 
     @retry(
         tries=10,
@@ -483,7 +457,7 @@ class PuppetMaster:
         """
         state = self.get_certificate_metadata(hostname)["state"]
         if state != PuppetMaster.PUPPET_CERT_STATE_REQUESTED:
-            raise PuppetMasterError("Expected certificate in requested state, got: {state}".format(state=state))
+            raise PuppetMasterError(f"Expected certificate in requested state, got: {state}")
 
     def get_certificate_metadata(self, hostname: str) -> Dict:
         """Return the metadata of the certificate of the given hostname in the Puppet CA.
@@ -512,21 +486,20 @@ class PuppetMaster:
             spicerack.puppet.PuppetMasterError: if more than one certificate is found or it has invalid data.
 
         """
+        pattern = hostname.replace(".", r"\.")
         response = self._run_json_command(
-            'puppet ca --disable_warnings deprecations --render-as json list --all --subject "^{pattern}$"'.format(
-                pattern=hostname.replace(".", r"\.")
-            )
+            f'puppet ca --disable_warnings deprecations --render-as json list --all --subject "^{pattern}$"'
         )
 
         if not response:
-            raise PuppetMasterCheckError("No certificate found for hostname: {host}".format(host=hostname))
+            raise PuppetMasterCheckError(f"No certificate found for hostname: {hostname}")
 
         if len(response) > 1:
-            raise PuppetMasterError("Expected one result from Puppet CA, got {num}".format(num=len(response)))
+            raise PuppetMasterError(f"Expected one result from Puppet CA, got {len(response)}")
 
         metadata = response[0]
         if metadata["name"] != hostname:
-            raise PuppetMasterError("Hostname mismatch {name} != {host}".format(name=metadata["name"], host=hostname))
+            raise PuppetMasterError(f"Hostname mismatch {metadata['name']} != {hostname}")
 
         return metadata
 
@@ -549,17 +522,11 @@ class PuppetMaster:
             lines = output.message().decode()
             break
         else:
-            raise PuppetMasterError(
-                "Got no output from Puppet master while executing command: {command}".format(command=command)
-            )
+            raise PuppetMasterError(f"Got no output from Puppet master while executing command: {command}")
 
         try:
             response = json.loads(lines)
         except ValueError as e:
-            raise PuppetMasterError(
-                'Unable to parse Puppet master response for command "{command}": {lines}'.format(
-                    command=command, lines=lines
-                )
-            ) from e
+            raise PuppetMasterError(f'Unable to parse Puppet master response for command "{command}": {lines}') from e
 
         return response

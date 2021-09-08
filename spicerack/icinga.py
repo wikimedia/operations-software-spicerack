@@ -43,7 +43,7 @@ class CommandFile(str):
         """
         # Can't use functools cache decorators because NodeSet are not hashable
         if len(icinga_host) != 1:
-            raise IcingaError("Icinga host must match a single host, got: {host}".format(host=icinga_host))
+            raise IcingaError(f"Icinga host must match a single host, got: {icinga_host}")
 
         identifier = (str(icinga_host), config_file)
 
@@ -58,12 +58,10 @@ class CommandFile(str):
                 command_file = output.message().decode().split("=", 1)[-1].strip()
 
             if not command_file:
-                raise ValueError(
-                    "Empty or no value found for command_file configuration in {config}".format(config=config_file)
-                )
+                raise ValueError(f"Empty or no value found for command_file configuration in {config_file}")
 
         except (SpicerackError, ValueError) as e:
-            raise IcingaError("Unable to read command_file configuration in {config}".format(config=config_file)) from e
+            raise IcingaError(f"Unable to read command_file configuration in {config_file}") from e
 
         cls._command_files[identifier] = command_file
         return cast(CommandFile, command_file)
@@ -88,9 +86,10 @@ class IcingaStatusNotFoundError(IcingaError):
 
         """
         if len(hostnames) == 1:
-            super().__init__("Host {host} was not found in Icinga status".format(host=hostnames[0]))
+            super().__init__(f"Host {hostnames[0]} was not found in Icinga status")
         else:
-            super().__init__("Hosts {hosts} were not found in Icinga status".format(hosts=", ".join(hostnames)))
+            hosts = ", ".join(hostnames)
+            super().__init__(f"Hosts {hosts} were not found in Icinga status")
 
 
 class HostsStatus(dict):
@@ -257,12 +256,12 @@ class IcingaHosts:
         """
         duration_seconds = int(duration.total_seconds())
         if duration_seconds < MIN_DOWNTIME_SECONDS:
-            raise IcingaError("Downtime duration must be at least 1 minute, got: {duration}".format(duration=duration))
+            raise IcingaError(f"Downtime duration must be at least 1 minute, got: {duration}")
 
         try:
             self.get_status()  # Ensure all hosts are known to Icinga, ignoring the return value.
         except IcingaStatusNotFoundError as e:
-            raise IcingaError("{e} - no hosts have been downtimed.".format(e=e)) from e
+            raise IcingaError(f"{e} - no hosts have been downtimed.") from e
 
         logger.info(
             "Scheduling downtime on Icinga server %s for hosts: %s",
@@ -348,13 +347,13 @@ class IcingaHosts:
         """
         duration_seconds = int(duration.total_seconds())
         if duration_seconds < MIN_DOWNTIME_SECONDS:
-            raise IcingaError("Downtime duration must be at least 1 minute, got: {duration}".format(duration=duration))
+            raise IcingaError(f"Downtime duration must be at least 1 minute, got: {duration}")
 
         try:
             # This also validates the regular expression syntax and ensures all hosts are known to Icinga.
             status = self.get_status(service_re)
         except IcingaStatusNotFoundError as e:
-            raise IcingaError("{e} - no hosts have been downtimed.".format(e=e)) from e
+            raise IcingaError(f"{e} - no hosts have been downtimed.") from e
 
         unique_services = set()
         for host_status in status.values():
@@ -364,7 +363,7 @@ class IcingaHosts:
         matched_host_count = sum(1 if host_status.services else 0 for host_status in status.values())
 
         if not unique_services:
-            raise IcingaError('No services on {hosts} matched "{re}"'.format(hosts=self._target_hosts, re=service_re))
+            raise IcingaError(f'No services on {self._target_hosts} matched "{service_re}"')
 
         logger.info(
             'Scheduling downtime on Icinga server %s for services "%s" for host%s: %s '
@@ -427,7 +426,7 @@ class IcingaHosts:
         """
         status = self.get_status(service_re)  # This also validates the regular expression syntax.
         if not any(host_status.services for host_status in status.values()):
-            raise IcingaError('No services on {hosts} matched "{re}"'.format(hosts=self._target_hosts, re=service_re))
+            raise IcingaError(f'No services on {self._target_hosts} matched "{service_re}"')
 
         logger.info(
             'Removing downtime on Icinga server %s for services "%s" for hosts: %s',
@@ -492,9 +491,7 @@ class IcingaHosts:
         verbatim = " --verbatim-hosts" if self._verbatim_hosts else ""
         services = (" --services " + shlex.quote(service_re)) if service_re else ""
         command = Command(
-            '/usr/local/bin/icinga-status -j{verbatim}{services} "{hosts}"'.format(
-                verbatim=verbatim, services=services, hosts=self._target_hosts
-            ),
+            f'/usr/local/bin/icinga-status -j{verbatim}{services} "{self._target_hosts}"',
             ok_codes=[],
         )
         for _, output in self._icinga_host.run_sync(command, is_safe=True):  # icinga-status is a read-only script
@@ -529,8 +526,8 @@ class IcingaHosts:
         """
         status = self.get_status()
         if not status.optimal:
-            failed = ["{}:{}".format(k, ",".join(v)) for k, v in status.failed_services.items()]
-            raise IcingaError("Not all services are recovered: {}".format(" ".join(failed)))
+            failed = [f"{k}:{','.join(v)}" for k, v in status.failed_services.items()]
+            raise IcingaError("Not all services are recovered: " + " ".join(failed))
 
     def _get_command_string(self, *args: str) -> str:
         """Get the Icinga command to execute given the current arguments.
@@ -542,7 +539,6 @@ class IcingaHosts:
             str: the command line to execute on the Icinga host.
 
         """
-        bash_cmd = 'echo -n "[{now}] {args}" > {command_file} '.format(
-            now=int(time.time()), args=";".join(args), command_file=self._command_file
-        )
+        args_str = ";".join(args)
+        bash_cmd = f'echo -n "[{int(time.time())}] {args_str}" > {self._command_file} '
         return "bash -c " + shlex.quote(bash_cmd)

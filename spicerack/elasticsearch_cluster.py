@@ -80,7 +80,7 @@ def create_elasticsearch_clusters(
     try:
         endpoints = ELASTICSEARCH_CLUSTERS["search"][clustergroup].values()
     except KeyError as e:
-        raise ElasticsearchClusterError("No cluster group named {name}".format(name=clustergroup)) from e
+        raise ElasticsearchClusterError(f"No cluster group named {clustergroup}") from e
 
     clusters = [Elasticsearch(endpoint) for endpoint in endpoints]
     elasticsearch_clusters = [ElasticsearchCluster(cluster, remote, dry_run=dry_run) for cluster in clusters]
@@ -137,7 +137,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
 
     def _systemctl_for_each_instance(self, action: str) -> None:
         logger.info("%s all elasticsearch instances on %s", action, self)
-        self._remote_hosts.run_sync("cat /etc/elasticsearch/instances | xargs systemctl {action}".format(action=action))
+        self._remote_hosts.run_sync(f"cat /etc/elasticsearch/instances | xargs systemctl {action}")
 
     def depool_nodes(self) -> None:
         """Depool the hosts."""
@@ -394,13 +394,12 @@ class ElasticsearchClusters:
             for (topic, partition, queue_size) in queue_results:
                 if queue_size > 0:
                     raise ElasticsearchClusterCheckError(
-                        "Write queue not empty (had value of {}) for partition {}"
-                        "of topic {}.".format(queue_size, partition, topic)
+                        f"Write queue not empty (had value of {queue_size}) for partition {partition} of topic {topic}."
                     )
         if not have_received_results:
             raise ElasticsearchClusterError(
-                "Prometheus query {} returned empty response for all dcs in {}, "
-                "is query correct?".format(query, self._write_queue_datacenters)
+                f"Prometheus query {query} returned empty response for all dcs in {self._write_queue_datacenters}, "
+                f"is query correct?"
             )
 
 
@@ -724,11 +723,9 @@ class NodesGroup:
         """
         if self._fqdn != json_node["attributes"]["fqdn"]:
             # should never happen
-            raise AssertionError(
-                "Invalid data, two instances on the same node with different fqdns [{fqdn1}/{fqdn2}]".format(
-                    fqdn1=self._fqdn, fqdn2=json_node["attributes"]["fqdn"]
-                )
-            )
+            fqdn1 = self._fqdn
+            fqdn2 = json_node["attributes"]["fqdn"]
+            raise AssertionError(f"Invalid data, two instances on the same node with different fqdns [{fqdn1}/{fqdn2}]")
         cluster_name = json_node["settings"]["cluster"]["name"]
         if cluster_name not in self._clusters_names:
             self._clusters_names.append(cluster_name)
@@ -736,12 +733,10 @@ class NodesGroup:
             self._clusters_instances.append(cluster)
         if self._row != json_node["attributes"]["row"]:
             # should never happen
+            row1 = self._row
+            row2 = json_node["attributes"]["row"]
             raise AssertionError(
-                "Invalid data, two instances on the same node with different rows {host}:[{row1}/{row2}]".format(
-                    host=self._hostname,
-                    row1=self._row,
-                    row2=json_node["attributes"]["row"],
-                )
+                f"Invalid data, two instances on the same node with different rows {self._hostname}:[{row1}/{row2}]"
             )
         start_time = datetime.utcfromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000)
         self._oldest_start_time = min(self._oldest_start_time, start_time)

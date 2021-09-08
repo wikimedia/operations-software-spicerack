@@ -56,7 +56,7 @@ class Discovery:
             try:
                 self._resolvers[nameserver].nameservers = [rdata.address for rdata in resolver.query(nameserver)]
             except DNSException as e:
-                raise DiscoveryError("Unable to resolve {name}".format(name=nameserver)) from e
+                raise DiscoveryError(f"Unable to resolve {nameserver}") from e
 
     @property
     def _conftool_selector(self) -> str:
@@ -66,7 +66,8 @@ class Discovery:
             str: the Conftool selector.
 
         """
-        return "({regexp})".format(regexp="|".join(self._records))
+        regexp = "|".join(self._records)
+        return f"({regexp})"
 
     @property
     def active_datacenters(self) -> defaultdict:
@@ -108,7 +109,7 @@ class Discovery:
         try:  # Querying the first resolver
             return next(iter(self._resolvers.values())).query(name)[0].address
         except DNSException as e:
-            raise DiscoveryError("Unable to resolve {name}".format(name=name)) from e
+            raise DiscoveryError(f"Unable to resolve {name}") from e
 
     def update_ttl(self, ttl: int) -> None:
         """Update the TTL for all registered records.
@@ -149,11 +150,7 @@ class Discovery:
 
         for record in self.resolve():
             if record.ttl != ttl:
-                raise DiscoveryCheckError(
-                    "Expected TTL '{expected}', got '{ttl}' for record {record}".format(
-                        expected=ttl, ttl=record.ttl, record=record[0].address
-                    )
-                )
+                raise DiscoveryCheckError(f"Expected TTL '{ttl}', got '{record.ttl}' for record {record[0].address}")
         if len(self._records) == 1:
             logger.info("%s.discovery.wmnet TTL is correct.", self._records[0])
         else:
@@ -205,7 +202,7 @@ class Discovery:
                 )
 
         if failed:
-            raise DiscoveryError("Resolved record {name} with the wrong IP".format(name=name))
+            raise DiscoveryError(f"Resolved record {name} with the wrong IP")
 
         logger.info("%s.discovery.wmnet record is correct.", name)
 
@@ -233,12 +230,10 @@ class Discovery:
         for nameserver, dns_resolver in self._resolvers.items():
             for record in records:
                 try:
-                    record_name = "{record}.discovery.wmnet".format(record=record)
+                    record_name = f"{record}.discovery.wmnet"
                     answer = dns_resolver.query(record_name)
                 except DNSException as e:
-                    raise DiscoveryError(
-                        "Unable to resolve {name} from {ns}".format(name=record_name, ns=nameserver)
-                    ) from e
+                    raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}") from e
 
                 logger.debug(
                     "[%s] %s -> %s TTL %d",
@@ -284,9 +279,8 @@ class Discovery:
         # we don't care about services that are completely down.
         non_depoolable = [svc for svc, dcs in self.active_datacenters.items() if dcs == [datacenter]]
         if non_depoolable:
-            message = "Services {svcs} cannot be depooled as they are only active in {dc}".format(
-                svcs=", ".join(sorted(non_depoolable)), dc=datacenter
-            )
+            services = ", ".join(sorted(non_depoolable))
+            message = f"Services {services} cannot be depooled as they are only active in {datacenter}"
             if self._dry_run:
                 logger.debug(message)
             else:

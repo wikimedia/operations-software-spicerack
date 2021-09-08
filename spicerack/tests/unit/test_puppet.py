@@ -89,28 +89,20 @@ class TestPuppetHosts:
     def test_disable(self):
         """It should disable Puppet on the hosts."""
         self.puppet_hosts.disable(REASON)
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            "disable-puppet {reason}".format(reason=REASON.quoted())
-        )
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"disable-puppet {REASON.quoted()}")
 
     def test_enable(self):
         """It should enable Puppet on the hosts."""
         self.puppet_hosts.enable(REASON)
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            "enable-puppet {reason}".format(reason=REASON.quoted())
-        )
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {REASON.quoted()}")
 
     def test_disabled(self):
         """It should disable Puppet, yield and enable Puppet on the hosts."""
         with self.puppet_hosts.disabled(REASON):
-            self.mocked_remote_hosts.run_sync.assert_called_once_with(
-                "disable-puppet {reason}".format(reason=REASON.quoted())
-            )
+            self.mocked_remote_hosts.run_sync.assert_called_once_with(f"disable-puppet {REASON.quoted()}")
             self.mocked_remote_hosts.run_sync.reset_mock()
 
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            "enable-puppet {reason}".format(reason=REASON.quoted())
-        )
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {REASON.quoted()}")
 
     def test_disabled_on_raise(self):
         """It should re-enable Puppet even if the yielded code raises exception.."""
@@ -119,9 +111,7 @@ class TestPuppetHosts:
                 self.mocked_remote_hosts.run_sync.reset_mock()
                 raise RuntimeError("Error")
 
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            "enable-puppet {reason}".format(reason=REASON.quoted())
-        )
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {REASON.quoted()}")
 
     def test_check_enabled_ok(self):
         """It should check that all hosts have Puppet enabled."""
@@ -190,7 +180,7 @@ class TestPuppetHosts:
         """It should run Puppet with the specified arguments."""
         self.puppet_hosts.run(**kwargs)
         self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            puppet.Command("run-puppet-agent {exp}".format(exp=expected), timeout=300.0),
+            puppet.Command(f"run-puppet-agent {expected}", timeout=300.0),
             batch_size=10,
         )
 

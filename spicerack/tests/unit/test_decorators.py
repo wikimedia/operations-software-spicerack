@@ -19,7 +19,7 @@ class DryRunRetry:
     @retry
     def fail(self):
         """A method that fail always to trigger the retry logic."""
-        raise SpicerackError("self._dry_run={d}".format(d=self._dry_run))
+        raise SpicerackError(f"self._dry_run={self._dry_run}")
 
 
 def _generate_mocked_function(calls):
