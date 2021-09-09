@@ -249,6 +249,20 @@ class TestIpmi:
         self.ipmi.force_pxe()
         assert mocked_sleep.called
 
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    @mock.patch("spicerack.ipmi.run")
+    def test_force_pxe_dry_run(self, mocked_run, mocked_sleep):
+        """Should not raise an exception on dry-run mode when unable to verify the boot parameters."""
+        mocked_run.side_effect = [
+            CompletedProcess(
+                (),
+                0,
+                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0000000000", pxe="No override").encode(),
+            ),
+        ]
+        self.ipmi_dry_run.force_pxe()  # should not raise
+        assert not mocked_sleep.called
+
     @mock.patch("spicerack.ipmi.run")
     def test_reset_password_16(self, mocked_run):
         """It should reset the users password and store the password as 16 bytes."""
