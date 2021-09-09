@@ -1,6 +1,78 @@
 Spicerack Changelog
 -------------------
 
+`v0.0.59`_ (2021-09-09)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* ipmi: refactor class signature
+
+  * API breaking change, but the ``Spicerack.ipmi()`` accessor is used only in the ``sre.hosts.decommission`` and
+    ``sre.hosts.ipmi-password-reset cookbooks``, so it should be trivial to change both at once.
+  * Convert the IPMI class to require the FQDN of the management console to target, to avoid the need to pass that
+    around both from the client and internally in the class.
+  * The caching of the management password is done transparently by the ``Spicerack.ipmi()`` accessor to avoid the
+    anoyance of being asked the management password for each host.
+
+* dhcp: small refactor (the module is still unused)
+
+  * Rename ``switch_port`` to ``switch_iface`` to avoid confusions.
+  * Rename the context manager from ``dhcp_push()`` to ``config()`` as it's more natural to use:
+    ``with dhcp.config(my_config): # do something``
+  * Simplify formatting of templates, added ignores to vulture for false positives
+  * Add constructor documentation to the dataclasses.
+
+* icinga: remove the deprecated ``Icinga`` class
+
+  * The Icinga class has been deprecated for a while now and it's time to remove it completely. No cookbook is using
+    it anymore.
+
+
+New features
+""""""""""""
+
+* remote: add support for the installer key
+
+  * When instantiating a ``remote()`` instance, allow to pass a new parameter ``installer``, defaulted to ``False``,
+    that when ``True`` will use the special installer key for the remote instances that allow to connect to the
+    Debian installer environment or a freshly installed host prior to its first Puppet run.
+
+* ipmi: add status and reboot capabilities:
+
+  * Add a new method ``power_status()`` that returns the current power status and is also used by the existing
+    ``check_connection()`` method.
+  * Add a new method ``reboot()`` to issue an IPMI power on or power cycle, based on the current status of the device.
+
+* netbox: add getter ``asset_tag_fqdn`` for the asset tag mgmt FQDN property.
+* icinga: add ``downtime_services()`` and ``remove_service_downtimes()`` and also a ``services_downtimed()`` context
+  manager to allow to downtime only the host services that matches the given regex.
+
+
+Minor improvements
+""""""""""""""""""
+
+* puppet: minor improvements
+
+  * Return the results from the ``Puppet.first_run()`` method to allow to save it to a file like the current reimage
+    script does.
+  * Add an accessor for the ``master_host`` property in the ``PuppetMaster`` class as this is created and instantiated
+    by Spicerack and was hidden from the user of the API.
+
+* decorators: migrate to the wmflib version of ``@retry`` (`T257905`_)
+
+  * Use the wmflib version of ``@retry`` while keeping the dry-run awareness and default to catching ``SpicerackError``
+    instead of ``WmflibError`` like the pre-exsiting version was doing.
+
+Miscellanea
+"""""""""""
+
+* code style: migrate all the usage of string ``format()`` to f-strings.
+* pylint: addressed newly reported pylint issues and removed unnecessary disable comments.
+* prospector: disable ``E203`` for pep-8 over black.
+* code style: if there are no local modifications check last commit instead of not checking anything.
+
 `v0.0.58`_ (2021-08-25)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1386,3 +1458,4 @@ New features
 .. _`v0.0.56`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.56
 .. _`v0.0.57`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.57
 .. _`v0.0.58`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.58
+.. _`v0.0.59`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.59
