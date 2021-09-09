@@ -1,5 +1,4 @@
 """Wrapper around etcdctl handling parameters and such."""
-# pylint: disable=unsubscriptable-object,too-many-arguments
 import logging
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -15,8 +14,9 @@ SimpleType = Union[str, int, bool]
 class HealthStatus(Enum):
     """Health status."""
 
-    healthy = auto()
-    unhealthy = auto()
+    # TODO: rename the following with UPPERCASE names
+    healthy = auto()  # pylint: disable=invalid-name
+    unhealthy = auto()  # pylint: disable=invalid-name
 
 
 @dataclass(frozen=True)
@@ -67,8 +67,8 @@ class EtcdctlController(RemoteHostsAdapter):
         raw_results = self._remote_hosts.run_sync(" ".join(args))
         try:
             result = next(raw_results)[1].message().decode("utf8")
-        except StopIteration:
-            raise UnableToParseOutput("Got no results when trying to retrieve the etcdctl cluster health.")
+        except StopIteration as e:
+            raise UnableToParseOutput("Got no results when trying to retrieve the etcdctl cluster health.") from e
 
         global_status = None
         members_status = {}
@@ -98,8 +98,8 @@ class EtcdctlController(RemoteHostsAdapter):
         raw_results = self._remote_hosts.run_sync(" ".join(args))
         try:
             result = next(raw_results)[1].message().decode("utf8")
-        except StopIteration:
-            raise UnableToParseOutput("Got no results when trying to retrieve the etcdctl members list.")
+        except StopIteration as e:
+            raise UnableToParseOutput("Got no results when trying to retrieve the etcdctl members list.") from e
 
         structured_result = {}
         for line in result.split("\n"):

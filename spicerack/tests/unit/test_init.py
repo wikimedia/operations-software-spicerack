@@ -17,7 +17,7 @@ from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.ganeti import Ganeti
-from spicerack.icinga import Icinga, IcingaHosts
+from spicerack.icinga import IcingaHosts
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
@@ -49,6 +49,7 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.irc_logger, logging.Logger)
     assert isinstance(spicerack.actions, ActionsDict)
     assert isinstance(spicerack.remote(), Remote)
+    assert isinstance(spicerack.remote(installer=True), Remote)
     assert isinstance(spicerack.confctl("discovery"), ConftoolEntity)
     assert isinstance(spicerack.confctl("mwconfig"), ConftoolEntity)
     assert isinstance(spicerack.dns(), Dns)
@@ -104,7 +105,6 @@ def test_spicerack_icinga(mocked_command_file, mocked_remote_query, mocked_dns, 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
     assert spicerack.icinga_master_host.hosts == "icinga-server.example.com"
-    assert isinstance(spicerack.icinga(), Icinga)
     assert isinstance(spicerack.icinga_hosts(["host1", "host2"]), IcingaHosts)
     mocked_hostname.assert_called_once_with()
 
@@ -127,7 +127,7 @@ def test_spicerack_ipmi(monkeypatch):
     """Should instantiate an instance of Ipmi."""
     monkeypatch.setenv("MGMT_PASSWORD", "env_password")
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-    assert isinstance(spicerack.ipmi(), Ipmi)
+    assert isinstance(spicerack.ipmi("test-mgmt.example.com"), Ipmi)
 
 
 def test_spicerack_ipmi_cached(monkeypatch):
@@ -135,11 +135,10 @@ def test_spicerack_ipmi_cached(monkeypatch):
     monkeypatch.setenv("MGMT_PASSWORD", "first_password")
     expected_cached = {"IPMITOOL_PASSWORD": "first_password"}
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-    assert spicerack.ipmi(cached=True).env == expected_cached
+    assert spicerack.ipmi("test-mgmt.example.com").env == expected_cached
     monkeypatch.setenv("MGMT_PASSWORD", "second_password")
 
-    assert spicerack.ipmi(cached=True).env == expected_cached
-    assert spicerack.ipmi().env == {"IPMITOOL_PASSWORD": "second_password"}
+    assert spicerack.ipmi("test-mgmt.example.com").env == expected_cached
 
 
 @pytest.mark.parametrize(

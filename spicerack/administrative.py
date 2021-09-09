@@ -42,7 +42,7 @@ class Reason:
 
         """
         if value is not None and '"' in value:
-            raise ReasonError("Property {name} cannot contain double quotes: {value}".format(name=name, value=value))
+            raise ReasonError(f"Property {name} cannot contain double quotes: {value}")
 
         super().__setattr__(name, value)
 
@@ -77,7 +77,7 @@ class Reason:
             str: the origin (user@host) of the currently running code.
 
         """
-        return "{user}@{host}".format(user=self._username, host=self._hostname)
+        return f"{self._username}@{self._hostname}"
 
     @property
     def hostname(self) -> str:
@@ -106,4 +106,4 @@ class Reason:
             str: the generated string representation of all the instance attributes, double quoted.
 
         """
-        return '"{msg}"'.format(msg=self)
+        return f'"{self}"'

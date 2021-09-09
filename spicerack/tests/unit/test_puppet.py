@@ -89,28 +89,20 @@ class TestPuppetHosts:
     def test_disable(self):
         """It should disable Puppet on the hosts."""
         self.puppet_hosts.disable(REASON)
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            "disable-puppet {reason}".format(reason=REASON.quoted())
-        )
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"disable-puppet {REASON.quoted()}")
 
     def test_enable(self):
         """It should enable Puppet on the hosts."""
         self.puppet_hosts.enable(REASON)
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            "enable-puppet {reason}".format(reason=REASON.quoted())
-        )
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {REASON.quoted()}")
 
     def test_disabled(self):
         """It should disable Puppet, yield and enable Puppet on the hosts."""
         with self.puppet_hosts.disabled(REASON):
-            self.mocked_remote_hosts.run_sync.assert_called_once_with(
-                "disable-puppet {reason}".format(reason=REASON.quoted())
-            )
+            self.mocked_remote_hosts.run_sync.assert_called_once_with(f"disable-puppet {REASON.quoted()}")
             self.mocked_remote_hosts.run_sync.reset_mock()
 
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            "enable-puppet {reason}".format(reason=REASON.quoted())
-        )
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {REASON.quoted()}")
 
     def test_disabled_on_raise(self):
         """It should re-enable Puppet even if the yielded code raises exception.."""
@@ -119,9 +111,7 @@ class TestPuppetHosts:
                 self.mocked_remote_hosts.run_sync.reset_mock()
                 raise RuntimeError("Error")
 
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            "enable-puppet {reason}".format(reason=REASON.quoted())
-        )
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {REASON.quoted()}")
 
     def test_check_enabled_ok(self):
         """It should check that all hosts have Puppet enabled."""
@@ -190,7 +180,7 @@ class TestPuppetHosts:
         """It should run Puppet with the specified arguments."""
         self.puppet_hosts.run(**kwargs)
         self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            puppet.Command("run-puppet-agent {exp}".format(exp=expected), timeout=300.0),
+            puppet.Command(f"run-puppet-agent {expected}", timeout=300.0),
             batch_size=10,
         )
 
@@ -306,7 +296,7 @@ class TestPuppetHosts:
 
     # TODO: check why the following test_wait_since_* tests take longer (~4s each) when running the whole suite but are
     # quick if running only tests in this module (tox -e py34-unit -- -k test_puppet)
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_timeout(self, mocked_sleep):
         """It should raise PuppetHostsCheckError if the successful Puppet run is too old within the timeout."""
         last_run = datetime.utcnow()
@@ -324,7 +314,7 @@ class TestPuppetHosts:
 
         assert mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_failed_execution(self, mocked_sleep):
         """It should raise PuppetHostsCheckError if fails to get the successful Puppet run within the timeout."""
         self.mocked_remote_hosts.run_sync.side_effect = RemoteExecutionError(1, "fail")
@@ -335,7 +325,7 @@ class TestPuppetHosts:
 
         assert mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_missing_host(self, mocked_sleep):
         """It should raise PuppetHostsCheckError unable to get the result from some host."""
         last_run = datetime.utcnow()
@@ -449,6 +439,10 @@ class TestPuppetMaster:
             match="The master_host instance must target only one host, got 2",
         ):
             puppet.PuppetMaster(self.mocked_master_host)
+
+    def test_master_host(self):
+        """It should return the master host RemoteHosts instance."""
+        assert self.puppet_master.master_host is self.mocked_master_host
 
     def test_delete(self):
         """It should delete the host from Puppet master and PuppetDB."""
@@ -710,7 +704,7 @@ class TestPuppetMaster:
         ):
             self.puppet_master.wait_for_csr("test.example.com")
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_csr_timeout(self, mocked_sleep):
         """It should raise PuppetMasterCheckError if the certificate request doesn't appear."""
         results = [

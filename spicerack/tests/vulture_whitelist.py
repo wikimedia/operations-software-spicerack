@@ -20,6 +20,14 @@ whitelist_mock.side_effect
 whitelist_ganeti = Whitelist()
 whitelist_ganeti.Ganeti._http_session.auth
 
+# Needed because of https://github.com/jendrikseipp/vulture/issues/264
+whitelist_dhcp = Whitelist()
+whitelist_dhcp.DHCPConfOpt82.switch_hostname
+whitelist_dhcp.DHCPConfOpt82.switch_iface
+whitelist_dhcp.DHCPConfOpt82.vlan
+whitelist_dhcp.DHCPConfMgmt.serial
+whitelist_dhcp.DHCPConfMgmt.ip_address
+
 whitelist_dnsdisc = Whitelist()
 whitelist_dnsdisc.pool
 whitelist_dnsdisc.depool

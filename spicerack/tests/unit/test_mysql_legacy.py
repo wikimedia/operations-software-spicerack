@@ -111,7 +111,8 @@ class TestMysqlLegacy:
     )
     def test_get_core_dbs_fail(self, kwargs):
         """It should raise MysqlLegacyError if called with invalid parameters."""
-        message = "Got invalid {key}".format(key=list(kwargs.keys())[0])
+        key = list(kwargs.keys())[0]
+        message = f"Got invalid {key}"
         with pytest.raises(mysql_legacy.MysqlLegacyError, match=message):
             self.mysql.get_core_dbs(**kwargs)
 
@@ -155,7 +156,7 @@ class TestMysqlLegacy:
         ):
             self.mysql.verify_core_masters_readonly("eqiad", True)
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_core_masters_in_sync_ok(self, mocked_sleep):
         """Should check that all core masters are in sync with the master in the other DC."""
         hosts = NodeSet(EQIAD_CORE_MASTERS_QUERY)
@@ -166,7 +167,7 @@ class TestMysqlLegacy:
         self.mysql.check_core_masters_in_sync("eqiad", "codfw")
         assert not mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_core_masters_in_sync_fail_heartbeat(self, mocked_sleep):
         """Should raise MysqlLegacyError if unable to get the heartbeat from the current master."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet("db1001"))
@@ -175,7 +176,7 @@ class TestMysqlLegacy:
             self.mysql.check_core_masters_in_sync("eqiad", "codfw")
         assert not mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_core_masters_in_sync_not_in_sync(self, mocked_sleep):
         """Should raise MysqlLegacyError if a master is not in sync with the one in the other DC."""
         hosts = NodeSet(EQIAD_CORE_MASTERS_QUERY)
@@ -204,7 +205,7 @@ class TestMysqlLegacy:
         with pytest.raises(mysql_legacy.MysqlLegacyError, match="Unable to convert heartbeat"):
             self.mysql.get_core_masters_heartbeats("eqiad", "codfw")
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_core_masters_heartbeats_fail(self, mocked_sleep):
         """Should raise MysqlLegacyError if unable to get the heartbeat from the master."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet("db1001"))

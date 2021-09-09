@@ -181,7 +181,7 @@ class CookbookItem(BaseItem):
         """
         super().__init__(args, spicerack)
         if not issubclass(class_obj, cookbook.CookbookBase):
-            raise MenuError("Class {obj} is not a subclass of CookbookBase".format(obj=class_obj))
+            raise MenuError(f"Class {class_obj} is not a subclass of CookbookBase")
 
         self._status = CookbookItem.not_run
         self.name = class_obj.spicerack_name
@@ -273,7 +273,7 @@ class CookbookItem(BaseItem):
 
         _log.log_task_end(
             self.status,
-            "Cookbook {name} (exit_code={ret}) {desc}".format(name=self.full_name, ret=ret, desc=description).strip(),
+            f"Cookbook {self.full_name} (exit_code={ret}) {description}".strip(),
         )
 
         return ret
@@ -395,7 +395,7 @@ class TreeItem(BaseItem):
         if completed == total:
             message = "DONE"
         else:
-            message = "{completed}/{total}".format(completed=completed, total=total)
+            message = f"{completed}/{total}"
 
         return message
 
@@ -431,14 +431,14 @@ class TreeItem(BaseItem):
         """Print the menu to stdout."""
         for name in sorted(self.items.keys()):
             item = self.items[name]
-            print("[{status}] {name}: {title}".format(status=item.status, name=name, title=item.title))
+            print(f"[{item.status}] {name}: {item.title}")
 
         if self.parent is None:
-            print("{answer} - Quit".format(answer=TreeItem.quit_answer))
+            print(f"{TreeItem.quit_answer} - Quit")
         else:
-            print("{answer} - Back to parent menu".format(answer=TreeItem.back_answer))
+            print(f"{TreeItem.back_answer} - Back to parent menu")
 
-        print("{answer} - Help".format(answer=TreeItem.help_answer))
+        print(f"{TreeItem.help_answer} - Help")
 
     def calculate_status(self) -> Tuple[int, int]:
         """Calculate the status of a menu, checking the status of all it's tasks recursively.
@@ -459,7 +459,7 @@ class TreeItem(BaseItem):
                 if item.status != CookbookItem.not_run:
                     completed += 1
             else:  # pragma: no cover | This should never happen
-                raise MenuError("Unknown item of type {type}".format(type=type(item)))
+                raise MenuError(f"Unknown item of type {type(item)}")
 
         return completed, total
 
@@ -474,7 +474,8 @@ class TreeItem(BaseItem):
         if not lines:
             return ""
 
-        return "{title}\n{lines}\n".format(title=self.menu_title, lines="\n".join(lines))
+        lines_str = "\n".join(lines)
+        return f"{self.menu_title}\n{lines_str}\n"
 
     def get_menu_tree(self, level: int, cont_levels: List[bool]) -> List[str]:
         """Calculate the tree lines for a given menu.
@@ -497,9 +498,9 @@ class TreeItem(BaseItem):
 
             prefix = self._get_line_prefix(level, cont_levels, is_final)
             if self.spicerack.verbose:
-                line = "{prefix}{name}: {title}".format(prefix=prefix, name=item.full_name, title=item.title)
+                line = f"{prefix}{item.full_name}: {item.title}"
             else:
-                line = "{prefix}{name}".format(prefix=prefix, name=item.full_name)
+                line = f"{prefix}{item.full_name}"
 
             lines.append(line)
 
@@ -515,7 +516,7 @@ class TreeItem(BaseItem):
             spicerack._menu.TreeItem: the current menu instance.
 
         """
-        print("#--- {title} args={args} ---#".format(title=self.verbose_title, args=self.args))
+        print(f"#--- {self.verbose_title} args={self.args} ---#")
         self.show()
 
         if not sys.stdout.isatty():
@@ -524,9 +525,9 @@ class TreeItem(BaseItem):
 
         try:
             answer = input(">>> ")
-        except (EOFError, KeyboardInterrupt):
+        except (EOFError, KeyboardInterrupt) as e:
             print("QUIT")
-            raise StopIteration  # Ctrl+d or Ctrl+c pressed while waiting for input
+            raise StopIteration from e  # Ctrl+d or Ctrl+c pressed while waiting for input
 
         if not answer:
             return

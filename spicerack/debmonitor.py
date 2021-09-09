@@ -26,7 +26,7 @@ class Debmonitor:
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
-        self._base_url: str = "https://{host}".format(host=host)
+        self._base_url: str = f"https://{host}"
         self._cert = cert
         self._key = key
         self._dry_run = dry_run
@@ -47,7 +47,7 @@ class Debmonitor:
             logger.debug("Skip removing host %s from Debmonitor in DRY-RUN", hostname)
             return
 
-        url = "{base}/hosts/{host}".format(base=self._base_url, host=hostname)
+        url = f"{self._base_url}/hosts/{hostname}"
         response = self._http_session.delete(url, cert=(self._cert, self._key))
 
         if response.status_code == requests.codes["no_content"]:
@@ -56,7 +56,5 @@ class Debmonitor:
             logger.info("Host %s already missing on Debmonitor", hostname)
         else:
             raise DebmonitorError(
-                "Unable to remove host {host} from Debmonitor, got: {code} {msg}".format(
-                    host=hostname, code=response.status_code, msg=response.reason
-                )
+                f"Unable to remove host {hostname} from Debmonitor, got: {response.status_code} {response.reason}"
             )

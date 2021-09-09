@@ -58,7 +58,7 @@ class MediaWiki:
 
         """
         noc_server = self._remote.query("O:Noc::Site").hosts[0]
-        url = "http://{noc}/conf/{filename}.php.txt".format(noc=noc_server, filename=filename)
+        url = f"http://{noc_server}/conf/{filename}.php.txt"
         mwconfig = self._http_session.get(url, headers={"Host": "noc.wikimedia.org"})
         found = expected in mwconfig.text
         logger.debug(
@@ -126,9 +126,7 @@ class MediaWiki:
         """
         logger.debug("Syncing MediaWiki wmf-config/%s.php", filename)
         query = "C:Deployment::Rsync and R:Class%cron_ensure = absent"
-        command = "su - {user} -c 'scap sync-file --force wmf-config/{filename}.php \"{message}\"'".format(
-            user=self._user, filename=filename, message=message
-        )
+        command = f"su - {self._user} -c 'scap sync-file --force wmf-config/{filename}.php \"{message}\"'"
         self._remote.query(query).run_sync(command)
 
     def set_readonly(self, datacenter: str, message: str) -> None:
@@ -320,14 +318,10 @@ class MediaWiki:
                 try:
                     value = value[key]
                 except (KeyError, TypeError) as e:
-                    raise MediaWikiError("Failed to traverse siteinfo for key {key}".format(key=key)) from e
+                    raise MediaWikiError(f"Failed to traverse siteinfo for key {key}") from e
 
             if value != expected:
-                raise MediaWikiCheckError(
-                    "Expected '{expected}', got '{value}' for path: {path}".format(
-                        expected=expected, value=value, path=path
-                    )
-                )
+                raise MediaWikiCheckError(f"Expected '{expected}', got '{value}' for path: {path}")
 
     def _check_siteinfo_dry_run_aware(
         self, datacenter: str, checks: Dict[Tuple[str, ...], Any], samples: int = 1

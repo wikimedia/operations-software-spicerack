@@ -49,7 +49,7 @@ class TestDiscovery:
         """Initialize the test environment for Discovery."""
         # pylint: disable=attribute-defined-outside-init
         self.records = ["record1", "record2"]
-        self.conftool_records = "({records})".format(records="|".join(self.records))
+        self.conftool_records = "(" + "|".join(self.records) + ")"
         self.nameservers = ["authdns1", "authdns2"]
 
         self.mocked_confctl = mock.MagicMock()
@@ -91,13 +91,13 @@ class TestDiscovery:
         self.discovery.update_ttl(10)
         self.mocked_confctl.assert_has_calls([mock.call.set_and_verify("ttl", 10, dnsdisc=self.conftool_records)])
 
-    @mock.patch("spicerack.decorators.time.sleep")
+    @mock.patch("wmflib.decorators.time.sleep")
     def test_update_ttl_dry_run(self, mocked_sleep):
         """Calling update_ttl() in DRY-RUN mode should not raise when verifying the TTL."""
         self.discovery_dry_run.update_ttl(20)
         assert not mocked_sleep.called
 
-    @mock.patch("spicerack.decorators.time.sleep")
+    @mock.patch("wmflib.decorators.time.sleep")
     def test_update_ttl_ko(self, mocked_sleep):
         """Calling update_ttl() should raise DiscoveryCheckError if unable to verify the value."""
         with pytest.raises(DiscoveryCheckError, match="Expected TTL '20', got '10'"):
@@ -122,7 +122,7 @@ class TestDiscovery:
             getattr(self, name).check_ttl(10)
         assert expected in caplog.text
 
-    @mock.patch("spicerack.decorators.time.sleep")
+    @mock.patch("wmflib.decorators.time.sleep")
     def test_check_ttl_ko(self, mocked_sleep):
         """Calling check_ttl() should raise DiscoveryCheckError if the check fails."""
         with pytest.raises(DiscoveryCheckError, match="Expected TTL '20', got '10'"):
@@ -134,12 +134,12 @@ class TestDiscovery:
         """Calling check_record() should verify that a record has a certain value on the nameservers."""
         self.discovery.check_record(self.records[0], "ok.svc.eqiad.wmnet")
 
-    @mock.patch("spicerack.decorators.time.sleep")
+    @mock.patch("wmflib.decorators.time.sleep")
     def test_check_record_ko(self, mocked_sleep):
         """Calling check_record() should raise DiscoveryError if unable to check the records."""
         with pytest.raises(
             DiscoveryError,
-            match="Resolved record {record} with the wrong IP".format(record=self.records[0]),
+            match=f"Resolved record {self.records[0]} with the wrong IP",
         ):
             self.discovery.check_record(self.records[0], "fail.svc.eqiad.wmnet")
 

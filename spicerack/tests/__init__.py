@@ -19,6 +19,7 @@ def get_fixture_path(*paths):
 
 SPICERACK_TEST_PARAMS = {
     "cumin_config": get_fixture_path("remote", "config.yaml"),
+    "cumin_installer_config": get_fixture_path("remote", "config_installer.yaml"),
     "conftool_config": get_fixture_path("confctl", "config.yaml"),
     "conftool_schema": get_fixture_path("confctl", "schema.yaml"),
     "debmonitor_config": get_fixture_path("debmonitor", "config.ini"),

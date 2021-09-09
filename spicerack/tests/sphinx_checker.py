@@ -40,26 +40,19 @@ def main(base_path):
 
     ret = 0
     if spicerack_modules - doc_api_modules:
-        print(
-            "Spicerack modules that are not listed in {doc}: {modules}".format(
-                doc=DOC_API_INDEX_PATH, modules=spicerack_modules - doc_api_modules
-            )
-        )
+        print(f"Spicerack modules that are not listed in {DOC_API_INDEX_PATH}: {spicerack_modules - doc_api_modules}")
         ret += 1
     if doc_api_modules - spicerack_modules:
         print(
-            "Documented modules in {doc} that are missing in Spicerack: {modules}".format(
-                doc=DOC_API_INDEX_PATH, modules=doc_api_modules - spicerack_modules
-            )
+            f"Documented modules in {DOC_API_INDEX_PATH} that are missing in Spicerack: "
+            f"{doc_api_modules - spicerack_modules}"
         )
         ret += 1
 
-    doc_api_files = ["{name}.rst".format(name=name) for name in doc_api_modules]
+    doc_api_files = [f"{name}.rst" for name in doc_api_modules]
     missing_doc_api_files = [file_name for file_name in doc_api_files if not (DOC_API_BASE_PATH / file_name).is_file()]
     if missing_doc_api_files:
-        print(
-            "Missing documentation files in {doc}: {files}".format(doc=DOC_API_BASE_PATH, files=missing_doc_api_files)
-        )
+        print(f"Missing documentation files in {DOC_API_BASE_PATH}: {missing_doc_api_files}")
         ret += 1
 
     if ret == 0:
@@ -69,10 +62,8 @@ def main(base_path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(  # pylint: disable=invalid-name
-        description="Check that all Spicerack modules are documented"
-    )
+    parser = argparse.ArgumentParser(description="Check that all Spicerack modules are documented")
     parser.add_argument("base_path", help="Path to the root of the spicerack repository")
-    args = parser.parse_args()  # pylint: disable=invalid-name
+    args = parser.parse_args()
 
     sys.exit(main(args.base_path))

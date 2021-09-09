@@ -1,0 +1,27 @@
+{
+    "host1": {
+        "name": "host1",
+        "optimal": true,
+        "state": "UP",
+        "downtimed": false,
+        "notifications_enabled": true,
+        "services": [
+            {
+                "name": "service1",
+                "host": "host1",
+                "status": {
+                    "scheduled_downtime_depth": 1,
+                    "57 other fields elided": ""
+                }
+            },
+            {
+                "name": "service2",
+                "host": "host1",
+                "status": {
+                    "scheduled_downtime_depth": 1,
+                    "57 other fields elided": ""
+                }
+            }
+        ]
+    }
+}

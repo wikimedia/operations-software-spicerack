@@ -21,7 +21,7 @@ from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
 from spicerack.ganeti import Ganeti
-from spicerack.icinga import ICINGA_DOMAIN, Icinga, IcingaHosts
+from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.management import Management
@@ -42,7 +42,7 @@ except DistributionNotFound:  # pragma: no cover - this should never happen duri
     pass  # package is not installed
 
 
-class Spicerack:
+class Spicerack:  # pylint: disable=too-many-instance-attributes
     """Spicerack service locator."""
 
     def __init__(
@@ -51,6 +51,7 @@ class Spicerack:
         verbose: bool = False,
         dry_run: bool = True,
         cumin_config: str = "/etc/cumin/config.yaml",
+        cumin_installer_config: str = "/etc/cumin/config-installer.yaml",
         conftool_config: str = "/etc/conftool/config.yaml",
         conftool_schema: str = "/etc/conftool/schema.yaml",
         debmonitor_config: str = "/etc/debmonitor.conf",
@@ -63,6 +64,7 @@ class Spicerack:
             verbose (bool, optional): whether to set the verbose mode.
             dry_run (bool, optional): whether this is a DRY-RUN.
             cumin_config (str, optional): the path to Cumin's configuration file.
+            cumin_installer_config (str, optional): the path to Cumin's configuration file for the Debian installer.
             conftool_config (str, optional): the path to Conftool's configuration file.
             conftool_schema (str, optional): the path to Conftool's schema file.
             debmonitor_config (str, optional): the path to Debmonitor's INI configuration file. It must have at least
@@ -83,6 +85,7 @@ class Spicerack:
         self._dry_run = dry_run
         self._http_proxy = http_proxy
         self._cumin_config = cumin_config
+        self._cumin_installer_config = cumin_installer_config
         self._conftool_config = conftool_config
         self._conftool_schema = conftool_schema
         self._debmonitor_config = debmonitor_config
@@ -92,7 +95,7 @@ class Spicerack:
         self._current_hostname = gethostname()
         self._irc_logger = irc_logger
         self._confctl: Optional[Confctl] = None
-        self._ipmi: Optional[Ipmi] = None
+        self._mgmt_password: str = ""
         self._actions = ActionsDict()
 
     @property
@@ -202,14 +205,18 @@ class Spicerack:
         """
         return self.remote().query(self.dns().resolve_cname(NETBOX_DOMAIN))
 
-    def remote(self) -> Remote:
+    def remote(self, installer: bool = False) -> Remote:
         """Get a Remote instance.
+
+        Arguments:
+            installer (bool, optional): whether to use the special configuration to connect to a Debian installer
+                or freshly re-imaged host prior to its first Puppet run.
 
         Returns:
             spicerack.remote.Remote: the Remote instance.
 
         """
-        return Remote(self._cumin_config, dry_run=self._dry_run)
+        return Remote(self._cumin_installer_config if installer else self._cumin_config, dry_run=self._dry_run)
 
     def confctl(self, entity_name: str) -> ConftoolEntity:
         """Access a Conftool specific entity instance.
@@ -352,18 +359,6 @@ class Spicerack:
         """
         return Reason(reason, self._username, self._current_hostname, task_id=task_id)
 
-    def icinga(self) -> Icinga:
-        """Get an Icinga instance.
-
-        .. deprecated:: v0.0.50
-            use :py:meth:`spicerack.Spicerack.icinga_hosts()` instead.
-
-        Returns:
-            spicerack.icinga.Icinga: Icinga instance.
-
-        """
-        return Icinga(self.icinga_master_host)
-
     def icinga_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> IcingaHosts:
         """Get an IcingaHosts instance.
 
@@ -401,26 +396,20 @@ class Spicerack:
         """
         return PuppetMaster(self.remote().query(get_puppet_ca_hostname()))
 
-    def ipmi(self, *, cached: bool = False) -> Ipmi:
+    def ipmi(self, mgmt_fqdn: str) -> Ipmi:
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
 
         Arguments:
-            cached (bool, optional): whether to cache the Ipmi instance and allow to re-use it without re-asking the
-                management password. The cached instance will be returned at each future call of this method with
-                the cached parameter set to :py:data:`True`.
+            mgmt_fqdn (str): the management console FQDN to target.
 
         Returns:
             spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
 
         """
-        if cached and self._ipmi is not None:
-            return self._ipmi
+        if not self._mgmt_password:
+            self._mgmt_password = get_management_password()
 
-        ipmi = Ipmi(get_management_password(), dry_run=self._dry_run)
-        if cached:
-            self._ipmi = ipmi
-
-        return ipmi
+        return Ipmi(mgmt_fqdn, self._mgmt_password, dry_run=self._dry_run)
 
     def phabricator(self, bot_config_file: str, section: str = "phabricator_bot") -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.
@@ -541,7 +530,7 @@ class Spicerack:
             requests.Session: the pre-configured session.
 
         """
-        name = "Spicerack/{version} {name}".format(version=__version__, name=name)
+        name = f"Spicerack/{__version__} {name}"
         return requests.http_session(name, timeout=timeout, tries=tries, backoff=backoff)
 
     def etcdctl(self, *, remote_host: RemoteHosts) -> EtcdctlController:  # pylint: disable=no-self-use

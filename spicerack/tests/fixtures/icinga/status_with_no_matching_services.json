@@ -1,0 +1,10 @@
+{
+    "host1": {
+        "name": "host1",
+        "optimal": true,
+        "state": "UP",
+        "downtimed": false,
+        "notifications_enabled": true,
+        "services": []
+    }
+}

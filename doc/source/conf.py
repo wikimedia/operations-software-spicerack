@@ -54,10 +54,10 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = u"Spicerack"
-title = u"{project} Documentation".format(project=project)
-copyright = u"2018-2020, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
-author = u"Riccardo Coccioli"
+project = "Spicerack"
+title = f"{project} Documentation"
+copyright = "2018-2021, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
+author = "Riccardo Coccioli"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

@@ -107,7 +107,7 @@ def test_wait_for_elasticsearch_does_no_check_when_in_dry_run():
     assert not node_group.check_all_nodes_up.called
 
 
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_wait_for_elasticsearch_up_fails_if_one_node_is_down(mocked_sleep):
     """Test that elasticsearch instance is called when wait for instance to come up."""
     node_group1 = mock.Mock(spec_set=NodesGroup)
@@ -123,7 +123,7 @@ def test_wait_for_elasticsearch_up_fails_if_one_node_is_down(mocked_sleep):
     assert mocked_sleep.called
 
 
-@mock.patch("spicerack.decorators.time.sleep", return_value=None)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
 def test_wait_for_elasticsearch_up_retries_on_failures(mocked_sleep):
     """Test that elasticsearch instance is called when wait for instance to come up."""
     node_group = mock.Mock(spec_set=NodesGroup)
@@ -515,7 +515,7 @@ class TestElasticsearchClusters:
         elasticsearch_clusters.wait_for_green(timedelta(seconds=4))
         assert retry.call_args[1]["tries"] == 1
 
-    @mock.patch("spicerack.decorators.time.sleep", return_value=None)
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_green_retry_test(self, mocked_sleep):
         """Test that the retry is called again when cluster health request throws an exception."""
         self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError(500, "test"))
@@ -763,7 +763,7 @@ def json_node(
 ) -> Dict:
     """Used to mock the elasticsearch node API."""
     hostname = fqdn.split(".", 1)[0]
-    node_name = "{hostname}-{cluster_name}".format(hostname=hostname, cluster_name=cluster_name)
+    node_name = f"{hostname}-{cluster_name}"
     return {
         "name": node_name,
         "attributes": {
@@ -785,7 +785,7 @@ def mock_node_info(values):
     clusters = []
     port = 9200
     for nodes in values:
-        elasticsearch = Elasticsearch("localhost:{port}".format(port=port))
+        elasticsearch = Elasticsearch(f"localhost:{port}")
         port += 1
         elasticsearch.nodes.info = mock.Mock(return_value={"nodes": nodes})
         cluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=False)

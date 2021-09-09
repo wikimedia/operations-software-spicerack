@@ -1,11 +1,5 @@
 #!/bin/bash -e
 
-are_we_in_ci() {
-    [[ "$(git diff HEAD)" == "" ]] &&
-        [[ "$(git diff HEAD --cached)" == "" ]] &&
-        [[ "${ZUUL_PIPELINE:-notset}" == "test" ]]
-}
-
 fail() {
     echo "The code is not formatted according to the current style. You can autoformat your code running:"
     echo "    tox -e py3-format"
@@ -20,8 +14,8 @@ STAGED_FILES=(
     $(git diff HEAD --cached --name-only | grep '\.py$' || true)
 )
 
-if are_we_in_ci; then
-    echo "CI: Using files changed in the current commit too."
+if [[ "$(git diff HEAD)" == "" ]] && [[ "$(git diff HEAD --cached)" == "" ]]; then
+    echo "No local changes, testing the last commit."
     COMMITTED_FILES=(
         $(git diff HEAD^ --name-only | grep '\.py$' || true)
     )

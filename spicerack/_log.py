@@ -6,8 +6,8 @@ from typing import Optional, Union
 
 from wmflib.irc import SALSocketHandler
 
-root_logger = logging.getLogger()  # pylint: disable=invalid-name
-irc_logger = logging.getLogger("spicerack_irc_announce")  # pylint: disable=invalid-name
+root_logger = logging.getLogger()
+irc_logger = logging.getLogger("spicerack_irc_announce")
 
 
 class FilterOutCumin(logging.Filter):
@@ -58,23 +58,19 @@ def setup_logging(
         dry_run_prefix = ""
 
     # Default INFO logging
-    formatter = logging.Formatter(
-        fmt="%(asctime)s {dryrun}{user} %(process)d [%(levelname)s] %(message)s".format(
-            dryrun=dry_run_prefix, user=user
-        )
-    )
-    handler = logging.FileHandler(os.path.join(base_path, "{name}.log".format(name=name)))
+    formatter = logging.Formatter(fmt=f"%(asctime)s {dry_run_prefix}{user} %(process)d [%(levelname)s] %(message)s")
+    handler = logging.FileHandler(os.path.join(base_path, f"{name}.log"))
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
 
     # Extended logging for detailed debugging
     formatter_extended = logging.Formatter(
         fmt=(
-            "%(asctime)s {dryrun}{user} %(process)d [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] "
+            f"%(asctime)s {dry_run_prefix}{user} %(process)d [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] "
             "%(message)s"
-        ).format(dryrun=dry_run_prefix, user=user)
+        )
     )
-    handler_extended = logging.FileHandler(os.path.join(base_path, "{name}-extended.log".format(name=name)))
+    handler_extended = logging.FileHandler(os.path.join(base_path, f"{name}-extended.log"))
     handler_extended.setFormatter(formatter_extended)
     handler_extended.setLevel(logging.DEBUG)
 

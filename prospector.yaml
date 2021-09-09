@@ -21,6 +21,8 @@ pep8:
   full: true
   options:
     max-line-length: 120
+  disable:
+    - E203  # Apparently not PEP8 compliant, clashes with black, see https://github.com/psf/black/issues/315
 
 pep257:
   explain: true
@@ -34,7 +36,7 @@ pep257:
 pylint:
   disable:
     - pointless-string-statement  # used as documentation for class attributes
-    - unsubscriptable-object  # Breaks for latest pylint https://github.com/PyCQA/pylint/issues/3882
+    - unspecified-encoding  # Can create issues only on Windows, that is not supported
     # the following two from https://github.com/psf/black/blob/master/docs/compatible_configs.md#pylint
     - C0330  # Wrong hanging indentation
     - C0326  # Bad whitespace

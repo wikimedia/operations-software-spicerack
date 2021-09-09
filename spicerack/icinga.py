@@ -1,12 +1,12 @@
 """Icinga module."""
 import json
 import logging
+import re
 import shlex
 import time
-import warnings
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Dict, Iterator, List, Mapping, Sequence, Tuple, cast
+from typing import Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, cast
 
 from cumin import NodeSet
 from cumin.transports import Command
@@ -43,7 +43,7 @@ class CommandFile(str):
         """
         # Can't use functools cache decorators because NodeSet are not hashable
         if len(icinga_host) != 1:
-            raise IcingaError("Icinga host must match a single host, got: {host}".format(host=icinga_host))
+            raise IcingaError(f"Icinga host must match a single host, got: {icinga_host}")
 
         identifier = (str(icinga_host), config_file)
 
@@ -58,12 +58,10 @@ class CommandFile(str):
                 command_file = output.message().decode().split("=", 1)[-1].strip()
 
             if not command_file:
-                raise ValueError(
-                    "Empty or no value found for command_file configuration in {config}".format(config=config_file)
-                )
+                raise ValueError(f"Empty or no value found for command_file configuration in {config_file}")
 
         except (SpicerackError, ValueError) as e:
-            raise IcingaError("Unable to read command_file configuration in {config}".format(config=config_file)) from e
+            raise IcingaError(f"Unable to read command_file configuration in {config_file}") from e
 
         cls._command_files[identifier] = command_file
         return cast(CommandFile, command_file)
@@ -88,9 +86,10 @@ class IcingaStatusNotFoundError(IcingaError):
 
         """
         if len(hostnames) == 1:
-            super().__init__("Host {host} was not found in Icinga status".format(host=hostnames[0]))
+            super().__init__(f"Host {hostnames[0]} was not found in Icinga status")
         else:
-            super().__init__("Hosts {hosts} were not found in Icinga status".format(hosts=", ".join(hostnames)))
+            hosts = ", ".join(hostnames)
+            super().__init__(f"Hosts {hosts} were not found in Icinga status")
 
 
 class HostsStatus(dict):
@@ -152,27 +151,33 @@ class HostStatus:
         name: str,
         state: str,
         optimal: bool,
-        failed_services: Sequence[Mapping],
         downtimed: bool,
         notifications_enabled: bool,
+        failed_services: Optional[Sequence[Mapping]] = None,
+        services: Optional[Sequence[Mapping]] = None,
     ):
         """Initialize the instance.
+
+        Either `services` or `failed_services` may be present, depending on the flags passed to icinga-status.
 
         Arguments:
             name (str): the hostname.
             state (str): the Icinga state for the host, one of ``UP``, ``DOWN``, UNREACHABLE``.
             optimal (bool): whether the host is in optimal state (all green).
-            failed_services (list): a list of dictionaries representing the failed services.
             downtimed (bool): whether the host is currently downtimed.
             notifications_enabled: (bool): whether the host has notifications enabled.
+            failed_services (list, optional): a list of dictionaries representing the failed services.
+            services (list, optional): a list of dictionaries giving detailed service status.
 
         """
         self.name = name
         self.state = state
         self.optimal = optimal
-        self.failed_services_raw = failed_services  # TODO: could be improved creating a ServiceStatus class
         self.downtimed = downtimed
         self.notifications_enabled = notifications_enabled
+        # TODO: could be improved creating a ServiceStatus class
+        self.services = services if services is not None else []
+        self.failed_services_raw = failed_services if failed_services is not None else []
 
     @property
     def failed_services(self) -> List[str]:
@@ -183,214 +188,6 @@ class HostStatus:
 
         """
         return [service["name"] for service in self.failed_services_raw]
-
-
-class Icinga:
-    """Class to interact with the Icinga server."""
-
-    def __init__(self, icinga_host: RemoteHosts) -> None:
-        """Initialize the instance.
-
-        .. deprecated:: v0.0.50
-            use :py:class:`spicerack.icinga.IcingaHosts` instead.
-
-        Arguments:
-            icinga_host (spicerack.remote.RemoteHosts): the RemoteHosts instance for the Icinga server.
-
-        """
-        self._icinga_host = icinga_host
-        warnings.warn("Deprecated class, use spicearack.icinga_hosts() instead", DeprecationWarning)
-
-    @property
-    def command_file(self) -> str:
-        """Getter for the command_file property.
-
-        Returns:
-            str: the path of the Icinga command file.
-
-        Raises:
-            spicerack.icinga.IcingaError: if unable to get the command file path.
-
-        """
-        return CommandFile(self._icinga_host)
-
-    @contextmanager
-    def hosts_downtimed(
-        self,
-        hosts: TypeHosts,
-        reason: Reason,
-        *,
-        duration: timedelta = timedelta(hours=4),
-        remove_on_error: bool = False,
-    ) -> Iterator[None]:
-        """Context manager to perform actions while the hosts are downtimed on Icinga.
-
-        Arguments:
-            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to downtime.
-            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
-            duration (datetime.timedelta, optional): the length of the downtime period.
-            remove_on_error: should the downtime be removed even if an exception was raised.
-
-        Yields:
-            None: it just yields control to the caller once Icinga has been downtimed and deletes the downtime once
-            getting back the control.
-
-        """
-        self.downtime_hosts(hosts, reason, duration=duration)
-        try:
-            yield
-        except BaseException:
-            if remove_on_error:
-                self.remove_downtime(hosts)
-            raise
-        else:
-            self.remove_downtime(hosts)
-
-    def downtime_hosts(self, hosts: TypeHosts, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> None:
-        """Downtime hosts on the Icinga server for the given time with a message.
-
-        Arguments:
-            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to downtime.
-            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
-            duration (datetime.timedelta, optional): the length of the downtime period.
-
-        """
-        duration_seconds = int(duration.total_seconds())
-        if duration_seconds < MIN_DOWNTIME_SECONDS:
-            raise IcingaError("Downtime duration must be at least 1 minute, got: {duration}".format(duration=duration))
-
-        if not hosts:
-            raise IcingaError("Got empty hosts list to downtime")
-
-        hostnames = Icinga._get_hostnames(hosts)
-        downtime_command: str = 'icinga-downtime -h "{hostname}" -d {duration} -r {reason}'
-        commands = [
-            downtime_command.format(hostname=name, duration=duration_seconds, reason=reason.quoted())
-            for name in hostnames
-        ]
-
-        logger.info(
-            "Scheduling downtime on Icinga server %s for hosts: %s",
-            self._icinga_host,
-            hosts,
-        )
-        self._icinga_host.run_sync(*commands)
-
-    def recheck_all_services(self, hosts: TypeHosts) -> None:
-        """Force recheck of all services associated with a set of hosts.
-
-        Arguments:
-            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to recheck.
-
-        """
-        self.host_command("SCHEDULE_FORCED_HOST_SVC_CHECKS", hosts, str(int(time.time())))
-
-    def remove_downtime(self, hosts: TypeHosts) -> None:
-        """Remove a downtime from a set of hosts.
-
-        Arguments:
-            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to remove the downtime from.
-
-        """
-        self.host_command("DEL_DOWNTIME_BY_HOST_NAME", hosts)
-
-    def host_command(self, command: str, hosts: TypeHosts, *args: str) -> None:
-        """Execute a host-specific Icinga command on the Icinga server for a set of hosts.
-
-        Arguments:
-            command (str): the Icinga command to execute.
-            hosts (spicerack.typing.TypeHosts): the set of hostnames or FQDNs to iterate the command to.
-            *args (str): optional positional arguments to pass to the command.
-
-        See Also:
-            https://icinga.com/docs/icinga1/latest/en/extcommands2.html
-
-        """
-        hostnames = Icinga._get_hostnames(hosts)
-        commands = [self._get_command_string(command, hostname, *args) for hostname in hostnames]
-        self._icinga_host.run_sync(*commands)
-
-    def get_status(self, hosts: NodeSet) -> HostsStatus:
-        """Get the current status of the given hosts from Icinga.
-
-        Arguments:
-            hosts (cumin.NodeSet): the set of hostnames or FQDNs to iterate the command to.
-
-        Returns:
-            spicerack.icinga.HostsStatus: the instance that represents the status for the given hosts.
-
-        Raises:
-            IcingaError: if unable to get the status.
-            IcingaStatusParseError: when failing to parse the status.
-            IcingaStatusNotFoundError: if a host is not found in the Icinga status.
-
-        """
-        # icinga-status exits with non-zero exit code on missing and non-optimal hosts.
-        command = Command('/usr/local/bin/icinga-status -j "{hosts}"'.format(hosts=hosts), ok_codes=[])
-        for _, output in self._icinga_host.run_sync(command, is_safe=True):  # icinga-status is a read-only script
-            json_status = output.message().decode()
-            break
-        else:
-            raise IcingaError("Unable to get the status for the given hosts, no output from icinga-status")
-
-        try:
-            status = json.loads(json_status)
-        except json.JSONDecodeError as e:
-            raise IcingaStatusParseError("Unable to parse Icinga status") from e
-
-        missing_hosts = [hostname for hostname, host_status in status.items() if host_status is None]
-        if missing_hosts:
-            raise IcingaStatusNotFoundError(missing_hosts)
-
-        return HostsStatus({hostname: HostStatus(**host_status) for hostname, host_status in status.items()})
-
-    @retry(
-        tries=15,
-        delay=timedelta(seconds=3),
-        backoff_mode="linear",
-        exceptions=(IcingaError,),
-    )
-    def wait_for_optimal(self, hosts: NodeSet) -> None:
-        """Waits for an icinga optimal status, else raises an exception.
-
-        Arguments:
-            hosts (cumin.NodeSet): the set of hostnames or FQDNs to iterate the command to.
-
-        Raises:
-            IcingaError
-
-        """
-        status = self.get_status(hosts)
-        if not status.optimal:
-            failed = ["{}:{}".format(k, ",".join(v)) for k, v in status.failed_services.items()]
-            raise IcingaError("Not all services are recovered: {}".format(" ".join(failed)))
-
-    def _get_command_string(self, *args: str) -> str:
-        """Get the Icinga command to execute given the current arguments.
-
-        Arguments:
-            *args (str): positional arguments to use to compose the Icinga command string.
-
-        Returns:
-            str: the command line to execute on the Icinga host.
-
-        """
-        return "bash -c 'echo -n \"[{now}] {args}\" > {command_file} '".format(
-            now=int(time.time()), args=";".join(args), command_file=self.command_file
-        )
-
-    @staticmethod
-    def _get_hostnames(fqdns: TypeHosts) -> List[str]:
-        """Convert FQDNs into hostnames.
-
-        Arguments:
-            hosts (spicerack.typing.TypeHosts): an iterable with the list of hostnames to iterate the command for.
-
-        Returns:
-            list: the list of hostnames.
-
-        """
-        return [fqdn.split(".")[0] for fqdn in fqdns]
 
 
 class IcingaHosts:
@@ -459,12 +256,12 @@ class IcingaHosts:
         """
         duration_seconds = int(duration.total_seconds())
         if duration_seconds < MIN_DOWNTIME_SECONDS:
-            raise IcingaError("Downtime duration must be at least 1 minute, got: {duration}".format(duration=duration))
+            raise IcingaError(f"Downtime duration must be at least 1 minute, got: {duration}")
 
         try:
             self.get_status()  # Ensure all hosts are known to Icinga, ignoring the return value.
         except IcingaStatusNotFoundError as e:
-            raise IcingaError("{e} - no hosts have been downtimed.".format(e=e))
+            raise IcingaError(f"{e} - no hosts have been downtimed.") from e
 
         logger.info(
             "Scheduling downtime on Icinga server %s for hosts: %s",
@@ -498,6 +295,112 @@ class IcingaHosts:
             reason.reason,
         )
 
+    @contextmanager
+    def services_downtimed(
+        self,
+        service_re: str,
+        reason: Reason,
+        *,
+        duration: timedelta = timedelta(hours=4),
+        remove_on_error: bool = False,
+    ) -> Iterator[None]:
+        """Context manager to perform actions while services are downtimed on Icinga.
+
+        Arguments:
+            service_re (str): the regular expression matching service names to downtime.
+            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
+            duration (datetime.timedelta, optional): the length of the downtime period.
+            remove_on_error (bool, optional): should the downtime be removed even if an exception was raised.
+
+        Yields:
+            None: it just yields control to the caller once Icinga has been downtimed and deletes the downtime once
+            getting back the control.
+
+        """
+        self.downtime_services(service_re, reason, duration=duration)
+        try:
+            yield
+        except BaseException:
+            if remove_on_error:
+                self.remove_service_downtimes(service_re)
+            raise
+        else:
+            self.remove_service_downtimes(service_re)
+
+    def downtime_services(self, service_re: str, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> None:
+        """Downtime services on the Icinga server for the given time with a message.
+
+        If there are multiple target_hosts, the set of matching services may vary from host to host (e.g. because a
+        hostname, DB section, or other unique fact is included in the service name) and downtime_services will downtime
+        each service on the correct target_host. If some hosts happen to have no matching services, they will be safely
+        skipped. But if *no* hosts have matching services, IcingaError is raised (because the regex is probably wrong).
+
+        Arguments:
+            service_re (str): the regular expression matching service names to downtime.
+            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
+            duration (datetime.timedelta, optional): the length of the downtime period.
+
+        Raises:
+            re.error: if service_re is an invalid regular expression.
+            IcingaError: if no services on any target host match the regular expression.
+
+        """
+        duration_seconds = int(duration.total_seconds())
+        if duration_seconds < MIN_DOWNTIME_SECONDS:
+            raise IcingaError(f"Downtime duration must be at least 1 minute, got: {duration}")
+
+        try:
+            # This also validates the regular expression syntax and ensures all hosts are known to Icinga.
+            status = self.get_status(service_re)
+        except IcingaStatusNotFoundError as e:
+            raise IcingaError(f"{e} - no hosts have been downtimed.") from e
+
+        unique_services = set()
+        for host_status in status.values():
+            for service in host_status.services:
+                unique_services.add(service["name"])
+        unique_service_count = len(unique_services)
+        matched_host_count = sum(1 if host_status.services else 0 for host_status in status.values())
+
+        if not unique_services:
+            raise IcingaError(f'No services on {self._target_hosts} matched "{service_re}"')
+
+        logger.info(
+            'Scheduling downtime on Icinga server %s for services "%s" for host%s: %s '
+            "(matched %d unique service name%s on %d host%s)",
+            self._icinga_host,
+            service_re,
+            "" if len(self._target_hosts) == 1 else "s",
+            self._target_hosts,
+            unique_service_count,
+            "" if unique_service_count == 1 else "s",
+            matched_host_count,
+            "" if matched_host_count == 1 else "s",
+        )
+        start_time = str(int(time.time()))
+        end_time = str(int(time.time() + duration_seconds))
+        # This doesn't use self.run_icinga_command because if the service names are different, we'll set different
+        # downtimes (and therefore run different Icinga commands) for each target_host.
+        commands = []
+        for hostname, host_status in status.items():
+            for service in host_status.services:
+                logger.debug('Downtiming "%s" on %s', service["name"], hostname)
+                commands.append(
+                    self._get_command_string(
+                        "SCHEDULE_SVC_DOWNTIME",
+                        hostname,
+                        service["name"],
+                        start_time,
+                        end_time,
+                        "1",  # Start at the start_time and end at the end_time.
+                        "0",  # Not triggered by another downtime.
+                        str(duration_seconds),
+                        reason.owner,
+                        reason.reason,
+                    )
+                )
+        self._icinga_host.run_sync(*commands)
+
     def recheck_all_services(self) -> None:
         """Force recheck of all services associated with a set of hosts."""
         self.run_icinga_command("SCHEDULE_FORCED_HOST_SVC_CHECKS", str(int(time.time())))
@@ -505,6 +408,45 @@ class IcingaHosts:
     def remove_downtime(self) -> None:
         """Remove a downtime from a set of hosts."""
         self.run_icinga_command("DEL_DOWNTIME_BY_HOST_NAME")
+
+    def remove_service_downtimes(self, service_re: str) -> None:
+        """Remove downtimes for services from a set of hosts.
+
+        If there are multiple target_hosts, this method has the same behavior as downtime_services. If any matching
+        service is not downtimed, it's silently skipped. (If one or more services exist matching the regex, but none of
+        them is downtimed, this method does nothing.)
+
+        Arguments:
+            service_re (str): the regular expression matching service names to un-downtime.
+
+        Raises:
+            re.error: if service_re is an invalid regular expression.
+            IcingaError: if no services on any target host match the regular expression.
+
+        """
+        status = self.get_status(service_re)  # This also validates the regular expression syntax.
+        if not any(host_status.services for host_status in status.values()):
+            raise IcingaError(f'No services on {self._target_hosts} matched "{service_re}"')
+
+        logger.info(
+            'Removing downtime on Icinga server %s for services "%s" for hosts: %s',
+            self._icinga_host,
+            service_re,
+            self._target_hosts,
+        )
+
+        commands = []
+        for hostname, host_status in status.items():
+            for service in host_status.services:
+                if not service["status"]["scheduled_downtime_depth"]:  # Skip if not downtimed.
+                    continue
+                logger.debug('Removing downtime for "%s" on %s', service["name"], hostname)
+                # DEL_DOWNTIME_BY_HOST_NAME is misleadingly named -- it also accepts an optional service name argument.
+                commands.append(self._get_command_string("DEL_DOWNTIME_BY_HOST_NAME", hostname, service["name"]))
+        if commands:
+            self._icinga_host.run_sync(*commands)
+        else:
+            logger.info("No services downtimed, nothing to do.")
 
     def run_icinga_command(self, command: str, *args: str) -> None:
         """Execute an Icinga command on the Icinga server for all the current hosts.
@@ -525,8 +467,11 @@ class IcingaHosts:
         commands = [self._get_command_string(command, target_host, *args) for target_host in self._target_hosts]
         self._icinga_host.run_sync(*commands)
 
-    def get_status(self) -> HostsStatus:
+    def get_status(self, service_re: str = "") -> HostsStatus:
         """Get the current status of the given hosts from Icinga.
+
+        Arguments:
+            service_re (str): if non-empty, the regular expression matching service names
 
         Returns:
             spicerack.icinga.HostsStatus: the instance that represents the status for the given hosts.
@@ -535,12 +480,18 @@ class IcingaHosts:
             IcingaError: if unable to get the status.
             IcingaStatusParseError: when failing to parse the status.
             IcingaStatusNotFoundError: if a host is not found in the Icinga status.
+            re.error: if service_re is an invalid regular expression.
 
         """
+        if service_re:
+            # Compile the regex and ignore the result, in order to raise re.error if it's malformed.
+            re.compile(service_re)
+
         # icinga-status exits with non-zero exit code on missing and non-optimal hosts.
         verbatim = " --verbatim-hosts" if self._verbatim_hosts else ""
+        services = (" --services " + shlex.quote(service_re)) if service_re else ""
         command = Command(
-            '/usr/local/bin/icinga-status -j{verbatim} "{hosts}"'.format(verbatim=verbatim, hosts=self._target_hosts),
+            f'/usr/local/bin/icinga-status -j{verbatim}{services} "{self._target_hosts}"',
             ok_codes=[],
         )
         for _, output in self._icinga_host.run_sync(command, is_safe=True):  # icinga-status is a read-only script
@@ -575,8 +526,8 @@ class IcingaHosts:
         """
         status = self.get_status()
         if not status.optimal:
-            failed = ["{}:{}".format(k, ",".join(v)) for k, v in status.failed_services.items()]
-            raise IcingaError("Not all services are recovered: {}".format(" ".join(failed)))
+            failed = [f"{k}:{','.join(v)}" for k, v in status.failed_services.items()]
+            raise IcingaError("Not all services are recovered: " + " ".join(failed))
 
     def _get_command_string(self, *args: str) -> str:
         """Get the Icinga command to execute given the current arguments.
@@ -588,7 +539,6 @@ class IcingaHosts:
             str: the command line to execute on the Icinga host.
 
         """
-        bash_cmd = 'echo -n "[{now}] {args}" > {command_file} '.format(
-            now=int(time.time()), args=";".join(args), command_file=self._command_file
-        )
+        args_str = ";".join(args)
+        bash_cmd = f'echo -n "[{int(time.time())}] {args_str}" > {self._command_file} '
         return "bash -c " + shlex.quote(bash_cmd)

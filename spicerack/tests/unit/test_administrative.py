@@ -29,7 +29,7 @@ def test_reason_init_double_quotes_in_params(failing_param_name, args, kwargs):
     """It should raise ReasonError if any of the parameters contains double quotes."""
     with pytest.raises(
         administrative.ReasonError,
-        match="Property {name} cannot contain double quotes".format(name=failing_param_name),
+        match=f"Property {failing_param_name} cannot contain double quotes",
     ):
         administrative.Reason(*args, **kwargs)
 
