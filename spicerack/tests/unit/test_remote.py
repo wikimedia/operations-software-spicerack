@@ -87,6 +87,8 @@ class TestLBRemoteCluster:
             batch_size=1,
             batch_sleep=None,
             is_safe=False,
+            print_output=True,
+            print_progress_bars=True,
         )
 
     def test_run_no_depool_failures(self):
@@ -99,6 +101,8 @@ class TestLBRemoteCluster:
             batch_size=1,
             batch_sleep=None,
             is_safe=False,
+            print_output=True,
+            print_progress_bars=True,
         )
 
     @mock.patch("spicerack.remote.RemoteHosts.run_async")
@@ -200,6 +204,8 @@ class TestLBRemoteCluster:
             batch_size=1,
             batch_sleep=None,
             is_safe=False,
+            print_output=True,
+            print_progress_bars=True,
         )
 
     def test_restart_services(self):
@@ -213,6 +219,8 @@ class TestLBRemoteCluster:
             batch_size=1,
             batch_sleep=None,
             is_safe=False,
+            print_output=True,
+            print_progress_bars=True,
         )
 
 
@@ -356,7 +364,7 @@ class TestRemoteHosts:
         since = datetime.utcnow() - timedelta(minutes=5)
         mocked_uptime.return_value = [(self.hosts, 30.0)]
         self.remote_hosts.wait_reboot_since(since)
-        mocked_uptime.assert_called_once_with()
+        mocked_uptime.assert_called_once_with(print_progress_bars=True)
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
@@ -386,7 +394,7 @@ class TestRemoteHosts:
         ):
             self.remote_hosts.wait_reboot_since(since)
 
-        mocked_uptime.assert_called_with()
+        mocked_uptime.assert_called_with(print_progress_bars=True)
         assert mocked_sleep.called
 
     def test_uptime(self):

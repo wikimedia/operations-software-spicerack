@@ -9,6 +9,7 @@ from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, CuminError, NodeSet, query, transport, transports
 from cumin.cli import target_batch_size
 from cumin.transports import Command
+from cumin.transports.clustershell import NullReporter, TqdmReporter
 
 from spicerack.confctl import ConftoolEntity
 from spicerack.decorators import retry
@@ -109,6 +110,8 @@ class LBRemoteCluster(RemoteHostsAdapter):
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
         max_failed_batches: int = 0,
+        print_output: bool = True,
+        print_progress_bars: bool = True,
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Run commands while depooling servers in groups of batch_size.
 
@@ -131,6 +134,8 @@ class LBRemoteCluster(RemoteHostsAdapter):
             batch_sleep (float, optional): the batch sleep in seconds to use before scheduling the next batch of hosts.
             is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
             max_failed_batches (int, optional): Maximum number of batches that can fail. Defaults to 0.
+            print_output (bool, optional): whether to print Cumin's output to stdout.
+            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
 
         Returns:
             list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
@@ -160,6 +165,8 @@ class LBRemoteCluster(RemoteHostsAdapter):
                     batch_size=batch_size,
                     batch_sleep=batch_sleep,
                     is_safe=is_safe,
+                    print_output=print_output,
+                    print_progress_bars=print_progress_bars,
                 )
             )
 
@@ -179,7 +186,13 @@ class LBRemoteCluster(RemoteHostsAdapter):
                 name="|".join(remotes_slice.hosts.striter()),
             ):
                 try:
-                    for result in remotes_slice.run_async(*commands, is_safe=is_safe, success_threshold=1.0):
+                    for result in remotes_slice.run_async(
+                        *commands,
+                        is_safe=is_safe,
+                        success_threshold=1.0,
+                        print_output=print_output,
+                        print_progress_bars=print_progress_bars,
+                    ):
                         results.append(result)
                 except RemoteExecutionError as e:
                     failures.append(e)
@@ -194,7 +207,13 @@ class LBRemoteCluster(RemoteHostsAdapter):
         return results
 
     def restart_services(
-        self, services: List[str], svc_to_depool: List[str], *, batch_size: int = 1, batch_sleep: Optional[float] = None
+        self,
+        services: List[str],
+        svc_to_depool: List[str],
+        *,
+        batch_size: int = 1,
+        batch_sleep: Optional[float] = None,
+        verbose: bool = True,
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Restart services in batches, removing the host from all the affected services first.
 
@@ -203,6 +222,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
             svc_to_depool (list): A list of services (in conftool) to depool.
             batch_size (int): the batch size for cumin, as an integer. Defaults to 1
             batch_sleep (float, optional): the batch sleep between groups of runs.
+            verbose (bool, optional): whether to print Cumin's output and progress bars to stdout/stderr.
 
         Returns:
             list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
@@ -212,10 +232,18 @@ class LBRemoteCluster(RemoteHostsAdapter):
                 returns a non-zero exit code.
 
         """
-        return self._act_on_services(services, svc_to_depool, "restart", batch_size, batch_sleep)
+        return self._act_on_services(
+            services, svc_to_depool, "restart", batch_size, batch_sleep=batch_sleep, verbose=verbose
+        )
 
     def reload_services(
-        self, services: List[str], svc_to_depool: List[str], *, batch_size: int = 1, batch_sleep: Optional[float] = None
+        self,
+        services: List[str],
+        svc_to_depool: List[str],
+        *,
+        batch_size: int = 1,
+        batch_sleep: Optional[float] = None,
+        verbose: bool = True,
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Reload services in batches, removing the host from all the affected services first.
 
@@ -224,6 +252,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
             svc_to_depool (list): A list of services (in conftool) to depool.
             batch_size (int): the batch size for cumin, as an integer.Defaults to 1
             batch_sleep (float, optional): the batch sleep between groups of runs.
+            verbose (bool, optional): whether to print Cumin's output and progress bars to stdout/stderr.
 
         Returns:
             list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
@@ -233,15 +262,18 @@ class LBRemoteCluster(RemoteHostsAdapter):
                 returns a non-zero exit code.
 
         """
-        return self._act_on_services(services, svc_to_depool, "reload", batch_size, batch_sleep)
+        return self._act_on_services(
+            services, svc_to_depool, "reload", batch_size, batch_sleep=batch_sleep, verbose=verbose
+        )
 
-    def _act_on_services(
+    def _act_on_services(  # pylint: disable=too-many-arguments
         self,
         services: List[str],
         svc_to_depool: List[str],
         what: str,
         batch_size: int,
         batch_sleep: Optional[float] = None,
+        verbose: bool = True,
     ) -> List[Tuple[NodeSet, MsgTreeElem]]:
         """Act on services in batches, depooling the servers first.
 
@@ -251,6 +283,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
             what (string): Action to perform. restart by default.
             batch_size (int): the batch size for cumin, as an integer.
             batch_sleep (float, optional): the batch sleep between groups of runs.
+            verbose (bool, optional): whether to print Cumin's output and progress bars to stdout/stderr.
 
         Returns:
             list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
@@ -262,7 +295,13 @@ class LBRemoteCluster(RemoteHostsAdapter):
         """
         commands = [f'systemctl {what} "{svc}"' for svc in services]
         return self.run(
-            *commands, svc_to_depool=svc_to_depool, batch_size=batch_size, batch_sleep=batch_sleep, is_safe=False
+            *commands,
+            svc_to_depool=svc_to_depool,
+            batch_size=batch_size,
+            batch_sleep=batch_sleep,
+            is_safe=False,
+            print_output=verbose,
+            print_progress_bars=verbose,
         )
 
 
@@ -414,6 +453,8 @@ class RemoteHosts:
         batch_size: Optional[Union[int, str]] = None,
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
+        print_output: bool = True,
+        print_progress_bars: bool = True,
     ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Execute commands on hosts matching a query via Cumin in async mode.
 
@@ -425,6 +466,8 @@ class RemoteHosts:
             batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
             is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
                 command that doesn't modify the state.
+            print_output (bool, optional): whether to print Cumin's output to stdout.
+            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
 
         Returns:
             generator: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
@@ -440,6 +483,8 @@ class RemoteHosts:
             batch_size=batch_size,
             batch_sleep=batch_sleep,
             is_safe=is_safe,
+            print_output=print_output,
+            print_progress_bars=print_progress_bars,
         )
 
     def run_sync(
@@ -449,6 +494,8 @@ class RemoteHosts:
         batch_size: Optional[Union[int, str]] = None,
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
+        print_output: bool = True,
+        print_progress_bars: bool = True,
     ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Execute commands on hosts matching a query via Cumin in sync mode.
 
@@ -460,6 +507,8 @@ class RemoteHosts:
             batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
             is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
                 command that doesn't modify the state.
+            print_output (bool, optional): whether to print Cumin's output to stdout.
+            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
 
         Returns:
             generator: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
@@ -475,6 +524,8 @@ class RemoteHosts:
             batch_size=batch_size,
             batch_sleep=batch_sleep,
             is_safe=is_safe,
+            print_output=print_output,
+            print_progress_bars=print_progress_bars,
         )
 
     def reboot(self, batch_size: int = 1, batch_sleep: Optional[float] = 180.0) -> None:
@@ -508,11 +559,12 @@ class RemoteHosts:
         backoff_mode="constant",
         exceptions=(RemoteExecutionError, RemoteCheckError),
     )
-    def wait_reboot_since(self, since: datetime) -> None:
+    def wait_reboot_since(self, since: datetime, print_progress_bars: bool = True) -> None:
         """Poll the host until is reachable and has an uptime lower than the provided datetime.
 
         Arguments:
             since (datetime.datetime): the time after which the host should have booted.
+            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
 
         Raises:
             spicerack.remote.RemoteCheckError: if unable to connect to the host or the uptime is higher than expected.
@@ -520,7 +572,7 @@ class RemoteHosts:
         """
         remaining = cast(NodeSet, self.hosts)
         delta = (datetime.utcnow() - since).total_seconds()
-        for nodeset, uptime in self.uptime():
+        for nodeset, uptime in self.uptime(print_progress_bars=print_progress_bars):
             if uptime >= delta:
                 raise RemoteCheckError(f"Uptime for {nodeset} higher than threshold: {uptime} > {delta}")
 
@@ -531,15 +583,24 @@ class RemoteHosts:
 
         logger.info("Found reboot since %s for hosts %s", since, self._hosts)
 
-    def uptime(self) -> List[Tuple[NodeSet, float]]:
+    def uptime(self, print_progress_bars: bool = True) -> List[Tuple[NodeSet, float]]:
         """Get current uptime.
+
+        Arguments:
+            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
 
         Returns:
             list: a list of 2-element :py:class:`tuple` instances with hosts :py:class:`ClusterShell.NodeSet.NodeSet`
             as first item and :py:class:`float` uptime as second item.
 
         """
-        results = self.run_sync(transports.Command("cat /proc/uptime", timeout=10), is_safe=True)
+        results = self.run_sync(
+            transports.Command("cat /proc/uptime", timeout=10),
+            is_safe=True,
+            print_output=False,
+            print_progress_bars=print_progress_bars,
+        )
+        logger.info("Got uptime for hosts %s", self._hosts)
         # Callback to extract the uptime from /proc/uptime (i.e. getting 12345.67 from '12345.67 123456789.00').
         return RemoteHosts.results_to_list(results, callback=lambda output: float(output.split()[0]))
 
@@ -590,11 +651,10 @@ class RemoteHosts:
         batch_size: Optional[Union[int, str]] = None,
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
+        print_output: bool = True,
+        print_progress_bars: bool = True,
     ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
         """Lower level Cumin's execution of commands on the target nodes.
-
-        Todo:
-            Expose options to suppress Cumin output once T212783 is fixed.
 
         Arguments:
             commands (list): the list of commands to execute on the target hosts, either a list of commands or a list
@@ -606,6 +666,8 @@ class RemoteHosts:
             batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
             is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
                 command that doesn't modify the state.
+            print_output (bool, optional): whether to print Cumin's output to stdout.
+            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
 
         Returns:
             generator: as returned by :py:meth:`cumin.transports.BaseWorker.get_results` to iterate over the results.
@@ -632,6 +694,11 @@ class RemoteHosts:
         worker.commands = commands
         worker.handler = mode
         worker.success_threshold = success_threshold
+        worker.progress_bars = print_progress_bars
+        if print_output:
+            worker.reporter = TqdmReporter
+        else:
+            worker.reporter = NullReporter
 
         logger.debug(
             "Executing commands %s on %d hosts: %s",
