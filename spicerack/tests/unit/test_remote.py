@@ -401,18 +401,6 @@ class TestRemoteHosts:
         uptimes = self.remote_hosts.uptime()
         assert sorted(uptimes) == sorted([(NodeSet(nodes_a), 1514768400.0), (NodeSet(nodes_b), 1514768401.0)])
 
-    def test_init_system(self):
-        """It should gather the current init system from the target hosts."""
-        nodes_a = "host1"
-        nodes_b = "host[2-9]"
-        mock_cumin(
-            self.mocked_transports,
-            0,
-            retvals=[[(nodes_a, b"init"), (nodes_b, b"systemd")]],
-        )
-        uptimes = self.remote_hosts.init_system()
-        assert sorted(uptimes) == sorted([(NodeSet(nodes_a), "init"), (NodeSet(nodes_b), "systemd")])
-
     def test_results_to_list_callback(self):
         """It should return the output string coverted by the callback."""
         results = (item for item in [(self.hosts, MsgTreeElem(b"test", parent=MsgTreeElem()))])

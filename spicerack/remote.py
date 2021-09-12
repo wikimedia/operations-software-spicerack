@@ -543,17 +543,6 @@ class RemoteHosts:
         # Callback to extract the uptime from /proc/uptime (i.e. getting 12345.67 from '12345.67 123456789.00').
         return RemoteHosts.results_to_list(results, callback=lambda output: float(output.split()[0]))
 
-    def init_system(self) -> List[Tuple[NodeSet, str]]:
-        """Detect the init system.
-
-        Returns:
-            list: a list of 2-element tuples with hosts :py:class:`ClusterShell.NodeSet.NodeSet` as first item and the
-            init system :py:class:`str` as second.
-
-        """
-        results = self.run_sync(transports.Command("ps --no-headers -o comm 1", timeout=10), is_safe=True)
-        return RemoteHosts.results_to_list(results)
-
     @staticmethod
     def results_to_list(
         results: Iterator[Tuple[NodeSet, MsgTreeElem]],
