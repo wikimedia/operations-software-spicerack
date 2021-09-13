@@ -99,7 +99,7 @@ class ConftoolEntity:
             spicerack.confctl.ConfctlError: on etcd or Conftool errors.
 
         Examples:
-            >>> confctl.update({'pooled': False}, service='appservers-.*', name='eqiad')
+            >>> confctl.update({'pooled': 'no'}, service='appservers-.*', name='eqiad')
 
         """
         logger.debug("Updating conftool matching tags: %s", tags)
@@ -185,11 +185,11 @@ class ConftoolEntity:
 
         Examples:
             >>> inactive = confctl.filter_objects({'pooled': 'inactive'}, service='appservers-.*', name='eqiad')
-            >>> confctl.update_objects({'pooled': False}, inactive)
+            >>> confctl.update_objects({'pooled': 'no'}, inactive)
 
         """
         # TODO: make the api nicer by returning an EntitiesCollection from filter_objects so we can allow to write
-        # >>> inactive.update({'pooled': False})
+        # >>> inactive.update({'pooled': 'no'})
         if self._dry_run:
             message_prefix = "Skipping conftool update on dry-run mode"
         else:
