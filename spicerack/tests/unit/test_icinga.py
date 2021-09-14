@@ -52,7 +52,9 @@ def assert_has_downtime_calls(
             for host in hosts
         ],
     ]
-    mocked_icinga_host.run_sync.assert_has_calls([mock.call(*call) for call in downtime_calls])
+    mocked_icinga_host.run_sync.assert_has_calls(
+        [mock.call(*call, print_output=False, print_progress_bars=False) for call in downtime_calls]
+    )
 
 
 def assert_has_service_downtime_calls(
@@ -72,7 +74,9 @@ def assert_has_service_downtime_calls(
             for host, service in host_services
         ],
     ]
-    mocked_icinga_host.run_sync.assert_has_calls([mock.call(*call) for call in downtime_calls])
+    mocked_icinga_host.run_sync.assert_has_calls(
+        [mock.call(*call, print_output=False, print_progress_bars=False) for call in downtime_calls]
+    )
 
 
 class TestCommandFile:
@@ -183,7 +187,7 @@ class TestIcingaHosts:
             for host in effective_hosts
         ]
 
-        self.mocked_icinga_host.run_sync.assert_called_once_with(*calls)
+        self.mocked_icinga_host.run_sync.assert_called_once_with(*calls, print_output=False, print_progress_bars=False)
         assert mocked_time.called
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
@@ -199,7 +203,9 @@ class TestIcingaHosts:
             [
                 mock.call(
                     'bash -c \'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1" > '
-                    "/var/lib/icinga/rw/icinga.cmd '"
+                    "/var/lib/icinga/rw/icinga.cmd '",
+                    print_output=False,
+                    print_progress_bars=False,
                 )
             ]
         )
@@ -284,6 +290,8 @@ class TestIcingaHosts:
             "/var/lib/icinga/rw/icinga.cmd '",
             'bash -c \'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1;service2" > '
             "/var/lib/icinga/rw/icinga.cmd '",
+            print_output=False,
+            print_progress_bars=False,
         )
         assert mocked_time.called
 
@@ -364,7 +372,7 @@ class TestIcingaHosts:
         self.icinga_hosts.run_icinga_command("TEST_COMMAND", "arg1", "arg2")
         call = "bash -c 'echo -n \"[1514764800] TEST_COMMAND;host1;arg1;arg2\" > /var/lib/icinga/rw/icinga.cmd '"
 
-        self.mocked_icinga_host.run_sync.assert_called_once_with(call)
+        self.mocked_icinga_host.run_sync.assert_called_once_with(call, print_output=False, print_progress_bars=False)
         assert mocked_time.called
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
@@ -373,7 +381,9 @@ class TestIcingaHosts:
         self.icinga_hosts.recheck_all_services()
         self.mocked_icinga_host.run_sync.assert_called_once_with(
             'bash -c \'echo -n "[1514764800] SCHEDULE_FORCED_HOST_SVC_CHECKS;host1;1514764800" > '
-            "/var/lib/icinga/rw/icinga.cmd '"
+            "/var/lib/icinga/rw/icinga.cmd '",
+            print_output=False,
+            print_progress_bars=False,
         )
         assert mocked_time.called
 
@@ -382,7 +392,9 @@ class TestIcingaHosts:
         """It should remove the downtime for the hosts on the Icinga server."""
         self.icinga_hosts.remove_downtime()
         self.mocked_icinga_host.run_sync.assert_called_once_with(
-            "bash -c 'echo -n \"[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1\" > /var/lib/icinga/rw/icinga.cmd '"
+            "bash -c 'echo -n \"[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1\" > /var/lib/icinga/rw/icinga.cmd '",
+            print_output=False,
+            print_progress_bars=False,
         )
         assert mocked_time.called
 
@@ -397,7 +409,9 @@ class TestIcingaHosts:
                 f'bash -c \'echo -n "[1514764800] DEL_DOWNTIME_BY_HOST_NAME;host1;{service}" '
                 f"> /var/lib/icinga/rw/icinga.cmd '"
                 for service in ["service1", "service2"]
-            ]
+            ],
+            print_output=False,
+            print_progress_bars=False,
         )
         assert mocked_time.called
 

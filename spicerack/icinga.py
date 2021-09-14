@@ -54,7 +54,9 @@ class CommandFile(str):
             # Get the command_file value in the Icinga configuration.
             command = r"grep -P '\s*command_file\s*=.+' " + config_file
             command_file = ""
-            for _, output in icinga_host.run_sync(command, is_safe=True):  # Read only operation
+            for _, output in icinga_host.run_sync(
+                command, is_safe=True, print_output=False, print_progress_bars=False
+            ):  # Read only operation
                 command_file = output.message().decode().split("=", 1)[-1].strip()
 
             if not command_file:
@@ -399,7 +401,7 @@ class IcingaHosts:
                         reason.reason,
                     )
                 )
-        self._icinga_host.run_sync(*commands)
+        self._icinga_host.run_sync(*commands, print_output=False, print_progress_bars=False)
 
     def recheck_all_services(self) -> None:
         """Force recheck of all services associated with a set of hosts."""
@@ -444,7 +446,7 @@ class IcingaHosts:
                 # DEL_DOWNTIME_BY_HOST_NAME is misleadingly named -- it also accepts an optional service name argument.
                 commands.append(self._get_command_string("DEL_DOWNTIME_BY_HOST_NAME", hostname, service["name"]))
         if commands:
-            self._icinga_host.run_sync(*commands)
+            self._icinga_host.run_sync(*commands, print_output=False, print_progress_bars=False)
         else:
             logger.info("No services downtimed, nothing to do.")
 
@@ -465,7 +467,7 @@ class IcingaHosts:
 
         """
         commands = [self._get_command_string(command, target_host, *args) for target_host in self._target_hosts]
-        self._icinga_host.run_sync(*commands)
+        self._icinga_host.run_sync(*commands, print_output=False, print_progress_bars=False)
 
     def get_status(self, service_re: str = "") -> HostsStatus:
         """Get the current status of the given hosts from Icinga.
@@ -494,7 +496,9 @@ class IcingaHosts:
             f'/usr/local/bin/icinga-status -j{verbatim}{services} "{self._target_hosts}"',
             ok_codes=[],
         )
-        for _, output in self._icinga_host.run_sync(command, is_safe=True):  # icinga-status is a read-only script
+        for _, output in self._icinga_host.run_sync(
+            command, is_safe=True, print_output=False, print_progress_bars=False
+        ):  # icinga-status is a read-only script
             json_status = output.message().decode()
             break
         else:
