@@ -205,6 +205,8 @@ class TestPuppetHosts:
                 ),
                 timeout=10800,
             ),
+            print_output=False,
+            print_progress_bars=False,
         )
 
     def test_first_run_not_systemd(self):
@@ -219,6 +221,8 @@ class TestPuppetHosts:
                 ),
                 timeout=10800,
             ),
+            print_output=False,
+            print_progress_bars=False,
         )
 
     def test_regenerate_certificate_ok(self):
@@ -236,7 +240,7 @@ class TestPuppetHosts:
         self.mocked_remote_hosts.run_sync.assert_has_calls(
             [
                 mock.call("rm -rfv /var/lib/puppet/ssl"),
-                mock.call(puppet.Command("puppet agent --test --color=false", ok_codes=[])),
+                mock.call(puppet.Command("puppet agent --test --color=false", ok_codes=[]), print_output=False),
             ]
         )
         assert fingerprints == {"test.example.com": "00:FF"}
@@ -292,6 +296,8 @@ class TestPuppetHosts:
                 '"${PUPPET_SUMMARY}"'
             ),
             is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
         )
 
     # TODO: check why the following test_wait_since_* tests take longer (~4s each) when running the whole suite but are
@@ -370,6 +376,8 @@ class TestPuppetHosts:
                 '"${PUPPET_SUMMARY}"'
             ),
             is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
         )
 
     def test_get_ca_servers_explodes_multihost_nodeset_into_single_hosts(self):
@@ -448,15 +456,14 @@ class TestPuppetMaster:
         """It should delete the host from Puppet master and PuppetDB."""
         self.puppet_master.delete("test.example.com")
         self.mocked_master_host.run_sync.assert_called_once_with(
-            "puppet node clean test.example.com",
-            "puppet node deactivate test.example.com",
+            "puppet node clean test.example.com", "puppet node deactivate test.example.com", print_progress_bars=False
         )
 
     def test_destroy(self):
         """It should delete the certificate of the host in the Puppet CA."""
         self.puppet_master.destroy("test.example.com")
         self.mocked_master_host.run_sync.assert_called_once_with(
-            "puppet ca --disable_warnings deprecations destroy test.example.com"
+            "puppet ca --disable_warnings deprecations destroy test.example.com", print_progress_bars=False
         )
 
     def test_verify_ok(self):
@@ -474,6 +481,8 @@ class TestPuppetMaster:
         self.mocked_master_host.run_sync.assert_called_once_with(
             "puppet ca --disable_warnings deprecations --render-as json verify test.example.com",
             is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
         )
 
     def test_verify_raise(self):
@@ -496,6 +505,8 @@ class TestPuppetMaster:
         self.mocked_master_host.run_sync.assert_called_once_with(
             "puppet ca --disable_warnings deprecations --render-as json verify test.example.com",
             is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
         )
 
     def test_verify_no_output(self):
@@ -558,12 +569,20 @@ class TestPuppetMaster:
                     "puppet ca --disable_warnings deprecations --render-as json "
                     r'list --all --subject "^test\.example\.com$"',
                     is_safe=True,
+                    print_output=False,
+                    print_progress_bars=False,
                 ),
-                mock.call("puppet cert --disable_warnings deprecations sign --no-allow-dns-alt-names test.example.com"),
+                mock.call(
+                    "puppet cert --disable_warnings deprecations sign --no-allow-dns-alt-names test.example.com",
+                    print_output=False,
+                    print_progress_bars=False,
+                ),
                 mock.call(
                     "puppet ca --disable_warnings deprecations --render-as json "
                     r'list --all --subject "^test\.example\.com$"',
                     is_safe=True,
+                    print_output=False,
+                    print_progress_bars=False,
                 ),
             ]
         )
@@ -596,12 +615,20 @@ class TestPuppetMaster:
                     "puppet ca --disable_warnings deprecations --render-as json "
                     r'list --all --subject "^test\.example\.com$"',
                     is_safe=True,
+                    print_output=False,
+                    print_progress_bars=False,
                 ),
-                mock.call("puppet cert --disable_warnings deprecations sign --allow-dns-alt-names test.example.com"),
+                mock.call(
+                    "puppet cert --disable_warnings deprecations sign --allow-dns-alt-names test.example.com",
+                    print_output=False,
+                    print_progress_bars=False,
+                ),
                 mock.call(
                     "puppet ca --disable_warnings deprecations --render-as json "
                     r'list --all --subject "^test\.example\.com$"',
                     is_safe=True,
+                    print_output=False,
+                    print_progress_bars=False,
                 ),
             ]
         )
@@ -686,6 +713,8 @@ class TestPuppetMaster:
             "puppet ca --disable_warnings deprecations --render-as json "
             r'list --all --subject "^test\.example\.com$"',
             is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
         )
 
     def test_wait_for_csr_fail(self):
@@ -740,6 +769,8 @@ class TestPuppetMaster:
             "puppet ca --disable_warnings deprecations --render-as json list "
             r'--all --subject "^test\.example\.com$"',
             is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
         )
 
     @pytest.mark.parametrize(
