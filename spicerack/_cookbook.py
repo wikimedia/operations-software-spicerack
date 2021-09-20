@@ -96,7 +96,7 @@ class CookbookCollection:
         progressive_path = [self.cookbooks_module_prefix]
         for subpath in path.split(".")[1:]:
             progressive_path.append(subpath)
-            if subpath in item.items.keys():
+            if subpath in item.items:
                 item = cast(TreeItem, item.items[subpath])
             else:
                 module_name = ".".join(progressive_path)
