@@ -1,6 +1,64 @@
 Spicerack Changelog
 -------------------
 
+`v1.0.0`_ (2021-09-22)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* remote: remove ``RemoteHosts.init_system()`` method:
+
+  * As systemd is used by all hosts and this method is not used in any cookbook, remove it completely as it's no longer
+    needed.
+
+New features
+""""""""""""
+
+* remote: add support to enable/disable Cumin output:
+
+  * Add support to suppress Cumin's output and progress bars independently to the ``RemoteHosts`` and
+    ``LBRemoteCluster`` classes.
+  * Add a ``print_output`` and ``print_progress_bars`` boolean parameters to ``run_sync()``, ``run_async()`` and
+    ``run()`` methods to independently print Cumin's output and progress bars respectively.
+  * Add a simplified ``verbose`` parameter to the more higher level methods ``restart_services()`` and
+    ``reload_services()`` that when set to ``False`` will suppress both output and progress bars at once.
+  * Add just the ``print_progress_bars`` parameter for the high level methods ``wait_reboot_since()`` and ``uptime()``.
+  * All the new parameters default to ``True`` right now to keep the existing behaviour, to be changed to ``False`` in
+    a future release.
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: reduce verbosity of Cumin's output, taking advantage of the new parameters to control the output of Cumin's
+  commands.
+* puppet: reduce verbosity of Cumin's output, taking advantage of the new parameters to control the output of Cumin's
+  commands.
+* dhcp: reduce verbosity of Cumin's output, taking advantage of the new parameters to control the output of Cumin's
+  commands.
+
+Bug fixes
+"""""""""
+
+ipmi: improve dry-run mode for ``force_pxe()``:
+
+* When ``force_pxe()`` can't verify that the next boot will indeed be via PXE it raises an exception. Convert that
+  into a warning logging message when in DRY-RUN mode to let the cookbooks continue the DRY-RUN.
+
+Miscellanea
+"""""""""""
+
+* versioning: moving Spicerack releases to a semantic versioning schema.
+* management: deprecate the ``Management`` class:
+
+  * As its only purpose was to get the management FQDN of a host, given that the same functionality is now provided
+    by the netbox module via the ``NetboxServer`` class and its ``mgmt_fqdn`` and ``asset_tag_fqdn`` properties,
+    deprecate the class for a subsequent removal.
+
+* confctl: fix example code in docstring.
+* pylint: fix newly reported issues.
+* docs: add how to contribute section.
+
 `v0.0.59`_ (2021-09-09)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1459,3 +1517,4 @@ New features
 .. _`v0.0.57`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.57
 .. _`v0.0.58`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.58
 .. _`v0.0.59`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.59
+.. _`v1.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.0

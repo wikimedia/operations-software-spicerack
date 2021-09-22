@@ -165,7 +165,12 @@ class DHCP:
         """
         filename = configuration.filename
         try:
-            self._hosts.run_sync(f"/usr/bin/test '!' '-e'  {DHCP_TARGET_PATH}/{filename}", is_safe=True)
+            self._hosts.run_sync(
+                f"/usr/bin/test '!' '-e'  {DHCP_TARGET_PATH}/{filename}",
+                is_safe=True,
+                print_output=False,
+                print_progress_bars=False,
+            )
         except RemoteExecutionError as exc:
             raise DHCPError(f"target file {filename} exists") from exc
 
@@ -191,7 +196,12 @@ class DHCP:
         if not force:
             confsha256 = sha256(str(configuration).encode()).hexdigest()
             try:
-                results = self._hosts.run_sync(f"sha256sum {DHCP_TARGET_PATH}/{configuration.filename}", is_safe=True)
+                results = self._hosts.run_sync(
+                    f"sha256sum {DHCP_TARGET_PATH}/{configuration.filename}",
+                    is_safe=True,
+                    print_output=False,
+                    print_progress_bars=False,
+                )
             except RemoteExecutionError as exc:
                 raise DHCPError(f"Can't test {configuration.filename} for removal.") from exc
             seen_match = False
@@ -203,7 +213,9 @@ class DHCP:
             if not seen_match:
                 raise DHCPError("Did not get any result trying to get SHA256, refusing to attempt to remove.")
         try:
-            self._hosts.run_sync(f"/bin/rm -v {DHCP_TARGET_PATH}/{configuration.filename}")
+            self._hosts.run_sync(
+                f"/bin/rm -v {DHCP_TARGET_PATH}/{configuration.filename}", print_output=False, print_progress_bars=False
+            )
         except RemoteExecutionError as exc:
             raise DHCPError(f"Can't remove {configuration.filename}.") from exc
 

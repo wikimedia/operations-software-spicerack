@@ -459,6 +459,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
     def management(self) -> Management:
         """Get a Management instance to interact with the management interfaces.
 
+        .. deprecated:: v1.0.0
+            use :py:meth:`spicerack.Spicerack.netbox_server` instead, whose returned object has a ``mgmt_fqdn``
+            and ``asset_tag_fqdn`` properties.
+
         Returns:
             spicerack.management.Management: the instance.
 

@@ -87,6 +87,8 @@ class TestLBRemoteCluster:
             batch_size=1,
             batch_sleep=None,
             is_safe=False,
+            print_output=True,
+            print_progress_bars=True,
         )
 
     def test_run_no_depool_failures(self):
@@ -99,6 +101,8 @@ class TestLBRemoteCluster:
             batch_size=1,
             batch_sleep=None,
             is_safe=False,
+            print_output=True,
+            print_progress_bars=True,
         )
 
     @mock.patch("spicerack.remote.RemoteHosts.run_async")
@@ -200,6 +204,8 @@ class TestLBRemoteCluster:
             batch_size=1,
             batch_sleep=None,
             is_safe=False,
+            print_output=True,
+            print_progress_bars=True,
         )
 
     def test_restart_services(self):
@@ -213,6 +219,8 @@ class TestLBRemoteCluster:
             batch_size=1,
             batch_sleep=None,
             is_safe=False,
+            print_output=True,
+            print_progress_bars=True,
         )
 
 
@@ -356,7 +364,7 @@ class TestRemoteHosts:
         since = datetime.utcnow() - timedelta(minutes=5)
         mocked_uptime.return_value = [(self.hosts, 30.0)]
         self.remote_hosts.wait_reboot_since(since)
-        mocked_uptime.assert_called_once_with()
+        mocked_uptime.assert_called_once_with(print_progress_bars=True)
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
@@ -386,7 +394,7 @@ class TestRemoteHosts:
         ):
             self.remote_hosts.wait_reboot_since(since)
 
-        mocked_uptime.assert_called_with()
+        mocked_uptime.assert_called_with(print_progress_bars=True)
         assert mocked_sleep.called
 
     def test_uptime(self):
@@ -400,18 +408,6 @@ class TestRemoteHosts:
         )
         uptimes = self.remote_hosts.uptime()
         assert sorted(uptimes) == sorted([(NodeSet(nodes_a), 1514768400.0), (NodeSet(nodes_b), 1514768401.0)])
-
-    def test_init_system(self):
-        """It should gather the current init system from the target hosts."""
-        nodes_a = "host1"
-        nodes_b = "host[2-9]"
-        mock_cumin(
-            self.mocked_transports,
-            0,
-            retvals=[[(nodes_a, b"init"), (nodes_b, b"systemd")]],
-        )
-        uptimes = self.remote_hosts.init_system()
-        assert sorted(uptimes) == sorted([(NodeSet(nodes_a), "init"), (NodeSet(nodes_b), "systemd")])
 
     def test_results_to_list_callback(self):
         """It should return the output string coverted by the callback."""

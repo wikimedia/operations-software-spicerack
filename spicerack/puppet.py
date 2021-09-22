@@ -218,7 +218,7 @@ class PuppetHosts(RemoteHostsAdapter):
         ]
 
         logger.info("Starting first Puppet run (sit back, relax, and enjoy the wait)")
-        results = self._remote_hosts.run_sync(*commands)
+        results = self._remote_hosts.run_sync(*commands, print_output=False, print_progress_bars=False)
         logger.info("First Puppet run completed")
         return results
 
@@ -239,7 +239,7 @@ class PuppetHosts(RemoteHostsAdapter):
         # output.
         command = Command("puppet agent --test --color=false", ok_codes=[])
         logger.info("Generating a new Puppet certificate on %d hosts: %s", len(self), self)
-        for nodeset, output in self._remote_hosts.run_sync(command):
+        for nodeset, output in self._remote_hosts.run_sync(command, print_output=False):
             for line in output.message().decode().splitlines():
                 if line.startswith("Error:"):
                     errors.append((nodeset, line))
@@ -292,7 +292,9 @@ class PuppetHosts(RemoteHostsAdapter):
 
         logger.info("Polling the completion of a successful Puppet run")
         try:
-            for nodeset, output in self._remote_hosts.run_sync(command, is_safe=True):
+            for nodeset, output in self._remote_hosts.run_sync(
+                command, is_safe=True, print_output=False, print_progress_bars=False
+            ):
                 last_run = datetime.utcfromtimestamp(int(output.message().decode()))
                 if last_run <= start:
                     raise PuppetHostsCheckError(f"Successful Puppet run too old ({last_run} <= {start}) on: {nodeset}")
@@ -318,6 +320,8 @@ class PuppetHosts(RemoteHostsAdapter):
         results = self._remote_hosts.run_sync(
             f'source {PUPPET_COMMON_SCRIPT} && test -f "${{PUPPET_DISABLEDLOCK}}" && echo "1" || echo "0"',
             is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
         )
 
         disabled = {True: NodeSet(), False: NodeSet()}
@@ -368,7 +372,7 @@ class PuppetMaster:
 
         """
         commands = [f"puppet node {action} {hostname}" for action in ("clean", "deactivate")]
-        self._master_host.run_sync(*commands)
+        self._master_host.run_sync(*commands, print_progress_bars=False)
 
     def destroy(self, hostname: str) -> None:
         """Remove the certificate for the given hostname.
@@ -380,7 +384,9 @@ class PuppetMaster:
             hostname (str): the FQDN of the host for which to remove the certificate.
 
         """
-        self._master_host.run_sync(f"puppet ca --disable_warnings deprecations destroy {hostname}")
+        self._master_host.run_sync(
+            f"puppet ca --disable_warnings deprecations destroy {hostname}", print_progress_bars=False
+        )
 
     def verify(self, hostname: str) -> None:
         """Verify that there is a valid certificate signed by the Puppet CA for the given hostname.
@@ -429,7 +435,7 @@ class PuppetMaster:
 
         command = f"puppet cert --disable_warnings deprecations sign {dns_option} {hostname}"
         logger.info("Signing CSR for %s with fingerprint %s", hostname, fingerprint)
-        executed = self._master_host.run_sync(command)
+        executed = self._master_host.run_sync(command, print_output=False, print_progress_bars=False)
 
         cert = self.get_certificate_metadata(hostname)
         if cert["state"] != PuppetMaster.PUPPET_CERT_STATE_SIGNED:
@@ -518,7 +524,9 @@ class PuppetMaster:
             spicerack.puppet.PuppetMasterError: if unable to get or parse the command output.
 
         """
-        for _, output in self._master_host.run_sync(command, is_safe=True):
+        for _, output in self._master_host.run_sync(
+            command, is_safe=True, print_output=False, print_progress_bars=False
+        ):
             lines = output.message().decode()
             break
         else:

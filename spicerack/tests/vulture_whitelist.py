@@ -44,6 +44,8 @@ whitelist_remote.execute.worker.commands
 whitelist_remote.execute.worker.commands
 whitelist_remote.execute.worker.handler
 whitelist_remote.execute.worker.success_threshold
+whitelist_remote.execute.worker.progress_bars
+whitelist_remote.execute.worker.reporter
 whitelist_remote.run_async
 whitelist_remote.run_sync
 

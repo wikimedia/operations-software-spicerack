@@ -200,7 +200,12 @@ class TestDHCP:
 
         self.dhcp.push_configuration(config)
 
-        call_test = mock.call(f"/usr/bin/test '!' '-e'  {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
+        call_test = mock.call(
+            f"/usr/bin/test '!' '-e'  {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
+        )
         call_write = mock.call(
             f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}"
         )
@@ -237,8 +242,15 @@ class TestDHCP:
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             self.dhcp.remove_configuration(config)
 
-        call_sha256 = mock.call(f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
-        call_rm = mock.call(f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}")
+        call_sha256 = mock.call(
+            f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
+        )
+        call_rm = mock.call(
+            f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}", print_output=False, print_progress_bars=False
+        )
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
 
         hosts.run_sync.assert_has_calls([call_sha256, call_rm, call_refresh])
@@ -291,7 +303,9 @@ class TestDHCP:
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             self.dhcp.remove_configuration(config, force=True)
 
-        call_rm = mock.call(f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}")
+        call_rm = mock.call(
+            f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}", print_output=False, print_progress_bars=False
+        )
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
 
         hosts.run_sync.assert_has_calls([call_rm, call_refresh])
@@ -314,8 +328,15 @@ class TestDHCP:
         """Test push context manager success."""
         config = get_mock_config()
         hosts = self._setup_dhcp_mocks()
-        call_sha256 = mock.call(f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
-        call_rm = mock.call(f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}")
+        call_sha256 = mock.call(
+            f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
+        )
+        call_rm = mock.call(
+            f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}", print_output=False, print_progress_bars=False
+        )
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
@@ -333,13 +354,25 @@ class TestDHCP:
         config = get_mock_config()
         hosts = self._setup_dhcp_mocks()
 
-        call_test = mock.call(f"/usr/bin/test '!' '-e'  {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
+        call_test = mock.call(
+            f"/usr/bin/test '!' '-e'  {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
+        )
         call_write = mock.call(
             f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}"
         )
 
-        call_sha256 = mock.call(f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}", is_safe=True)
-        call_rm = mock.call(f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}")
+        call_sha256 = mock.call(
+            f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
+        )
+        call_rm = mock.call(
+            f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}", print_output=False, print_progress_bars=False
+        )
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:

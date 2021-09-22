@@ -133,7 +133,11 @@ class Ipmi:
         self.command(["chassis", "bootdev", "pxe"])
         boot_device = self._get_boot_parameter("Boot Device Selector")
         if boot_device != "Force PXE":
-            raise IpmiCheckError("Unable to verify that Force PXE is set. The host might reboot in the current OS")
+            message = "Unable to verify that Force PXE is set. The host might reboot in the current OS"
+            if self._dry_run:
+                logger.warning(message)
+            else:
+                raise IpmiCheckError(message)
 
     def reboot(self) -> None:
         """Reboot a host via IPMI, either performing a power cycle or a power on based on the power status."""

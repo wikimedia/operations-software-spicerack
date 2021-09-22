@@ -1,6 +1,7 @@
 """Management module."""
 import logging
 import re
+import warnings
 
 from wmflib.constants import ALL_DATACENTERS
 from wmflib.dns import Dns, DnsError
@@ -22,11 +23,16 @@ class Management:
     def __init__(self, dns: Dns) -> None:
         """Initialize the instance.
 
+        .. deprecated:: v1.0.0
+            use :py:class:`spicerack.netbox.NetboxServer` instead that has a ``mgmt_fqdn``
+            and ``asset_tag_fqdn`` properties.
+
         Arguments:
             dns (wmflib.dns.Dns): the instance to use for DNS resolution.
 
         """
         self._dns = dns
+        warnings.warn("Deprecated class, use spicearack.netbox_server() instead", DeprecationWarning)
 
     def get_fqdn(self, hostname: str) -> str:
         """Get the FQDN of the management interface.
