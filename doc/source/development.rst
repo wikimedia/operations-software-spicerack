@@ -1,6 +1,11 @@
 Development
 ===========
 
+How to contribute
+-----------------
+
+See the `Spicerack's Wikitech page`_.
+
 Code style
 ----------
 
@@ -77,3 +82,4 @@ It's possible to pass extra arguments to the underlying environment:
 .. _`black's related`: https://github.com/psf/black/blob/master/docs/editor_integration.md
 .. _`isort`: https://pycqa.github.io/isort/
 .. _`isort's related`: https://pycqa.github.io/isort/#installing-isorts-for-your-preferred-text-editor
+.. _`Spicerack's Wikitech page`: https://wikitech.wikimedia.org/wiki/Spicerack#How_to_contribute
