@@ -3,7 +3,7 @@ import logging
 import math
 import time
 from datetime import datetime, timedelta
-from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, CuminError, NodeSet, query, transport, transports
@@ -557,7 +557,7 @@ class RemoteHosts:
         tries=360,
         delay=timedelta(seconds=10),
         backoff_mode="constant",
-        exceptions=(RemoteExecutionError, RemoteCheckError),
+        exceptions=(RemoteCheckError,),
     )
     def wait_reboot_since(self, since: datetime, print_progress_bars: bool = True) -> None:
         """Poll the host until is reachable and has an uptime lower than the provided datetime.
@@ -570,16 +570,17 @@ class RemoteHosts:
             spicerack.remote.RemoteCheckError: if unable to connect to the host or the uptime is higher than expected.
 
         """
-        remaining = cast(NodeSet, self.hosts)
         delta = (datetime.utcnow() - since).total_seconds()
-        for nodeset, uptime in self.uptime(print_progress_bars=print_progress_bars):
+        try:
+            uptimes = self.uptime(print_progress_bars=print_progress_bars)
+        except RemoteExecutionError as e:
+            raise RemoteCheckError(f"Unable to get uptime for {self._hosts}") from e
+
+        for nodeset, uptime in uptimes:
             if uptime >= delta:
-                raise RemoteCheckError(f"Uptime for {nodeset} higher than threshold: {uptime} > {delta}")
-
-            remaining.difference_update(nodeset)
-
-        if remaining:
-            raise RemoteCheckError(f"Unable to check uptime from {len(remaining)} hosts: {remaining}")
+                raise RemoteCheckError(
+                    f"Uptime for {nodeset} higher than threshold: {round(uptime, 2)} > {round(delta, 2)}"
+                )
 
         logger.info("Found reboot since %s for hosts %s", since, self._hosts)
 
