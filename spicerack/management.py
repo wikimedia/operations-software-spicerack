@@ -23,7 +23,7 @@ class Management:
     def __init__(self, dns: Dns) -> None:
         """Initialize the instance.
 
-        .. deprecated:: v0.0.60
+        .. deprecated:: v1.0.0
             use :py:class:`spicerack.netbox.NetboxServer` instead that has a ``mgmt_fqdn``
             and ``asset_tag_fqdn`` properties.
 
