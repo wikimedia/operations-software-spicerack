@@ -24,6 +24,7 @@ from spicerack.ganeti import Ganeti
 from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
+from spicerack.kafka import Kafka
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
@@ -549,3 +550,17 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         """
         return EtcdctlController(remote_host=remote_host)
+
+    def kafka(self) -> Kafka:
+        """Get an instance to interact with Kafka.
+
+        Returns:
+            spicerack.kafka.Kafka: the instance
+
+        Raises:
+            KeyError: If the configuration file does not contain the correct keys.
+
+        """
+        configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, "kafka", "config.yaml"))
+
+        return Kafka(kafka_config=configuration, dry_run=self._dry_run)

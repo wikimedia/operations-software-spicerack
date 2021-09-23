@@ -122,6 +122,7 @@ intersphinx_mapping = {
     "requests": ("https://requests.readthedocs.io/en/master/", None),
     "pymysql": ("https://pymysql.readthedocs.io/en/latest/", None),
     "wmflib": ("https://doc.wikimedia.org/wmflib/master/", None),
+    "kafka": ("https://kafka-python.readthedocs.io/en/master/", None),
 }
 
 # Napoleon settings

@@ -9,7 +9,7 @@ from wmflib.dns import Dns
 from wmflib.phabricator import Phabricator
 from wmflib.prometheus import Prometheus
 
-from spicerack import Spicerack, puppet
+from spicerack import Kafka, Spicerack, puppet
 from spicerack.administrative import Reason
 from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
@@ -77,6 +77,7 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
         spicerack.etcdctl(remote_host=mock.MagicMock(spec_set=RemoteHosts)),
         EtcdctlController,
     )
+    assert isinstance(spicerack.kafka(), Kafka)
     assert mocked_remote_query.called
     assert mocked_dns_resolver.Resolver.called
 

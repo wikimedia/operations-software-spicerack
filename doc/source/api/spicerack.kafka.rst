@@ -1,0 +1,4 @@
+kafka
+======
+
+.. automodule:: spicerack.kafka

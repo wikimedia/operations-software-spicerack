@@ -12,6 +12,7 @@ INSTALL_REQUIRES = [
     "dnspython>=1.16.0",
     "elasticsearch>=5.0.0,<7.15.0",
     "elasticsearch-curator>=5.0.0",
+    "kafka-python>=1.4.3",
     "pymysql>=0.9.3",
     "pynetbox>=5.0.7",
     "redis>=3.2.1",

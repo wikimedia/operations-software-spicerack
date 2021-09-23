@@ -1,0 +1,19 @@
+jumbo:
+  eqiad:
+    api_version:
+    brokers:
+      ssl_string: kafka-jumbo1001.eqiad.wmnet:9093
+    name: jumbo-eqiad
+main:
+  codfw:
+    api_version:
+    brokers:
+      ssl_string: kafka-main2001.codfw.wmnet:9093
+    name: main-codfw
+
+  eqiad:
+    api_version:
+    brokers:
+      ssl_string: kafka-main1001.eqiad.wmnet:9093
+    name: main-eqiad
+
