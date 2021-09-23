@@ -601,7 +601,7 @@ class RemoteHosts:
             print_output=False,
             print_progress_bars=print_progress_bars,
         )
-        logger.info("Got uptime for hosts %s", self._hosts)
+        logger.debug("Got uptime for hosts %s", self._hosts)
         # Callback to extract the uptime from /proc/uptime (i.e. getting 12345.67 from '12345.67 123456789.00').
         return RemoteHosts.results_to_list(results, callback=lambda output: float(output.split()[0]))
 
