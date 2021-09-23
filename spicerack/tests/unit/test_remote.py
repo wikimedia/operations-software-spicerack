@@ -368,13 +368,13 @@ class TestRemoteHosts:
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
-    def test_wait_reboot_since_remaining_hosts(self, mocked_uptime, mocked_sleep):
-        """It should raise RemoteCheckError if unable to get the uptime from all hosts."""
-        since = datetime.utcnow() - timedelta(minutes=5)
-        mocked_uptime.return_value = [(NodeSet("host1"), 30.0)]
+    def test_wait_reboot_since_uptime_fails(self, mocked_uptime, mocked_sleep):
+        """It should raise RemoteCheckError if unable to check the uptime on any host."""
+        since = datetime.utcnow()
+        mocked_uptime.side_effect = remote.RemoteExecutionError(message="unable to connect", retcode=1)
         with pytest.raises(
             remote.RemoteCheckError,
-            match=r"Unable to check uptime from 8 hosts: host\[2-9\]",
+            match=r"Unable to get uptime for host\[1-9\]",
         ):
             self.remote_hosts.wait_reboot_since(since)
 
