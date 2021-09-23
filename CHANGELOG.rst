@@ -1,6 +1,30 @@
 Spicerack Changelog
 -------------------
 
+`v1.0.1`_ (2021-09-23)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* remote: refactor ``wait_reboot_since()``
+
+  * As the check for uptime is currently either returning a value for all hosts or raising an exception, remove the
+    existing logic to check for a partial result as that can't happen.
+  * Catch instead the error and re-raise a check exception with a clear message.
+  * Also round the printed value of the uptime and the time against which it's checked to 2 decimal values for more
+    readability.
+
+Miscellanea
+"""""""""""
+
+* setup.py: limit elasticsearch max version
+
+  * The latest 7.15.0 release has started to deprecate things for the upcoming 8.0.0 release, and mypy started
+    complaining about some return types.
+  * Instead of fixing the signatures to be compatible with both versions put a max version limit for now, we'll deal
+    with the upgrade when the time will come, Debian most recent version is 7.1.0.
+
 `v1.0.0`_ (2021-09-22)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1518,3 +1542,4 @@ New features
 .. _`v0.0.58`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.58
 .. _`v0.0.59`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.59
 .. _`v1.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.0
+.. _`v1.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.1
