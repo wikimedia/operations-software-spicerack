@@ -174,7 +174,7 @@ class GntInstance:
 
         """
         logger.info("Shutting down VM %s in cluster %s", self._instance, self._cluster)
-        self._master.run_sync(f"gnt-instance shutdown --timeout={timeout} {self._instance}")
+        self._master.run_sync(f"gnt-instance shutdown --force --timeout={timeout} {self._instance}")
 
     def remove(self, *, shutdown_timeout: int = 2) -> None:
         """Shutdown and remove the VM instance from the Ganeti cluster, including its disks.
