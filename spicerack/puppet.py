@@ -45,7 +45,7 @@ class PuppetHostsError(SpicerackError):
     """Custom base exception class for errors in the PuppetHosts class."""
 
 
-class PuppetHostsCheckError(SpicerackError):
+class PuppetHostsCheckError(SpicerackCheckError):
     """Custom base exception class for check errors in the PuppetHosts class."""
 
 
