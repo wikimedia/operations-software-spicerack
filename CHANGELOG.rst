@@ -1,6 +1,23 @@
 Spicerack Changelog
 -------------------
 
+`v1.0.2`_ (2021-09-27)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* dhcp: always require to se the OS version when instantiating a ``DHCPConfOpt82`` instance. Although technically this
+  is an API change, the whole module is new and still unused, hence not considering it as a breaking change.
+* remote, puppet: reduce logging verbosity.
+
+Bug fixes
+"""""""""
+
+* ganeti: use ``--force`` option in shutdown method when calling ``gnt-instance shutdown`` to work with all states a
+  VM can be in.
+* puppet: fix check exception inheritance to the correct ``SpicerackCheckError``.
+
 `v1.0.1`_ (2021-09-23)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1543,3 +1560,4 @@ New features
 .. _`v0.0.59`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.59
 .. _`v1.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.0
 .. _`v1.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.1
+.. _`v1.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.2

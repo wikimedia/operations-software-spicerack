@@ -45,7 +45,7 @@ class PuppetHostsError(SpicerackError):
     """Custom base exception class for errors in the PuppetHosts class."""
 
 
-class PuppetHostsCheckError(SpicerackError):
+class PuppetHostsCheckError(SpicerackCheckError):
     """Custom base exception class for check errors in the PuppetHosts class."""
 
 
@@ -290,7 +290,7 @@ class PuppetHosts(RemoteHostsAdapter):
             "awk /last_run/'{ print $2 }' \"${PUPPET_SUMMARY}\""
         )
 
-        logger.info("Polling the completion of a successful Puppet run")
+        logger.debug("Polling the completion of a successful Puppet run")
         try:
             for nodeset, output in self._remote_hosts.run_sync(
                 command, is_safe=True, print_output=False, print_progress_bars=False

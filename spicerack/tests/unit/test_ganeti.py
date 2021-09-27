@@ -146,7 +146,7 @@ class TestGaneti:
         instance.shutdown(**kwargs)
         timeout = kwargs["timeout"] if "timeout" in kwargs else 2
         self.remote.query.return_value.run_sync.assert_called_once_with(
-            f"gnt-instance shutdown --timeout={timeout} test.example.com"
+            f"gnt-instance shutdown --force --timeout={timeout} test.example.com"
         )
 
     @pytest.mark.parametrize("kwargs", ({}, {"shutdown_timeout": 0}))

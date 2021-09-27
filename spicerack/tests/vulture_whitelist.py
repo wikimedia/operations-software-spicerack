@@ -25,6 +25,7 @@ whitelist_dhcp = Whitelist()
 whitelist_dhcp.DHCPConfOpt82.switch_hostname
 whitelist_dhcp.DHCPConfOpt82.switch_iface
 whitelist_dhcp.DHCPConfOpt82.vlan
+whitelist_dhcp.DHCPConfOpt82.distro
 whitelist_dhcp.DHCPConfMgmt.serial
 whitelist_dhcp.DHCPConfMgmt.ip_address
 

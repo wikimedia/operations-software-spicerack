@@ -54,12 +54,15 @@ configuration_generator_data = (
             "switch_hostname": "asw2-d-eqiad",
             "switch_iface": "ge-0/0/0",
             "vlan": 1021,
+            "ttys": 1,
+            "distro": "buster",
         },
         (
             "\nhost testhost0 {\n"
             '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
             "    fixed-address testhost0.eqiad.wmnet;\n"
-            "\n"
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/'
+            'tftpboot/buster-installer/";\n'
             "}\n"
         ),
         "opt82-entries.ttyS1-115200/testhost0.eqiad.wmnet.conf",
@@ -74,34 +77,14 @@ configuration_generator_data = (
             "switch_iface": "ge-0/0/0",
             "vlan": 1021,
             "ttys": 0,
-        },
-        (
-            "\nhost testhost0 {\n"
-            '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
-            "    fixed-address testhost0.eqiad.wmnet;\n"
-            "\n"
-            "}\n"
-        ),
-        "opt82-entries.ttyS0-115200/testhost0.eqiad.wmnet.conf",
-    ),
-    # - distro argument should add a pxelinux pathprefix to the output
-    (
-        dhcp.DHCPConfOpt82,
-        {
-            "hostname": "testhost0",
-            "fqdn": "testhost0.eqiad.wmnet",
-            "switch_hostname": "asw2-d-eqiad",
-            "switch_iface": "ge-0/0/0",
-            "vlan": 1021,
-            "ttys": 0,
-            "distro": "stretch",
+            "distro": "buster",
         },
         (
             "\nhost testhost0 {\n"
             '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
             "    fixed-address testhost0.eqiad.wmnet;\n"
             '    option pxelinux.pathprefix "http://apt.wikimedia.org/'
-            'tftpboot/stretch-installer/";\n'
+            'tftpboot/buster-installer/";\n'
             "}\n"
         ),
         "opt82-entries.ttyS0-115200/testhost0.eqiad.wmnet.conf",
@@ -180,7 +163,7 @@ class TestDHCP:
         """Test refresh_dhcp method for correct execution."""
         hosts = self._setup_dhcp_mocks()
         self.dhcp.refresh_dhcp()
-        hosts.run_sync.assert_called_with("/usr/local/sbin/dhcpincludes -r commit")
+        hosts.run_sync.assert_called_with("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
     # - does it deal with them failing as expected
     def test_refresh_dhcp_dhcpincludes_fail(self):
@@ -188,7 +171,7 @@ class TestDHCP:
         hosts = get_mock_fail_hosts()
         self._setup_dhcp_mocks(hosts=hosts)
         pytest.raises(dhcp.DHCPRestartError, self.dhcp.refresh_dhcp)
-        hosts.run_sync.assert_called_with("/usr/local/sbin/dhcpincludes -r commit")
+        hosts.run_sync.assert_called_with("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
     # test DHCP.push_configuration
     # - does it attempt to execute commands expected
@@ -207,7 +190,8 @@ class TestDHCP:
             print_progress_bars=False,
         )
         call_write = mock.call(
-            f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}"
+            f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            print_progress_bars=False,
         )
         hosts.run_sync.assert_has_calls([call_test, call_write])
 
@@ -251,7 +235,7 @@ class TestDHCP:
         call_rm = mock.call(
             f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}", print_output=False, print_progress_bars=False
         )
-        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
+        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
         hosts.run_sync.assert_has_calls([call_sha256, call_rm, call_refresh])
 
@@ -306,7 +290,7 @@ class TestDHCP:
         call_rm = mock.call(
             f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}", print_output=False, print_progress_bars=False
         )
-        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
+        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
         hosts.run_sync.assert_has_calls([call_rm, call_refresh])
 
@@ -337,7 +321,7 @@ class TestDHCP:
         call_rm = mock.call(
             f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}", print_output=False, print_progress_bars=False
         )
-        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
+        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
             configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
@@ -361,7 +345,8 @@ class TestDHCP:
             print_progress_bars=False,
         )
         call_write = mock.call(
-            f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}"
+            f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            print_progress_bars=False,
         )
 
         call_sha256 = mock.call(
@@ -373,7 +358,7 @@ class TestDHCP:
         call_rm = mock.call(
             f"/bin/rm -v {dhcp.DHCP_TARGET_PATH}/{config.filename}", print_output=False, print_progress_bars=False
         )
-        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit")
+        call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
             configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()

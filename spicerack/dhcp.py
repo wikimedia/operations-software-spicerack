@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import sha256
 from ipaddress import IPv4Address
-from typing import Iterator, Optional
+from typing import Iterator
 
 from wmflib.constants import ALL_DATACENTERS
 
@@ -55,8 +55,7 @@ class DHCPConfOpt82(DHCPConfiguration):
         switch_iface (str): the name of the switch interface the host is connected to.
         vlan (str): the name of the VLAN the host is configured for.
         ttys (int): which ttyS to use for this host, accepted values are 0 and 1.
-        distro (str, optional): the codename of the Debian distribution to use for the PXE installer, if different
-            from the default distribution configured by Puppet globally.
+        distro (str): the codename of the Debian distribution to use for the PXE installer.
 
     """
 
@@ -65,24 +64,20 @@ class DHCPConfOpt82(DHCPConfiguration):
     switch_hostname: str
     switch_iface: str
     vlan: str
-    ttys: int = 1
-    distro: Optional[str] = None
+    ttys: int
+    distro: str
 
     _template = """
     host {s.hostname} {{
         host-identifier option agent.circuit-id "{s.switch_hostname}:{s.switch_iface}:{s.vlan}";
         fixed-address {s.fqdn};
-        {pathprefix}
+        option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-installer/";
     }}
     """
 
     def __str__(self) -> str:
         """Return the rendered DHCP configuration snippet."""
-        pathprefix = ""
-        if self.distro is not None:
-            pathprefix = f"""option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{self.distro}-installer/";"""
-
-        return textwrap.dedent(self._template.format(s=self, pathprefix=pathprefix))
+        return textwrap.dedent(self._template.format(s=self))
 
     @property
     def filename(self) -> str:
@@ -151,7 +146,7 @@ class DHCP:
     def refresh_dhcp(self) -> None:
         """Regenerate includes on target data center and restart DHCP, or raise if failure at any stage."""
         try:
-            self._hosts.run_sync("/usr/local/sbin/dhcpincludes -r commit")
+            self._hosts.run_sync("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
         except RemoteExecutionError as exc:
             raise DHCPRestartError("restarting generating dhcp config or restarting dhcpd failed") from exc
 
@@ -176,7 +171,10 @@ class DHCP:
 
         b64encoded = base64.b64encode(str(configuration).encode()).decode()
         try:
-            self._hosts.run_sync(f"/bin/echo '{b64encoded}' | /usr/bin/base64 -d > {DHCP_TARGET_PATH}/{filename}")
+            self._hosts.run_sync(
+                f"/bin/echo '{b64encoded}' | /usr/bin/base64 -d > {DHCP_TARGET_PATH}/{filename}",
+                print_progress_bars=False,
+            )
         except RemoteExecutionError as exc:
             raise DHCPError(f"target file {filename} failed to be created.") from exc
 
