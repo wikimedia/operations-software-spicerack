@@ -65,7 +65,7 @@ configuration_generator_data = (
             'tftpboot/buster-installer/";\n'
             "}\n"
         ),
-        "opt82-entries.ttyS1-115200/testhost0.eqiad.wmnet.conf",
+        "opt82-ttyS1-115200/testhost0.eqiad.wmnet.conf",
     ),
     # - tty argument should change the filename
     (
@@ -87,7 +87,7 @@ configuration_generator_data = (
             'tftpboot/buster-installer/";\n'
             "}\n"
         ),
-        "opt82-entries.ttyS0-115200/testhost0.eqiad.wmnet.conf",
+        "opt82-ttyS0-115200/testhost0.eqiad.wmnet.conf",
     ),
     # dhcpconfmgmt tests
     # - basic check of functionality

@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v1.0.3`_ (2021-09-28)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* dhcp: fix typo in opt82 file path.
+
 `v1.0.2`_ (2021-09-27)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1561,3 +1569,4 @@ New features
 .. _`v1.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.0
 .. _`v1.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.1
 .. _`v1.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.2
+.. _`v1.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.3

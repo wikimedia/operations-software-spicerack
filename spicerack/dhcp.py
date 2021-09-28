@@ -82,7 +82,7 @@ class DHCPConfOpt82(DHCPConfiguration):
     @property
     def filename(self) -> str:
         """Return the proposed filename based on this configuration."""
-        return f"opt82-entries.ttyS{self.ttys}-115200/{self.fqdn}.conf"
+        return f"opt82-ttyS{self.ttys}-115200/{self.fqdn}.conf"
 
 
 @dataclass
