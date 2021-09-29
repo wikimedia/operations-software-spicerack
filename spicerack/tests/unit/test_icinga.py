@@ -9,6 +9,7 @@ from unittest import mock
 import pytest
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
+from cumin.transports import Command
 
 from spicerack import icinga
 from spicerack.administrative import Reason
@@ -388,6 +389,37 @@ class TestIcingaHosts:
         assert mocked_time.called
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    def test_recheck_failed_services_failed(self, mocked_time):
+        """It should force a recheck of all services for the hosts on the Icinga server."""
+        with open(get_fixture_path("icinga", "status_with_failed_services.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+
+        self.icinga_hosts.recheck_failed_services()
+        self.mocked_icinga_host.run_sync.assert_called_with(
+            'bash -c \'echo -n "[1514764800] SCHEDULE_FORCED_SVC_CHECK;host2;check_name1;1514764800" > '
+            "/var/lib/icinga/rw/icinga.cmd '",
+            'bash -c \'echo -n "[1514764800] SCHEDULE_FORCED_SVC_CHECK;host2;check_name2;1514764800" > '
+            "/var/lib/icinga/rw/icinga.cmd '",
+            print_output=False,
+            print_progress_bars=False,
+        )
+        assert mocked_time.called
+
+    def test_recheck_failed_services_optimal(self):
+        """It should force a recheck of all services for the hosts on the Icinga server."""
+        with open(get_fixture_path("icinga", "status_with_services.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+
+        self.icinga_hosts.recheck_failed_services()
+        # This also ensures that we are not making an additional call of run_sync in the recheck method
+        self.mocked_icinga_host.run_sync.assert_called_with(
+            Command('/usr/local/bin/icinga-status -j "host1"', ok_codes=[]),
+            is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
+        )
+
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_remove_downtime(self, mocked_time):
         """It should remove the downtime for the hosts on the Icinga server."""
         self.icinga_hosts.remove_downtime()
@@ -487,7 +519,7 @@ class TestIcingaHosts:
     def test_wait_for_optimal_ok(self, mocked_sleep):
         """It should return immediately if host is optimal."""
         with open(get_fixture_path("icinga", "status_valid.json")) as f:
-            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 2)
 
         self.icinga_hosts.wait_for_optimal()
         assert not mocked_sleep.called
