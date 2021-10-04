@@ -378,8 +378,8 @@ class TestRemoteHosts:
         ):
             self.remote_hosts.wait_reboot_since(since)
 
-        # wait_reboot_since() sets tries to 360 and dry_run is False.
-        assert mocked_uptime.call_count == 360
+        # wait_reboot_since() sets tries to 120 and dry_run is False.
+        assert mocked_uptime.call_count == 120
         assert mocked_sleep.called
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
