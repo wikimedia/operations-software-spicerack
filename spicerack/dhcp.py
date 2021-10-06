@@ -50,7 +50,7 @@ class DHCPConfOpt82(DHCPConfiguration):
 
     Arguments:
         hostname (str): the hostname to generate the DHCP matching block for.
-        fqdn (str): the FQDN of the same host.
+        ipv4 (ipaddress.IPv4Address): the IPv4 to be assigned to the host.
         switch_hostname (str): the hostname of the switch the host is connected to.
         switch_iface (str): the name of the switch interface the host is connected to.
         vlan (str): the name of the VLAN the host is configured for.
@@ -60,7 +60,7 @@ class DHCPConfOpt82(DHCPConfiguration):
     """
 
     hostname: str
-    fqdn: str
+    ipv4: IPv4Address
     switch_hostname: str
     switch_iface: str
     vlan: str
@@ -70,7 +70,7 @@ class DHCPConfOpt82(DHCPConfiguration):
     _template = """
     host {s.hostname} {{
         host-identifier option agent.circuit-id "{s.switch_hostname}:{s.switch_iface}:{s.vlan}";
-        fixed-address {s.fqdn};
+        fixed-address {s.ipv4};
         option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-installer/";
     }}
     """
@@ -82,7 +82,7 @@ class DHCPConfOpt82(DHCPConfiguration):
     @property
     def filename(self) -> str:
         """Return the proposed filename based on this configuration."""
-        return f"opt82-ttyS{self.ttys}-115200/{self.fqdn}.conf"
+        return f"opt82-ttyS{self.ttys}-115200/{self.hostname}.conf"
 
 
 @dataclass
@@ -93,14 +93,14 @@ class DHCPConfMgmt(DHCPConfiguration):
         datacenter (str): the name of the Datacenter the host is.
         serial (str): the vendor serial of the host.
         fqdn (str): the management console FQDN to use for this host.
-        ip_address (ipaddress.IPv4Address): the IP address to give the management interface.
+        ipv4 (ipaddress.IPv4Address): the IP address to give the management interface.
 
     """
 
     datacenter: str
     serial: str
     fqdn: str
-    ip_address: IPv4Address
+    ipv4: IPv4Address
 
     _template = """
     class "{s.fqdn}" {{
@@ -108,7 +108,7 @@ class DHCPConfMgmt(DHCPConfiguration):
     }}
     pool {{
         allow members of "{s.fqdn}";
-        range {s.ip_address} {s.ip_address};
+        range {s.ipv4} {s.ipv4};
     }}
     """
 
