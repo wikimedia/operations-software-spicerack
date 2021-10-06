@@ -1,6 +1,26 @@
 Spicerack Changelog
 -------------------
 
+`v1.0.4`_ (2021-10-06)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* dhcp: use IP address instead of DNS name
+
+  * Given that all the required data comes from Netbox there is no point to depend on the DNS when generating the DHCP
+    snippets, require to pass the IPv4 instead of the FQDN.
+  * Renamed ``fqdn`` parameter to ``ipv4`` in the ``DHCPConfOpt82`` class.
+  * Renamed ``ip_address`` parameter to ``ipv4`` in the ``DHCPConfMgmt`` class.
+  * Although technically this is an API change, the whole module is new and still unused except from the experimental
+    reimage cookbook, hence not considering it as a breaking change for the semantic versioning.
+
+Minor improvements
+""""""""""""""""""
+
+* remote: reduce wait time for reboot to 20 minutes.
+
 `v1.0.3`_ (2021-09-28)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1570,3 +1590,4 @@ New features
 .. _`v1.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.1
 .. _`v1.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.2
 .. _`v1.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.3
+.. _`v1.0.4`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.4

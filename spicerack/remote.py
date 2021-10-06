@@ -554,7 +554,7 @@ class RemoteHosts:
         )
 
     @retry(
-        tries=360,
+        tries=120,
         delay=timedelta(seconds=10),
         backoff_mode="constant",
         exceptions=(RemoteCheckError,),

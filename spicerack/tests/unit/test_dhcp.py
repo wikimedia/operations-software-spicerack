@@ -50,7 +50,7 @@ configuration_generator_data = (
         dhcp.DHCPConfOpt82,
         {
             "hostname": "testhost0",
-            "fqdn": "testhost0.eqiad.wmnet",
+            "ipv4": IPv4Address("10.0.0.1"),
             "switch_hostname": "asw2-d-eqiad",
             "switch_iface": "ge-0/0/0",
             "vlan": 1021,
@@ -60,19 +60,19 @@ configuration_generator_data = (
         (
             "\nhost testhost0 {\n"
             '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
-            "    fixed-address testhost0.eqiad.wmnet;\n"
+            "    fixed-address 10.0.0.1;\n"
             '    option pxelinux.pathprefix "http://apt.wikimedia.org/'
             'tftpboot/buster-installer/";\n'
             "}\n"
         ),
-        "opt82-ttyS1-115200/testhost0.eqiad.wmnet.conf",
+        "opt82-ttyS1-115200/testhost0.conf",
     ),
-    # - tty argument should change the filename
+    # - tty argument should change the file path
     (
         dhcp.DHCPConfOpt82,
         {
             "hostname": "testhost0",
-            "fqdn": "testhost0.eqiad.wmnet",
+            "ipv4": IPv4Address("10.0.0.1"),
             "switch_hostname": "asw2-d-eqiad",
             "switch_iface": "ge-0/0/0",
             "vlan": 1021,
@@ -82,12 +82,12 @@ configuration_generator_data = (
         (
             "\nhost testhost0 {\n"
             '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
-            "    fixed-address testhost0.eqiad.wmnet;\n"
+            "    fixed-address 10.0.0.1;\n"
             '    option pxelinux.pathprefix "http://apt.wikimedia.org/'
             'tftpboot/buster-installer/";\n'
             "}\n"
         ),
-        "opt82-ttyS0-115200/testhost0.eqiad.wmnet.conf",
+        "opt82-ttyS0-115200/testhost0.conf",
     ),
     # dhcpconfmgmt tests
     # - basic check of functionality
@@ -97,7 +97,7 @@ configuration_generator_data = (
             "datacenter": "eqiad",
             "serial": "TEST",
             "fqdn": "test1001.mgmt.eqiad.wmnet",
-            "ip_address": IPv4Address("10.0.0.1"),
+            "ipv4": IPv4Address("10.0.0.1"),
         },
         (
             '\nclass "test1001.mgmt.eqiad.wmnet" {\n'
@@ -125,11 +125,11 @@ def test_dhcp_mgmt_fail():
     """A DHCPConfMgmt object should fail to create if invalid parameters are passed to its init."""
     with pytest.raises(dhcp.DHCPError):
         # data center must be a value in ALL_DATACENTERS
-        dhcp.DHCPConfMgmt(datacenter="not-a-real-datacenter", serial="", fqdn="", ip_address=None)
+        dhcp.DHCPConfMgmt(datacenter="not-a-real-datacenter", serial="", fqdn="", ipv4=None)
 
     with pytest.raises(dhcp.DHCPError):
         # hostname must be in the correct format
-        dhcp.DHCPConfMgmt(datacenter="eqiad", serial="", fqdn="not-a-real-hostname", ip_address=None)
+        dhcp.DHCPConfMgmt(datacenter="eqiad", serial="", fqdn="not-a-real-hostname", ipv4=None)
 
 
 def test_create_dhcp_fail():
