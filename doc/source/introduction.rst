@@ -114,12 +114,19 @@ Logging
 ^^^^^^^
 
 The logging is already pre-setup by the ``cookbook`` entry point script that initialize the root logger, so that each
-cookbook can just initialize its own :py:mod:`logging` instance and log. A special logger to send notification to the
-``#wikimedia-operations`` IRC channel with the ``!log`` prefix is also available through the ``spicerack`` argument,
-passed to the cookbook's ``run()`` function for the module API or available in the cookbook class as ``self.spicerack``
-for the class API, in its ``irc_logger`` property. The ``irc_logger`` logs to both IRC and the nomal log outputs of
-Spicerack. If the dry-run mode is set it does not log to IRC.
-The log files can be found in `/var/log/spicerack/${PATH_OF_THE_COOKBOOK}` on the host where the cookbooks are run.
+cookbook can just initialize its own :py:mod:`logging` instance and log.
+
+A special logger to send notification to the ``#wikimedia-operations`` IRC channel with the ``!log`` prefix is also
+available through the ``spicerack`` argument, passed to the cookbook's ``run()`` function for the module API or
+available in the cookbook class as ``self.spicerack`` for the class API, in its ``irc_logger`` property.
+
+The ``irc_logger`` logs to both IRC and the nomal log outputs of Spicerack. If the dry-run mode is set it does not log
+to IRC.
+
+Log files
+"""""""""
+
+The log files can be found in ``/var/log/spicerack/${PATH_OF_THE_COOKBOOK}`` on the host where the cookbooks are run.
 All normal log messages are sent to two separate files, of which one always logs at ``DEBUG`` level even if
 ``-v/--verbose`` is not set.
 So for example running the cookbook ``foo.bar.baz`` will generate two log files::
@@ -133,9 +140,12 @@ path ones::
     /var/log/spicerack/foo/bar.log  # with INFO and higher log levels
     /var/log/spicerack/foo/bar-extended.log  # with all log levels
 
-Example of logging::
+Example
+"""""""
 
-    import logging
+::
+
+   import logging
 
     logger = logging.getLogger(__name__)
 
