@@ -88,7 +88,7 @@ class PuppetHosts(RemoteHostsAdapter):
         host_to_ca_server: Dict[str, str] = {}
         for node_set, output in raw_results:
             for hostname in node_set:
-                host_to_ca_server[hostname] = output.message().decode()
+                host_to_ca_server[hostname] = list(output.lines())[-1].decode()
 
         return host_to_ca_server
 
