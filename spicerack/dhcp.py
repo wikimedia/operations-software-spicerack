@@ -34,9 +34,20 @@ class DHCPRestartError(DHCPError):
 class DHCPConfiguration(ABC):
     """An abstract class which defines the interface for the DHCP configuration generators."""
 
-    @abstractmethod
     def __str__(self) -> str:
-        """Return a string of this configuration rendered."""
+        """Return the rendered DHCP configuration snippet."""
+        return textwrap.dedent(self._template.format(s=self))
+
+    @property
+    @classmethod
+    @abstractmethod
+    def _template(cls) -> str:
+        """Define a string template to be formatted by the instance properties.
+
+        The default implementation of the string representation of the instance will format this template string with
+        ``s=self``.
+
+        """
 
     @property
     @abstractmethod
@@ -44,9 +55,9 @@ class DHCPConfiguration(ABC):
         """Return a string of the proposed filename for this configuration, from the automation directory."""
 
 
-@dataclass
+@dataclass(frozen=True)
 class DHCPConfOpt82(DHCPConfiguration):
-    """A configuration generator for host installation DHCP entries.
+    """A configuration generator for host installation DHCP entries via DHCP Option 82.
 
     Arguments:
         hostname (str): the hostname to generate the DHCP matching block for.
@@ -75,17 +86,57 @@ class DHCPConfOpt82(DHCPConfiguration):
     }}
     """
 
-    def __str__(self) -> str:
-        """Return the rendered DHCP configuration snippet."""
-        return textwrap.dedent(self._template.format(s=self))
+    @property
+    def filename(self) -> str:
+        """Return the proposed filename based on this configuration."""
+        return f"ttyS{self.ttys}-115200/{self.hostname}.conf"
+
+
+@dataclass(frozen=True)
+class DHCPConfMac(DHCPConfiguration):
+    """A configuration generator for host installation DHCP entries via MAC address.
+
+    Arguments:
+        hostname (str): the hostname to generate the DHCP matching block for.
+        ipv4 (ipaddress.IPv4Address): the IPv4 to be assigned to the host.
+        mac (str): the MAC address of the host's interface.
+        ttys (int): which ttyS to use for this host, accepted values are 0 and 1.
+        distro (str): the codename of the Debian distribution to use for the PXE installer.
+
+    """
+
+    hostname: str
+    ipv4: IPv4Address
+    mac: str
+    ttys: int
+    distro: str
+
+    _template = """
+    host {s.hostname} {{
+        hardware ethernet {s.mac};
+        fixed-address {s.ipv4};
+        option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-installer/";
+    }}
+    """
+
+    def __post_init__(self) -> None:
+        """According to Python's dataclass API to validate the arguments.
+
+        See Also:
+            https://docs.python.org/3/library/dataclasses.html#post-init-processing
+
+        """
+        mac_pattern = r"[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}"
+        if re.fullmatch(mac_pattern, self.mac) is None:
+            raise DHCPError(f"Got invalid MAC address {self.mac}, not matching pattern {mac_pattern}")
 
     @property
     def filename(self) -> str:
         """Return the proposed filename based on this configuration."""
-        return f"opt82-ttyS{self.ttys}-115200/{self.hostname}.conf"
+        return f"ttyS{self.ttys}-115200/{self.hostname}.conf"
 
 
-@dataclass
+@dataclass(frozen=True)
 class DHCPConfMgmt(DHCPConfiguration):
     """A configuration for management network DHCP entries.
 
@@ -118,10 +169,6 @@ class DHCPConfMgmt(DHCPConfiguration):
             raise DHCPError(f"invalid datacenter {self.datacenter}")
         if not re.search(MGMT_HOSTNAME_RE.format(dc=self.datacenter), self.fqdn):
             raise DHCPError(f"hostname does not look like a valid management hostname: {self.fqdn}")
-
-    def __str__(self) -> str:
-        """Return the rendered DHCP configuration snippet."""
-        return textwrap.dedent(self._template.format(s=self))
 
     @property
     def filename(self) -> str:
