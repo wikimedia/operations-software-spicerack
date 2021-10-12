@@ -1,3 +1,10 @@
+spicerack (1.0.5-1) unstable; urgency=medium
+
+  * v1.0.5 upstream release.
+  * Add python3-kafka as dependency.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Tue, 12 Oct 2021 11:11:10 -0000
+
 spicerack (1.0.4-1) unstable; urgency=medium
 
   * v1.0.4 upstream release.
