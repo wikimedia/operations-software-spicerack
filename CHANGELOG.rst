@@ -20,7 +20,7 @@ Minor improvements
 Bug fixes
 """""""""
 
-* puppet: get only the last line of output in ``PuppetHost.get_ca_server()`` to ignore spurious output that might be
+* puppet: get only the last line of output in ``PuppetHosts.get_ca_servers()`` to ignore spurious output that might be
   present in some environments.
 
 `v1.0.4`_ (2021-10-06)
