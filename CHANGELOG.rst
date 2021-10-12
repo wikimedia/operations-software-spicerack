@@ -1,6 +1,28 @@
 Spicerack Changelog
 -------------------
 
+`v1.0.5`_ (2021-10-12)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* kafka: add a new ``kafka`` module with the following capabilities (`T291681`_):
+
+  * transferring of offsets between consumer groups and clusters approximating offsets based on timestamp.
+  * approximating and seeking offsets based on user provided timestamps.
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: add ``recheck_failed_services()`` method to force a recheck of services which are in failed state.
+
+Bug fixes
+"""""""""
+
+* puppet: get only the last line of output in ``PuppetHost.get_ca_server()`` to ignore spurious output that might be
+  present in some environments.
+
 `v1.0.4`_ (2021-10-06)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1526,6 +1548,7 @@ New features
 .. _`T286206`: https://phabricator.wikimedia.org/T286206
 .. _`T288558`: https://phabricator.wikimedia.org/T288558
 .. _`T289078`: https://phabricator.wikimedia.org/T289078
+.. _`T291681`: https://phabricator.wikimedia.org/T291681
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -1591,3 +1614,4 @@ New features
 .. _`v1.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.2
 .. _`v1.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.3
 .. _`v1.0.4`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.4
+.. _`v1.0.5`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.5

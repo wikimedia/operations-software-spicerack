@@ -407,6 +407,18 @@ class IcingaHosts:
         """Force recheck of all services associated with a set of hosts."""
         self.run_icinga_command("SCHEDULE_FORCED_HOST_SVC_CHECKS", str(int(time.time())))
 
+    def recheck_failed_services(self) -> None:
+        """Force recheck of all failed associated with a set of hosts."""
+        status = self.get_status()
+        if status.optimal:
+            return
+        commands = [
+            self._get_command_string("SCHEDULE_FORCED_SVC_CHECK", hostname, service_name, str(int(time.time())))
+            for hostname, failed in status.failed_services.items()
+            for service_name in failed
+        ]
+        self._icinga_host.run_sync(*commands, print_output=False, print_progress_bars=False)
+
     def remove_downtime(self) -> None:
         """Remove a downtime from a set of hosts."""
         self.run_icinga_command("DEL_DOWNTIME_BY_HOST_NAME")
@@ -515,23 +527,32 @@ class IcingaHosts:
 
         return HostsStatus({hostname: HostStatus(**host_status) for hostname, host_status in status.items()})
 
-    @retry(
-        tries=15,
-        delay=timedelta(seconds=3),
-        backoff_mode="linear",
-        exceptions=(IcingaError,),
-    )
     def wait_for_optimal(self) -> None:
         """Waits for an icinga optimal status, else raises an exception.
+
+        This function will first instruct icinga to recheck all failed services
+        and then wait until all services are in an optimal status.  If an
+        optimal status is not reached in 6 minutes then we raise IcingaError
 
         Raises:
             IcingaError: if the status is not optimal.
 
         """
-        status = self.get_status()
-        if not status.optimal:
-            failed = [f"{k}:{','.join(v)}" for k, v in status.failed_services.items()]
-            raise IcingaError("Not all services are recovered: " + " ".join(failed))
+
+        @retry(
+            tries=15,
+            delay=timedelta(seconds=3),
+            backoff_mode="linear",
+            exceptions=(IcingaError,),
+        )
+        def check() -> None:
+            status = self.get_status()
+            if not status.optimal:
+                failed = [f"{k}:{','.join(v)}" for k, v in status.failed_services.items()]
+                raise IcingaError("Not all services are recovered: " + " ".join(failed))
+
+        self.recheck_failed_services()
+        check()
 
     def _get_command_string(self, *args: str) -> str:
         """Get the Icinga command to execute given the current arguments.

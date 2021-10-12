@@ -428,6 +428,24 @@ class TestPuppetHosts:
         assert "test1.example.com" in result
         assert result["test1.example.com"] == "test1.puppetmast.er"
 
+    def test_get_ca_servers_handles_multiple_lines_in_command_output(self):
+        """Test test get ca servers handles multiple results."""
+        self.mocked_remote_hosts.run_sync.return_value = [
+            (
+                NodeSet("test0.example.com"),
+                MsgTreeElem(
+                    b"test0.puppetmast.er",
+                    parent=MsgTreeElem(b"some message that should be ignored", parent=MsgTreeElem()),
+                ),
+            ),
+        ]
+
+        result = self.puppet_hosts.get_ca_servers()
+
+        self.mocked_remote_hosts.run_sync.assert_called_once()
+        assert "test0.example.com" in result
+        assert result["test0.example.com"] == "test0.puppetmast.er"
+
 
 class TestPuppetMaster:
     """Test class for the PuppetMaster class."""
