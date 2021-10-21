@@ -54,6 +54,13 @@ class TestMediaWiki:
         requests_mock.get("http://host1/conf/file1.php.txt", text="data")
         assert self.mediawiki.check_config_line("file1", "data") is True
 
+    def test_get_master_datacenter(self):
+        """It should return athe primary site."""
+        self.mocked_confctl.get.return_value.__next__.return_value.val = "dc1"
+        dc = self.mediawiki.get_master_datacenter()
+        self.mocked_confctl.get.assert_called_once_with(scope="common", name="WMFMasterDatacenter")
+        assert dc == "dc1"
+
     def test_get_siteinfo(self, requests_mock):
         """It should get the siteinfo API from a canary host."""
         requests_mock.get(self.siteinfo_url, text=json.dumps(self.siteinfo_ro))

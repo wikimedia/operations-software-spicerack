@@ -165,6 +165,15 @@ class MediaWiki:
         self._conftool.set_and_verify("val", False, scope=datacenter, name="ReadOnly")
         self._check_siteinfo_dry_run_aware(datacenter, {("query", "general", "readonly"): False}, samples=10)
 
+    def get_master_datacenter(self) -> str:
+        """Return a string representing the primary DC.
+
+        Returns:
+            str: the primary DC
+
+        """
+        return next(self._conftool.get(scope="common", name="WMFMasterDatacenter")).val
+
     def set_master_datacenter(self, datacenter: str) -> None:
         """Set the MediaWiki config master datacenter variable in Conftool.
 

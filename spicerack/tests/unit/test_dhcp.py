@@ -61,11 +61,10 @@ configuration_generator_data = (
             "\nhost testhost0 {\n"
             '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
             "    fixed-address 10.0.0.1;\n"
-            '    option pxelinux.pathprefix "http://apt.wikimedia.org/'
-            'tftpboot/buster-installer/";\n'
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/buster-installer/";\n'
             "}\n"
         ),
-        "opt82-ttyS1-115200/testhost0.conf",
+        "ttyS1-115200/testhost0.conf",
     ),
     # - tty argument should change the file path
     (
@@ -83,11 +82,49 @@ configuration_generator_data = (
             "\nhost testhost0 {\n"
             '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
             "    fixed-address 10.0.0.1;\n"
-            '    option pxelinux.pathprefix "http://apt.wikimedia.org/'
-            'tftpboot/buster-installer/";\n'
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/buster-installer/";\n'
             "}\n"
         ),
-        "opt82-ttyS0-115200/testhost0.conf",
+        "ttyS0-115200/testhost0.conf",
+    ),
+    # DHCPConfMac tests
+    # - basic check of functionality
+    (
+        dhcp.DHCPConfMac,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "mac": "00:00:00:00:00:01",
+            "ttys": 0,
+            "distro": "buster",
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    hardware ethernet 00:00:00:00:00:01;\n"
+            "    fixed-address 10.0.0.1;\n"
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/buster-installer/";\n'
+            "}\n"
+        ),
+        "ttyS0-115200/testhost0.conf",
+    ),
+    # - tty argument should change the file path
+    (
+        dhcp.DHCPConfMac,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "mac": "00:00:00:00:00:01",
+            "ttys": 1,
+            "distro": "bullseye",
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    hardware ethernet 00:00:00:00:00:01;\n"
+            "    fixed-address 10.0.0.1;\n"
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/bullseye-installer/";\n'
+            "}\n"
+        ),
+        "ttyS1-115200/testhost0.conf",
     ),
     # dhcpconfmgmt tests
     # - basic check of functionality
@@ -119,6 +156,47 @@ def test_configuration_generator(generator, kw_arguments, expected, expected_fil
     confobj = generator(**kw_arguments)
     assert str(confobj) == expected
     assert confobj.filename == expected_filename
+
+
+@pytest.mark.parametrize(
+    "mac",
+    (
+        "00:00:00:00:00:00",
+        "01:23:45:67:89:ab",
+        "cd:ef:00:11:22:33",
+        "aa:aa:aa:aa:aa:aa",
+        "AA:AA:AA:AA:AA:AA",
+        "ff:ff:ff:ff:ff:ff",
+    ),
+)
+def test_dhcp_conf_mac_valid_mac(mac):
+    """It should not raise when a valid MAC address is passed."""
+    config = dhcp.DHCPConfMac(hostname="testhost0", ipv4=IPv4Address("10.0.0.1"), mac=mac, ttys=1, distro="bullseye")
+    assert config.mac == mac
+
+
+@pytest.mark.parametrize(
+    "mac",
+    (
+        ":00:00:00:00:00:00",
+        "00:00:00:00:00:00:",
+        ":00:00:00:00:00:00:",
+        "0:00:00:00:00:00",
+        "00:00:00:00:00:0",
+        "000:00:00:00:00:00",
+        "00:00:00:00:00:000",
+        "00:00:000:00:00:00",
+        "g0:00:00:00:00:00",
+        "00-00-00-00-00-00",
+        "01-23-45-67-89-AB",
+        "0123.4567.89AB",
+        "01-23-45-67-89-AB-CD-EF",
+    ),
+)
+def test_dhcp_conf_mac_invalid_mac(mac):
+    """It should raise DHCPError if an invalid MAC address is passed."""
+    with pytest.raises(dhcp.DHCPError, match="Got invalid MAC address"):
+        dhcp.DHCPConfMac(hostname="testhost0", ipv4=IPv4Address("10.0.0.1"), mac=mac, ttys=1, distro="bullseye")
 
 
 def test_dhcp_mgmt_fail():

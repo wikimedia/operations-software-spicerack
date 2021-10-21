@@ -1,6 +1,36 @@
 Spicerack Changelog
 -------------------
 
+`v1.0.6`_ (2021-10-21)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* dhcp: add support for MAC address based config (`T269855`_):
+
+  * Add support for MAC address based configuration snippets to be used in the automation for Ganeti VMs instead of
+    using DHCP Option 82 as the MAC address is retrieved from Ganeti API.
+  * The MAC address is validated to ensure has the format accepted by the DHCP server.
+  * Consolidate the filename path for both DHCP Option 82 and MAC address based configuration to be in the same
+    directory, dependent only by the TTY settings as there is no other difference between the two and it allows to
+    prevent duplicated snippets for the same hostname in different directories as the library checks that the file
+    doesn't exists before creating it.
+  * Consolidate the defult string representation implementation of the DHCPConfiguration derived classes into the
+    abstract parent one because they are all the same. Define a class property ``_template`` as part of the
+    ``DHCPConfiguration`` class API.
+
+Minor improvements
+""""""""""""""""""
+
+* mediawiki: add a ``get_primary_dc()`` method that returns the primary/active datacenter.
+* kafka: docstrings minor improvements.
+
+Miscellanea
+"""""""""""
+
+* changelog: fix typo in previous entry.
+
 `v1.0.5`_ (2021-10-12)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -20,7 +50,7 @@ Minor improvements
 Bug fixes
 """""""""
 
-* puppet: get only the last line of output in ``PuppetHost.get_ca_server()`` to ignore spurious output that might be
+* puppet: get only the last line of output in ``PuppetHosts.get_ca_servers()`` to ignore spurious output that might be
   present in some environments.
 
 `v1.0.4`_ (2021-10-06)
@@ -1615,3 +1645,4 @@ New features
 .. _`v1.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.3
 .. _`v1.0.4`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.4
 .. _`v1.0.5`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.5
+.. _`v1.0.6`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.6
