@@ -9,17 +9,16 @@
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
+# documentation root, use pathlib's resolve() to make it absolute, like shown here.
 #
-import os
 import sys
+from pathlib import Path
 
 import sphinx_rtd_theme
 from pkg_resources import get_distribution
 
 # Adjust path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
-
+sys.path.insert(0, Path(__file__).parent.parent.resolve())
 
 # -- General configuration ------------------------------------------------
 

@@ -1,6 +1,6 @@
 """Cookbook module tests."""
-import os
 import shutil
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -8,7 +8,7 @@ import pytest
 from spicerack import Spicerack, _cookbook, _menu, cookbook
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
 
-COOKBOOKS_BASE_PATH = "spicerack/tests/fixtures/cookbook"
+COOKBOOKS_BASE_PATH = Path("spicerack/tests/fixtures/cookbook")
 LIST_COOKBOOKS_ALL = """cookbooks
 |-- class_api
 |   |-- class_api.example
@@ -181,7 +181,7 @@ def test_parse_args_list():
 
 def test_main_wrong_instance_config(capsys):
     """If the configuration file has invalid instance_params it should print an error and exit."""
-    ret = _cookbook.main(["-c", get_fixture_path("config_wrong_overrides.yaml"), "cookbook"])
+    ret = _cookbook.main(["-c", str(get_fixture_path("config_wrong_overrides.yaml")), "cookbook"])
     _, err = capsys.readouterr()
     assert ret == 1
     assert "Unable to instantiate Spicerack, check your configuration" in err
@@ -211,10 +211,7 @@ class TestCookbookCollection:
         """The string representation of the CookbookCollection should print all the cookbooks as a tree."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         if not path_filter and not verbose:  # For the first test ensure there is no __pycache__ directory.
-            shutil.rmtree(
-                os.path.join(COOKBOOKS_BASE_PATH, "cookbooks", "__pycache__"),
-                ignore_errors=True,
-            )
+            shutil.rmtree(COOKBOOKS_BASE_PATH / "cookbooks" / "__pycache__", ignore_errors=True)
 
         spicerack = self.spicerack
         if verbose:
@@ -224,7 +221,7 @@ class TestCookbookCollection:
 
     def test_cookbooks_non_existent(self):
         """The CookbookCollection class initialized with an empty path should not collect any cookbook."""
-        cookbooks = _cookbook.CookbookCollection(os.path.join(COOKBOOKS_BASE_PATH, "non_existent"), [], self.spicerack)
+        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH / "non_existent", [], self.spicerack)
         assert cookbooks.menu.get_tree() == ""
 
     @pytest.mark.parametrize(

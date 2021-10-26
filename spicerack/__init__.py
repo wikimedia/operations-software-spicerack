@@ -1,6 +1,6 @@
 """Spicerack package."""
-import os
 from logging import Logger
+from pathlib import Path
 from socket import gethostname
 from typing import Dict, Optional, Sequence
 
@@ -90,7 +90,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._conftool_config = conftool_config
         self._conftool_schema = conftool_schema
         self._debmonitor_config = debmonitor_config
-        self._spicerack_config_dir = spicerack_config_dir
+        self._spicerack_config_dir = Path(spicerack_config_dir)
 
         self._username = get_username()
         self._current_hostname = gethostname()
@@ -130,7 +130,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return self._username
 
     @property
-    def config_dir(self) -> str:
+    def config_dir(self) -> Path:
         """Getter for Spicerack's configuration file directory.
 
         Returns:
@@ -321,7 +321,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         return RedisCluster(
             cluster,
-            os.path.join(self._spicerack_config_dir, "redis_cluster"),
+            self._spicerack_config_dir / "redis_cluster",
             dry_run=self._dry_run,
         )
 
@@ -480,7 +480,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             KeyError: If the configuration file does not contain the correct keys.
 
         """
-        configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, "ganeti", "config.yaml"))
+        configuration = load_yaml_config(self._spicerack_config_dir / "ganeti" / "config.yaml")
 
         return Ganeti(
             configuration["username"],
@@ -499,7 +499,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.netbox.Netbox: the instance
 
         """
-        config = load_yaml_config(os.path.join(self._spicerack_config_dir, "netbox", "config.yaml"))
+        config = load_yaml_config(self._spicerack_config_dir / "netbox" / "config.yaml")
         if read_write and not self._dry_run:
             token = config["api_token_rw"]
         else:
@@ -561,6 +561,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             KeyError: If the configuration file does not contain the correct keys.
 
         """
-        configuration = load_yaml_config(os.path.join(self._spicerack_config_dir, "kafka", "config.yaml"))
+        configuration = load_yaml_config(self._spicerack_config_dir / "kafka" / "config.yaml")
 
         return Kafka(kafka_config=configuration, dry_run=self._dry_run)

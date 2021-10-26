@@ -1,6 +1,5 @@
 """Mysql module tests."""
-
-import os
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -18,7 +17,7 @@ class TestMysql:
             match["charset"] = kwargs.get("charset", "utf8mb4")
 
         if "read_default_file" not in match:
-            match["read_default_file"] = kwargs.get("read_default_file", os.path.expanduser("~/.my.cnf"))
+            match["read_default_file"] = kwargs.get("read_default_file", str(Path("~/.my.cnf").expanduser()))
         if "read_default_group" not in match:
             match["read_default_group"] = kwargs.get("read_default_group", "client")
 

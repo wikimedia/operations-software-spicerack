@@ -4,7 +4,8 @@ import importlib
 import logging
 import os
 import sys
-from typing import Dict, List, Optional, Tuple, Type, cast
+from pathlib import Path
+from typing import Dict, List, Optional, Type, cast
 
 from wmflib.config import load_yaml_config
 
@@ -26,7 +27,7 @@ class CookbookCollection:
 
     def __init__(
         self,
-        base_dir: str,
+        base_dir: Path,
         args: List[str],
         spicerack: Spicerack,
         path_filter: str = "",
@@ -41,7 +42,7 @@ class CookbookCollection:
                 are part of this subtree will be collected.
 
         """
-        self.base_dir = os.path.join(base_dir, self.cookbooks_module_prefix)
+        self.base_dir = base_dir / self.cookbooks_module_prefix
         self.args = args
         self.spicerack = spicerack
         self.path_filter = path_filter
@@ -115,47 +116,19 @@ class CookbookCollection:
 
         return item
 
-    @staticmethod
-    def _filter_dirnames_and_filenames(dirnames: List[str], filenames: List[str]) -> Tuple[List, List]:
-        """Filter the dirnames and filenames in place (required by os.walk()) to select only Python modules.
-
-        Arguments:
-            dirnames (list): the list of sub-directories, as returned by os.walk().
-            filenames (list): the list of filenames in the current directory, as returned by os.walk().
-
-        Returns:
-            tuple: (list, list) with the modified dirnames and filenames.
-
-        """
-        try:
-            dirnames.remove("__pycache__")
-        except ValueError:
-            pass
-
-        for filename in filenames.copy():  # TODO: add support for cookbooks in __init__.py files
-            if filename == "__init__.py" or not filename.endswith(".py"):
-                filenames.remove(filename)
-
-        return dirnames, filenames
-
     def _collect(self) -> None:
         """Collect available cookbooks starting from a base path."""
-        for dirpath, dirnames, filenames in os.walk(self.base_dir):
-            dirnames, filenames = CookbookCollection._filter_dirnames_and_filenames(dirnames, filenames)
-            if not filenames and not dirnames:
+        for dirpath in self.base_dir.rglob(""):  # Selects only directories
+            if dirpath.name == "__pycache__":
                 continue
 
-            # Sort the directories and files to be recursed in-place, required by os.walk().
-            dirnames.sort()
-            filenames.sort()
-
-            relpath = os.path.relpath(dirpath, start=self.base_dir)
-            if relpath == ".":
+            relpath = dirpath.relative_to(self.base_dir)
+            if relpath.name:
+                prefix = str(relpath).replace("/", ".").rstrip(".")
+                module_prefix = f"{self.cookbooks_module_prefix}.{prefix}"
+            else:
                 prefix = ""
                 module_prefix = self.cookbooks_module_prefix
-            else:
-                prefix = relpath.replace("/", ".").rstrip(".")
-                module_prefix = ".".join([self.cookbooks_module_prefix, prefix])
 
             if self._should_filter(prefix):
                 continue
@@ -166,8 +139,8 @@ class CookbookCollection:
                 logger.error(e)
                 continue
 
-            for filename in filenames:
-                module_name = ".".join((module_prefix, os.path.splitext(filename)[0]))
+            for filepath in dirpath.glob("[!_]*.py"):  # Excludes files starting with an underscore, like __init__.py
+                module_name = f"{module_prefix}.{filepath.stem}"
                 self._collect_filename(module_name, menu)
 
     def _collect_filename(self, module_name: str, menu: TreeItem) -> None:
@@ -376,9 +349,8 @@ def cookbook_path_type(path: str) -> str:
         str: the converted path in module syntax.
 
     """
-    cookbook_path, ext = os.path.splitext(path)
-    if ext == ".py":
-        path = cookbook_path.replace("/", ".")
+    if path.endswith(".py"):
+        path = path[:-3].replace("/", ".")
 
     return path
 
@@ -427,7 +399,7 @@ def execute_cookbook(config: Dict[str, str], args: argparse.Namespace, cookbooks
         logger.error("Unable to find cookbook %s", args.cookbook)
         return cookbook.NOT_FOUND_RETCODE
 
-    base_path = os.path.join(config["logs_base_dir"], cookbook_item.path.replace(".", os.sep))
+    base_path = Path(config["logs_base_dir"]) / cookbook_item.path.replace(".", os.sep)
     _log.setup_logging(
         base_path,
         cookbook_item.name,
@@ -453,8 +425,8 @@ def main(argv: Optional[List[str]] = None) -> Optional[int]:
     """
     args = argument_parser().parse_args(argv)
     config = load_yaml_config(args.config_file)
-    cookbooks_base_dir = os.path.expanduser(config["cookbooks_base_dir"])
-    sys.path.append(cookbooks_base_dir)
+    cookbooks_base_dir = Path(config["cookbooks_base_dir"]).expanduser()
+    sys.path.append(str(cookbooks_base_dir))
     params = config.get("instance_params", {})
     params.update({"verbose": args.verbose, "dry_run": args.dry_run})
 
