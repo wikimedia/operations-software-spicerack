@@ -45,12 +45,15 @@ class Ipmi:
         self._mgmt_fqdn = mgmt_fqdn
         self._dry_run = dry_run
 
-    def command(self, command_parts: List[str], is_safe: bool = False) -> str:
+    def command(self, command_parts: List[str], is_safe: bool = False, hide_parts: Tuple = ()) -> str:
         """Run an ipmitool command for a remote management console FQDN.
 
         Arguments:
             command_parts (list): a list of :py:class:`str` with the IPMI command components to execute.
             is_safe (bool, optional): if this is a safe command to run also in DRY RUN mode.
+            hide_parts (tuple, optional): tuple with indexes of the command_parts list that should be redacted in logs
+                and outputs because contain sensitive data. For example setting it to (2, 4) would replace in logs and
+                outputs the 3rd and 5th element of the command_parts list.
 
         Returns:
             str: the output of the ipmitool command.
@@ -68,14 +71,18 @@ class Ipmi:
             "-U",
             "root",
             "-E",
-        ] + command_parts
-        logger.info("Running IPMI command: %s", " ".join(command))
+        ]
+        redacted_parts = command_parts[:]
+        for i in hide_parts:
+            redacted_parts[i] = "__REDACTED__"
+
+        logger.info("Running IPMI command: %s", " ".join(command + redacted_parts))
 
         if self._dry_run and not is_safe:
             return ""
 
         try:
-            output = run(command, env=self.env.copy(), stdout=PIPE, check=True).stdout.decode()
+            output = run(command + command_parts, env=self.env.copy(), stdout=PIPE, check=True).stdout.decode()
         except CalledProcessError as e:
             raise IpmiError(f"Remote IPMI for {self._mgmt_fqdn} failed (exit={e.returncode}): {e.output}") from e
 
@@ -224,7 +231,7 @@ class Ipmi:
             user_id = self._get_user_id(username, 2)
 
         success = f"Set User Password command successful (user {user_id})\n"
-        result = self.command(["user", "set", "password", user_id, password, password_store_size])
+        result = self.command(["user", "set", "password", user_id, password, password_store_size], hide_parts=(4,))
 
         if self._dry_run:
             return
