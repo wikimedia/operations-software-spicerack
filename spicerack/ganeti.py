@@ -23,6 +23,8 @@ CLUSTERS_AND_ROWS: Dict[str, Tuple[str, ...]] = {
     "ganeti01.svc.ulsfo.wmnet": ("1",),
     "ganeti01.svc.eqsin.wmnet": ("1",),
     "ganeti-test01.svc.codfw.wmnet": ("A",),
+    "ganeti01.svc.drmrs.wmnet": ("B12",),
+    "ganeti02.svc.drmrs.wmnet": ("B13",),
 }
 """:py:class:`dict`: the available Ganeti clusters with the set of available rows in each of them."""
 
