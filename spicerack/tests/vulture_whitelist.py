@@ -44,6 +44,21 @@ whitelist_mysql = Whitelist()
 whitelist_mysql.set_core_masters_readonly
 whitelist_mysql.set_core_masters_readwrite
 
+whitelist_redfish = Whitelist()
+whitelist_redfish.ChassisResetPolicy.FORCE_RESTART
+whitelist_redfish.ChassisResetPolicy.GRACEFUL_RESTART
+whitelist_redfish.ChassisResetPolicy.GRACEFUL_SHUTDOWN
+whitelist_redfish.ChassisResetPolicy.ON
+whitelist_redfish.DellSCPRebootPolicy.FORCED
+whitelist_redfish.DellSCPRebootPolicy.GRACEFUL
+whitelist_redfish.DellSCPPowerStatePolicy.OFF
+whitelist_redfish.DellSCPTargetPolicy.BIOS
+whitelist_redfish.DellSCPTargetPolicy.IDRAC
+whitelist_redfish.DellSCPTargetPolicy.NIC
+whitelist_redfish.DellSCPTargetPolicy.RAID
+whitelist_redfish.DellSCP.model
+whitelist_redfish.DellSCP.comments
+
 whitelist_remote = Whitelist()
 whitelist_remote.execute.worker.commands
 whitelist_remote.execute.worker.commands

@@ -24,6 +24,7 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NetboxServer
+from spicerack.redfish import RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
@@ -124,22 +125,23 @@ def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostn
     assert mocked_remote_query.called
 
 
-def test_spicerack_ipmi(monkeypatch):
-    """Should instantiate an instance of Ipmi."""
+def test_spicerack_management_password_instances(monkeypatch):
+    """Should instantiate the instances that require the management password."""
     monkeypatch.setenv("MGMT_PASSWORD", "env_password")
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    assert spicerack.management_password == "env_password"
     assert isinstance(spicerack.ipmi("test-mgmt.example.com"), Ipmi)
+    assert isinstance(spicerack.redfish("test-mgmt.example.com", "root"), RedfishDell)
+    assert isinstance(spicerack.redfish("test-mgmt.example.com", "root", "other_password"), RedfishDell)
 
 
-def test_spicerack_ipmi_cached(monkeypatch):
-    """Should instantiate an instance of Ipmi only the first time and re-use the cached instance after."""
+def test_spicerack_management_password_cached(monkeypatch):
+    """Should ask for the management_password only once and cache its result."""
     monkeypatch.setenv("MGMT_PASSWORD", "first_password")
-    expected_cached = {"IPMITOOL_PASSWORD": "first_password"}
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-    assert spicerack.ipmi("test-mgmt.example.com").env == expected_cached
+    assert spicerack.management_password == "first_password"
     monkeypatch.setenv("MGMT_PASSWORD", "second_password")
-
-    assert spicerack.ipmi("test-mgmt.example.com").env == expected_cached
+    assert spicerack.management_password == "first_password"
 
 
 @pytest.mark.parametrize(

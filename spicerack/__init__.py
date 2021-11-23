@@ -31,6 +31,7 @@ from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import NETBOX_DOMAIN, Netbox, NetboxServer
 from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
+from spicerack.redfish import Redfish, RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.toolforge.etcdctl import EtcdctlController
@@ -96,7 +97,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._current_hostname = gethostname()
         self._irc_logger = irc_logger
         self._confctl: Optional[Confctl] = None
-        self._mgmt_password: str = ""
+        self._management_password: str = ""
         self._actions = ActionsDict()
 
     @property
@@ -205,6 +206,19 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         """
         return self.remote().query(self.dns().resolve_cname(NETBOX_DOMAIN))
+
+    @property
+    def management_password(self) -> str:
+        """Getter for the ``management_password`` property.
+
+        Returns:
+            str: the management password. It will be asked to the user if not already cached by the current instance.
+
+        """
+        if not self._management_password:
+            self._management_password = get_management_password()
+
+        return self._management_password
 
     def remote(self, installer: bool = False) -> Remote:
         """Get a Remote instance.
@@ -407,10 +421,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
 
         """
-        if not self._mgmt_password:
-            self._mgmt_password = get_management_password()
-
-        return Ipmi(mgmt_fqdn, self._mgmt_password, dry_run=self._dry_run)
+        return Ipmi(mgmt_fqdn, self.management_password, dry_run=self._dry_run)
 
     def phabricator(self, bot_config_file: str, section: str = "phabricator_bot") -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.
@@ -564,3 +575,25 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         configuration = load_yaml_config(self._spicerack_config_dir / "kafka" / "config.yaml")
 
         return Kafka(kafka_config=configuration, dry_run=self._dry_run)
+
+    def redfish(self, mgmt_fqdn: str, username: str, password: str = "") -> Redfish:  # nosec
+        """Get an instance to talk to the Redfish API of a physical server.
+
+        Notes:
+            At the moment only Dell hardware is supported.
+
+        Arguments:
+            mgmt_fqdn (str): the management console FQDN to target.
+            username (str): the username for the management console (usually 'root').
+            password (str, optional): the password for the management console for the given user. If empty or not
+                provided would use the production management password and ask the user for it if not already in memory.
+
+        Returns:
+            spicerack.redfish.Redfish: the instance.
+
+        """
+        if not password:
+            password = self.management_password
+
+        # TODO: generalize when support for additional vendors will be added.
+        return RedfishDell(mgmt_fqdn, username, password, dry_run=self._dry_run)
