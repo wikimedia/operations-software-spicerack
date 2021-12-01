@@ -155,7 +155,7 @@ class DHCPConfMgmt(DHCPConfiguration):
 
     _template = """
     class "{s.fqdn}" {{
-        match if (option host-name = "iDRAC-{s.serial}")
+        match if (option host-name = "iDRAC-{s.serial}");
     }}
     pool {{
         allow members of "{s.fqdn}";
