@@ -34,6 +34,7 @@ Spicerack Python API autodoc.
    spicerack.redfish
    spicerack.redis_cluster
    spicerack.remote
+   spicerack.reposync
    spicerack.toolforge
    spicerack.toolforge.etcdctl
    spicerack.typing

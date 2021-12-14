@@ -12,6 +12,8 @@ INSTALL_REQUIRES = [
     "dnspython>=1.16.0,<2.2.0",  # Temporary upper limit to prevent mypy failures
     "elasticsearch>=5.0.0,<7.15.0",
     "elasticsearch-curator>=5.0.0",
+    # TODO: gitpython 3.1.15 causes issues with mypy
+    "gitpython<=3.1.14",
     "kafka-python>=1.4.3",
     "pymysql>=0.9.3",
     "pynetbox>=5.0.7",

@@ -4,6 +4,7 @@ from pathlib import Path
 from socket import gethostname
 from typing import TYPE_CHECKING, Callable, Dict, Optional, Sequence
 
+from git import Repo
 from pkg_resources import DistributionNotFound, get_distribution
 from wmflib import requests
 from wmflib.actions import ActionsDict
@@ -34,6 +35,7 @@ from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redfish import Redfish, RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
+from spicerack.reposync import RepoSync
 from spicerack.toolforge.etcdctl import EtcdctlController
 from spicerack.typing import TypeHosts
 
@@ -378,6 +380,32 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             self._spicerack_config_dir / "redis_cluster",
             dry_run=self._dry_run,
         )
+
+    def reposync(self, name: str) -> RepoSync:
+        """Get a Reposync instance.
+
+        Arguments:
+            name (str): the name of the repo to sync.
+
+        Returns:
+            spicerack.reposync.RepoSync: the reposync instance.
+
+        """
+        config = load_yaml_config(self.config_dir / "reposync" / "config.yaml")
+        if name not in config["repos"]:
+            raise SpicerackError(f"Unknown repo {name}")
+
+        repo_dir = Path(config["base_dir"], name)
+        query = ",".join(config["remotes"])
+        remote_hosts = self.remote().query(query)
+
+        if not repo_dir.is_dir():
+            raise SpicerackError(f"The repo directory ({repo_dir}) does not exist")
+        repo = Repo(repo_dir)
+        if not repo.bare:
+            raise SpicerackError(f"The repo directory ({repo_dir}) is not a bare git repository")
+
+        return RepoSync(repo, self.username, remote_hosts, dry_run=self._dry_run)
 
     def elasticsearch_clusters(
         self, clustergroup: str, write_queue_datacenters: Sequence[str]
