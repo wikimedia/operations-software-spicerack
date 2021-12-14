@@ -543,7 +543,7 @@ class TreeItem(BaseItem):
             raise StopIteration
 
         name, *args = shlex.split(answer)
-        if name not in self.items.keys():
+        if name not in self.items:
             print("==> Invalid input <==")
             return
 

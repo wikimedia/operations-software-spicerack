@@ -331,7 +331,7 @@ class TestRemoteHosts:
     def test_execute_dry_run_unsafe(self, func_name):
         """Calling execute() in dry_run mode should not run the given commands, considered unsafe by default."""
         results = getattr(self.remote_hosts_dry_run, func_name)("command1")
-        assert list(results) == []
+        assert list(results) == []  # pylint: disable=use-implicit-booleaness-not-comparison
 
     @pytest.mark.parametrize("func_name", ("run_sync", "run_async"))
     def test_execute_batch_size(self, func_name):

@@ -111,6 +111,7 @@ class TestConfctl:
     def test_filter_objects_empty(self, generated_entities):
         """It should return an empty generator if no object matches the request."""
         self.discovery._select = mock.MagicMock(return_value=generated_entities)  # pylint: disable=protected-access
+        # pylint: disable=use-implicit-booleaness-not-comparison
         assert list(self.discovery.filter_objects({"pooled": False}, dnsdisc="test")) == []
 
     def test_filter_objects_bad_tags(self):

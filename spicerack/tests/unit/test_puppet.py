@@ -405,7 +405,7 @@ class TestPuppetHosts:
         result = self.puppet_hosts.get_ca_servers()
 
         self.mocked_remote_hosts.run_sync.assert_called_once()
-        assert result == {}
+        assert result == {}  # pylint: disable=use-implicit-booleaness-not-comparison
 
     def test_get_ca_servers_handles_multiple_results(self):
         """Test test get ca servers handles multiple results."""

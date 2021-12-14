@@ -313,7 +313,7 @@ class ElasticsearchClusters:
             for json_node in cluster.get_nodes().values():
                 node_name = json_node["attributes"]["hostname"]
 
-                if node_name not in nodes_group.keys():
+                if node_name not in nodes_group:
                     nodes_group[node_name] = NodesGroup(json_node, cluster)
                 else:
                     nodes_group[node_name].accumulate(json_node, cluster)
