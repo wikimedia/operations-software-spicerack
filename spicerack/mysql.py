@@ -1,7 +1,7 @@
 """MySQL module (native)."""
 
 from contextlib import contextmanager
-from os.path import expanduser
+from pathlib import Path
 from typing import Any, Dict, Generator, Optional
 
 from pymysql.connections import Connection
@@ -73,7 +73,7 @@ class Mysql:
         read_only = read_only or self._dry_run
 
         if read_default_file == "":
-            read_default_file = expanduser("~/.my.cnf")
+            read_default_file = str(Path("~/.my.cnf").expanduser())
         if read_default_file and not read_default_group:
             read_default_group = "client"
             if kwargs.get("host", "").startswith("labsdb"):

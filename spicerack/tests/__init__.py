@@ -1,7 +1,7 @@
 """Tests package for Spicerack."""
-import os
+from pathlib import Path
 
-TESTS_BASE_PATH = os.path.realpath(os.path.dirname(__file__))
+TESTS_BASE_PATH = Path(__file__).parent.resolve()
 
 
 def get_fixture_path(*paths):
@@ -14,7 +14,7 @@ def get_fixture_path(*paths):
         str: the absolute path of the selected fixture.
 
     """
-    return os.path.join(TESTS_BASE_PATH, "fixtures", *paths)
+    return Path(TESTS_BASE_PATH, "fixtures", *paths)
 
 
 SPICERACK_TEST_PARAMS = {

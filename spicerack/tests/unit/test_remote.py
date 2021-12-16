@@ -331,7 +331,7 @@ class TestRemoteHosts:
     def test_execute_dry_run_unsafe(self, func_name):
         """Calling execute() in dry_run mode should not run the given commands, considered unsafe by default."""
         results = getattr(self.remote_hosts_dry_run, func_name)("command1")
-        assert list(results) == []
+        assert list(results) == []  # pylint: disable=use-implicit-booleaness-not-comparison
 
     @pytest.mark.parametrize("func_name", ("run_sync", "run_async"))
     def test_execute_batch_size(self, func_name):
@@ -366,12 +366,19 @@ class TestRemoteHosts:
         self.remote_hosts.wait_reboot_since(since)
         mocked_uptime.assert_called_once_with(print_progress_bars=True)
 
+    @pytest.mark.parametrize(
+        "side_effect",
+        (
+            remote.RemoteExecutionError(message="unable to connect", retcode=1),
+            remote.RemoteError("Unable to extract data"),
+        ),
+    )
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
-    def test_wait_reboot_since_uptime_fails(self, mocked_uptime, mocked_sleep):
+    def test_wait_reboot_since_uptime_fails(self, mocked_uptime, mocked_sleep, side_effect):
         """It should raise RemoteCheckError if unable to check the uptime on any host."""
         since = datetime.utcnow()
-        mocked_uptime.side_effect = remote.RemoteExecutionError(message="unable to connect", retcode=1)
+        mocked_uptime.side_effect = side_effect
         with pytest.raises(
             remote.RemoteCheckError,
             match=r"Unable to get uptime for host\[1-9\]",
@@ -397,7 +404,7 @@ class TestRemoteHosts:
         mocked_uptime.assert_called_with(print_progress_bars=True)
         assert mocked_sleep.called
 
-    def test_uptime(self):
+    def test_uptime_ok(self):
         """It should gather the current uptime from the target hosts."""
         nodes_a = "host1"
         nodes_b = "host[2-9]"
@@ -408,6 +415,12 @@ class TestRemoteHosts:
         )
         uptimes = self.remote_hosts.uptime()
         assert sorted(uptimes) == sorted([(NodeSet(nodes_a), 1514768400.0), (NodeSet(nodes_b), 1514768401.0)])
+
+    def test_uptime_invalid(self):
+        """It should raise RemoteError if unable to parse the output as uptime."""
+        mock_cumin(self.mocked_transports, 0, retvals=[[("host1", b"invalid")]])
+        with pytest.raises(remote.RemoteError, match="Unable to extract data with <lambda> for host1"):
+            self.remote_hosts.uptime()
 
     def test_results_to_list_callback(self):
         """It should return the output string coverted by the callback."""

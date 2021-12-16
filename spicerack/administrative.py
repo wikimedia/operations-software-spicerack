@@ -49,6 +49,15 @@ class Reason:
     def __str__(self) -> str:
         """String representation of the instance, including all attributes.
 
+        Example:
+            * Example return value when the task ID is not set::
+
+                Given reason - username@hostname
+
+            * Example return value when the task ID is set::
+
+                Given reason - username@hostname - T12345
+
         Returns:
             str: the generated string representation of all the instance attributes.
 
@@ -73,8 +82,13 @@ class Reason:
     def owner(self) -> str:
         """Getter for the owner property.
 
+        Example:
+            Example return value::
+
+                username@hostname
+
         Returns:
-            str: the origin (user@host) of the currently running code.
+            str: the owner of the currently running code.
 
         """
         return f"{self._username}@{self._hostname}"
@@ -100,7 +114,16 @@ class Reason:
         return self._task_id
 
     def quoted(self) -> str:
-        """Quoted string representation of the instance, including all attributes.
+        """Double quoted string representation of the instance, including all attributes.
+
+        Example:
+            * Example return value when the task ID is not set::
+
+                "Given reason - username@hostname"
+
+            * Example return value when the task ID is set::
+
+                "Given reason - username@hostname - T12345"
 
         Returns:
             str: the generated string representation of all the instance attributes, double quoted.

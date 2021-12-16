@@ -138,7 +138,7 @@ configuration_generator_data = (
         },
         (
             '\nclass "test1001.mgmt.eqiad.wmnet" {\n'
-            '    match if (option host-name = "iDRAC-TEST")\n'
+            '    match if (option host-name = "iDRAC-TEST");\n'
             "}\npool {\n"
             '    allow members of "test1001.mgmt.eqiad.wmnet";\n'
             "    range 10.0.0.1 10.0.0.1;\n"

@@ -32,6 +32,7 @@ Spicerack Python API autodoc.
    spicerack.mysql_legacy
    spicerack.netbox
    spicerack.puppet
+   spicerack.redfish
    spicerack.redis_cluster
    spicerack.remote
    spicerack.toolforge

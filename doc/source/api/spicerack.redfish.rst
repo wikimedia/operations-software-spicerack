@@ -1,0 +1,4 @@
+redfish
+=======
+
+.. automodule:: spicerack.redfish

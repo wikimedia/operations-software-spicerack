@@ -573,7 +573,7 @@ class RemoteHosts:
         delta = (datetime.utcnow() - since).total_seconds()
         try:
             uptimes = self.uptime(print_progress_bars=print_progress_bars)
-        except RemoteExecutionError as e:
+        except (RemoteExecutionError, RemoteError) as e:
             raise RemoteCheckError(f"Unable to get uptime for {self._hosts}") from e
 
         for nodeset, uptime in uptimes:
@@ -593,6 +593,9 @@ class RemoteHosts:
         Returns:
             list: a list of 2-element :py:class:`tuple` instances with hosts :py:class:`ClusterShell.NodeSet.NodeSet`
             as first item and :py:class:`float` uptime as second item.
+
+        Raises:
+            spicerack.remote.RemoteError: if unable to parse the output as an uptime.
 
         """
         results = self.run_sync(

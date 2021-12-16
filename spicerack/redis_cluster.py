@@ -1,7 +1,7 @@
 """Redis cluster module."""
 import logging
-import os
 from collections import defaultdict
+from pathlib import Path
 from typing import Any, DefaultDict, Dict, Tuple, Union
 
 from redis import StrictRedis
@@ -19,7 +19,7 @@ class RedisClusterError(SpicerackError):
 class RedisCluster:
     """Class to manage a Redis Cluster."""
 
-    def __init__(self, cluster: str, config_dir: str, *, dry_run: bool = True) -> None:
+    def __init__(self, cluster: str, config_dir: Path, *, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -30,7 +30,7 @@ class RedisCluster:
         """
         self._dry_run = dry_run
         self._shards: DefaultDict[str, Dict] = defaultdict(dict)
-        config = load_yaml_config(os.path.join(config_dir, cluster + ".yaml"))
+        config = load_yaml_config(config_dir / f"{cluster}.yaml")
 
         for datacenter, shards in config["shards"].items():
             for shard, data in shards.items():

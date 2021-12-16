@@ -1,8 +1,7 @@
 """Log module."""
 import logging
-import os
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from wmflib.irc import SALSocketHandler
 
@@ -31,7 +30,7 @@ class FilterOutCumin(logging.Filter):
 
 
 def setup_logging(
-    base_path: Union[str, Path],
+    base_path: Path,
     name: str,
     user: str,
     dry_run: bool = True,
@@ -50,7 +49,7 @@ def setup_logging(
 
     """
     logging.raiseExceptions = False
-    os.makedirs(base_path, mode=0o755, exist_ok=True)
+    base_path.mkdir(mode=0o755, parents=True, exist_ok=True)
 
     if dry_run:
         dry_run_prefix = "DRY-RUN "
@@ -59,7 +58,7 @@ def setup_logging(
 
     # Default INFO logging
     formatter = logging.Formatter(fmt=f"%(asctime)s {dry_run_prefix}{user} %(process)d [%(levelname)s] %(message)s")
-    handler = logging.FileHandler(os.path.join(base_path, f"{name}.log"))
+    handler = logging.FileHandler(base_path / f"{name}.log")
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
 
@@ -70,7 +69,7 @@ def setup_logging(
             "%(message)s"
         )
     )
-    handler_extended = logging.FileHandler(os.path.join(base_path, f"{name}-extended.log"))
+    handler_extended = logging.FileHandler(base_path / f"{name}-extended.log")
     handler_extended.setFormatter(formatter_extended)
     handler_extended.setLevel(logging.DEBUG)
 
