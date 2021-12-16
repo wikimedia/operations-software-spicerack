@@ -1,6 +1,49 @@
 Spicerack Changelog
 -------------------
 
+`v1.1.0`_ (2021-12-16)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* spicerack.redfish: add new module with support for Redfish API:
+
+  * Add a new redfish module that allows to interact with the Redfish API. As Redfish implementation differs
+    sensibly between vendors, there are some basic functionalities in the ``Redfish`` class and then there is a
+    ``RedfishDell`` class for Dell-specific functionalities.
+  * At the moment the only supported vendor is Dell (hence the hardcoded ``RedfishDell`` call in
+    ``Spicerack.redfish()``.
+
+* spicerack: add a ``management_password`` property getter to access the cached management password. If the cache is
+  empty the password will be asked to the user.
+
+Minor improvements
+""""""""""""""""""
+
+* ganeti: add new Ganeti clusters in the new site ``drmrs``.
+
+Bug fixes
+"""""""""
+
+* ipmi: when running an IPMI command that contains sensitive data, allow to hide the sensitive data from the logs and
+  the outputs.
+* ganeti: fix up row configuration for ganeti test cluster.
+* dhcp: fix missing semicolon in DHCP config.
+* remote: intercept bad uptimes in ``wait_reboot_since()``.
+
+  * In some cases the uptime method could fail to parse the host uptime, for example during a shutdown of a system
+    where the login might be prevented to the host.
+  * Make sure that the ``wait_reboot_since()`` method catches those errors too and retries.
+
+Miscellanea
+"""""""""""
+
+* Adopt ``pathlib.Path`` instead of the ``os`` and ``os.path`` functions across the project to modernize it following
+  current best practices.
+* administrative: add examples to the documentation and documentation for the special method ``__str__``.
+* pylint: fix newly reported issues.
+
 `v1.0.6`_ (2021-10-21)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1646,3 +1689,4 @@ New features
 .. _`v1.0.4`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.4
 .. _`v1.0.5`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.5
 .. _`v1.0.6`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.6
+.. _`v1.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.1.0
