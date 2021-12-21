@@ -375,7 +375,7 @@ class DellSCP:
         # Sort the components recursively
         return {component: dict(sorted(components[component].items())) for component in sorted(components)}
 
-    def set(self, component_name: str, attribute_name: str, attribute_value: str) -> None:
+    def set(self, component_name: str, attribute_name: str, attribute_value: str) -> bool:
         """Update the current configuration setting to the new value for the given key in the given component.
 
         Notes:
@@ -386,6 +386,9 @@ class DellSCP:
             component_name (str): the name of the component the settings belongs to.
             attribute_name (str): the attribute name whose value needs to be updated.
             attribute_value (str): the new value for the attribute to set.
+
+        Returns:
+            bool: :py:data:`True` if the value was changed, :py:data:`False` if it had already the correct value.
 
         Raises:
             spicerack.redfish.RedfishError: if unable to find the given component or attribute.
@@ -408,19 +411,20 @@ class DellSCP:
                         attribute_name,
                         attribute["Value"],
                     )
-                else:
-                    logger.info(
-                        "Updated value for attribute %s -> %s%s: %s => %s",
-                        component_name,
-                        attribute_name,
-                        " (marked Set On Import to True)" if attribute["Set On Import"] == "False" else "",
-                        attribute["Value"],
-                        attribute_value,
-                    )
-                    attribute["Value"] = attribute_value
-                    attribute["Set On Import"] = "True"
+                    return False
 
-                return
+                logger.info(
+                    "Updated value for attribute %s -> %s%s: %s => %s",
+                    component_name,
+                    attribute_name,
+                    " (marked Set On Import to True)" if attribute["Set On Import"] == "False" else "",
+                    attribute["Value"],
+                    attribute_value,
+                )
+                attribute["Value"] = attribute_value
+                attribute["Set On Import"] = "True"
+
+                return True
 
             # Attribute not found
             raise RedfishError(f"Unable to find attribute {component_name} -> {attribute_name}")
@@ -428,7 +432,7 @@ class DellSCP:
         # Component not found
         raise RedfishError(f"Unable to find component {component_name}")
 
-    def update(self, changes: Dict[str, Dict[str, str]]) -> None:
+    def update(self, changes: Dict[str, Dict[str, str]]) -> bool:
         """Bulk update the current configuration with the set of changes provided.
 
         Notes:
@@ -439,13 +443,19 @@ class DellSCP:
             changes (dict): a dictionary of changes to apply in the same format of the one returned by
                 :py:meth:`spicerack.redfish.DellSCP.components`.
 
+        Returns:
+            bool: :py:data:`True` if any of the values produced a change, :py:data:`False` if no change was made.
+
         Raises:
             spicerack.redfish.RedfishError: if unable to apply all the changes.
 
         """
+        was_changed = False
         for component, attributes in changes.items():
             for name, value in attributes.items():
-                self.set(component, name, value)
+                was_changed |= self.set(component, name, value)
+
+        return was_changed
 
 
 class RedfishDell(Redfish):

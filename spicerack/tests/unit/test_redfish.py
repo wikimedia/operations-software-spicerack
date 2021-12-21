@@ -307,27 +307,41 @@ class TestDellSCP:
     def test_set_same_value(self, caplog):
         """It should not set the same value and log a different message if the value is already correct."""
         with caplog.at_level(logging.INFO):
-            self.config.set("Some.Component.1", "Some.Attribute.1", "value")
+            was_changed = self.config.set("Some.Component.1", "Some.Attribute.1", "value")
 
+        assert not was_changed
         assert "Skipped set of attribute Some.Component.1 -> Some.Attribute.1, has already" in caplog.text
         assert self.config.config["SystemConfiguration"]["Components"][1]["Attributes"][0]["Set On Import"] == "False"
 
     def test_set_new_value(self):
         """It should set the value and mark it for import."""
-        self.config.set("Some.Component.1", "Some.Attribute.1", "new value")
+        was_changed = self.config.set("Some.Component.1", "Some.Attribute.1", "new value")
         attribute = self.config.config["SystemConfiguration"]["Components"][1]["Attributes"][0]
+        assert was_changed
         assert attribute["Value"] == "new value"
         assert attribute["Set On Import"] == "True"
 
     def test_update(self):
         """It should update the config with the given changes."""
         changes = {
-            "Some.Component.1": {"Some.Attribute.1": "new value"},
+            "Some.Component.1": {"Some.Attribute.1": "value"},
             "Some.Component.2": {"Some.Attribute.2": "new value"},
         }
-        self.config.update(changes)
-        assert self.config.components["Some.Component.1"]["Some.Attribute.1"] == "new value"
+        was_changed = self.config.update(changes)
+        assert was_changed
+        assert self.config.components["Some.Component.1"]["Some.Attribute.1"] == "value"
         assert self.config.components["Some.Component.2"]["Some.Attribute.2"] == "new value"
+
+    def test_update_no_changes(self):
+        """It should return False if no changes were made."""
+        changes = {
+            "Some.Component.1": {"Some.Attribute.1": "value"},
+            "Some.Component.2": {"Some.Attribute.2": "value"},
+        }
+        was_changed = self.config.update(changes)
+        assert not was_changed
+        assert self.config.components["Some.Component.1"]["Some.Attribute.1"] == "value"
+        assert self.config.components["Some.Component.2"]["Some.Attribute.2"] == "value"
 
 
 class TestRedfishDell:
