@@ -1,6 +1,22 @@
 Spicerack Changelog
 -------------------
 
+`v1.1.1`_ (2021-12-22)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: tell if any change was made in ``DellSCP`` instances:
+
+  * When updating a ``DellSCP`` configuration with the ``set()`` or ``update()`` method, return ``True`` if the config
+    was actually changed, ``False`` if it had already the correct value(s).
+
+Bug fixes
+"""""""""
+
+* dhcp: fix file removal check in dry-run mode.
+
 `v1.1.0`_ (2021-12-16)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1690,3 +1706,4 @@ New features
 .. _`v1.0.5`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.5
 .. _`v1.0.6`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.6
 .. _`v1.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.1.0
+.. _`v1.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.1.1
