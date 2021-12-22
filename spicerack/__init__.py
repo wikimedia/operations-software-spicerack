@@ -253,7 +253,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         return self._confctl.entity(entity_name)
 
-    def dhcp(self, remote_hosts: RemoteHosts) -> DHCP:  # pylint: disable=no-self-use
+    def dhcp(self, remote_hosts: RemoteHosts) -> DHCP:
         """Return a DHCP configuration manager for specified site.
 
         Arguments:
@@ -263,7 +263,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.dhcp.DHCP : A DHCP configuration instance
 
         """
-        return DHCP(remote_hosts)
+        return DHCP(remote_hosts, dry_run=self._dry_run)
 
     def dns(self) -> Dns:  # pylint: disable=no-self-use
         """Get a Dns instance.

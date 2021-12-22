@@ -225,7 +225,7 @@ class TestDHCP:
         """Do any one time setup for the tests."""
         remotehosts_mock = get_mock_hosts()
         # pylint: disable=attribute-defined-outside-init
-        self.dhcp = dhcp.DHCP(remotehosts_mock)
+        self.dhcp = dhcp.DHCP(remotehosts_mock, dry_run=False)
 
     def _setup_dhcp_mocks(self, hosts=None):
         """Setup the DHCP's hosts remote as new mocks."""

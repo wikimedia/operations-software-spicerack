@@ -179,13 +179,15 @@ class DHCPConfMgmt(DHCPConfiguration):
 class DHCP:
     """A class which provides tools for manipulating DHCP configuration snippets by data center."""
 
-    def __init__(self, hosts: RemoteHosts):
+    def __init__(self, hosts: RemoteHosts, *, dry_run: bool = True):
         """Create a DHCP instance.
 
         Arguments:
             hosts (spicerack.remote.RemoteHosts): The target datacenter's install servers.
+            dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
+        self._dry_run = dry_run
         if len(hosts) < 1:
             raise DHCPError("No target hosts provided.")
         self._hosts = hosts
@@ -252,7 +254,7 @@ class DHCP:
             seen_match = False
             for _, result in RemoteHosts.results_to_list(results):
                 remotesha256 = result.strip().split()[0]
-                if remotesha256 != confsha256:
+                if remotesha256 != confsha256 and not self._dry_run:
                     raise DHCPError(f"Remote {configuration.filename} has a mismatched SHA256, refusing to remove.")
                 seen_match = True
             if not seen_match:
