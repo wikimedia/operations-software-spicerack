@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 
 import urllib3
 from requests import Response
+from requests.exceptions import RequestException
 from wmflib.requests import http_session
 
 from spicerack.decorators import retry
@@ -113,7 +114,7 @@ class Redfish:
 
         Raises:
             RedfishError: if the response status code is between 400 and 600 or if the given uri does not start with
-            a slash (/).
+            a slash (/) or if the request couldn't be performed.
 
         """
         if uri[0] != "/":
@@ -121,13 +122,19 @@ class Redfish:
 
         url = f"https://{self._fqdn}{uri}"
 
-        if self._dry_run and (data is not None or method not in ("HEAD", "GET")):  # RW call
+        if self._dry_run and (data is not None or method.lower() not in ("head", "get")):  # RW call
             logger.info("Would have called %s on %s", method, url)
-            response = Response()
-            response.status_code = 200
-            return response
+            return self._get_dummy_response()
 
-        response = self._http_session.request(method, url, json=data, headers=headers)
+        try:
+            response = self._http_session.request(method, url, json=data, headers=headers)
+        except RequestException as e:
+            message = f"Failed to perform {method.upper()} request to {url}"
+            if self._dry_run:
+                logger.error("%s: %s", message, e)
+                return self._get_dummy_response()
+
+            raise RedfishError(message) from e
 
         if not response.ok:
             raise RedfishError(
@@ -150,6 +157,9 @@ class Redfish:
             spicerack.redfish.RedfishError: if the response status code is not 202 or there is no Location header.
 
         """
+        if self._dry_run:
+            return "/"
+
         response = self.request("post", uri, data=data)
         if response.status_code != 202:
             raise RedfishError(
@@ -197,6 +207,9 @@ class Redfish:
             RedfishTaskNotCompletedError: if the task is not yet completed.
 
         """
+        if self._dry_run:
+            return {}
+
         response = self.request("get", uri)
         if response.status_code not in (200, 202):
             raise RedfishError(f"{uri} returned HTTP {response.status_code}:\n{response.text}")
@@ -260,7 +273,7 @@ class Redfish:
         if response.status_code != 200:
             raise RedfishError(f"Got unexpected HTTP {response.status_code}, expected 200:\n{response.text}")
 
-        if self._username == username:
+        if self._username == username and not self._dry_run:
             self._password = password
             self._http_session.auth = (self._username, self._password)
             logger.info("Updated current instance password to the new password")
@@ -297,10 +310,22 @@ class Redfish:
             "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset",
             data={"ResetType": action.value},
         )
-        if response.status_code != 204:
+        if response.status_code != 204 and not self._dry_run:
             raise RedfishError(
                 f"Got unexpected response HTTP {response.status_code}, expected HTTP 204: {response.text}"
             )
+
+    @staticmethod
+    def _get_dummy_response() -> Response:
+        """Return a dummy requests's Response to be used in dry-run mode.
+
+        Returns:
+            requests.Response: the dummy response.
+
+        """
+        response = Response()
+        response.status_code = 200
+        return response
 
 
 class DellSCP:
