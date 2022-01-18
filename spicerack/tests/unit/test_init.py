@@ -9,21 +9,24 @@ from wmflib.dns import Dns
 from wmflib.phabricator import Phabricator
 from wmflib.prometheus import Prometheus
 
-from spicerack import Kafka, Spicerack, puppet
+from spicerack import Spicerack
 from spicerack.administrative import Reason
 from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
+from spicerack.exceptions import SpicerackError
 from spicerack.ganeti import Ganeti
 from spicerack.icinga import IcingaHosts
 from spicerack.ipmi import Ipmi
+from spicerack.kafka import Kafka
 from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NetboxServer
+from spicerack.puppet import PuppetHosts, PuppetMaster
 from spicerack.redfish import RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
@@ -64,7 +67,7 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
         ElasticsearchClusters,
     )
     assert isinstance(spicerack.admin_reason("Reason message", task_id="T12345"), Reason)
-    assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), puppet.PuppetHosts)
+    assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), PuppetHosts)
     assert isinstance(
         spicerack.phabricator(get_fixture_path("phabricator", "valid.conf")),
         Phabricator,
@@ -120,7 +123,7 @@ def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostn
     mocked_remote_query.return_value = host
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
-    assert isinstance(spicerack.puppet_master(), puppet.PuppetMaster)
+    assert isinstance(spicerack.puppet_master(), PuppetMaster)
     mocked_get_puppet_ca_hostname.assert_called_once_with()
     assert mocked_remote_query.called
 
@@ -181,3 +184,10 @@ def test_spicerack_dhcp():
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
     assert isinstance(spicerack.dhcp(mock_hosts), DHCP)
+
+
+def test_run_cookbook_no_callback():
+    """It should raise a SpicerackError if there is no get_cookbook_callback defined."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    with pytest.raises(SpicerackError, match="Unable to run other cookbooks, get_cookbook_callback is not set."):
+        spicerack.run_cookbook("class_api.example", [])

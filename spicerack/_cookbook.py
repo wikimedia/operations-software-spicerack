@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Type, cast
+from typing import List, Optional, Sequence, Type, cast
 
 from wmflib.config import load_yaml_config
 
@@ -28,7 +28,7 @@ class CookbookCollection:
     def __init__(
         self,
         base_dir: Path,
-        args: List[str],
+        args: Sequence[str],
         spicerack: Spicerack,
         path_filter: str = "",
     ) -> None:
@@ -63,8 +63,13 @@ class CookbookCollection:
             spicerack._menu.CookbookItem: when the item found is a single cookbook.
 
         """
+        if path:
+            effective_path = ".".join((self.cookbooks_module_prefix, path))
+        else:
+            effective_path = self.cookbooks_module_prefix
+
         item: Optional[BaseItem] = None
-        parts = path.split(".")
+        parts = effective_path.split(".")
         multiple_class_name = ".".join(parts[-2:])
         for i, subpath in enumerate(parts):
             if i == 0:  # Initial menu
@@ -377,43 +382,7 @@ def import_module(module_name: str) -> _module_api.CookbooksModuleInterface:
     return cast(_module_api.CookbooksModuleInterface, module)
 
 
-def execute_cookbook(config: Dict[str, str], args: argparse.Namespace, cookbooks: CookbookCollection) -> Optional[int]:
-    """Execute a single cookbook with its arguments.
-
-    Arguments:
-        config (dict): the configuration dictionary.
-        args (argparse.Namespace): the parsed arguments.
-        cookbooks (spicerack._cookbook.CookbookCollection): the collected cookbooks.
-
-    Returns:
-        int: the return code, 0 on success, non-zero on cookbook failure, 98 on cookbook exception.
-
-    """
-    if args.cookbook:
-        path = ".".join((CookbookCollection.cookbooks_module_prefix, args.cookbook))
-    else:
-        path = CookbookCollection.cookbooks_module_prefix
-
-    cookbook_item = cookbooks.get_item(path)
-    if cookbook_item is None:
-        logger.error("Unable to find cookbook %s", args.cookbook)
-        return cookbook.NOT_FOUND_RETCODE
-
-    base_path = Path(config["logs_base_dir"]) / cookbook_item.path.replace(".", os.sep)
-    _log.setup_logging(
-        base_path,
-        cookbook_item.name,
-        cookbooks.spicerack.username,
-        dry_run=args.dry_run,
-        host=config.get("tcpircbot_host", None),
-        port=int(config.get("tcpircbot_port", 0)),
-    )
-
-    logger.debug("Executing cookbook with args: %s", args)
-    return cookbook_item.run()
-
-
-def main(argv: Optional[List[str]] = None) -> Optional[int]:
+def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:
     """Entry point, run the tool.
 
     Arguments:
@@ -424,11 +393,29 @@ def main(argv: Optional[List[str]] = None) -> Optional[int]:
 
     """
     args = argument_parser().parse_args(argv)
+    if not args.cookbook:
+        args.cookbook = ""
+
     config = load_yaml_config(args.config_file)
     cookbooks_base_dir = Path(config["cookbooks_base_dir"]).expanduser()
     sys.path.append(str(cookbooks_base_dir))
+
+    def get_cookbook(spicerack: Spicerack, cookbook_path: str, cookbook_args: Sequence[str] = ()) -> Optional[BaseItem]:
+        """Run a single cookbook.
+
+        Arguments:
+            argv (sequence, optional): a sequence of strings of command line arguments to parse.
+
+        Returns:
+            None: on success.
+            int: the return code, zero on success, non-zero on failure.
+
+        """
+        cookbooks = CookbookCollection(cookbooks_base_dir, cookbook_args, spicerack, path_filter=cookbook_path)
+        return cookbooks.get_item(cookbook_path)
+
     params = config.get("instance_params", {})
-    params.update({"verbose": args.verbose, "dry_run": args.dry_run})
+    params.update({"verbose": args.verbose, "dry_run": args.dry_run, "get_cookbook_callback": get_cookbook})
 
     try:
         spicerack = Spicerack(**params)
@@ -441,9 +428,24 @@ def main(argv: Optional[List[str]] = None) -> Optional[int]:
         return 1
 
     cookbooks = CookbookCollection(cookbooks_base_dir, args.cookbook_args, spicerack, path_filter=args.cookbook)
-
     if args.list:
         print(cookbooks.menu.get_tree(), end="")
         return 0
 
-    return execute_cookbook(config, args, cookbooks)
+    cookbook_item = cookbooks.get_item(args.cookbook)
+    if cookbook_item is None:
+        logger.error("Unable to find cookbook %s", args.cookbook)
+        return cookbook.NOT_FOUND_RETCODE
+
+    base_path = Path(config["logs_base_dir"]) / cookbook_item.path.replace(".", os.sep)
+    _log.setup_logging(
+        base_path,
+        cookbook_item.name,
+        spicerack.username,
+        dry_run=args.dry_run,
+        host=config.get("tcpircbot_host", None),
+        port=int(config.get("tcpircbot_port", 0)),
+    )
+
+    logger.debug("Executing cookbook %s with args: %s", args.cookbook, args.cookbook_args)
+    return cookbook_item.run()

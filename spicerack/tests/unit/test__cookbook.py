@@ -11,6 +11,7 @@ from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
 COOKBOOKS_BASE_PATH = Path("spicerack/tests/fixtures/cookbook")
 LIST_COOKBOOKS_ALL = """cookbooks
 |-- class_api
+|   |-- class_api.call_another_cookbook
 |   |-- class_api.example
 |   |-- class_api.get_runner_raise
 |   |-- class_api.multiple.CookbookA
@@ -46,6 +47,7 @@ LIST_COOKBOOKS_ALL = """cookbooks
 """
 LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |-- class_api: Class API Test Cookbooks.
+|   |-- class_api.call_another_cookbook: A cookbook that calls another cookbook.
 |   |-- class_api.example: -
 |   |-- class_api.get_runner_raise: Class API get_runner raise cookbook.
 |   |-- class_api.multiple.CookbookA: Multiple cookbook classes.
@@ -100,7 +102,7 @@ LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
         `-- group3.subgroup3.cookbook4
 """
 COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
-[0/8] class_api: Class API Test Cookbooks.
+[0/9] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -112,7 +114,7 @@ q - Quit
 h - Help
 """
 COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
-[0/8] class_api: Class API Test Cookbooks.
+[0/9] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -185,6 +187,34 @@ def test_main_wrong_instance_config(capsys):
     _, err = capsys.readouterr()
     assert ret == 1
     assert "Unable to instantiate Spicerack, check your configuration" in err
+
+
+def test_main_call_another_cookbook_ok(capsys):
+    """It should execute the cookbook that calls another cookbook."""
+    ret = _cookbook.main(
+        ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.example"]
+    )
+    _, err = capsys.readouterr()
+    assert ret == 0
+    expected = [
+        "START - Cookbook class_api.call_another_cookbook",
+        "START - Cookbook class_api.example",
+        "END (PASS) - Cookbook class_api.example (exit_code=0)",
+        "END (PASS) - Cookbook class_api.call_another_cookbook (exit_code=0)",
+    ]
+    for line in expected:
+        assert line in err
+
+
+def test_main_call_another_cookbook_not_found(capsys):
+    """It should fail to call another cookbook if it doesn't exists."""
+    ret = _cookbook.main(
+        ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.not_existent"]
+    )
+    _, err = capsys.readouterr()
+    assert ret == cookbook.EXCEPTION_RETCODE
+    assert "SpicerackError: Unable to find cookbook class_api.not_existent" in err
+    assert "END (FAIL) - Cookbook class_api.call_another_cookbook (exit_code=99)" in err
 
 
 class TestCookbookCollection:
@@ -384,7 +414,7 @@ class TestCookbookCollection:
         ),
     )  # pylint: disable=too-many-arguments
     def test_main_execute_cookbook(self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args):
-        """Calling execute_cookbook() should intercept any exception raised."""
+        """Calling main with the given cookbook and args should execute it."""
         config = {
             "cookbooks_base_dir": COOKBOOKS_BASE_PATH,
             "logs_base_dir": tmpdir.strpath,
@@ -454,16 +484,16 @@ class TestCookbookCollection:
         """Calling status on a TreeItem should show the completed and total tasks."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack)
-        menu = cookbooks.get_item(cookbooks.cookbooks_module_prefix)
-        assert menu.status == "0/27"
+        menu = cookbooks.get_item("")
+        assert menu.status == "0/28"
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a TreeItem with all tasks completed should return DONE."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack, path_filter="group1")
-        menu = cookbooks.get_item(".".join((cookbooks.cookbooks_module_prefix, "group1")))
+        menu = cookbooks.get_item("group1")
         assert menu.status == "0/1"
-        item = cookbooks.get_item(".".join((cookbooks.cookbooks_module_prefix, "group1", "cookbook1")))
+        item = cookbooks.get_item("group1.cookbook1")
         item.run()
         assert menu.status == "DONE"
 
