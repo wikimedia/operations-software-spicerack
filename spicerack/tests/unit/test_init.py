@@ -21,7 +21,6 @@ from spicerack.ganeti import Ganeti
 from spicerack.icinga import IcingaHosts
 from spicerack.ipmi import Ipmi
 from spicerack.kafka import Kafka
-from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
@@ -74,7 +73,6 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
     )
     assert isinstance(spicerack.prometheus(), Prometheus)
     assert isinstance(spicerack.debmonitor(), Debmonitor)
-    assert isinstance(spicerack.management(), Management)
     assert isinstance(spicerack.ganeti(), Ganeti)
     assert isinstance(spicerack.requests_session("name"), Session)
     assert isinstance(

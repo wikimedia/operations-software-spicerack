@@ -26,7 +26,6 @@ from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.kafka import Kafka
-from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
@@ -508,19 +507,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         options = load_ini_config(self._debmonitor_config).defaults()
         return Debmonitor(options["server"], options["cert"], options["key"], dry_run=self._dry_run)
-
-    def management(self) -> Management:
-        """Get a Management instance to interact with the management interfaces.
-
-        .. deprecated:: v1.0.0
-            use :py:meth:`spicerack.Spicerack.netbox_server` instead, whose returned object has a ``mgmt_fqdn``
-            and ``asset_tag_fqdn`` properties.
-
-        Returns:
-            spicerack.management.Management: the instance.
-
-        """
-        return Management(self.dns())
 
     def ganeti(self) -> Ganeti:
         """Get an instance to interact with Ganeti.

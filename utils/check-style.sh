@@ -8,16 +8,16 @@ fail() {
 }
 
 UNSTAGED_FILES=(
-    $(git diff HEAD --name-only | grep '\.py$' || true)
+    $(git diff HEAD --name-only --diff-filter=d | grep '\.py$' || true)
 )
 STAGED_FILES=(
-    $(git diff HEAD --cached --name-only | grep '\.py$' || true)
+    $(git diff HEAD --cached --name-only --diff-filter=d | grep '\.py$' || true)
 )
 
 if [[ "$(git diff HEAD)" == "" ]] && [[ "$(git diff HEAD --cached)" == "" ]]; then
     echo "No local changes, testing the last commit."
     COMMITTED_FILES=(
-        $(git diff HEAD^ --name-only | grep '\.py$' || true)
+        $(git diff HEAD^ --name-only --diff-filter=d | grep '\.py$' || true)
     )
 else
     COMMITTED_FILES=()

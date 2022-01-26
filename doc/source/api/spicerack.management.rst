@@ -1,4 +1,0 @@
-management
-==========
-
-.. automodule:: spicerack.management

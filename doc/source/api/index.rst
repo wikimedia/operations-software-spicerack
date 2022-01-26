@@ -26,7 +26,6 @@ Spicerack Python API autodoc.
    spicerack.interactive
    spicerack.ipmi
    spicerack.kafka
-   spicerack.management
    spicerack.mediawiki
    spicerack.mysql
    spicerack.mysql_legacy

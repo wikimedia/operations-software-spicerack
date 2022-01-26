@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-if [[ -n "$(git diff --name-only HEAD)" ]]; then
+if [[ -n "$(git diff --name-only --diff-filter=d HEAD)" ]]; then
     echo "Using staged and unstaged files"
     REVISION="HEAD"
 else
@@ -8,7 +8,7 @@ else
     REVISION="HEAD^"
 fi
 
-FILES=( $(git diff --name-only "${REVISION}" | grep '\.py$' || true) )
+FILES=( $(git diff --name-only --diff-filter=d "${REVISION}" | grep '\.py$' || true) )
 
 if [[ "${#FILES[@]}" -eq "0" ]]; then
     echo "No Python files to format"
