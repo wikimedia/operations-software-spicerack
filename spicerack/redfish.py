@@ -219,7 +219,12 @@ class Redfish:
             return results
 
         for message in results["Messages"]:
-            logger.info("[%s] %s", message["MessageId"], message["Message"])
+            if "Oem" in message:
+                continue  # Skip Oem messages, they might have any custom structure
+
+            # Some older Dell implementation use both keys in the same API response :/
+            message_id = message.get("MessageId", message.get("MessageID", "N.A."))
+            logger.info("[%s] %s", message_id, message["Message"])
 
         if "EndTime" not in results or results["EndTime"] == "TIME_NA":
             raise RedfishTaskNotCompletedError(

@@ -94,10 +94,21 @@ DELL_TASK_REPONSE = {
     "Id": "JID_1234567890",
     "Messages": [
         {
+            "Oem": {
+                "Custom": "Structure",
+            },
+        },
+        {
             "Message": "Exporting Server Configuration Profile.",
             "MessageArgs": [],
             "MessageArgs@odata.count": 0,
             "MessageId": "SYS057",
+        },
+        {
+            "Message": "Successfully exported Server Configuration Profile",
+            "MessageArgs": [],
+            "MessageArgs@odata.count": 0,
+            "MessageID": "SYS043",
         },
     ],
     "Messages@odata.count": 1,
