@@ -28,6 +28,7 @@ from spicerack.ganeti import Ganeti
 from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
+from spicerack.k8s import Kubernetes
 from spicerack.kafka import Kafka
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
@@ -334,6 +335,19 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             list(records),
             dry_run=self._dry_run,
         )
+
+    def kubernetes(self, group: str, cluster: str) -> Kubernetes:
+        """Get a kubernetes client for the specified cluster.
+
+        Arguments:
+            group (str): the cluster group
+            cluster (str): the kubernetes cluster
+
+        Returns:
+            spicerack.k8s.Kubernetes: a pre-configured kubernetes client
+
+        """
+        return Kubernetes(group, cluster, dry_run=self._dry_run)
 
     def mediawiki(self) -> MediaWiki:
         """Get a MediaWiki instance.

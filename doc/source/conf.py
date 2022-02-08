@@ -123,6 +123,7 @@ intersphinx_mapping = {
     "wmflib": ("https://doc.wikimedia.org/wmflib/master/", None),
     "kafka": ("https://kafka-python.readthedocs.io/en/master/", None),
     "git": ("https://gitpython.readthedocs.io/en/stable/", None),
+    "kubernetes": ("https://kubernetes.readthedocs.io/en/latest/", None),
 }
 
 # Napoleon settings
