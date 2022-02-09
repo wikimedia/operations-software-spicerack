@@ -562,7 +562,12 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return self.netbox(read_write=read_write).get_server(hostname)
 
     def requests_session(  # pylint: disable=no-self-use
-        self, name: str, *, timeout: float = requests.DEFAULT_TIMEOUT, tries: int = 3, backoff: float = 1.0
+        self,
+        name: str,
+        *,
+        timeout: requests.TypeTimeout = requests.DEFAULT_TIMEOUT,
+        tries: int = 3,
+        backoff: float = 1.0,
     ) -> requests.Session:
         """Return a new requests Session with timeout and retry logic.
 
