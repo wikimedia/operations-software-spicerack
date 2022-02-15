@@ -155,7 +155,7 @@ class DHCPConfMgmt(DHCPConfiguration):
 
     _template = """
     class "{s.fqdn}" {{
-        match if (lcase(option host-name) = "idrac-{s.serial}");
+        match if (lcase(option host-name) = "idrac-{s.lserial}");
     }}
     pool {{
         allow members of "{s.fqdn}";
@@ -172,8 +172,23 @@ class DHCPConfMgmt(DHCPConfiguration):
 
     @property
     def filename(self) -> str:
-        """Return the filename that corresponds to this configuration."""
+        """Return the filename that corresponds to this configuration.
+
+        Returns:
+            str: the filename.
+
+        """
         return f"""mgmt-{self.datacenter}/{self.fqdn}.conf"""
+
+    @property
+    def lserial(self) -> str:
+        """Return the serial as lowercase.
+
+        Returns:
+            str: the serial.
+
+        """
+        return self.serial.lower()
 
 
 class DHCP:
