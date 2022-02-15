@@ -1,8 +1,8 @@
 """Spicerack package."""
-from logging import Logger
+from logging import Logger, getLogger
 from pathlib import Path
 from socket import gethostname
-from typing import Dict, Optional, Sequence
+from typing import TYPE_CHECKING, Callable, Dict, Optional, Sequence
 
 from pkg_resources import DistributionNotFound, get_distribution
 from wmflib import requests
@@ -20,12 +20,12 @@ from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
+from spicerack.exceptions import SpicerackError
 from spicerack.ganeti import Ganeti
 from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.kafka import Kafka
-from spicerack.management import Management
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
@@ -36,6 +36,12 @@ from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.toolforge.etcdctl import EtcdctlController
 from spicerack.typing import TypeHosts
+
+if TYPE_CHECKING:  # Imported only during type checking, prevents cyclic imports at runtime
+    from spicerack._menu import BaseItem  # pragma: no cover
+
+
+logger = getLogger(__name__)
 
 try:
     __version__: str = get_distribution("wikimedia-spicerack").version  # Must be the same used as 'name' in setup.py
@@ -59,6 +65,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         debmonitor_config: str = "/etc/debmonitor.conf",
         spicerack_config_dir: str = "/etc/spicerack",
         http_proxy: str = "",
+        get_cookbook_callback: Optional[Callable[["Spicerack", str, Sequence[str]], Optional["BaseItem"]]] = None,
     ) -> None:
         """Initialize the service locator for the Spicerack library.
 
@@ -80,6 +87,8 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack_config_dir (str, optional): the path for the root configuration directory for Spicerack.
                 Module-specific configuration will be loaded from `config_dir/module_name/`.
             http_proxy (str, optional): the scheme://url:port of the HTTP proxy to use for external calls.
+            get_cookbook_callback (callable, optional): a callable to retrieve a CookbookItem to execute a cookbook
+                from inside another cookbook.
 
         """
         # Attributes
@@ -92,6 +101,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._conftool_schema = conftool_schema
         self._debmonitor_config = debmonitor_config
         self._spicerack_config_dir = Path(spicerack_config_dir)
+        self._get_cookbook_callback = get_cookbook_callback
 
         self._username = get_username()
         self._current_hostname = gethostname()
@@ -219,6 +229,36 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             self._management_password = get_management_password()
 
         return self._management_password
+
+    def run_cookbook(self, cookbook: str, args: Sequence[str] = ()) -> int:
+        """Run another Cookbook within the current run.
+
+        The other Cookbook will be executed with the current setup and will log in the same file of the current
+        Cookbook that is running.
+
+        Arguments:
+            cookbook (str): the path to the cookbook to execute, either in Spicerack's dot notation or the relative
+                path to the Python file to execute.
+            args (sequence, optional): an iterable sequence of strings with the Cookbook's argument. The Cookbook will
+                be executed with the same global arguments used for the current run.
+
+        Returns:
+            int: the exit code of the Cookbook, 0 if successful, non-zero if not.
+
+        Raises:
+            spicerack.exceptions.SpicerackError: if the get_cookbook_callback callback is not set or unable to find the
+                cookbook with the given name.
+
+        """
+        if self._get_cookbook_callback is None:
+            raise SpicerackError("Unable to run other cookbooks, get_cookbook_callback is not set.")
+
+        cookbook_item = self._get_cookbook_callback(self, cookbook, args)
+        if cookbook_item is None:
+            raise SpicerackError(f"Unable to find cookbook {cookbook}")
+
+        logger.debug("Executing cookbook %s with args: %s", cookbook, args)
+        return cookbook_item.run() or 0  # Force the return code to be 0 if the cookbook returns None
 
     def remote(self, installer: bool = False) -> Remote:
         """Get a Remote instance.
@@ -468,19 +508,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         options = load_ini_config(self._debmonitor_config).defaults()
         return Debmonitor(options["server"], options["cert"], options["key"], dry_run=self._dry_run)
 
-    def management(self) -> Management:
-        """Get a Management instance to interact with the management interfaces.
-
-        .. deprecated:: v1.0.0
-            use :py:meth:`spicerack.Spicerack.netbox_server` instead, whose returned object has a ``mgmt_fqdn``
-            and ``asset_tag_fqdn`` properties.
-
-        Returns:
-            spicerack.management.Management: the instance.
-
-        """
-        return Management(self.dns())
-
     def ganeti(self) -> Ganeti:
         """Get an instance to interact with Ganeti.
 
@@ -535,7 +562,12 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return self.netbox(read_write=read_write).get_server(hostname)
 
     def requests_session(  # pylint: disable=no-self-use
-        self, name: str, *, timeout: float = requests.DEFAULT_TIMEOUT, tries: int = 3, backoff: float = 1.0
+        self,
+        name: str,
+        *,
+        timeout: requests.TypeTimeout = requests.DEFAULT_TIMEOUT,
+        tries: int = 3,
+        backoff: float = 1.0,
     ) -> requests.Session:
         """Return a new requests Session with timeout and retry logic.
 

@@ -9,7 +9,7 @@ with open("README.rst", "r") as readme:
 INSTALL_REQUIRES = [
     "conftool>=1.0.1",
     "cumin>=3.0.2",
-    "dnspython>=1.16.0",
+    "dnspython>=1.16.0,<2.2.0",  # Temporary upper limit to prevent mypy failures
     "elasticsearch>=5.0.0,<7.15.0",
     "elasticsearch-curator>=5.0.0",
     "kafka-python>=1.4.3",

@@ -1,6 +1,52 @@
 Spicerack Changelog
 -------------------
 
+`v2.0.0`_ (2022-02-15)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* management: removed module, it was deprecated in v1.0.0.
+
+New features
+""""""""""""
+
+* spicerack: allow to execute another cookbook from within a cookbook.
+
+  * Add the capability from within a cookbook to call another cookbook with custom parameters using the
+    ``run_cookbook()`` method in the Spicerack class.
+  * The called cookbook will be executed with the same global options with which the current cookbook is running with
+    and will log in the same file of the current cookbook run.
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: better support of parsing JSON responses (`T299123`_).
+
+  * In some older Dell servers the Redfish API sometimes replies with different casing for the ``MessageId`` key, like
+    ``MessageID``.
+  * It's also possible that Oem custom messages are reported in the same replies with a different structure.
+  * Skip the Oem messages and try both keys cases when parsing the reply.
+
+* redfish: improve support for DRY-RUN mode.
+
+  * In DRY-RUN mode allow read-only requests to be performed (only GET and HEAD) but return a dummy successful
+    responses in case of an exception raised by requests (timeout, connection error, etc).
+  * In DRY-RUN mode don't allow read-write requests and return a successful dummy response instead.
+  * In various methods return a dummy response in DRY-RUN mode.
+
+* dhcp: case-insensitive match of the serial number for the Dell management DHCP requests.
+
+ * When matching the serial number in the DHCP request for the management interfaces of Dell servers, match them in a
+   case-insensitive way because the data sent varies between hosts (``idrac-ABC1234`` or ``iDRAC-ABC1234``).
+
+Miscellanea
+"""""""""""
+
+* setup.py: the latest v2.2.0 release of dnspython is generating mypy issues, temporarily put an upper limit to it.
+* spicerack: adapt type hint to the latest wmflib release.
+
 `v1.1.1`_ (2021-12-22)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1638,6 +1684,7 @@ New features
 .. _`T288558`: https://phabricator.wikimedia.org/T288558
 .. _`T289078`: https://phabricator.wikimedia.org/T289078
 .. _`T291681`: https://phabricator.wikimedia.org/T291681
+.. _`T299123`: https://phabricator.wikimedia.org/T299123
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -1707,3 +1754,4 @@ New features
 .. _`v1.0.6`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.0.6
 .. _`v1.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.1.0
 .. _`v1.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.1.1
+.. _`v2.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.0.0

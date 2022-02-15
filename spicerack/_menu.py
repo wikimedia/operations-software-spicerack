@@ -4,7 +4,7 @@ import logging
 import shlex
 import sys
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, cast
 
 from spicerack import Spicerack, _log, _module_api, cookbook
 from spicerack.exceptions import SpicerackError
@@ -65,11 +65,11 @@ class BaseItem:
 
     fallback_title: str = "-"
 
-    def __init__(self, args: List[str], spicerack: Spicerack) -> None:
+    def __init__(self, args: Sequence[str], spicerack: Spicerack) -> None:
         """Base cookbooks's item constructor.
 
         Arguments:
-            args (list): the command line arguments to pass to the item.
+            args (list): any sequence with the command line arguments to pass to the item.
             spicerack (spicerack.Spicerack): the initialized instance of the library.
 
         """
@@ -168,14 +168,14 @@ class CookbookItem(BaseItem):
     def __init__(
         self,
         class_obj: Type[cookbook.CookbookBase],
-        args: List[str],
+        args: Sequence[str],
         spicerack: Spicerack,
     ) -> None:
         """Override parent constructor to add cookbook-specific initialization.
 
         Arguments:
             class_obj (type): a class derived from :py:class:`spicerack.cookbook.CookbookBase`.
-            args (list): the command line arguments to pass to the item.
+            args (list): any sequence with the command line arguments to pass to the item.
             spicerack (spicerack.Spicerack): the initialized instance of the library.
 
         """
@@ -279,7 +279,7 @@ class CookbookItem(BaseItem):
         return ret
 
     def _parse_args(self) -> Tuple[int, argparse.Namespace]:
-        """Get the argument parser from the cookbook and  parse the arguments.
+        """Get the argument parser from the cookbook and parse the arguments.
 
         Returns:
             tuple: (int, argparse.Namespace) with the return code to use and the parsed arguments. If the return code is
@@ -355,7 +355,7 @@ class TreeItem(BaseItem):
     def __init__(
         self,
         module: _module_api.CookbooksModuleInterface,
-        args: List[str],
+        args: Sequence[str],
         spicerack: Spicerack,
         menu_title: str,
     ) -> None:
@@ -363,7 +363,7 @@ class TreeItem(BaseItem):
 
         Arguments:
             module (spicerack._module_api.CookbooksModuleInterface): a cookbook Python module.
-            args (list): the command line arguments to pass to the item.
+            args (list): any sequence with the command line arguments to pass to the item.
             spicerack (spicerack.Spicerack): the initialized instance of the library.
             menu_title (str): the title to use for the menu.
 
@@ -551,12 +551,12 @@ class TreeItem(BaseItem):
         item.args = self._get_item_args(item, args)
         item.run()
 
-    def _get_item_args(self, item: BaseItem, args: List[str]) -> List[str]:
+    def _get_item_args(self, item: BaseItem, args: Sequence[str]) -> Sequence[str]:
         """Get the arguments to pass to the given item.
 
         Arguments:
             item (spicerack._menu.BaseItem): the item to pass the arguments to.
-            args (list): the arguments passed via interactive menu to this item.
+            args (list): any sequence with the arguments passed via interactive menu to this item.
 
         Returns:
             list: the arguments to pass to the item.
