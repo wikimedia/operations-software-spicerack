@@ -15,7 +15,7 @@ INSTALL_REQUIRES = [
     "kafka-python>=1.4.3",
     "pymysql>=0.9.3",
     "pynetbox>=5.0.7",
-    "redis>=3.2.1",
+    "redis>=3.2.1,<=4.1.3",
     "requests>=2.21.0",
     "wmflib",
 ]
