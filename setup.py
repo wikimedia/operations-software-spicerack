@@ -25,7 +25,7 @@ EXTRAS_REQUIRE = {
     # Test dependencies
     "tests": [
         "bandit>=1.5.1",
-        "black",
+        "black<=21.12b0",  # this is needed so that it doesn't confict with curator
         "flake8>=3.6.0",
         "isort",
         "mypy>=0.670,<0.800",
