@@ -1,0 +1,4 @@
+alertmanager
+============
+
+.. automodule:: spicerack.alertmanager
