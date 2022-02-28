@@ -21,7 +21,7 @@ class TestGaneti:
         """Setup test environment."""
         # pylint: disable=attribute-defined-outside-init
         self.remote = mock.MagicMock(spec_set=Remote)
-        self.ganeti = Ganeti(username="user", password="pass", timeout=10, remote=self.remote)  # nosec
+        self.ganeti = Ganeti(username="user", password="pass", timeout=10, remote=self.remote)
 
         self.cluster = "ganeti01.svc.eqiad.wmnet"
         self.instance = "test.example.com"
