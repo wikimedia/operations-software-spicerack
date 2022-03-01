@@ -336,17 +336,23 @@ class Redfish:
 class DellSCP:
     """Reprenset a Dell System Configuration Profile configuration as returned by Redfish API."""
 
-    def __init__(self, config: Dict, target: DellSCPTargetPolicy):
+    def __init__(self, config: Dict, target: DellSCPTargetPolicy, *, allow_new_attributes: bool = False):
         """Parse the Redfish API response.
 
         Arguments:
             config (dict): the configuration as returned by Redfish API.
             target (spicerack.redfish.DellSCPTargetPolicy): describe which sections of the configuration are
                 represented in the loaded configuration.
+            allow_new_attributes (bool): when set to :py:data:`True` it allows the creation of new attributes not
+                already present in the provided configuration that otherwise would raise an exception. This is
+                useful for example when changing the boot mode between Uefi and Bios that changes the keys present.
 
         """
         self._config = config
         self._target = target
+        self._allow_new_attributes = allow_new_attributes
+        # Track if the Components property have been emptied, allowing the creation of new components
+        self._emptied_components = False
 
     @property
     def config(self) -> Dict:
@@ -411,6 +417,9 @@ class DellSCP:
         Notes:
             This updates only the instance representation of the instance. To push and apply the changes to the server
             see :py:meth:`spicerack.redfish.RedfishDell.scp_push`.
+            In order to add attributes not present the instance must have been created with `allow_new_attributes` set
+            to :py:data:`True` or the :py:meth:`spicerack.redfish.DellSCP.empty_component` method called. This last one
+            allows to automatically create any missing component while setting attributes.
 
         Arguments:
             component_name (str): the name of the component the settings belongs to.
@@ -418,12 +427,36 @@ class DellSCP:
             attribute_value (str): the new value for the attribute to set.
 
         Returns:
-            bool: :py:data:`True` if the value was changed, :py:data:`False` if it had already the correct value.
+            bool: :py:data:`True` if the value was added or changed, :py:data:`False` if it had already the correct
+            value.
 
         Raises:
-            spicerack.redfish.RedfishError: if unable to find the given component or attribute.
+            spicerack.redfish.RedfishError: if unable to find the given component or attribute and the creation of new
+            items is not allowed.
 
         """
+
+        def new_attribute() -> Dict[str, str]:
+            """Local helper that returns a new attribute.
+
+            Returns:
+                dict: the attribute to append to the component.
+
+            """
+            attribute = {
+                "Name": attribute_name,
+                "Value": attribute_value,
+                "Set On Import": "True",
+                "Comment": "Read and Write",
+            }
+            logger.info(
+                "Created attribute %s -> %s (with Set On Import True) with value %s",
+                component_name,
+                attribute_name,
+                attribute_value,
+            )
+            return attribute
+
         for component in self._config["SystemConfiguration"]["Components"]:
             if component["FQDD"] != component_name:
                 continue
@@ -456,10 +489,20 @@ class DellSCP:
 
                 return True
 
-            # Attribute not found
+            # Attribute not found, add it or raise
+            if self._allow_new_attributes or self._emptied_components:
+                component["Attributes"].append(new_attribute())
+                return True
+
             raise RedfishError(f"Unable to find attribute {component_name} -> {attribute_name}")
 
-        # Component not found
+        # Component not found, add it or raise
+        if self._emptied_components:
+            self._config["SystemConfiguration"]["Components"].append(
+                {"FQDD": component_name, "Attributes": [new_attribute()]}
+            )
+            return True
+
         raise RedfishError(f"Unable to find component {component_name}")
 
     def update(self, changes: Dict[str, Dict[str, str]]) -> bool:
@@ -487,17 +530,32 @@ class DellSCP:
 
         return was_changed
 
+    def empty_components(self) -> None:
+        """Empty the current Components from the configuration, allowing to create a new configuration from scratch.
+
+        After calling this method is possible to set values for non-existing components that would otherwise raise an
+        exception.
+
+        """
+        self._config["SystemConfiguration"]["Components"] = []
+        self._emptied_components = True
+
 
 class RedfishDell(Redfish):
     """Dell specific Redfish support."""
 
     scp_base_uri = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
 
-    def scp_dump(self, target: DellSCPTargetPolicy = DellSCPTargetPolicy.ALL) -> DellSCP:
+    def scp_dump(
+        self, target: DellSCPTargetPolicy = DellSCPTargetPolicy.ALL, *, allow_new_attributes: bool = True
+    ) -> DellSCP:
         """Dump and return the SCP (Server Configuration Profiles) configuration.
 
         Arguments:
             target (spicerack.redfish.DellSCPTargetPolicy, optional): choose which sections to dump.
+            allow_new_attributes (bool): when set to :py:data:`True` it allows the creation of new attributes not
+                already present in the retrieved configuration that otherwise would raise an exception. This is
+                useful for example when changing the boot mode between Uefi and Bios that changes the keys present.
 
         Returns:
             spicerack.redfish.DellSCP: the server's configuration.
@@ -510,7 +568,7 @@ class RedfishDell(Redfish):
         data = {"ExportFormat": "JSON", "ShareParameters": {"Target": target.value}}
         task_uri = self.submit_task(f"{self.scp_base_uri}.ExportSystemConfiguration", data)
 
-        return DellSCP(self.poll_task(task_uri), target)
+        return DellSCP(self.poll_task(task_uri), target, allow_new_attributes=allow_new_attributes)
 
     def scp_push(
         self,
