@@ -12,6 +12,7 @@ Build-Depends:
   python3-dnspython,
   python3-elasticsearch,
   python3-elasticsearch-curator,
+  python3-git,
   python3-kafka,
   python3-pymysql,
   python3-pynetbox,

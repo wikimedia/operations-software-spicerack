@@ -1,3 +1,10 @@
+spicerack (2.1.0-1) unstable; urgency=medium
+
+  * v2.1.0 upstream release.
+  * Add python3-git as dependency.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Thu, 03 Mar 2022 10:41:43 -0000
+
 spicerack (2.0.0-1) unstable; urgency=medium
 
   * v2.0.0 upstream release.
