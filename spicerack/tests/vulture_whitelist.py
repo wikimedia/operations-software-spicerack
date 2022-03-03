@@ -30,7 +30,7 @@ whitelist_dhcp.DHCPConfOpt82.distro
 whitelist_dhcp.DHCPConfMac.ipv4
 whitelist_dhcp.DHCPConfMac.mac
 whitelist_dhcp.DHCPConfMac.distro
-whitelist_dhcp.DHCPConfMgmt.serial
+whitelist_dhcp.DHCPConfMgmt.lserial
 whitelist_dhcp.DHCPConfMgmt.ipv4
 
 whitelist_dnsdisc = Whitelist()

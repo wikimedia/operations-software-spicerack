@@ -1,6 +1,63 @@
 Spicerack Changelog
 -------------------
 
+`v2.1.0`_ (2022-03-03)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* reposync: add new module to manage syncing of automatically generated repositories.
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: ``DellSCP``, allow creation of new entities
+
+  * So far the ``DellSCP`` class allowed only to modify existing attributes in existing components.
+  * When dealing with a ``DellSCP`` configuration, there are cases in which it might be necessary to create attributes
+    that do not exist in the current configuration. For example when changing the boot mode between ``Bios`` and
+    ``Uefi`` a long list of attributes disappear/appear in the configuration.
+  * To allow this use case an ``allow_new_attributes`` keyword only parameter has been added to the constructor to
+    explicitly allow new attributes, keeping the existing behaviour of typo-protection if that is not passed.
+  * Another possible use case is to start from a configuration and create a components section from scratch.
+  * To allow this use case an ``empty_components()`` method was added that, while keeping the rest of the configuration
+    intact, empties the existing components and from there allows to set new attributes, transparently creating any
+    missing component.
+  * Add the ``allow_new_attributes`` parameter to ``RedfishDell.scp_dump()`` to enable this new feature when dumping a
+    configuration.
+
+Bug fixes
+"""""""""
+
+* dhcp: fix lowercase serial tag matching.
+
+Miscellanea
+"""""""""""
+
+* setup.py: temporary limit redis library.
+
+  * The latest ``redis`` release v4.1.4 creates some dependency issue, for now limit the upper version as we're anyway
+    using v3 in production as that's the version up to Debian Bullseye.
+
+* setup.py: upper limit for black
+
+  * On Debian bullseye ``elastcisearch-curator`` latest release dependencies have a conflict with black's dependencies
+    and it's not possible to put an upper limit to ``elastcisearch-curator`` because previous version don't build
+    properly on Bullseye from pip (the debian package version of it has a patch to override its dependency constraints).
+  * To prevent conflicts force an upper limit on the black version for now.
+
+* bandit: ignore hardcoded password in tests
+
+  * Ignore the ``B105:hardcoded_password_string`` and ``B106:hardcoded_password_funcarg`` checks in test directories.
+  * Removed related #nosec comments unnecessary now.
+
+* prospector: ignore deprecation message
+
+  * The latest ``prospector`` issues a deprecated message for the ``pep8`` and ``pep257`` tools that have been renamed
+    to ``pycodestyle`` and ``pydocstyle`` respectively. The new names are incompatible with ``prospector < 1.7.0``,
+    so for now keep the old names and disable the deprecation warning.
+
 `v2.0.0`_ (2022-02-15)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -266,10 +323,10 @@ Minor improvements
 Bug fixes
 """""""""
 
-ipmi: improve dry-run mode for ``force_pxe()``:
+* ipmi: improve dry-run mode for ``force_pxe()``:
 
-* When ``force_pxe()`` can't verify that the next boot will indeed be via PXE it raises an exception. Convert that
-  into a warning logging message when in DRY-RUN mode to let the cookbooks continue the DRY-RUN.
+  * When ``force_pxe()`` can't verify that the next boot will indeed be via PXE it raises an exception. Convert that
+    into a warning logging message when in DRY-RUN mode to let the cookbooks continue the DRY-RUN.
 
 Miscellanea
 """""""""""
@@ -313,7 +370,6 @@ API breaking changes
   * The Icinga class has been deprecated for a while now and it's time to remove it completely. No cookbook is using
     it anymore.
 
-
 New features
 """"""""""""
 
@@ -332,7 +388,6 @@ New features
 * netbox: add getter ``asset_tag_fqdn`` for the asset tag mgmt FQDN property.
 * icinga: add ``downtime_services()`` and ``remove_service_downtimes()`` and also a ``services_downtimed()`` context
   manager to allow to downtime only the host services that matches the given regex.
-
 
 Minor improvements
 """"""""""""""""""
@@ -1064,7 +1119,6 @@ Minor improvements
 * ganeti: use canonical Ganeti cluster names (`T231068`_).
 * ganeti: add logging for ``GntInstance`` actions (`T231068`_).
 
-
 `v0.0.30`_ (2020-02-11)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1154,7 +1208,6 @@ Minor improvements
 * remote: Move splitting of a ``RemoteHosts`` instance to a ``split()`` method.
 * netbox: Make host private and raise exception on not found.
 * netbox: Add method to return host information.
-
 
 `v0.0.26`_ (2019-08-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1276,15 +1329,13 @@ Miscellanea
   * For line breaks around binary operators, adopt ``W504`` (breaking before the operator) and ignore ``W503``, following PEP8 suggestion, see: `PEP0008#line_break_binary_operator`_
   * Fix all line breaks around binary operators to follow ``W504``
 
-
 `v0.0.22`_ (2019-04-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Bug Fixes
 """""""""
 
-elasticsearch: use NodesGroup instead of free form JSON
-
+* elasticsearch: use NodesGroup instead of free form JSON
 
 `v0.0.21`_ (2019-04-03)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1548,7 +1599,6 @@ Miscellanea
 * setup.py: force ``urllib3`` version.
 * tests: fix lint ignore.
 
-
 `v0.0.9`_ (2018-09-12)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1755,3 +1805,4 @@ New features
 .. _`v1.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.1.0
 .. _`v1.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.1.1
 .. _`v2.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.0.0
+.. _`v2.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.1.0

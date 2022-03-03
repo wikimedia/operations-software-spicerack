@@ -317,6 +317,9 @@ class TestDellSCP:
         """Initialize the test instance."""
         # pylint: disable=attribute-defined-outside-init
         self.config = redfish.DellSCP(deepcopy(DELL_SCP), redfish.DellSCPTargetPolicy.ALL)
+        self.config_allow_new = redfish.DellSCP(
+            deepcopy(DELL_SCP), redfish.DellSCPTargetPolicy.ALL, allow_new_attributes=True
+        )
 
     @pytest.mark.parametrize(
         "property_name, expected",
@@ -339,6 +342,7 @@ class TestDellSCP:
     def test_properties(self, property_name, expected):
         """It should return the value of the given property."""
         assert getattr(self.config, property_name) == expected
+        assert getattr(self.config_allow_new, property_name) == expected
 
     @pytest.mark.parametrize(
         "component, attribute, exception_message",
@@ -348,9 +352,29 @@ class TestDellSCP:
         ),
     )
     def test_set_raise(self, component, attribute, exception_message):
-        """It should raise RedfishError if the specified component or attribute does not exists."""
+        """It should raise RedfishError if the specified component or attribute does not exists and is now allowed."""
         with pytest.raises(redfish.RedfishError, match=exception_message):
             self.config.set(component, attribute, "new_value")
+
+    def test_set_new_attribute(self):
+        """It should add the new attribute if allow_new_attributes is set to True or empty_components() was called."""
+        params = ["Some.Component.1", "Non.Existent", "new_value"]
+        self.config_allow_new.set(*params)
+        assert self.config_allow_new.components[params[0]][params[1]] == params[2]
+        self.config.empty_components()
+        self.config.set(*params)
+        assert self.config.components[params[0]][params[1]] == params[2]
+
+    def test_set_raise_new_component(self):
+        """It should raise RedfishError if the component does not exists even if allow_new_attributes is set."""
+        with pytest.raises(redfish.RedfishError, match="Unable to find component Non.Existent"):
+            self.config_allow_new.set("Non.Existent", "Some.Attribute.1", "new_value")
+
+    def test_set_new_component(self):
+        """It should create a new component and add to it the new attribute if empty_components() was called."""
+        self.config.empty_components()
+        self.config.set("Non.Existent", "Some.Attribute.1", "new_value")
+        assert self.config.components["Non.Existent"]["Some.Attribute.1"] == "new_value"
 
     def test_set_same_value(self, caplog):
         """It should not set the same value and log a different message if the value is already correct."""
@@ -391,6 +415,11 @@ class TestDellSCP:
         assert self.config.components["Some.Component.1"]["Some.Attribute.1"] == "value"
         assert self.config.components["Some.Component.2"]["Some.Attribute.2"] == "value"
 
+    def test_empty_components(self):
+        """It should empty the components of the current configuration."""
+        self.config.empty_components()
+        assert self.config.components == {}
+
 
 class TestRedfishDell:
     """Tests for the RedfishDell class."""
@@ -402,8 +431,9 @@ class TestRedfishDell:
         self.redfish = redfish.RedfishDell("test.example.org", "root", "mysecret", dry_run=False)
         self.requests_mock = requests_mock
 
+    @pytest.mark.parametrize("allow_new", (False, True))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_dump(self, mocked_sleep):
+    def test_scp_dump(self, mocked_sleep, allow_new):
         """It should return an instance of DellSCP with the current configuration for the given target."""
         self.requests_mock.post(
             "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ExportSystemConfiguration",
@@ -414,9 +444,15 @@ class TestRedfishDell:
             "/redfish/v1/TaskService/Tasks/JID_1234567890",
             [{"status_code": 202, "json": DELL_TASK_REPONSE}, {"status_code": 200, "json": DELL_SCP}],
         )
-        config = self.redfish.scp_dump()
+        config = self.redfish.scp_dump(allow_new_attributes=allow_new)
         assert config.service_tag == "12ABC34"
         assert mocked_sleep.called
+        if allow_new:
+            config.set("Some.Component.1", "Non.Existent", "new_value")
+            assert config.components["Some.Component.1"]["Non.Existent"] == "new_value"
+        else:
+            with pytest.raises(redfish.RedfishError, match="Unable to find attribute Some.Component.1 -> Non.Existent"):
+                config.set("Some.Component.1", "Non.Existent", "new_value")
 
     @pytest.mark.parametrize(
         "uri_suffix, preview",

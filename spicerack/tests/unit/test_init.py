@@ -3,6 +3,7 @@ import logging
 from unittest import mock
 
 import pytest
+from git import Repo
 from requests import Session
 from wmflib.actions import ActionsDict
 from wmflib.dns import Dns
@@ -29,6 +30,7 @@ from spicerack.puppet import PuppetHosts, PuppetMaster
 from spicerack.redfish import RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
+from spicerack.reposync import RepoSync
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
 from spicerack.toolforge.etcdctl import EtcdctlController
 
@@ -189,3 +191,28 @@ def test_run_cookbook_no_callback():
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
     with pytest.raises(SpicerackError, match="Unable to run other cookbooks, get_cookbook_callback is not set."):
         spicerack.run_cookbook("class_api.example", [])
+
+
+@mock.patch("spicerack.Path.is_dir")
+@mock.patch("spicerack.Repo")
+def test_reposync(mocked_repo, mocked_is_dir):
+    """Test spicerack.reposync."""
+    spicerack = Spicerack(**SPICERACK_TEST_PARAMS)
+
+    repo = mock.MagicMock(spec_set=Repo)
+    repo.bare = False
+
+    with pytest.raises(SpicerackError, match="Unknown repo missing_repo"):
+        spicerack.reposync("missing_repo")
+
+    mocked_is_dir.return_value = False
+    with pytest.raises(SpicerackError, match=r"The repo directory \(/testrepo\) does not exist"):
+        spicerack.reposync("testrepo")
+
+    mocked_is_dir.return_value = True
+    mocked_repo.return_value = repo
+    with pytest.raises(SpicerackError, match=r"The repo directory \(/testrepo\) is not a bare git repository"):
+        spicerack.reposync("testrepo")
+
+    repo.bare = True
+    assert isinstance(spicerack.reposync("testrepo"), RepoSync)

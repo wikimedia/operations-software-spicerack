@@ -12,10 +12,12 @@ INSTALL_REQUIRES = [
     "dnspython>=1.16.0,<2.2.0",  # Temporary upper limit to prevent mypy failures
     "elasticsearch>=5.0.0,<7.15.0",
     "elasticsearch-curator>=5.0.0",
+    # TODO: gitpython 3.1.15 causes issues with mypy
+    "gitpython<=3.1.14",
     "kafka-python>=1.4.3",
     "pymysql>=0.9.3",
     "pynetbox>=5.0.7",
-    "redis>=3.2.1",
+    "redis>=3.2.1,<=4.1.3",
     "requests>=2.21.0",
     "wmflib",
 ]
@@ -25,7 +27,7 @@ EXTRAS_REQUIRE = {
     # Test dependencies
     "tests": [
         "bandit>=1.5.1",
-        "black",
+        "black<=21.12b0",  # this is needed so that it doesn't confict with curator
         "flake8>=3.6.0",
         "isort",
         "mypy>=0.670,<0.800",

@@ -1,0 +1,4 @@
+reposync
+========
+
+.. automodule:: spicerack.reposync

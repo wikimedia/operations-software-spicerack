@@ -8,7 +8,7 @@ import pytest
 from spicerack.netbox import Netbox, NetboxAPIError, NetboxError, NetboxHostNotFoundError, NetboxServer
 
 NETBOX_URL = "https://example.com/"
-NETBOX_TOKEN = "FAKETOKEN"  # nosec
+NETBOX_TOKEN = "secret_token"
 
 
 def _request_error():
