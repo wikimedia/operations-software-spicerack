@@ -6,24 +6,28 @@ from unittest import mock
 import pytest
 from cumin import NodeSet
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
+from wmflib.config import load_yaml_config
 from wmflib.prometheus import Prometheus
 
 from spicerack import elasticsearch_cluster as ec
 from spicerack.administrative import Reason
 from spicerack.elasticsearch_cluster import NodesGroup
 from spicerack.remote import Remote, RemoteHosts
+from spicerack.tests import get_fixture_path
+
+ELASTICSEARCH_CONFIG = load_yaml_config(get_fixture_path("elasticsearch", "config.yaml"))
 
 
 def test_create_elasticsearch_clusters():
     """It should return an instance of ElasticsearchCluster."""
-    target = ec.create_elasticsearch_clusters("search_eqiad", ["some_core_dc"], None, None)
+    target = ec.create_elasticsearch_clusters(ELASTICSEARCH_CONFIG, "search_eqiad", ["some_core_dc"], None, None)
     assert isinstance(target, ec.ElasticsearchClusters)
 
 
 def test_create_elasticsearch_clusters_fail():
     """It should throw an ElasticsearchCluster Exception."""
     with pytest.raises(ec.ElasticsearchClusterError, match="No cluster group named search_test"):
-        ec.create_elasticsearch_clusters("search_test", ["some_core_dc"], None, None)
+        ec.create_elasticsearch_clusters(ELASTICSEARCH_CONFIG, "search_test", ["some_core_dc"], None, None)
 
 
 def test_get_remote_hosts():

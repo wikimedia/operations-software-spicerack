@@ -422,7 +422,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
 
         """
+        configuration = load_yaml_config(self._spicerack_config_dir / "elasticsearch" / "config.yaml")
+
         return create_elasticsearch_clusters(
+            configuration,
             clustergroup,
             write_queue_datacenters,
             self.remote(),
