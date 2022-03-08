@@ -16,6 +16,8 @@ from wmflib.prometheus import Prometheus
 
 from spicerack._log import irc_logger
 from spicerack.administrative import Reason
+from spicerack.alerting import AlertingHosts
+from spicerack.alertmanager import AlertmanagerHosts
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
@@ -657,3 +659,40 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         # TODO: generalize when support for additional vendors will be added.
         return RedfishDell(mgmt_fqdn, username, password, dry_run=self._dry_run)
+
+    def alertmanager_hosts(  # pylint: disable=no-self-use
+        self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False
+    ) -> AlertmanagerHosts:
+        """Get an AlertmanagerHosts instance.
+
+        Arguments:
+            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
+                of strings.
+            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
+                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
+                be used in Icinga.
+
+        Returns:
+            spicerack.alertmanager.AlertmanagerHosts: AlertmanagerHosts instance.
+
+        """
+        return AlertmanagerHosts(target_hosts, verbatim_hosts=verbatim_hosts)
+
+    def alerting_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertingHosts:
+        """Get an AlertingHosts instance.
+
+        Arguments:
+            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
+                of strings.
+            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
+                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
+                be used in Icinga.
+
+        Returns:
+            spicerack.alerting.AlertingHosts: AlertingHosts instance.
+
+        """
+        return AlertingHosts(
+            self.alertmanager_hosts(target_hosts, verbatim_hosts=verbatim_hosts),
+            self.icinga_hosts(target_hosts, verbatim_hosts=verbatim_hosts),
+        )

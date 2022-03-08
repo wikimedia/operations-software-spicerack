@@ -12,6 +12,8 @@ from wmflib.prometheus import Prometheus
 
 from spicerack import Spicerack
 from spicerack.administrative import Reason
+from spicerack.alerting import AlertingHosts
+from spicerack.alertmanager import AlertmanagerHosts
 from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
@@ -82,6 +84,7 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
         EtcdctlController,
     )
     assert isinstance(spicerack.kafka(), Kafka)
+    assert isinstance(spicerack.alertmanager_hosts(["host1", "host2"]), AlertmanagerHosts)
     assert mocked_remote_query.called
     assert mocked_dns_resolver.Resolver.called
 
@@ -216,3 +219,24 @@ def test_reposync(mocked_repo, mocked_is_dir):
 
     repo.bare = True
     assert isinstance(spicerack.reposync("testrepo"), RepoSync)
+
+
+@mock.patch("spicerack.gethostname", return_value="test.example.com")
+@mock.patch("spicerack.Dns", autospec=True)
+@mock.patch("spicerack.remote.Remote.query", autospec=True)
+@mock.patch("spicerack.icinga.CommandFile", autospec=True)
+def test_spicerack_alerting(mocked_command_file, mocked_remote_query, mocked_dns, mocked_hostname, monkeypatch):
+    """An instance of Spicerack should allow to get an AlertingHosts instance."""
+    monkeypatch.setenv("SUDO_USER", "user1")
+    icinga_server = mock.MagicMock(spec_set=RemoteHosts)
+    icinga_server.hosts = "icinga-server.example.com"
+    icinga_server.__len__.return_value = 1
+    mocked_remote_query.return_value = icinga_server
+    mocked_dns.return_value.resolve_cname.return_value = "icinga-server.example.com"
+    mocked_command_file.return_value = "/var/lib/icinga/rw/icinga.cmd"
+
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    assert spicerack.icinga_master_host.hosts == "icinga-server.example.com"
+    assert isinstance(spicerack.alerting_hosts(["host1", "host2"]), AlertingHosts)
+    mocked_hostname.assert_called_once_with()

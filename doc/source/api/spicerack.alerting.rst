@@ -1,0 +1,4 @@
+alerting
+========
+
+.. automodule:: spicerack.alerting

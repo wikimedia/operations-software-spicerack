@@ -12,6 +12,8 @@ Spicerack Python API autodoc.
 .. toctree::
 
    spicerack.administrative
+   spicerack.alerting
+   spicerack.alertmanager
    spicerack.confctl
    spicerack.constants
    spicerack.cookbook

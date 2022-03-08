@@ -547,7 +547,7 @@ class RedfishDell(Redfish):
     scp_base_uri = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
 
     def scp_dump(
-        self, target: DellSCPTargetPolicy = DellSCPTargetPolicy.ALL, *, allow_new_attributes: bool = True
+        self, target: DellSCPTargetPolicy = DellSCPTargetPolicy.ALL, *, allow_new_attributes: bool = False
     ) -> DellSCP:
         """Dump and return the SCP (Server Configuration Profiles) configuration.
 
