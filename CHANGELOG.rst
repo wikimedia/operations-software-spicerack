@@ -1,6 +1,29 @@
 Spicerack Changelog
 -------------------
 
+`v2.2.0`_ (2022-03-08)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* alertmanager: introduced a new module to manage resources on AlertManager.
+
+  * It has an ``AlertmanagerHosts`` class that currently supports creating a silence (downtime in Icinga terminology)
+    and removing it given its ID. It also provides a context manager to perform the silence similarly to the icinga module.
+
+* alerting: introduced new alerting module with an ``AlertingHosts`` class as a wrapper around the ``IcingaHosts`` and
+  ``AlertmanagerHosts`` classes so that the same actions are performed on both instances.
+
+* spicerack: add accessors for the new ``AlertmanagerHosts`` and ``AlertingHosts`` classes as ``alertmanager_hosts``
+  and ``alerting_hosts`` respectively. The preferred way is to use the ``alerting_hosts`` accessor so that actions like
+  the downtime are performed on both systems.
+
+Bug fixes
+"""""""""
+
+* redfish: the default value for the ``allow_new_attributes`` parameter of ``RedfishDell.scp_dump()``.
+
 `v2.1.0`_ (2022-03-03)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1806,3 +1829,4 @@ New features
 .. _`v1.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v1.1.1
 .. _`v2.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.0.0
 .. _`v2.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.1.0
+.. _`v2.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.2.0
