@@ -1,3 +1,9 @@
+spicerack (2.3.0-1) unstable; urgency=medium
+
+  * v2.3.0 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Wed, 09 Mar 2022 14:59:21 -0000
+
 spicerack (2.2.0-1) unstable; urgency=medium
 
   * v2.2.0 upstream release.
