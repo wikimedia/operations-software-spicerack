@@ -19,31 +19,6 @@ from spicerack.remote import Remote, RemoteHosts, RemoteHostsAdapter
 
 logger = logging.getLogger(__name__)
 
-# TODO: following should eventually be moved to puppet
-ELASTICSEARCH_CLUSTERS: Dict[str, Dict[str, Dict[str, str]]] = {
-    "search": {
-        "search_eqiad": {
-            "production-search-eqiad": "https://search.svc.eqiad.wmnet:9243",
-            "production-search-omega-eqiad": "https://search.svc.eqiad.wmnet:9443",
-            "production-search-psi-eqiad": "https://search.svc.eqiad.wmnet:9643",
-        },
-        "search_codfw": {
-            "production-search-codfw": "https://search.svc.codfw.wmnet:9243",
-            "production-search-omega-codfw": "https://search.svc.codfw.wmnet:9443",
-            "production-search-psi-codfw": "https://search.svc.codfw.wmnet:9643",
-        },
-        "relforge": {
-            "relforge-eqiad": "https://relforge1002.eqiad.wmnet:9243",
-            "relforge-eqiad-small-alpha": "https://relforge1002.eqiad.wmnet:9443",
-        },
-        "cloudelastic": {
-            "cloudelastic-chi-https": "https://cloudelastic.wikimedia.org:9243",
-            "cloudelastic-omega-https": "https://cloudelastic.wikimedia.org:9443",
-            "cloudelastic-psi-https": "https://cloudelastic.wikimedia.org:9643",
-        },
-    }
-}
-
 
 class ElasticsearchClusterError(SpicerackError):
     """Custom Exception class for errors of this module."""
@@ -54,6 +29,7 @@ class ElasticsearchClusterCheckError(SpicerackCheckError):
 
 
 def create_elasticsearch_clusters(
+    configuration: Dict[str, Dict[str, Dict[str, str]]],
     clustergroup: str,
     write_queue_datacenters: Sequence[str],
     remote: Remote,
@@ -78,7 +54,7 @@ def create_elasticsearch_clusters(
 
     """
     try:
-        endpoints = ELASTICSEARCH_CLUSTERS["search"][clustergroup].values()
+        endpoints = configuration["search"][clustergroup].values()
     except KeyError as e:
         raise ElasticsearchClusterError(f"No cluster group named {clustergroup}") from e
 

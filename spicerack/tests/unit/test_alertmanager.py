@@ -1,5 +1,5 @@
 """Alertmanager module tests."""
-
+import logging
 from datetime import datetime, timedelta, timezone
 from unittest import mock
 
@@ -51,6 +51,25 @@ class TestAlertmanager:
         self.requests_mock.delete("/api/v2/silence/foobar")
         self.am_hosts.remove_downtime("foobar")
         assert self.requests_mock.call_count == 1
+
+    def test_delete_silence_already_deleted(self, caplog):
+        """It should not error if the downtime has been already deleted or is expired."""
+        self.requests_mock.delete("/api/v2/silence/foobar", status_code=500, json="silence foobar already expired")
+        with caplog.at_level(logging.WARNING):
+            self.am_hosts.remove_downtime("foobar")
+
+        assert "Silence ID foobar has been already deleted or is expired" in caplog.text
+        assert self.requests_mock.call_count == 2
+
+    def test_delete_silence_error(self, caplog):
+        """It should raise an AlertmanagerError on any other error."""
+        self.requests_mock.delete("/api/v2/silence/foobar", status_code=500, json="silence not found")
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(alertmanager.AlertmanagerError, match="Unable to DELETE to any Alertmanager"):
+                self.am_hosts.remove_downtime("foobar")
+
+        assert "already deleted" not in caplog.text
+        assert self.requests_mock.call_count == 2
 
     def test_verbatim_hosts(self):
         """It should issue silences for verbatim hosts."""

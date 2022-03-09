@@ -1,13 +1,35 @@
 Spicerack Changelog
 -------------------
 
+`v2.3.0`_ (2022-03-09)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* alertmanager: catch the already deleted silence error (`T293209`_):
+
+  * The Alertmanager API, when trying to delete an existing silence, returns 500 with a JSON string message in the
+    case of an already expired or deleted silence.
+  * On delete, catch the exception and just log a warning message in case the silence has been already deleted / is
+    already expired.
+  * In orther to achieve this, change the ``AlertmanagerError`` exception to accept an optional parameter with the API
+    response object.
+
+* elasticsearch: load the configuration from a yaml file, remove the hardcoded one (`T278378`_).
+
+Miscellanea
+"""""""""""
+
+* spicerack: use the private property for the config dir within the class, for coherence.
+
 `v2.2.0`_ (2022-03-08)
 ^^^^^^^^^^^^^^^^^^^^^^
 
 New features
 """"""""""""
 
-* alertmanager: introduced a new module to manage resources on AlertManager.
+* alertmanager: introduced a new module to manage resources on AlertManager (`T293209`_).
 
   * It has an ``AlertmanagerHosts`` class that currently supports creating a silence (downtime in Icinga terminology)
     and removing it given its ID. It also provides a context manager to perform the silence similarly to the icinga module.
@@ -1749,6 +1771,7 @@ New features
 .. _`T269855`: https://phabricator.wikimedia.org/T269855
 .. _`T276338`: https://phabricator.wikimedia.org/T276338
 .. _`T277740`: https://phabricator.wikimedia.org/T277740
+.. _`T278378`: https://phabricator.wikimedia.org/T278378
 .. _`T285519`: https://phabricator.wikimedia.org/T285519
 .. _`T285706`: https://phabricator.wikimedia.org/T285706
 .. _`T285803`: https://phabricator.wikimedia.org/T285803
@@ -1757,6 +1780,7 @@ New features
 .. _`T288558`: https://phabricator.wikimedia.org/T288558
 .. _`T289078`: https://phabricator.wikimedia.org/T289078
 .. _`T291681`: https://phabricator.wikimedia.org/T291681
+.. _`T293209`: https://phabricator.wikimedia.org/T293209
 .. _`T299123`: https://phabricator.wikimedia.org/T299123
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
@@ -1830,3 +1854,4 @@ New features
 .. _`v2.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.0.0
 .. _`v2.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.1.0
 .. _`v2.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.2.0
+.. _`v2.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.0

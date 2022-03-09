@@ -97,6 +97,23 @@ class AlertmanagerHosts:
             self.remove_downtime(downtime_id)
 
     def _api_request(self, method: str, path: str, json: Optional[Mapping] = None) -> Response:
+        """Perform an Alertmanager API request on multiple endpoints and return the requests response object.
+
+        The request is performed on all configured alertmanager endpoints and returns at the first successful response.
+
+        Arguments:
+            method (str): the HTTP method to use for the request.
+            path (str): the final API path to call, the base path is prefixed automatically.
+            json (typing.Mapping, optional): if present, the JSON payload to send in the request.
+
+        Returns:
+            requests.Response: the requests response object.
+
+        Raises:
+            spicerack.alertmanager.AlertmanagerError: if unable to perform the request on any alertmanager endpoint.
+
+        """
+        res = None
         for am_url in self._alertmanager_urls:
             url = f"{am_url}/api/v2/{path}"
             try:
@@ -105,7 +122,8 @@ class AlertmanagerHosts:
                 return res
             except RequestException as e:
                 logger.error("Failed to %s to %s: %s", method.upper(), url, e)
-        raise AlertmanagerError(f"Unable to {method.upper()} to any Alertmanager: {self._alertmanager_urls}")
+
+        raise AlertmanagerError(f"Unable to {method.upper()} to any Alertmanager: {self._alertmanager_urls}", res)
 
     def downtime(self, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> str:
         """Issue a new downtime.
@@ -146,9 +164,31 @@ class AlertmanagerHosts:
             AlertmanagerError: if none of the `alertmanager_urls` API returned a success.
 
         """
-        self._api_request("delete", f"silence/{downtime_id}")
-        logger.info("Deleted silence ID %s", downtime_id)
+        try:
+            self._api_request("delete", f"silence/{downtime_id}")
+            logger.info("Deleted silence ID %s", downtime_id)
+        except AlertmanagerError as e:
+            if (
+                e.response is not None
+                and e.response.status_code == 500
+                and "silence" in e.response.json()
+                and "already expired" in e.response.json()
+            ):
+                logger.warning("Silence ID %s has been already deleted or is expired", downtime_id)
+            else:
+                raise
 
 
 class AlertmanagerError(SpicerackError):
     """Custom exception class for errors of this module."""
+
+    def __init__(self, message: str, response: Optional[Response] = None) -> None:
+        """Initializes an AlertmanagerError instance with the API response instance.
+
+        Arguments:
+            message (str): the actual exception message.
+            response (requests.Response, optional): the requests response object, if present.
+
+        """
+        super().__init__(message)
+        self.response = response

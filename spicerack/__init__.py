@@ -393,7 +393,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.reposync.RepoSync: the reposync instance.
 
         """
-        config = load_yaml_config(self.config_dir / "reposync" / "config.yaml")
+        config = load_yaml_config(self._spicerack_config_dir / "reposync" / "config.yaml")
         if name not in config["repos"]:
             raise SpicerackError(f"Unknown repo {name}")
 
@@ -422,7 +422,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
 
         """
+        configuration = load_yaml_config(self._spicerack_config_dir / "elasticsearch" / "config.yaml")
+
         return create_elasticsearch_clusters(
+            configuration,
             clustergroup,
             write_queue_datacenters,
             self.remote(),
