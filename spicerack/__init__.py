@@ -2,7 +2,7 @@
 from logging import Logger, getLogger
 from pathlib import Path
 from socket import gethostname
-from typing import TYPE_CHECKING, Callable, Dict, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence
 
 from git import Repo
 from pkg_resources import DistributionNotFound, get_distribution
@@ -594,14 +594,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         return self.netbox(read_write=read_write).get_server(hostname)
 
-    def requests_session(  # pylint: disable=no-self-use
-        self,
-        name: str,
-        *,
-        timeout: requests.TypeTimeout = requests.DEFAULT_TIMEOUT,
-        tries: int = 3,
-        backoff: float = 1.0,
-    ) -> requests.Session:
+    def requests_session(self, name: str, **kwargs: Any) -> requests.Session:  # pylint: disable=no-self-use
         """Return a new requests Session with timeout and retry logic.
 
         Params:
@@ -612,7 +605,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         """
         name = f"Spicerack/{__version__} {name}"
-        return requests.http_session(name, timeout=timeout, tries=tries, backoff=backoff)
+        return requests.http_session(name, **kwargs)
 
     def etcdctl(self, *, remote_host: RemoteHosts) -> EtcdctlController:  # pylint: disable=no-self-use
         """Add etcdctl control capabilities to the given RemoteHost.
