@@ -38,6 +38,7 @@ class AlertmanagerHosts:
         target_hosts: TypeHosts,
         *,
         verbatim_hosts: bool = False,
+        dry_run: bool = True,
     ) -> None:
         """Initialize the instance.
 
@@ -47,6 +48,7 @@ class AlertmanagerHosts:
             verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
                 :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
                 be used in Alertmanager.
+            dry_run (bool, optional): set to False to cause writes to Alertmanager occur.
 
         When using Alertmanager in high availability (cluster) make sure to pass all hosts in your cluster as
         `alertmanager_urls`.
@@ -74,6 +76,7 @@ class AlertmanagerHosts:
 
         self._alertmanager_urls = ALERTMANAGER_URLS
         self._verbatim_hosts = verbatim_hosts
+        self._dry_run = dry_run
         self._matchers = _matchers_from_hosts(self._target_hosts)
 
     @contextmanager
@@ -120,17 +123,23 @@ class AlertmanagerHosts:
             spicerack.alertmanager.AlertmanagerError: if unable to perform the request on any alertmanager endpoint.
 
         """
-        res = None
+        response = None
         for am_url in self._alertmanager_urls:
             url = f"{am_url}/api/v2/{path}"
+            if self._dry_run and method.lower() not in ("head", "get"):
+                logger.debug("Would have called %s %s", method.upper(), url)
+                response = Response()
+                response.status_code = 200
+                return response
+
             try:
-                res = self._http_session.request(method, url, json=json)
-                res.raise_for_status()
-                return res
+                response = self._http_session.request(method, url, json=json)
+                response.raise_for_status()
+                return response
             except RequestException as e:
                 logger.error("Failed to %s to %s: %s", method.upper(), url, e)
 
-        raise AlertmanagerError(f"Unable to {method.upper()} to any Alertmanager: {self._alertmanager_urls}", res)
+        raise AlertmanagerError(f"Unable to {method.upper()} to any Alertmanager: {self._alertmanager_urls}", response)
 
     def downtime(self, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> str:
         """Issue a new downtime.
@@ -157,6 +166,9 @@ class AlertmanagerHosts:
             "createdBy": reason.owner,
         }
         response = self._api_request("post", "silences", json=payload)
+        if self._dry_run:  # Bail out earlier as the next statement would fail
+            return ""
+
         silence = response.json()["silenceID"]
         logger.info("Created silence ID %s", silence)
         return silence

@@ -18,7 +18,8 @@ class TestAlertmanager:
     def setup_method(self, requests_mock):
         """Initialize the test instance."""
         # pylint: disable=attribute-defined-outside-init
-        self.am_hosts = alertmanager.AlertmanagerHosts(["host1", "host2"])
+        self.am_hosts = alertmanager.AlertmanagerHosts(["host1", "host2"], dry_run=False)
+        self.am_hosts_dry_run = alertmanager.AlertmanagerHosts(["host1", "host2"], dry_run=True)
         self.requests_mock = requests_mock
         self.reason = Reason("test", "user", "host")
 
@@ -45,6 +46,19 @@ class TestAlertmanager:
         request_json = self.requests_mock.last_request.json()
         assert request_json["startsAt"] == "2022-06-06T10:00:00+00:00"
         assert request_json["endsAt"] == "2022-06-06T16:00:00+00:00"
+
+    def test_add_silence_dry_run(self):
+        """It should not create a silence because in dry-run mode."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        response = self.am_hosts_dry_run.downtime(self.reason)
+        assert response == ""
+        assert self.requests_mock.call_count == 0
+
+    def test_delete_silence_dry_run(self):
+        """It should delete a downtime."""
+        self.requests_mock.delete("/api/v2/silence/foobar")
+        self.am_hosts_dry_run.remove_downtime("nonexistent")
+        assert self.requests_mock.call_count == 0
 
     def test_delete_silence_basic(self):
         """It should delete a downtime."""
@@ -74,7 +88,9 @@ class TestAlertmanager:
     def test_verbatim_hosts(self):
         """It should issue silences for verbatim hosts."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
-        am_hosts = alertmanager.AlertmanagerHosts(["host1.foo.bar", "host2.bar.baz"], verbatim_hosts=True)
+        am_hosts = alertmanager.AlertmanagerHosts(
+            ["host1.foo.bar", "host2.bar.baz"], verbatim_hosts=True, dry_run=False
+        )
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
@@ -85,7 +101,7 @@ class TestAlertmanager:
     def test_nodeset_hosts(self):
         """It should expand NodeSet hosts."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
-        am_hosts = alertmanager.AlertmanagerHosts(NodeSet("host[1-2]"), verbatim_hosts=True)
+        am_hosts = alertmanager.AlertmanagerHosts(NodeSet("host[1-2]"), verbatim_hosts=True, dry_run=False)
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
