@@ -656,9 +656,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         # TODO: generalize when support for additional vendors will be added.
         return RedfishDell(mgmt_fqdn, username, password, dry_run=self._dry_run)
 
-    def alertmanager_hosts(  # pylint: disable=no-self-use
-        self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False
-    ) -> AlertmanagerHosts:
+    def alertmanager_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertmanagerHosts:
         """Get an AlertmanagerHosts instance.
 
         Arguments:
@@ -672,7 +670,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.alertmanager.AlertmanagerHosts: AlertmanagerHosts instance.
 
         """
-        return AlertmanagerHosts(target_hosts, verbatim_hosts=verbatim_hosts)
+        return AlertmanagerHosts(target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run)
 
     def alerting_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertingHosts:
         """Get an AlertingHosts instance.

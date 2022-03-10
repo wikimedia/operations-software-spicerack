@@ -1,6 +1,18 @@
 Spicerack Changelog
 -------------------
 
+`v2.3.2`_ (2022-03-10)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* alertmanager: add missing support for dry-run mode.
+* reposync: make tests run quicker:
+
+  * Some tests were using ``192.0.2.1`` as a git remote, that doesn't fail immediately, at least on macOS. Replace it
+    with a non-existent local path.
+
 `v2.3.1`_ (2022-03-10)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1877,3 +1889,4 @@ New features
 .. _`v2.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.2.0
 .. _`v2.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.0
 .. _`v2.3.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.1
+.. _`v2.3.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.2
