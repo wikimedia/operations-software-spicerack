@@ -1,6 +1,27 @@
 Spicerack Changelog
 -------------------
 
+`v2.3.1`_ (2022-03-10)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* spicerack: make ``http_session`` more flexible.
+
+  * Instead of updating the signature with the new parameters available in wmflib, relax the signature here in
+    spicerack and delegate to wmflib what are the accepted parameters.
+
+Bug fixes
+"""""""""
+
+* alertmanager: do not retry on HTTP 500 responses
+
+  * The Alertmanager API can respond with an HTTP Status Code of 500 on some requests with a valid JSON response,
+    although there was no server error (i.e. trying to delete an already deleted silence).
+  * Do not retry on 500 responses, allowing requests to get a proper response and then let the module itself decide
+    what to do based on the content of the response.
+
 `v2.3.0`_ (2022-03-09)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -44,7 +65,7 @@ New features
 Bug fixes
 """""""""
 
-* redfish: the default value for the ``allow_new_attributes`` parameter of ``RedfishDell.scp_dump()``.
+* redfish: fix the default value for the ``allow_new_attributes`` parameter of ``RedfishDell.scp_dump()``.
 
 `v2.1.0`_ (2022-03-03)
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -1855,3 +1876,4 @@ New features
 .. _`v2.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.1.0
 .. _`v2.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.2.0
 .. _`v2.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.0
+.. _`v2.3.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.1

@@ -8,7 +8,7 @@ from typing import Dict, Iterable, Iterator, Mapping, Optional, Tuple
 from cumin import NodeSet
 from requests import Response
 from requests.exceptions import RequestException
-from wmflib.requests import http_session
+from wmflib.requests import DEFAULT_RETRY_STATUS_CODES, http_session
 
 from spicerack.administrative import Reason
 from spicerack.exceptions import SpicerackError
@@ -63,7 +63,14 @@ class AlertmanagerHosts:
         if not self._target_hosts:
             raise AlertmanagerError("Got empty target hosts list.")
 
-        self._http_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=2)
+        # Alertmanager API return HTTP 500 (Internal Server Error) on some requests with a valid JSON response
+        # For example when trying to delete a silence that doesn't exist or has already been deleted or is expired
+        # Do not retry on 500 and accept it's first response.
+        self._http_session = http_session(
+            ".".join((self.__module__, self.__class__.__name__)),
+            timeout=2,
+            retry_codes=tuple(i for i in DEFAULT_RETRY_STATUS_CODES if i != 500),
+        )
 
         self._alertmanager_urls = ALERTMANAGER_URLS
         self._verbatim_hosts = verbatim_hosts
