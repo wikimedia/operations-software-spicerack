@@ -87,7 +87,7 @@ class TestReposync:
     def test_update_bad_push(self, mock_ask_confirmation):
         """Test bad push flags."""
         file_content = f"test data: {random.random()}"  # nosec
-        self.reposync._repo.create_remote("bad_remote", "http://192.0.2.1/example.git")
+        self.reposync._repo.create_remote("bad_remote", "/nonexistent/example.git")
         with pytest.raises(RepoSyncError):
             with self.reposync.update("test add random data") as working_dir:
                 (working_dir / "test_file.txt").write_text(file_content)
@@ -97,7 +97,7 @@ class TestReposync:
     @mock.patch("spicerack.reposync.ask_confirmation")
     def test_update_bad_pushinfo(self, mock_ask_confirmation, mock_push):
         """Test bad push flags."""
-        self.reposync._repo.create_remote("bad_remote", "http://192.0.2.1/example.git")
+        self.reposync._repo.create_remote("bad_remote", "/nonexistent/example.git")
         push_info = mock.MagicMock(spec_set=PushInfo)
         push_info.flags = PushInfo.ERROR
         mock_push.return_value = [push_info]
