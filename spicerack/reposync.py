@@ -84,7 +84,7 @@ class RepoSync:
         logger.info("Committed changes: %s", commit.hexsha)
         self._hexsha = commit.hexsha
 
-    def _push(self, working_repo: Repo) -> None:
+    def _push(self, working_repo: Optional[Repo] = None) -> None:
         """Push the committed changes to the repository's remote.
 
         Arguments:
@@ -94,6 +94,9 @@ class RepoSync:
             spicerack.reposync.RepoSyncPushError: if there was an error pushing
 
         """
+        if working_repo is None:
+            working_repo = self._repo
+
         if self._dry_run:
             logger.info("Would have pushed commit")
             return
@@ -141,6 +144,10 @@ class RepoSync:
         ask_confirmation(f"Ok to push changes to {self._repo.common_dir}")
         self._push(working_repo)
 
+    def force_sync(self) -> None:
+        """Force a sync of the repo on the current host to all remotes."""
+        self._push()
+
     @contextmanager
     def update(self, message: str) -> Generator:
         """Context manager for updating a temporary directory with new data.
@@ -167,10 +174,6 @@ class RepoSync:
                 next(data_dir.iterdir())
             except StopIteration:
                 raise RepoSyncError("No data written to data directory") from None
-            try:
-                self._update_local(working_dir, message)
-            except RepoSyncNoChangeError as error:
-                logger.info(error)
-                return
+            self._update_local(working_dir, message)
         logger.debug("Push to remotes: %s", self._repo.remotes)
-        self._push(self._repo)
+        self._push()

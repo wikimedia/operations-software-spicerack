@@ -9,7 +9,7 @@ from git.objects.commit import Commit
 from git.remote import PushInfo
 
 from spicerack.remote import RemoteHosts
-from spicerack.reposync import RepoSync, RepoSyncError
+from spicerack.reposync import RepoSync, RepoSyncError, RepoSyncNoChangeError
 
 
 # pylint: disable=protected-access
@@ -46,8 +46,9 @@ class TestReposync:
         with self.reposync.update("test add random data") as working_dir:
             (working_dir / "test_file.txt").write_text(file_content)
         if commit_twice:
-            with self.reposync.update("test add random data") as working_dir:
-                (working_dir / "test_file.txt").write_text(file_content)
+            with pytest.raises(RepoSyncNoChangeError):
+                with self.reposync.update("test add random data") as working_dir:
+                    (working_dir / "test_file.txt").write_text(file_content)
         mock_ask_confirmation.assert_called_once_with(f"Ok to push changes to {self.bare_repo.common_dir}")
         assert not self.bare_repo.is_dirty()
         assert len(list(self.bare_repo.iter_commits())) == 1
@@ -107,6 +108,12 @@ class TestReposync:
             with self.reposync.update("test add random data") as working_dir:
                 (working_dir / "test_file.txt").write_text(file_content)
         mock_ask_confirmation.assert_called_once_with(f"Ok to push changes to {self.bare_repo.common_dir}")
+
+    @mock.patch("spicerack.reposync.RepoSync._push")
+    def test_force_sync(self, mock_push):
+        """Test force_sync."""
+        self.reposync.force_sync()
+        mock_push.assert_called_once_with()
 
     def test_commit_no_hexsha(self):
         """Test push with missmatch sha1."""
