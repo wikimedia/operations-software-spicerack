@@ -1,6 +1,16 @@
 Spicerack Changelog
 -------------------
 
+`v2.3.3`_ (2022-03-17)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* reposync: don't catch the ``RepoSyncNoChangeError`` allowing the calling cookbook to decide what to do in case of
+  no changes in the repository.
+* reposync: add a ``force_sync()`` method to perform a force push from the local repository to all remotes.
+
 `v2.3.2`_ (2022-03-10)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1890,3 +1900,4 @@ New features
 .. _`v2.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.0
 .. _`v2.3.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.1
 .. _`v2.3.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.2
+.. _`v2.3.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.3
