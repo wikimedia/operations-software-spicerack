@@ -26,7 +26,7 @@ Boot parameter data: {bootparams}
    - Boot Flag Invalid
    - Options apply to only next boot
    - BIOS PC Compatible (legacy) boot
-   - Boot Device Selector : {pxe}
+   - Boot Device Selector : {override}
    - Console Redirection control : System Default
    - BIOS verbosity : Console redirection occurs per BIOS configuration setting (default)
    - BIOS Mux Control Override : BIOS uses recommended setting of the mux at the end of POST
@@ -145,7 +145,7 @@ class TestIpmi:
         mocked_run.return_value = CompletedProcess(
             (),
             0,
-            stdout=BOOTPARAMS_OUTPUT.format(bootparams="0000000000", pxe="No override").encode(),
+            stdout=BOOTPARAMS_OUTPUT.format(bootparams="0000000000", override="No override").encode(),
         )
         self.ipmi.check_bootparams()
         mocked_run.assert_called_once_with(
@@ -161,11 +161,11 @@ class TestIpmi:
         mocked_run.return_value = CompletedProcess(
             (),
             0,
-            stdout=BOOTPARAMS_OUTPUT.format(bootparams="0004000000", pxe="Force PXE").encode(),
+            stdout=BOOTPARAMS_OUTPUT.format(bootparams="0004000000", override="Force PXE").encode(),
         )
         with pytest.raises(
             ipmi.IpmiCheckError,
-            match=r"Expected BIOS boot params in \('0000000000', '8000020000'\) got: 0004000000",
+            match=r"Expected BIOS boot params in \('0000000000', '8000000000', '8000020000'\) got: 0004000000",
         ):
             self.ipmi_dry_run.check_bootparams()
 
@@ -205,7 +205,7 @@ class TestIpmi:
             CompletedProcess(
                 (),
                 0,
-                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0004000000", pxe="Force PXE").encode(),
+                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0004000000", override="Force PXE").encode(),
             ),
         ]
         self.ipmi.force_pxe()
@@ -214,7 +214,7 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["chassis", "bootdev", "pxe"],
+                    IPMITOOL_BASE + ["chassis", "bootparam", "set", "bootflag", "force_pxe", "options=reset"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
@@ -237,13 +237,13 @@ class TestIpmi:
             CompletedProcess(
                 (),
                 0,
-                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0000000000", pxe="No override").encode(),
+                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0000000000", override="No override").encode(),
             ),
             CompletedProcess((), 0, stdout=b"PXE set"),
             CompletedProcess(
                 (),
                 0,
-                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0004000000", pxe="Force PXE").encode(),
+                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0004000000", override="Force PXE").encode(),
             ),
         ]
         self.ipmi.force_pxe()
@@ -257,11 +257,67 @@ class TestIpmi:
             CompletedProcess(
                 (),
                 0,
-                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0000000000", pxe="No override").encode(),
+                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0000000000", override="No override").encode(),
             ),
         ]
         self.ipmi_dry_run.force_pxe()  # should not raise
         assert not mocked_sleep.called
+
+    @mock.patch("spicerack.ipmi.run")
+    def test_remove_boot_override_ok(self, mocked_run):
+        """Should unset any boot override for the next boot."""
+        mocked_run.side_effect = [
+            CompletedProcess((), 0, stdout=b""),
+            CompletedProcess(
+                (),
+                0,
+                stdout=BOOTPARAMS_OUTPUT.format(bootparams="8000000000", override="No override").encode(),
+            ),
+        ]
+        self.ipmi.remove_boot_override()
+
+        mocked_run.assert_has_calls(
+            [
+                mock.call(
+                    IPMITOOL_BASE + ["chassis", "bootparam", "set", "bootflag", "none", "options=reset"],
+                    env=ENV,
+                    stdout=PIPE,
+                    check=True,
+                ),
+                mock.call(
+                    IPMITOOL_BASE + ["chassis", "bootparam", "get", "5"],
+                    env=ENV,
+                    stdout=PIPE,
+                    check=True,
+                ),
+            ]
+        )
+
+    @mock.patch("spicerack.ipmi.run")
+    def test_remove_boot_override_fail(self, mocked_run):
+        """Should raise an IpmiCheckError exception on failure."""
+        mocked_run.side_effect = [
+            CompletedProcess((), 0, stdout=b"PXE not set"),
+            CompletedProcess(
+                (),
+                0,
+                stdout=BOOTPARAMS_OUTPUT.format(bootparams="000400000", override="Force PXE").encode(),
+            ),
+        ]
+        with pytest.raises(ipmi.IpmiCheckError, match="Unable to verify that the boot override was removed."):
+            self.ipmi.remove_boot_override()
+
+    @mock.patch("spicerack.ipmi.run")
+    def test_remove_boot_override_dry_run(self, mocked_run):
+        """Should not raise an exception on dry-run mode when unable to verify the boot parameters."""
+        mocked_run.side_effect = [
+            CompletedProcess(
+                (),
+                0,
+                stdout=BOOTPARAMS_OUTPUT.format(bootparams="0004000000", override="Force PXE").encode(),
+            ),
+        ]
+        self.ipmi_dry_run.remove_boot_override()  # should not raise
 
     @mock.patch("spicerack.ipmi.run")
     def test_reset_password_16(self, mocked_run):
