@@ -34,6 +34,7 @@ from spicerack.redfish import RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.reposync import RepoSync
+from spicerack.service import Catalog
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
 from spicerack.toolforge.etcdctl import EtcdctlController
 
@@ -88,6 +89,9 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
     )
     assert isinstance(spicerack.kafka(), Kafka)
     assert isinstance(spicerack.alertmanager_hosts(["host1", "host2"]), AlertmanagerHosts)
+    service_catalog = spicerack.service_catalog()
+    assert isinstance(service_catalog, Catalog)
+    assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
     assert mocked_remote_query.called
     assert mocked_dns_resolver.Resolver.called
 

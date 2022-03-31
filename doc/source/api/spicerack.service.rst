@@ -1,0 +1,4 @@
+service
+=======
+
+.. automodule:: spicerack.service

@@ -39,6 +39,7 @@ from spicerack.redfish import Redfish, RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.reposync import RepoSync
+from spicerack.service import Catalog
 from spicerack.toolforge.etcdctl import EtcdctlController
 from spicerack.typing import TypeHosts
 
@@ -112,6 +113,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._current_hostname = gethostname()
         self._irc_logger = irc_logger
         self._confctl: Optional[Confctl] = None
+        self._service_catalog: Optional[Catalog] = None
         self._management_password: str = ""
         self._actions = ActionsDict()
 
@@ -713,3 +715,16 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             self.alertmanager_hosts(target_hosts, verbatim_hosts=verbatim_hosts),
             self.icinga_hosts(target_hosts, verbatim_hosts=verbatim_hosts),
         )
+
+    def service_catalog(self) -> Catalog:
+        """Get a Catalog instance that reflects Puppet's service::catalog hieradata variable.
+
+        Returns:
+            spicerack.service.Catalog: the service catalog instance.
+
+        """
+        if self._service_catalog is None:
+            config = load_yaml_config(self._spicerack_config_dir / "service" / "service.yaml")
+            self._service_catalog = Catalog(config, self.confctl("discovery"), self.remote(), dry_run=self._dry_run)
+
+        return self._service_catalog
