@@ -8,7 +8,7 @@ from requests import Session
 from wmflib.actions import ActionsDict
 from wmflib.dns import Dns
 from wmflib.phabricator import Phabricator
-from wmflib.prometheus import Prometheus
+from wmflib.prometheus import Prometheus, Thanos
 
 from spicerack import Spicerack
 from spicerack.administrative import Reason
@@ -23,6 +23,7 @@ from spicerack.exceptions import SpicerackError
 from spicerack.ganeti import Ganeti
 from spicerack.icinga import IcingaHosts
 from spicerack.ipmi import Ipmi
+from spicerack.k8s import Kubernetes
 from spicerack.kafka import Kafka
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
@@ -61,6 +62,7 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
     assert isinstance(spicerack.confctl("mwconfig"), ConftoolEntity)
     assert isinstance(spicerack.dns(), Dns)
     assert isinstance(spicerack.discovery("discovery-record"), Discovery)
+    assert isinstance(spicerack.kubernetes("group", "cluster"), Kubernetes)
     assert isinstance(spicerack.mediawiki(), MediaWiki)
     assert isinstance(spicerack.mysql(), Mysql)
     assert isinstance(spicerack.mysql_legacy(), MysqlLegacy)
@@ -76,6 +78,7 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
         Phabricator,
     )
     assert isinstance(spicerack.prometheus(), Prometheus)
+    assert isinstance(spicerack.thanos(), Thanos)
     assert isinstance(spicerack.debmonitor(), Debmonitor)
     assert isinstance(spicerack.ganeti(), Ganeti)
     assert isinstance(spicerack.requests_session("name"), Session)

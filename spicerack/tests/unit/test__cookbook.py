@@ -412,8 +412,10 @@ class TestCookbookCollection:
                 [],
             ),
         ),
-    )  # pylint: disable=too-many-arguments
-    def test_main_execute_cookbook(self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args):
+    )
+    def test_main_execute_cookbook(  # pylint: disable=too-many-arguments
+        self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args
+    ):
         """Calling main with the given cookbook and args should execute it."""
         config = {
             "cookbooks_base_dir": COOKBOOKS_BASE_PATH,

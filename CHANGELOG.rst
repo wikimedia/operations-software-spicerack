@@ -1,6 +1,28 @@
 Spicerack Changelog
 -------------------
 
+`v2.4.0`_ (2022-04-04)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* k8s: add a new module with initial support for Kubernetes that supports draining a node (`T300879`_).
+* spicerack: add a new ``Spicerack.thanos()`` accessor to get an instance of ``wmflib.prometheus.Thanos``.
+* ipmi: add a ``remove_boot_override()`` method to clear any BIOS boot parameter override because some hosts don't
+  automatically clear that after a reboot.
+
+Minor improvements
+""""""""""""""""""
+
+* ipmi: improve the ``force_pxe()`` method changing the way it sets the Force PXE bit in the BIOS boot parameters to
+  force the reset of the valid flag after a reboot and consider the valid flag as harmless anyway (`T304434`_).
+
+Miscellanea
+"""""""""""
+
+* pylint: fix newly reported issue.
+
 `v2.3.3`_ (2022-03-17)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1825,6 +1847,8 @@ New features
 .. _`T291681`: https://phabricator.wikimedia.org/T291681
 .. _`T293209`: https://phabricator.wikimedia.org/T293209
 .. _`T299123`: https://phabricator.wikimedia.org/T299123
+.. _`T300879`: https://phabricator.wikimedia.org/T300879
+.. _`T304434`: https://phabricator.wikimedia.org/T304434
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -1901,3 +1925,4 @@ New features
 .. _`v2.3.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.1
 .. _`v2.3.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.2
 .. _`v2.3.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.3
+.. _`v2.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.4.0

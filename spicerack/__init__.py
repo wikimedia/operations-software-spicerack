@@ -12,7 +12,7 @@ from wmflib.config import load_ini_config, load_yaml_config
 from wmflib.dns import Dns
 from wmflib.interactive import get_username
 from wmflib.phabricator import Phabricator, create_phabricator
-from wmflib.prometheus import Prometheus
+from wmflib.prometheus import Prometheus, Thanos
 
 from spicerack._log import irc_logger
 from spicerack.administrative import Reason
@@ -28,6 +28,7 @@ from spicerack.ganeti import Ganeti
 from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
+from spicerack.k8s import Kubernetes
 from spicerack.kafka import Kafka
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
@@ -335,6 +336,19 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             dry_run=self._dry_run,
         )
 
+    def kubernetes(self, group: str, cluster: str) -> Kubernetes:
+        """Get a kubernetes client for the specified cluster.
+
+        Arguments:
+            group (str): the cluster group
+            cluster (str): the kubernetes cluster
+
+        Returns:
+            spicerack.k8s.Kubernetes: a pre-configured kubernetes client
+
+        """
+        return Kubernetes(group, cluster, dry_run=self._dry_run)
+
     def mediawiki(self) -> MediaWiki:
         """Get a MediaWiki instance.
 
@@ -520,13 +534,22 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)
 
     def prometheus(self) -> Prometheus:  # pylint: disable=no-self-use
-        """Get an Prometheus instance.
+        """Get a Prometheus instance.
 
         Returns:
             wmflib.prometheus.Prometheus: Prometheus instance.
 
         """
         return Prometheus()
+
+    def thanos(self) -> Thanos:  # pylint: disable=no-self-use
+        """Get a Thanos instance.
+
+        Returns:
+            wmflib.prometheus.Thanos: Thanos instance.
+
+        """
+        return Thanos()
 
     def debmonitor(self) -> Debmonitor:
         """Get a Debmonitor instance to interact with a Debmonitor website.

@@ -27,6 +27,7 @@ Spicerack Python API autodoc.
    spicerack.icinga
    spicerack.interactive
    spicerack.ipmi
+   spicerack.k8s
    spicerack.kafka
    spicerack.mediawiki
    spicerack.mysql

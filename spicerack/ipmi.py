@@ -15,9 +15,10 @@ from spicerack.exceptions import SpicerackCheckError, SpicerackError
 IPMI_PASSWORD_MAX_LEN: int = 20
 IPMI_PASSWORD_MIN_LEN: int = 16
 IPMI_SAFE_BOOT_PARAMS: Tuple[str, ...] = (
-    "0000000000",
-    "8000020000",
-)  # No or unimportant overrides.
+    "0000000000",  # No overrides
+    "8000000000",  # Boot Flag Valid
+    "8000020000",  # Boot Flag Valid and Screen blank
+)
 logger = logging.getLogger(__name__)
 
 
@@ -137,10 +138,26 @@ class Ipmi:
             spicerack.ipmi.IpmiCheckError: if unable to verify the PXE mode within the retries.
 
         """
-        self.command(["chassis", "bootdev", "pxe"])
+        self.command(["chassis", "bootparam", "set", "bootflag", "force_pxe", "options=reset"])
         boot_device = self._get_boot_parameter("Boot Device Selector")
         if boot_device != "Force PXE":
             message = "Unable to verify that Force PXE is set. The host might reboot in the current OS"
+            if self._dry_run:
+                logger.warning(message)
+            else:
+                raise IpmiCheckError(message)
+
+    def remove_boot_override(self) -> None:
+        """Remove any boot override, if present for the next boot and verify that the change was applied.
+
+        Raises:
+            spicerack.ipmi.IpmiCheckError: if unable to verify the boot mode.
+
+        """
+        self.command(["chassis", "bootparam", "set", "bootflag", "none", "options=reset"])
+        boot_device = self._get_boot_parameter("Boot Device Selector")
+        if boot_device != "No override":
+            message = "Unable to verify that the boot override was removed. The host might reboot in PXE"
             if self._dry_run:
                 logger.warning(message)
             else:
