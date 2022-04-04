@@ -248,6 +248,30 @@ class ElasticsearchClusters:
 
         inner_wait()
 
+    def wait_for_yellow_w_no_moving_shards(self, timeout: timedelta = timedelta(hours=1)) -> None:
+        """Wait for a yellow cluster status with no relocating or initializing shards.
+
+        Arguments:
+            timeout (datetime.timedelta, optional): timedelta object to represent how long to wait
+                 for no yellow status with no initializing or relocating shards on all clusters.
+
+        """
+        delay = timedelta(seconds=10)
+        tries = max(floor(timeout / delay), 1)
+        logger.info("waiting for clusters to be yellow with no initializing or relocating shards")
+
+        @retry(
+            tries=tries,
+            delay=delay,
+            backoff_mode="constant",
+            exceptions=(ElasticsearchClusterCheckError,),
+        )
+        def inner_wait() -> None:
+            for cluster in self._clusters:
+                cluster.check_yellow_w_no_moving_shards()
+
+        inner_wait()
+
     def get_next_clusters_nodes(self, started_before: datetime, size: int = 1) -> Optional[ElasticsearchHosts]:
         """Get next set of cluster nodes for cookbook operations like upgrade, rolling restart etc.
 
@@ -485,9 +509,29 @@ class ElasticsearchCluster:
 
         """
         try:
-            self._elasticsearch.cluster.health(wait_for_status="green", params={"timeout": "1s"})
+            self._elasticsearch.cluster.health(wait_for_status="green", timeout="1s")
         except (TransportError, HTTPError) as e:
             raise ElasticsearchClusterCheckError("Error while waiting for green") from e
+
+    def check_yellow_w_no_moving_shards(self) -> None:
+        """Cluster health status.
+
+        Raises:
+            spicerack.elasticsearch_cluster.ElasticsearchClusterCheckError:
+                This is raised when request times and cluster is not yellow with no initializing or relocating shards.
+
+        """
+        try:
+            self._elasticsearch.cluster.health(
+                wait_for_status="yellow",
+                wait_for_no_initializing_shards=True,
+                wait_for_no_relocating_shards=True,
+                timeout="1s",
+            )
+        except (TransportError, HTTPError) as e:
+            raise ElasticsearchClusterCheckError(
+                "Error while waiting for yellow with no initializing or relocating shards"
+            ) from e
 
     @contextmanager
     def frozen_writes(self, reason: Reason) -> Iterator[None]:

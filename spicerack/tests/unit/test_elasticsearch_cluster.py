@@ -531,6 +531,27 @@ class TestElasticsearchClusters:
             assert self.elasticsearch1.cluster.health.call_count == 2
             assert self.elasticsearch2.cluster.health.call_count == 2
 
+    def test_wait_for_yellow_w_no_moving_shards_on_all_clusters_elastisearch_call(self):
+        """Makes sure the call to elasticsearch.cluster.health is placed for each cluster."""
+        self.elasticsearch1.cluster.health = mock.Mock(return_value=True)
+        self.elasticsearch2.cluster.health = mock.Mock(return_value=True)
+        elasticsearch_clusters = self.default_elasticsearch_clusters()
+        elasticsearch_clusters.wait_for_yellow_w_no_moving_shards(timedelta(seconds=13))
+        assert self.elasticsearch1.cluster.health.called
+        assert self.elasticsearch2.cluster.health.called
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    def test_wait_for_yellow_w_no_moving_shards_retry_test(self, mocked_sleep):
+        """Test that the retry is called again when cluster health request throws an exception."""
+        self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError(500, "test"))
+        self.elasticsearch2.cluster.health = mock.Mock(side_effect=TransportError(500, "test"))
+        elasticsearch_clusters = self.default_elasticsearch_clusters()
+        with pytest.raises(ec.ElasticsearchClusterCheckError):
+            elasticsearch_clusters.wait_for_yellow_w_no_moving_shards(timedelta(seconds=20))
+            assert mocked_sleep.called
+            assert self.elasticsearch1.cluster.health.call_count == 2
+            assert self.elasticsearch2.cluster.health.call_count == 2
+
     def test_reset_read_only_is_sent_to_all_clusters(self):
         """Reset read only status should be sent to all clusters."""
         # This should really be an integration test but too much work to set up.
