@@ -1,6 +1,8 @@
 spicerack (2.4.0-1) unstable; urgency=medium
 
   * v2.4.0 upstream release.
+  * Set standards to 4.6.0.1.
+  * Add python3-kubernetes as dependency.
 
  -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Mon, 04 Apr 2022 14:38:58 -0000
 

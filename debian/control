@@ -14,6 +14,7 @@ Build-Depends:
   python3-elasticsearch-curator,
   python3-git,
   python3-kafka,
+  python3-kubernetes,
   python3-pymysql,
   python3-pynetbox,
   python3-pytest,
