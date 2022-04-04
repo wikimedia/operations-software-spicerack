@@ -2,7 +2,7 @@ Source: spicerack
 Section: utils
 Priority: optional
 Maintainer: Riccardo Coccioli <rcoccioli@wikimedia.org>
-Standards-Version: 4.5.0
+Standards-Version: 4.6.0.1
 Build-Depends:
   cumin,
   debhelper (>= 12),
