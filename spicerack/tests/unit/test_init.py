@@ -8,7 +8,7 @@ from requests import Session
 from wmflib.actions import ActionsDict
 from wmflib.dns import Dns
 from wmflib.phabricator import Phabricator
-from wmflib.prometheus import Prometheus
+from wmflib.prometheus import Prometheus, Thanos
 
 from spicerack import Spicerack
 from spicerack.administrative import Reason
@@ -78,6 +78,7 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
         Phabricator,
     )
     assert isinstance(spicerack.prometheus(), Prometheus)
+    assert isinstance(spicerack.thanos(), Thanos)
     assert isinstance(spicerack.debmonitor(), Debmonitor)
     assert isinstance(spicerack.ganeti(), Ganeti)
     assert isinstance(spicerack.requests_session("name"), Session)
