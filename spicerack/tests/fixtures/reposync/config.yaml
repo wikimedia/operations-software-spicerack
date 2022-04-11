@@ -1,5 +1,5 @@
 base_dir: "/"
 repos:
-- testrepo
+  - testrepo
 remotes:
-- remote.example.org
+  - remote.example.org
