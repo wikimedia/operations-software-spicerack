@@ -1,6 +1,31 @@
 Spicerack Changelog
 -------------------
 
+`v2.4.1`_ (2022-04-12)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* elasticsearch: don't wait for green on first node.
+* alertmanager: improve downtime:
+
+  * Allow to pass hosts with already a specific port. If the port is present no port-related regex is added, if the
+    port is not present the port-related regex will be automatically added.
+  * Optimize the regex adding just once the port regex at the end if all hosts don't have the port specified.
+  * Add a matchers parameter to the ``downtime()`` and ``downtimed()`` methods to allow to perform additional filtering
+    adding additional matchers.
+  * Raise an error in case an additional matcher is trying to target the instance property.
+
+Bug fixes
+"""""""""
+
+* alertmanager: fix downtime
+
+  * Fix the way the matchers for the silence are created. Because AlertManager and Prometheus will evaluate all
+    matchers in AND, we can only add one single matcher for the instance property, that has to match all given hosts,
+    as opposed to the current implementation that was adding one matcher per host.
+
 `v2.4.0`_ (2022-04-04)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1926,3 +1951,4 @@ New features
 .. _`v2.3.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.2
 .. _`v2.3.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.3
 .. _`v2.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.4.0
+.. _`v2.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.4.1
