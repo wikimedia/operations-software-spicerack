@@ -23,19 +23,52 @@ class TestAlertmanager:
         self.requests_mock = requests_mock
         self.reason = Reason("test", "user", "host")
 
-    def test_add_silence_basic(self):
+    @pytest.mark.parametrize(
+        "hosts, regex",
+        (
+            (["host1", "host2"], r"^(host1|host2)(:[0-9]+)?$"),
+            (["host1:1234", "host2"], r"^(host1:1234|host2(:[0-9]+)?)$"),
+            (["host1:1234", "host2:5678"], r"^(host1:1234|host2:5678)$"),
+        ),
+    )
+    def test_add_silence_basic(self, hosts, regex):
         """It should issue a silence with all defaults."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
-        response = self.am_hosts.downtime(self.reason)
+        am_hosts = alertmanager.AlertmanagerHosts(hosts, dry_run=False)
+        response = am_hosts.downtime(self.reason)
         assert response == "foobar"
         assert self.requests_mock.last_request.hostname == "alertmanager-eqiad.wikimedia.org"
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
-            {"name": "instance", "value": r"^host1(:[0-9]+)?$", "isRegex": True},
-            {"name": "instance", "value": r"^host2(:[0-9]+)?$", "isRegex": True},
+            {"name": "instance", "value": regex, "isRegex": True},
         ]
         assert request_json["comment"] == "test - user@host"
         assert request_json["createdBy"] == "user@host"
+
+    def test_add_silence_additional_matchers(self):
+        """It should issue a silence with the provided additional matchers."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        self.am_hosts.downtime(self.reason, matchers=({"name": "severity", "value": "critical", "isRegex": False},))
+        request_json = self.requests_mock.last_request.json()
+        assert request_json["matchers"] == [
+            {"name": "severity", "value": "critical", "isRegex": False},
+            {"name": "instance", "value": r"^(host1|host2)(:[0-9]+)?$", "isRegex": True},
+        ]
+
+    def test_add_silence_additional_matchers_invalid(self):
+        """It should raise an AlertmanagerError if any of the matchers target the instance property."""
+        with pytest.raises(alertmanager.AlertmanagerError, match="Matchers cannot target the instance property"):
+            self.am_hosts.downtime(self.reason, matchers=({"name": "instance", "value": "host1001", "isRegex": False},))
+
+    def test_add_silence_port_included(self):
+        """It should issue a silence with the specific port and not any port in the matcher."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        am_hosts = alertmanager.AlertmanagerHosts(["host1:1234", "host2:5678"], dry_run=False)
+        am_hosts.downtime(self.reason)
+        request_json = self.requests_mock.last_request.json()
+        assert request_json["matchers"] == [
+            {"name": "instance", "value": r"^(host1:1234|host2:5678)$", "isRegex": True},
+        ]
 
     def test_add_silence_duration(self):
         """It should issue a silence with a given duration."""
@@ -94,8 +127,7 @@ class TestAlertmanager:
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
-            {"name": "instance", "value": r"^host2\.bar\.baz(:[0-9]+)?$", "isRegex": True},
-            {"name": "instance", "value": r"^host1\.foo\.bar(:[0-9]+)?$", "isRegex": True},
+            {"name": "instance", "value": r"^(host1\.foo\.bar|host2\.bar\.baz)(:[0-9]+)?$", "isRegex": True},
         ]
 
     def test_nodeset_hosts(self):
@@ -105,12 +137,10 @@ class TestAlertmanager:
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
-            {"name": "instance", "value": r"^host1(:[0-9]+)?$", "isRegex": True},
-            {"name": "instance", "value": r"^host2(:[0-9]+)?$", "isRegex": True},
+            {"name": "instance", "value": r"^(host1|host2)(:[0-9]+)?$", "isRegex": True},
         ]
 
-    # pylint: disable=no-self-use
-    def test_empty_target_hosts(self):
+    def test_empty_target_hosts(self):  # pylint: disable=no-self-use
         """It should error with empty hosts."""
         with pytest.raises(alertmanager.AlertmanagerError):
             alertmanager.AlertmanagerHosts([""])

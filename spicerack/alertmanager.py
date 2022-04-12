@@ -3,7 +3,7 @@ import logging
 import re
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Iterable, Iterator, Mapping, Optional, Tuple
+from typing import Dict, Iterator, Mapping, Optional, Sequence, Tuple, Union
 
 from cumin import NodeSet
 from requests import Response
@@ -15,19 +15,12 @@ from spicerack.exceptions import SpicerackError
 from spicerack.typing import TypeHosts
 
 logger = logging.getLogger(__name__)
-
+MatchersType = Sequence[Dict[str, Union[str, int, float, bool]]]
+PORT_REGEX = "(:[0-9]+)?"
 ALERTMANAGER_URLS: Tuple[str, str] = (
     "http://alertmanager-eqiad.wikimedia.org",
     "http://alertmanager-codfw.wikimedia.org",
 )
-
-
-def _matchers_from_hosts(hosts: NodeSet) -> Iterable[Dict]:
-    matchers = []
-    for host in hosts:
-        m = {"name": "instance", "value": f"^{re.escape(host)}(:[0-9]+)?$", "isRegex": True}
-        matchers.append(m)
-    return matchers
 
 
 class AlertmanagerHosts:
@@ -42,6 +35,9 @@ class AlertmanagerHosts:
     ) -> None:
         """Initialize the instance.
 
+        When using Alertmanager in high availability (cluster) make sure to pass all hosts in your cluster as
+        `alertmanager_urls`.
+
         Arguments:
             target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence of
                 strings.
@@ -50,8 +46,8 @@ class AlertmanagerHosts:
                 be used in Alertmanager.
             dry_run (bool, optional): set to False to cause writes to Alertmanager occur.
 
-        When using Alertmanager in high availability (cluster) make sure to pass all hosts in your cluster as
-        `alertmanager_urls`.
+        Raises:
+            spicerack.alertmanager.AlertmanagerError: if no target hosts are provided.
 
         """
         if not verbatim_hosts:
@@ -77,16 +73,24 @@ class AlertmanagerHosts:
         self._alertmanager_urls = ALERTMANAGER_URLS
         self._verbatim_hosts = verbatim_hosts
         self._dry_run = dry_run
-        self._matchers = _matchers_from_hosts(self._target_hosts)
 
     @contextmanager
     def downtimed(
-        self, reason: Reason, *, duration: timedelta = timedelta(hours=4), remove_on_error: bool = False
+        self,
+        reason: Reason,
+        *,
+        matchers: MatchersType = (),
+        duration: timedelta = timedelta(hours=4),
+        remove_on_error: bool = False,
     ) -> Iterator[None]:
         """Context manager to perform actions while the hosts are downtimed on Alertmanager.
 
         Arguments:
             reason (spicerack.administrative.Reason): the reason to set for the downtime on Alertmanager.
+            matchers (list, optional): an optional list of matchers to be applied to the downtime. They will be added
+                to the matcher automatically generated to match the current instance ``target_hosts`` hosts. For this
+                reason the provided matchers cannot be for the instance property. The downtime will match alerts that
+                match **all** the matchers provided, as they are ANDed by AlertManager.
             duration (datetime.timedelta, optional): the length of the downtime period.
             remove_on_error: should the downtime be removed even if an exception was raised.
 
@@ -96,7 +100,7 @@ class AlertmanagerHosts:
             control.
 
         """
-        downtime_id = self.downtime(reason, duration=duration)
+        downtime_id = self.downtime(reason, matchers=matchers, duration=duration)
         try:
             yield
         except BaseException:
@@ -141,25 +145,47 @@ class AlertmanagerHosts:
 
         raise AlertmanagerError(f"Unable to {method.upper()} to any Alertmanager: {self._alertmanager_urls}", response)
 
-    def downtime(self, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> str:
+    def downtime(self, reason: Reason, *, matchers: MatchersType = (), duration: timedelta = timedelta(hours=4)) -> str:
         """Issue a new downtime.
 
         Arguments:
             reason (Reason): the downtime reason.
-            duration (datetime.timedelta): how long to downtime for.
+            matchers (list, optional): an optional list of matchers to be applied to the downtime. They will be added
+                to the matcher automatically generated to match the current instance ``target_hosts`` hosts. For this
+                reason the provided matchers cannot be for the instance property. The downtime will match alerts that
+                match **all** the matchers provided, as they are ANDed by AlertManager.
+            duration (datetime.timedelta, optional): the length of the downtime period.
 
         Returns:
             str: the downtime ID.
 
         Raises:
-            AlertmanagerError: if none of the `alertmanager_urls` API returned a success.
+            spicerack.alertmanager.AlertmanagerError: if none of the `alertmanager_urls` API returned a success or the
+            parameters are invalid.
 
         """
+        if any(item.get("name") == "instance" for item in matchers):
+            raise AlertmanagerError("Matchers cannot target the instance property.")
+
+        # If none of the hosts has the port embedded, put the port regex only once at the end
+        group_port = all(":" not in host for host in self._target_hosts)
+        group_port_regex = PORT_REGEX if group_port else ""
+        target_hosts = []
+        for host in sorted(self._target_hosts):
+            if group_port or ":" in host:
+                target_hosts.append(re.escape(host))
+            else:
+                target_hosts.append(f"{re.escape(host)}{PORT_REGEX}")
+
+        target_regex = "|".join(target_hosts)
+        target_matchers = list(matchers)
+        target_matchers.append({"name": "instance", "value": f"^({target_regex}){group_port_regex}$", "isRegex": True})
+
         # Swagger API format for startsAt/endsAt is 'date-time' which includes a timezone.
         start = datetime.utcnow().astimezone(tz=timezone.utc)
         end = start + duration
         payload = {
-            "matchers": self._matchers,
+            "matchers": target_matchers,
             "startsAt": start.isoformat(),
             "endsAt": end.isoformat(),
             "comment": str(reason),
@@ -180,7 +206,7 @@ class AlertmanagerHosts:
             downtime_id (str): the downtime ID to remove.
 
         Raises:
-            AlertmanagerError: if none of the `alertmanager_urls` API returned a success.
+            spicerack.alertmanager.AlertmanagerError: if none of the `alertmanager_urls` API returned a success.
 
         """
         try:
