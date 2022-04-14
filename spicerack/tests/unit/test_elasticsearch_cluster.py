@@ -1,4 +1,5 @@
 """ElasticsearchCluster module test."""
+import itertools
 from datetime import datetime, timedelta
 from typing import Dict
 from unittest import mock
@@ -642,6 +643,127 @@ def test_get_next_nodes_returns_less_nodes_than_specified():
     assert nodes_not_restarted == ["elastic1001.example.com", "elastic1002.example.com"]
 
 
+def test_get_next_clusters_nodes_fails_with_masters_depending_on_each_other():
+    """Tests that the restart fails in an obvious manner when nothing is restartable."""
+    remote = mock.Mock(spec_set=Remote)
+    since = datetime.utcfromtimestamp(20 / 1000)
+    elasticsearch_clusters = ec.ElasticsearchClusters(
+        mock_node_info(
+            [
+                {
+                    "x1": json_node(
+                        "elastic1001.example.com", cluster_name="alpha", start_time=10, master_capable=True
+                    ),
+                    "x2": json_node("elastic1002.example.com", cluster_name="alpha", start_time=10),
+                },
+                {
+                    "x1": json_node("elastic1001.example.com", cluster_name="beta", start_time=10),
+                    "x2": json_node("elastic1002.example.com", cluster_name="beta", start_time=10, master_capable=True),
+                },
+            ]
+        ),
+        remote,
+        None,
+        ["eqiad", "codfw"],
+    )
+    with pytest.raises(Exception) as excinfo:
+        elasticsearch_clusters.get_next_clusters_nodes(since, 4)
+    assert "graph has cycles" in str(excinfo.value)
+
+
+def _eval_get_next_nodes(node_info, batch_size=4):
+    def update_start(start_time, accept):
+        for cluster in node_info:
+            for node in cluster.values():
+                if accept(node):
+                    node["jvm"] = {"start_time_in_millis": start_time}
+
+    update_start(0, lambda x: True)
+    since = datetime.utcfromtimestamp(10 / 1000)
+    for i in itertools.count(start=20, step=10):
+        remote = mock.Mock(spec_set=Remote)
+        elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info(node_info), remote, None, ["eqiad", "codfw"])
+        res = elasticsearch_clusters.get_next_clusters_nodes(since, batch_size)
+        if res is None:
+            return
+        # FIXME: We assert on the nodes that were queried via cumin and not on the return value of
+        #  get_next_clusters_nodes(). This is a simplification to avoid mocking yet another return value.
+        #  It is also a code smell. There is a refactoring waiting to happen to reduce / isolate the complexity
+        #  of get_next_clusters_nodes().
+        nodes_queried = remote.query.call_args[0][0]
+        nodes_queried = nodes_queried.split(",")
+        nodes_queried.sort()
+        update_start(i, lambda x, nodes=nodes_queried: x["attributes"]["fqdn"] in nodes)
+        yield nodes_queried
+
+
+def test_get_next_nodes_returns_masters_from_separate_rows_one_at_a_time():
+    """Test to verify masters ignore batching and start one at a time.
+
+    Makes the bold assumption the cluster is properly deployed with only a single
+    master capable node per row.
+    """
+    node_info = [
+        {
+            "m1": json_node("elastic1005.example.com", "alpha", "row2", 10, master_capable=True),
+            "m2": json_node("elastic1006.example.com", "alpha", "row3", 10, master_capable=True),
+        },
+    ]
+
+    seen = set()
+    for batch in _eval_get_next_nodes(node_info):
+        assert len(batch) == 1
+        for node in batch:
+            assert node not in seen
+            seen.add(node)
+    assert len(seen) == 2
+
+
+def test_get_next_nodes_returns_masters_after_other_nodes():
+    """Test to verify master nodes are restarted last.
+
+    In this setup, mimicing prod, where some nodes are masters in two clusters,
+    and some nodes are masters in one cluster, a3 and a4 must still be rebooted
+    prior to a1 and a2, to ensure the alpha cluster masters are not restarted
+    prior to their worker nodes.
+    """
+    node_info = [
+        {
+            "a1": json_node("elastic1001.example.com", "alpha", "row2", 10, master_capable=True),
+            "a2": json_node("elastic1002.example.com", "alpha", "row3", 10, master_capable=True),
+            "a3": json_node("elastic1003.example.com", "alpha", "row3", 10),
+            "a4": json_node("elastic1004.example.com", "alpha", "row4", 10),
+            "a5": json_node("elastic1005.example.com", "alpha", "row2", 10),
+            "a6": json_node("elastic1006.example.com", "alpha", "row2", 10),
+        },
+        {
+            "a1": json_node("elastic1001.example.com", "beta", "row2", 10, master_capable=True),
+            "a3": json_node("elastic1003.example.com", "beta", "row3", 10, master_capable=True),
+            "a5": json_node("elastic1005.example.com", "beta", "row2", 10),
+        },
+        {
+            "a2": json_node("elastic1002.example.com", "delta", "row3", 10, master_capable=True),
+            "a4": json_node("elastic1004.example.com", "delta", "row4", 10, master_capable=True),
+            "a6": json_node("elastic1006.example.com", "delta", "row2", 10),
+        },
+    ]
+
+    expect_batches = [
+        {"elastic1005.example.com", "elastic1006.example.com"},
+        {"elastic1003.example.com", "elastic1004.example.com"},
+        {"elastic1001.example.com", "elastic1002.example.com"},
+    ]
+    expect_batch = None
+    for batch in _eval_get_next_nodes(node_info):
+        if not expect_batch:
+            assert expect_batches, "unexpected batch of hosts returned"
+            expect_batch = expect_batches.pop(0)
+        unexpected = [node for node in batch if node not in expect_batch]
+        assert not unexpected, "node not expected in current batch"
+        expect_batch = expect_batch.difference(batch)
+    assert not expect_batches, "expected batches of hosts remain"
+
+
 def test_get_next_nodes_least_not_restarted():
     """Test to get rows that have the least not restarted nodes first on each cluster."""
     remote = mock.Mock(spec_set=Remote)
@@ -785,6 +907,7 @@ def json_node(
     cluster_name: str = "alpha-cluster",
     row: str = "row1",
     start_time: int = 10,
+    master_capable: bool = False,
 ) -> Dict:
     """Used to mock the elasticsearch node API."""
     hostname = fqdn.split(".", 1)[0]
@@ -796,6 +919,7 @@ def json_node(
             "hostname": hostname,
             "fqdn": fqdn,
         },
+        "roles": ["master"] if master_capable else [],
         "settings": {
             "cluster": {
                 "name": cluster_name,
