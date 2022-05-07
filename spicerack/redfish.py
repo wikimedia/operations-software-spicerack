@@ -241,7 +241,7 @@ class Redfish:
             username (str): the username to search for.
 
         Returns:
-            tuple: a 2-element tuple with the the URI for the account and the ETag header value of the GET response.
+            tuple: a 2-element tuple with the URI for the account and the ETag header value of the GET response.
 
         Raises:
             spicerack.redfish.RedfishError: if unable to find the account.
