@@ -178,6 +178,11 @@ class GntInstance:
         logger.info("Shutting down VM %s in cluster %s", self._instance, self._cluster)
         self._master.run_sync(f"gnt-instance shutdown --force --timeout={timeout} {self._instance}")
 
+    def startup(self) -> None:
+        """Start the Ganeti VM instance."""
+        logger.info("Starting VM %s in cluster %s", self._instance, self._cluster)
+        self._master.run_sync(f"gnt-instance startup --force {self._instance}")
+
     def remove(self, *, shutdown_timeout: int = 2) -> None:
         """Shutdown and remove the VM instance from the Ganeti cluster, including its disks.
 
@@ -256,9 +261,9 @@ class GntInstance:
             link,
         )
 
-        results = self._master.run_sync(command)
+        results = self._master.run_sync(command, print_output=True)
         for _, output in results:
-            logger.info(output.message().decode())
+            logger.debug(output.message().decode())
 
 
 class Ganeti:
