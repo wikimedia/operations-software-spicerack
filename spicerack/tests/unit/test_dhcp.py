@@ -66,6 +66,28 @@ configuration_generator_data = (
         ),
         "ttyS1-115200/testhost0.conf",
     ),
+    # - update media type
+    (
+        dhcp.DHCPConfOpt82,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "switch_hostname": "asw2-d-eqiad",
+            "switch_iface": "ge-0/0/0",
+            "vlan": 1021,
+            "ttys": 1,
+            "distro": "buster",
+            "media_type": "rescue",
+        },
+        (
+            "\nhost testhost0 {\n"
+            '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
+            "    fixed-address 10.0.0.1;\n"
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/buster-rescue/";\n'
+            "}\n"
+        ),
+        "ttyS1-115200/testhost0.conf",
+    ),
     # - tty argument should change the file path
     (
         dhcp.DHCPConfOpt82,
@@ -103,6 +125,26 @@ configuration_generator_data = (
             "    hardware ethernet 00:00:00:00:00:01;\n"
             "    fixed-address 10.0.0.1;\n"
             '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/buster-installer/";\n'
+            "}\n"
+        ),
+        "ttyS0-115200/testhost0.conf",
+    ),
+    # - update media type
+    (
+        dhcp.DHCPConfMac,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "mac": "00:00:00:00:00:01",
+            "ttys": 0,
+            "distro": "buster",
+            "media_type": "installer-11.0",
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    hardware ethernet 00:00:00:00:00:01;\n"
+            "    fixed-address 10.0.0.1;\n"
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/buster-installer-11.0/";\n'
             "}\n"
         ),
         "ttyS0-115200/testhost0.conf",

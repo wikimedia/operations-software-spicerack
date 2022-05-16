@@ -27,9 +27,11 @@ whitelist_dhcp.DHCPConfOpt82.switch_hostname
 whitelist_dhcp.DHCPConfOpt82.switch_iface
 whitelist_dhcp.DHCPConfOpt82.vlan
 whitelist_dhcp.DHCPConfOpt82.distro
+whitelist_dhcp.DHCPConfOpt82.media_type
 whitelist_dhcp.DHCPConfMac.ipv4
 whitelist_dhcp.DHCPConfMac.mac
 whitelist_dhcp.DHCPConfMac.distro
+whitelist_dhcp.DHCPConfMac.media_type
 whitelist_dhcp.DHCPConfMgmt.lserial
 whitelist_dhcp.DHCPConfMgmt.ipv4
 
