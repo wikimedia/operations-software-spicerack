@@ -183,7 +183,7 @@ class TestRedfish:
         with pytest.raises(
             redfish.RedfishError, match="POST https://test.example.org/redfish returned HTTP 405 with message"
         ):
-            self.redfish.request("post", "/redfish", data={"key": "value"})
+            self.redfish.request("post", "/redfish", json={"key": "value"})
 
     def test_request_response_raises(self):
         """It should raise a RedfishError if the request failes to be performed."""
