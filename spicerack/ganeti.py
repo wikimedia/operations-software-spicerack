@@ -183,6 +183,16 @@ class GntInstance:
         logger.info("Starting VM %s in cluster %s", self._instance, self._cluster)
         self._master.run_sync(f"gnt-instance startup --force {self._instance}")
 
+    def set_boot_media(self, boot: str) -> None:
+        """Set the boot media of the Ganeti VM to the given media.
+
+        Arguments:
+            boot (str): the boot media to use. Use `disk` to boot from disk and `network` to boot from PXE.
+
+        """
+        self._master.run_sync(f"gnt-instance modify --hypervisor-parameters=boot_order={boot} {self._instance}")
+        logger.info("Set boot media to %s for VM %s in cluster %s", boot, self._instance, self._cluster)
+
     def remove(self, *, shutdown_timeout: int = 2) -> None:
         """Shutdown and remove the VM instance from the Ganeti cluster, including its disks.
 

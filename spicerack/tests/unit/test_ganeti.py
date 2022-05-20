@@ -145,6 +145,16 @@ class TestGaneti:
         instance.startup()
         self.remote.query.return_value.run_sync.assert_called_once_with("gnt-instance startup --force test.example.com")
 
+    def test_instance_set_boot_media(self, requests_mock):
+        """It should set the boot media to the one provided."""
+        self._set_requests_mock_for_instance(requests_mock)
+        requests_mock.get(self.base_url + "/info", text=self.info)
+        instance = self.ganeti.instance(self.instance)
+        instance.set_boot_media("disk")
+        self.remote.query.return_value.run_sync.assert_called_once_with(
+            "gnt-instance modify --hypervisor-parameters=boot_order=disk test.example.com"
+        )
+
     @pytest.mark.parametrize("kwargs", ({}, {"timeout": 0}))
     def test_instance_shutdown(self, requests_mock, kwargs):
         """It should issue the shutdown command on the master host."""
