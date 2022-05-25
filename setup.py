@@ -85,6 +85,7 @@ setup(
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/x-rst",
     name="wikimedia-spicerack",  # Must be the same used for __version__ in __init__.py
+    package_data={"spicerack": ["py.typed"]},
     packages=find_packages(exclude=["*.tests", "*.tests.*"]),
     platforms=["GNU/Linux"],
     setup_requires=SETUP_REQUIRES,
