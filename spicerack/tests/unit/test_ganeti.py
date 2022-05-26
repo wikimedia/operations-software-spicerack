@@ -137,6 +137,24 @@ class TestGaneti:
         with pytest.raises(GanetiError, match="Master for cluster ganeti01.svc.eqiad.wmnet is None"):
             self.ganeti.instance(self.instance)
 
+    def test_instance_startup(self, requests_mock):
+        """It should issue the startup command on the master host."""
+        self._set_requests_mock_for_instance(requests_mock)
+        requests_mock.get(self.base_url + "/info", text=self.info)
+        instance = self.ganeti.instance(self.instance)
+        instance.startup()
+        self.remote.query.return_value.run_sync.assert_called_once_with("gnt-instance startup --force test.example.com")
+
+    def test_instance_set_boot_media(self, requests_mock):
+        """It should set the boot media to the one provided."""
+        self._set_requests_mock_for_instance(requests_mock)
+        requests_mock.get(self.base_url + "/info", text=self.info)
+        instance = self.ganeti.instance(self.instance)
+        instance.set_boot_media("disk")
+        self.remote.query.return_value.run_sync.assert_called_once_with(
+            "gnt-instance modify --hypervisor-parameters=boot_order=disk test.example.com"
+        )
+
     @pytest.mark.parametrize("kwargs", ({}, {"timeout": 0}))
     def test_instance_shutdown(self, requests_mock, kwargs):
         """It should issue the shutdown command on the master host."""
@@ -178,7 +196,8 @@ class TestGaneti:
 
         self.remote.query.return_value.run_sync.assert_called_once_with(
             "gnt-instance add -t drbd -I hail --net 0:link=private --hypervisor-parameters=kvm:boot_order=network "
-            "-o debootstrap+default --no-install -g row_A -B vcpus=2,memory=3g --disk 0:size=4g test.example.com"
+            "-o debootstrap+default --no-install -g row_A -B vcpus=2,memory=3g --disk 0:size=4g test.example.com",
+            print_output=True,
         )
 
     @pytest.mark.parametrize(

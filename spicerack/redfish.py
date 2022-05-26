@@ -3,7 +3,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import urllib3
 from requests import Response
@@ -98,16 +98,13 @@ class Redfish:
         self._http_session.auth = (self._username, self._password)
         self._http_session.headers.update({"Accept": "application/json"})
 
-    def request(
-        self, method: str, uri: str, *, data: Optional[Dict] = None, headers: Optional[Dict] = None
-    ) -> Response:
+    def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
 
         Arguments:
             uri (str): the relative URI to request.
             method (str): the HTTP method to use (e.g. "post").
-            data (dict, optional): the data to send as JSON in the request.
-            data (dict, optional): the custom headers to set in the request.
+            **kwargs (mixed): arbitrary keyword arguments, to be passed requests
 
         Returns:
             requests.models.Response: the response.
@@ -122,12 +119,13 @@ class Redfish:
 
         url = f"https://{self._fqdn}{uri}"
 
-        if self._dry_run and (data is not None or method.lower() not in ("head", "get")):  # RW call
+        data = kwargs.get("json", kwargs.get("data")) is not None
+        if self._dry_run and (data or method.lower() not in ("head", "get")):  # RW call
             logger.info("Would have called %s on %s", method, url)
             return self._get_dummy_response()
 
         try:
-            response = self._http_session.request(method, url, json=data, headers=headers)
+            response = self._http_session.request(method, url, **kwargs)
         except RequestException as e:
             message = f"Failed to perform {method.upper()} request to {url}"
             if self._dry_run:
@@ -160,7 +158,7 @@ class Redfish:
         if self._dry_run:
             return "/"
 
-        response = self.request("post", uri, data=data)
+        response = self.request("post", uri, json=data)
         if response.status_code != 202:
             raise RedfishError(
                 f"Unable to start task for {uri}, expected HTTP 202, "
@@ -241,7 +239,7 @@ class Redfish:
             username (str): the username to search for.
 
         Returns:
-            tuple: a 2-element tuple with the the URI for the account and the ETag header value of the GET response.
+            tuple: a 2-element tuple with the URI for the account and the ETag header value of the GET response.
 
         Raises:
             spicerack.redfish.RedfishError: if unable to find the account.
@@ -273,7 +271,7 @@ class Redfish:
         user_uri, etag = self.find_account(username)
         logger.info("Changing password for the account with username %s: %s", username, user_uri)
         response = self.request(
-            "patch", user_uri, data={"UserName": username, "Password": password}, headers={"If-Match": etag}
+            "patch", user_uri, json={"UserName": username, "Password": password}, headers={"If-Match": etag}
         )
         if response.status_code != 200:
             raise RedfishError(f"Got unexpected HTTP {response.status_code}, expected 200:\n{response.text}")
@@ -313,7 +311,7 @@ class Redfish:
         response = self.request(
             "post",
             "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset",
-            data={"ResetType": action.value},
+            json={"ResetType": action.value},
         )
         if response.status_code != 204 and not self._dry_run:
             raise RedfishError(

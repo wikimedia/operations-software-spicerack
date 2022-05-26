@@ -67,6 +67,7 @@ class DHCPConfOpt82(DHCPConfiguration):
         vlan (str): the name of the VLAN the host is configured for.
         ttys (int): which ttyS to use for this host, accepted values are 0 and 1.
         distro (str): the codename of the Debian distribution to use for the PXE installer.
+        media_type (str): The media type to use e.g. installer, installer-11.0, rescue
 
     """
 
@@ -77,12 +78,13 @@ class DHCPConfOpt82(DHCPConfiguration):
     vlan: str
     ttys: int
     distro: str
+    media_type: str = "installer"
 
     _template = """
     host {s.hostname} {{
         host-identifier option agent.circuit-id "{s.switch_hostname}:{s.switch_iface}:{s.vlan}";
         fixed-address {s.ipv4};
-        option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-installer/";
+        option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-{s.media_type}/";
     }}
     """
 
@@ -102,6 +104,7 @@ class DHCPConfMac(DHCPConfiguration):
         mac (str): the MAC address of the host's interface.
         ttys (int): which ttyS to use for this host, accepted values are 0 and 1.
         distro (str): the codename of the Debian distribution to use for the PXE installer.
+        media_type (str): The media type to use e.g. installer, installer-11.0, rescue
 
     """
 
@@ -110,12 +113,13 @@ class DHCPConfMac(DHCPConfiguration):
     mac: str
     ttys: int
     distro: str
+    media_type: str = "installer"
 
     _template = """
     host {s.hostname} {{
         hardware ethernet {s.mac};
         fixed-address {s.ipv4};
-        option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-installer/";
+        option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-{s.media_type}/";
     }}
     """
 

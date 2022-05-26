@@ -38,6 +38,7 @@ Spicerack Python API autodoc.
    spicerack.redis_cluster
    spicerack.remote
    spicerack.reposync
+   spicerack.service
    spicerack.toolforge
    spicerack.toolforge.etcdctl
    spicerack.typing

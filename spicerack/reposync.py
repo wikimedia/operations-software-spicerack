@@ -104,7 +104,7 @@ class RepoSync:
         old_ssh_auth_sock = os.getenv("SSH_AUTH_SOCK")
         os.environ["SSH_AUTH_SOCK"] = KEYHOLDER_SOCK
 
-        try:
+        try:  # pylint: disable=too-many-nested-blocks
             for remote in working_repo.remotes:
                 logger.debug("Attempt push to: %s", remote)
                 try:
@@ -112,8 +112,14 @@ class RepoSync:
                     push_info_list = remote.push()
                     for push_info in push_info_list:
                         msg = f"bitflags {push_info.flags}: {push_info.summary.strip()}"
-                        if push_info.flags & PushInfo.ERROR == PushInfo.ERROR:
-                            raise RepoSyncPushError(f"Error pushing to {remote}: {msg}")
+                        for flag in [
+                            PushInfo.REJECTED,
+                            PushInfo.REMOTE_REJECTED,
+                            PushInfo.REMOTE_FAILURE,
+                            PushInfo.ERROR,
+                        ]:
+                            if push_info.flags & flag:
+                                raise RepoSyncPushError(f"Error pushing to {remote}: {msg}")
                 # remote.push returns an empty list on error
                 except (StopIteration, GitError) as error:
                     raise RepoSyncPushError(f"Error pushing to {remote}: {error}") from error

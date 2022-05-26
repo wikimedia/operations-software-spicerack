@@ -12,11 +12,6 @@ class Whitelist:
 whitelist_logging = Whitelist()
 whitelist_logging.raiseExceptions
 
-# Needed for vulture < 0.27
-whitelist_mock = Whitelist()
-whitelist_mock.return_value
-whitelist_mock.side_effect
-
 whitelist_ganeti = Whitelist()
 whitelist_ganeti.Ganeti._http_session.auth
 
@@ -27,9 +22,11 @@ whitelist_dhcp.DHCPConfOpt82.switch_hostname
 whitelist_dhcp.DHCPConfOpt82.switch_iface
 whitelist_dhcp.DHCPConfOpt82.vlan
 whitelist_dhcp.DHCPConfOpt82.distro
+whitelist_dhcp.DHCPConfOpt82.media_type
 whitelist_dhcp.DHCPConfMac.ipv4
 whitelist_dhcp.DHCPConfMac.mac
 whitelist_dhcp.DHCPConfMac.distro
+whitelist_dhcp.DHCPConfMac.media_type
 whitelist_dhcp.DHCPConfMgmt.lserial
 whitelist_dhcp.DHCPConfMgmt.ipv4
 
@@ -68,6 +65,26 @@ whitelist_remote.execute.worker.progress_bars
 whitelist_remote.execute.worker.reporter
 whitelist_remote.run_async
 whitelist_remote.run_sync
+
+# Needed because of https://github.com/jendrikseipp/vulture/issues/264
+whitelist_service = Whitelist()
+whitelist_service.Service.aliases
+whitelist_service.Service.bgp
+whitelist_service.Service.depool_threshold
+whitelist_service.Service.encryption
+whitelist_service.Service.lvs
+whitelist_service.Service.lvs_class
+whitelist_service.Service.monitors
+whitelist_service.Service.name
+whitelist_service.Service.page
+whitelist_service.Service.probes
+whitelist_service.Service.protocol
+whitelist_service.Service.public_aliases
+whitelist_service.Service.public_endpoint
+whitelist_service.Service.scheduler
+whitelist_service.ServiceMonitoring.check_command
+whitelist_service.ServiceMonitoring.contact_group
+whitelist_service.ServiceMonitoring.notes_url
 
 whitelist_tests = Whitelist()
 whitelist_tests.unit.test_confctl.TestConfctl.setup_method
