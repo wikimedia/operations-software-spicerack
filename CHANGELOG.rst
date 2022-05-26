@@ -1,6 +1,63 @@
 Spicerack Changelog
 -------------------
 
+`v2.5.0`_ (2022-05-26)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* redfish: update signature of the ``request()`` method to support dynamic keyword arguments that will be passed
+  directly to the requests library.
+
+  * Although this breaks backward compatibility of the existing API for the ``request()`` method, it's not currently
+    used directly anywhere and so it was deemed ok to not justify a new major release for this.
+  * In particular the previous ``data`` parameter that was passed to requests's ``json`` parameter would now be passed
+    to request's ``data`` parameter, so not being automatically converted to JSON. Existing calls have been modified to
+    call ``requests()`` with a ``json`` parameter instead.
+
+New features
+""""""""""""
+
+* service: add new module to expose Puppet's ``service::catalog``:
+
+  * Add a new module to load the Puppet ``service::catalog`` hieradata structure into Spicerack.
+  * Part of the abstractions allow to access in a more programmatic way the properties of a given service.
+  * It also allow to ``depool``/``pool`` (and related context manager) a service in the DNS Discovery realm.
+  * It also allow to ``downtime`` (and related context manager) a service in a given datacenter in Alertmanager.
+  * See the `service module example usage`_.
+
+Minor improvements
+""""""""""""""""""
+
+* reposync: improve git push error handling catching more possible git errors.
+* ganeti: add a ``startup()`` method to startup a Ganeti VM (`T306661`_).
+* ganeti: add ``set_boot_media()`` method to modify the instance boot media and change it between disk and network
+  (PXE) (`T306661`_).
+* ganeti: print the output of a Ganeti VM creation while it's being created so that it gets printed live and not at
+  only at end.
+* dhcp: add to the ``DHCPConfOpt82`` and ``DHCPConfMac`` classes a ``media_type`` parameter:
+
+  * This new ``media_type`` parameter will allow use to easily choose PXE boot media other then the default debian
+    installers. Specifically this will allow us to create cookbooks to test specific point releases as well as
+    rescue and secure-wipe options.
+
+Bug fixes
+"""""""""
+
+* mediawiki: Mediawiki APIs now are only listening only on HTTPS, call the siteinfo API in HTTPS.
+* remote: increase the wait for reboot timeout (`T307260`_):
+
+  * In some cases, in particular during reimages, the reboot time can take longer. Increase the limit for now as in most
+    cases this will not change anything as the check will succeed way before the timeout.
+
+Miscellanea
+"""""""""""
+
+* tests: fix yaml file indentation.
+* documentation: fix typo.
+* setup.py: mark the module as typed so that mypy can type check calls in other tools that are importing this library.
+
 `v2.4.1`_ (2022-04-12)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1840,6 +1897,7 @@ New features
 .. _`pynetbox.core.response.Record`: https://pynetbox.readthedocs.io/en/latest/response.html#pynetbox.core.response.Record
 .. _`elasticsearch compatibility matrix`: https://elasticsearch-py.readthedocs.io/en/stable/#compatibility
 .. _`elasticsearch curator compatibility matrix`: https://www.elastic.co/guide/en/elasticsearch/client/curator/current/version-compatibility.html
+.. _`service module example usage`: https://phabricator.wikimedia.org/P24020
 
 .. _`T147074`: https://phabricator.wikimedia.org/T147074
 .. _`T211750`: https://phabricator.wikimedia.org/T211750
@@ -1874,6 +1932,8 @@ New features
 .. _`T299123`: https://phabricator.wikimedia.org/T299123
 .. _`T300879`: https://phabricator.wikimedia.org/T300879
 .. _`T304434`: https://phabricator.wikimedia.org/T304434
+.. _`T306661`: https://phabricator.wikimedia.org/T306661
+.. _`T307260`: https://phabricator.wikimedia.org/T307260
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -1952,3 +2012,4 @@ New features
 .. _`v2.3.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.3.3
 .. _`v2.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.4.0
 .. _`v2.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.4.1
+.. _`v2.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.5.0
