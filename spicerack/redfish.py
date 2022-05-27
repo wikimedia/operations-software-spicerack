@@ -119,8 +119,7 @@ class Redfish:
 
         url = f"https://{self._fqdn}{uri}"
 
-        data = kwargs.get("json", kwargs.get("data")) is not None
-        if self._dry_run and (data or method.lower() not in ("head", "get")):  # RW call
+        if self._dry_run and method.lower() not in ("head", "get"):  # RW call
             logger.info("Would have called %s on %s", method, url)
             return self._get_dummy_response()
 
