@@ -140,7 +140,7 @@ class TestAlertmanager:
             {"name": "instance", "value": r"^(host1|host2)(:[0-9]+)?$", "isRegex": True},
         ]
 
-    def test_empty_target_hosts(self):  # pylint: disable=no-self-use
+    def test_empty_target_hosts(self):
         """It should error with empty hosts."""
         with pytest.raises(alertmanager.AlertmanagerError):
             alertmanager.AlertmanagerHosts([""])

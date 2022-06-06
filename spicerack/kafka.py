@@ -356,14 +356,14 @@ class Kafka:
                 logger.info("Same cluster, setting offsets...")
                 offset_data = Kafka._get_offsets(client=source_client, topics=topics)
                 logger.info(
-                    'Extracted offsets from source cluster "%s", ' 'site "%s" and consumer group "%s".',
+                    'Extracted offsets from source cluster "%s", site "%s" and consumer group "%s".',
                     source_consumer.cluster,
                     source_consumer.site,
                     source_consumer.consumer_group,
                 )
                 self._set_offsets(client=target_client, offset_data=offset_data)
                 logger.info(
-                    'Offsets set for target cluster "%s", ' 'site "%s" and consumer group "%s".',
+                    'Offsets set for target cluster "%s", site "%s" and consumer group "%s".',
                     target_consumer.cluster,
                     target_consumer.site,
                     target_consumer.consumer_group,

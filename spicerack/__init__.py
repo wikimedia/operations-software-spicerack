@@ -312,7 +312,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         return DHCP(remote_hosts, dry_run=self._dry_run)
 
-    def dns(self) -> Dns:  # pylint: disable=no-self-use
+    def dns(self) -> Dns:
         """Get a Dns instance.
 
         Returns:
@@ -479,7 +479,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         return IcingaHosts(self.icinga_master_host, target_hosts, verbatim_hosts=verbatim_hosts)
 
-    def puppet(self, remote_hosts: RemoteHosts) -> PuppetHosts:  # pylint: disable=no-self-use
+    def puppet(self, remote_hosts: RemoteHosts) -> PuppetHosts:
         """Get a PuppetHosts instance for the given remote hosts.
 
         Arguments:
@@ -535,7 +535,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         # different Phabricator BOT accounts, potentially with different permissions.
         return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)
 
-    def prometheus(self) -> Prometheus:  # pylint: disable=no-self-use
+    def prometheus(self) -> Prometheus:
         """Get a Prometheus instance.
 
         Returns:
@@ -544,7 +544,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         return Prometheus()
 
-    def thanos(self) -> Thanos:  # pylint: disable=no-self-use
+    def thanos(self) -> Thanos:
         """Get a Thanos instance.
 
         Returns:
@@ -619,7 +619,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         return self.netbox(read_write=read_write).get_server(hostname)
 
-    def requests_session(self, name: str, **kwargs: Any) -> requests.Session:  # pylint: disable=no-self-use
+    def requests_session(self, name: str, **kwargs: Any) -> requests.Session:
         """Return a new requests Session with timeout and retry logic.
 
         Params:
@@ -632,7 +632,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         name = f"Spicerack/{__version__} {name}"
         return requests.http_session(name, **kwargs)
 
-    def etcdctl(self, *, remote_host: RemoteHosts) -> EtcdctlController:  # pylint: disable=no-self-use
+    def etcdctl(self, *, remote_host: RemoteHosts) -> EtcdctlController:
         """Add etcdctl control capabilities to the given RemoteHost.
 
         Params:
