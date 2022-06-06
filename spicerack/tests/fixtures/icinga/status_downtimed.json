@@ -1,0 +1,10 @@
+{
+    "host1": {
+        "failed_services": [],
+        "name": "host1",
+        "optimal": true,
+        "state": "UP",
+        "downtimed": true,
+        "notifications_enabled": true
+    }
+}

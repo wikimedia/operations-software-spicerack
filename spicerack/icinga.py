@@ -13,7 +13,7 @@ from cumin.transports import Command
 
 from spicerack.administrative import Reason
 from spicerack.decorators import retry
-from spicerack.exceptions import SpicerackError
+from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import RemoteHosts
 from spicerack.typing import TypeHosts
 
@@ -71,6 +71,10 @@ class CommandFile(str):
 
 class IcingaError(SpicerackError):
     """Custom exception class for errors of this module."""
+
+
+class IcingaCheckError(SpicerackCheckError):
+    """Custom exception class for check errors of this module."""
 
 
 class IcingaStatusParseError(IcingaError):
@@ -296,6 +300,28 @@ class IcingaHosts:
             reason.owner,
             reason.reason,
         )
+        try:  # Best effort attempt to ensure the downtime was applied. See T309447.
+            self.wait_for_downtimed()
+        except IcingaCheckError as e:
+            logger.warning(e)
+
+    @retry(
+        tries=12,
+        delay=timedelta(seconds=10),
+        backoff_mode="constant",
+        exceptions=(IcingaCheckError,),
+        failure_message="Unable to verify all hosts got downtimed",
+    )
+    def wait_for_downtimed(self) -> None:
+        """Poll the Icinga status to verify that the hosts got effectively downtimed.
+
+        Raises:
+            spicerack.icinga.IcingaError: if unable to verify that all hosts got downtimed.
+
+        """
+        not_downtimed = [hostname for hostname, host_status in self.get_status().items() if not host_status.downtimed]
+        if not_downtimed:
+            raise IcingaCheckError(f"Some hosts are not yet downtimed: {not_downtimed}")
 
     @contextmanager
     def services_downtimed(
