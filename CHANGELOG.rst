@@ -1,6 +1,25 @@
 Spicerack Changelog
 -------------------
 
+`v2.6.0`_ (2022-06-07)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: Assume all ``GET`` and ``HEAD`` requests are read-only and anything else is potentally read-write.
+* redfish: allow to submit tasks with ``DELETE`` as some Redfish REST API DELETE actions do submit jobs. The
+  ``submit_task()`` method accepts an HTTP method different than ``POST`` now.
+* netbox: update netbox to use internal discovery address as it got migrated from a public IP to the discovery
+  infrastructure.
+
+Miscellanea
+"""""""""""
+
+* doc: set default language as Sphinx 5.0+ requires language to not be None when warnings are treated as errors.
+* pylint: remove unnecessary comments. The latest pylint has moved the ``no-self-use`` reported issue to an optional
+  plugin. We don't need to enable it, hence removing the unnecessary comments.
+
 `v2.5.0`_ (2022-05-26)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2013,3 +2032,4 @@ New features
 .. _`v2.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.4.0
 .. _`v2.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.4.1
 .. _`v2.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.5.0
+.. _`v2.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.6.0
