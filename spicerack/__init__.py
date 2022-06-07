@@ -33,7 +33,7 @@ from spicerack.kafka import Kafka
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
-from spicerack.netbox import NETBOX_DOMAIN, Netbox, NetboxServer
+from spicerack.netbox import Netbox, NetboxServer
 from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redfish import Redfish, RedfishDell
 from spicerack.redis_cluster import RedisCluster
@@ -222,7 +222,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.remote.RemoteHosts: the instance to execute commands on the Netbox master host.
 
         """
-        return self.remote().query(self.dns().resolve_cname(NETBOX_DOMAIN))
+        dns = self.dns()
+        netbox_hostname = dns.resolve_ptr(dns.resolve_ips("netbox.discovery.wmnet")[0])[0]
+        return self.remote().query(netbox_hostname)
 
     @property
     def management_password(self) -> str:
