@@ -8,7 +8,6 @@ from wmflib.requests import http_session
 
 from spicerack.exceptions import SpicerackError
 
-NETBOX_DOMAIN: str = "netbox.wikimedia.org"
 MANAGEMENT_IFACE_NAME: str = "mgmt"
 SERVER_ROLE_SLUG: str = "server"
 logger = logging.getLogger(__name__)

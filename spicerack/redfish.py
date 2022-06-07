@@ -119,8 +119,7 @@ class Redfish:
 
         url = f"https://{self._fqdn}{uri}"
 
-        data = kwargs.get("json", kwargs.get("data")) is not None
-        if self._dry_run and (data or method.lower() not in ("head", "get")):  # RW call
+        if self._dry_run and method.lower() not in ("head", "get"):  # RW call
             logger.info("Would have called %s on %s", method, url)
             return self._get_dummy_response()
 
@@ -141,12 +140,13 @@ class Redfish:
 
         return response
 
-    def submit_task(self, uri: str, data: Optional[Dict] = None) -> str:
+    def submit_task(self, uri: str, data: Optional[Dict] = None, method: str = "post") -> str:
         """Submit a request that generates a task, return the URI of the submitted task.
 
         Arguments:
             uri (str): the relative URI to request.
-            data (dict, optional): the data to send in the POST request, if no data is provided a GET request is made.
+            data (dict, optional): the data to send in the request.
+            method (str, optional): the HTTP method to use, if not the default one.
 
         Returns:
             str: the URI of the task ID to poll the results.
@@ -158,7 +158,7 @@ class Redfish:
         if self._dry_run:
             return "/"
 
-        response = self.request("post", uri, json=data)
+        response = self.request(method, uri, json=data)
         if response.status_code != 202:
             raise RedfishError(
                 f"Unable to start task for {uri}, expected HTTP 202, "

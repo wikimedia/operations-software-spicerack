@@ -11,7 +11,7 @@ from spicerack.constants import PUPPET_CA_PATH
 class TestMysql:
     """Mysql class tests."""
 
-    def make_match_from_defaults(self, kwargs, match):  # pylint: disable=no-self-use
+    def make_match_from_defaults(self, kwargs, match):
         """Removes the need to put 'obvious' expectations in match."""
         if "charset" not in match:
             match["charset"] = kwargs.get("charset", "utf8mb4")
@@ -70,14 +70,14 @@ class TestMysql:
         ),
     )
     @mock.patch("spicerack.mysql.Connection", autospec=True)
-    # pylint: disable=no-self-use
     def test_connect_read_only(self, mocked_pymsql_connect, dry_run, read_only, transaction_ro):
         """It should start a read-only transaction if either dry-run or read-only are set."""
         my = mysql.Mysql(dry_run=dry_run)
         with my.connect(read_only=read_only) as conn:
             assert conn == mocked_pymsql_connect.return_value
             if transaction_ro:
-                # pylint: disable=maybe-no-member
-                conn.query.assert_called_once_with("SET SESSION TRANSACTION READ ONLY")
+                conn.query.assert_called_once_with(  # pylint: disable=maybe-no-member
+                    "SET SESSION TRANSACTION READ ONLY"
+                )
             else:
                 conn.query.assert_not_called()  # pylint: disable=maybe-no-member
