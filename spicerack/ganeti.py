@@ -22,7 +22,7 @@ CLUSTERS_AND_ROWS: Dict[str, Tuple[str, ...]] = {
     "ganeti01.svc.esams.wmnet": ("OE",),
     "ganeti01.svc.ulsfo.wmnet": ("1",),
     "ganeti01.svc.eqsin.wmnet": ("1",),
-    "ganeti-test01.svc.codfw.wmnet": ("A",),
+    "ganeti-test01.svc.codfw.wmnet": ("A-test",),
     "ganeti01.svc.drmrs.wmnet": ("B12",),
     "ganeti02.svc.drmrs.wmnet": ("B13",),
 }
