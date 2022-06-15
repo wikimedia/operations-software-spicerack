@@ -117,6 +117,10 @@ DELL_TASK_REPONSE = {
     "TaskState": "Running",
     "TaskStatus": "OK",
 }
+DELL_TASK_REPONSE_EPOC = deepcopy(DELL_TASK_REPONSE)
+DELL_TASK_REPONSE_EPOC["EndTime"] = "1969-12-31T18:00:00-06:00"
+DELL_TASK_REPONSE_BAD_TIME = deepcopy(DELL_TASK_REPONSE)
+DELL_TASK_REPONSE_BAD_TIME["EndTime"] = "bad value"
 
 
 def add_accounts_mock_responses(requests_mock):
@@ -241,6 +245,15 @@ class TestRedfish:
     def test_poll_task_dry_run(self):
         """It should return a dummy response in dry-run mode."""
         assert self.redfish_dry_run.poll_task("/redfish/v1/TaskService/Tasks/JID_1234567890") == {}
+
+    @pytest.mark.parametrize("response", (DELL_TASK_REPONSE, DELL_TASK_REPONSE_EPOC, DELL_TASK_REPONSE_BAD_TIME))
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    def test_poll_endtime(self, mocked_sleep, response):
+        """It should raise a RedfishError if polling the task the device returns a failure code."""
+        self.requests_mock.get("/redfish/v1/TaskService/Tasks/JID_1234567890", status_code=202, json=response)
+        with pytest.raises(redfish.RedfishTaskNotCompletedError):
+            self.redfish.poll_task("/redfish/v1/TaskService/Tasks/JID_1234567890")
+        mocked_sleep.assert_called()
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_poll_task_raises(self, mocked_sleep):
