@@ -118,10 +118,10 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "ClusterShell": ("https://clustershell.readthedocs.io/en/v1.8.1/", None),
     "cumin": ("https://doc.wikimedia.org/cumin/master/", None),
-    "requests": ("https://requests.readthedocs.io/en/master/", None),
+    "requests": ("https://requests.readthedocs.io/en/stable/", None),
     "pymysql": ("https://pymysql.readthedocs.io/en/latest/", None),
     "wmflib": ("https://doc.wikimedia.org/wmflib/master/", None),
-    "kafka": ("https://kafka-python.readthedocs.io/en/master/", None),
+    "kafka": ("https://kafka-python.readthedocs.io/en/stable/", None),
     "git": ("https://gitpython.readthedocs.io/en/stable/", None),
     "kubernetes": ("https://kubernetes.readthedocs.io/en/latest/", None),
 }
