@@ -146,6 +146,12 @@ MODEL_RESPONSE = {
 }
 MODEL_RESPONSE_BAD = deepcopy(MODEL_RESPONSE)
 MODEL_RESPONSE_BAD["Model"] = "Foobar"
+PUSHURI_RESPONSE = {
+    "@odata.context": "/redfish/v1/$metadata#UpdateService.UpdateService",
+    "@odata.id": "/redfish/v1/UpdateService",
+    "@odata.type": "#UpdateService.v1_8_1.UpdateService",
+    "HttpPushUri": "/redfish/v1/UpdateService/FirmwareInventory",
+}
 
 
 def add_accounts_mock_responses(requests_mock):
@@ -188,6 +194,13 @@ class TestRedfish:
         assert self.redfish.generation == generation
         # assert twice to check cached version
         assert self.redfish.generation == generation
+
+    def test_property_pushuri(self):
+        """It should return the pushuri."""
+        self.requests_mock.get("/redfish/v1/UpdateService?$select=HttpPushUri", json=PUSHURI_RESPONSE)
+        assert self.redfish.pushuri == "/redfish/v1/UpdateService/FirmwareInventory"
+        # assert twice to check cached version
+        assert self.redfish.pushuri == "/redfish/v1/UpdateService/FirmwareInventory"
 
     @pytest.mark.parametrize("method", ("get", "head"))
     def test_request_dry_run_ro(self, method):

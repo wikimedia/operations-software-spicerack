@@ -99,6 +99,7 @@ class Redfish:
         self._http_session.auth = (self._username, self._password)
         self._http_session.headers.update({"Accept": "application/json"})
         self._generation = 0
+        self._pushuri = ""
 
     def __str__(self) -> str:
         """String representation of the instance.
@@ -143,6 +144,22 @@ class Redfish:
                 self._generation = int(match.group(0))
         logger.debug("%s: iDRAC generation %s", self._fqdn, self._generation)
         return self._generation
+
+    @property
+    def pushuri(self) -> str:
+        """Property representing the HttpPushUri of the idrac.
+
+        This property is used for uploading firmwares to the idrac
+
+        Returns:
+            str: representing the HttpPushUri
+
+        """
+        if not self._pushuri:
+            result = self.request("get", "/redfish/v1/UpdateService?$select=HttpPushUri")
+            self._pushuri = result.json()["HttpPushUri"]
+        logger.debug("%s: iDRAC PushUri %s", self._fqdn, self._pushuri)
+        return self._pushuri
 
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
