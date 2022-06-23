@@ -2,6 +2,7 @@
 import json
 import logging
 import re
+import time
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
@@ -160,6 +161,78 @@ class Redfish:
             self._pushuri = result.json()["HttpPushUri"]
         logger.debug("%s: iDRAC PushUri %s", self._fqdn, self._pushuri)
         return self._pushuri
+
+    @staticmethod
+    def most_recent_member(members: List[Dict], key: str) -> Dict:
+        """Return the most recent member of members result from dell api.
+
+        Members will be sorted on key and the most recent value is returned.
+        The value of key is assumed to be an iso date.
+
+        Arguments:
+            members: A list of dicts returned from the dell api.
+            key: The key to search on.
+
+        Returns:
+            dict: the most recent member
+
+        """
+
+        def sorter(element: Dict) -> datetime:
+            return datetime.fromisoformat(element[key])
+
+        return sorted(members, key=sorter)[-1]
+
+    def last_reboot(self) -> datetime:
+        """Ask redfish for the last reboot time.
+
+        Returns:
+            datetime: the datetime of the last reboot event
+
+        """
+        # TODO: we can possibly use filter once all idrac are updated.  e.g.
+        # iDRAC.Embedded.1/LogServices/Lclog/Entries?$filter=MessageId eq 'RAC0182'
+        # currently we get the following on some older models
+        # Message=Querying is not supported by the implementation, MessageArgs=$filter"
+        last_reboot = datetime.fromisoformat("1970-01-01T00:00:00-00:00")
+        results = self.request(
+            "get",
+            "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog",
+        ).json()
+        # idrac reboots have the message_id RAC0182
+        members = [m for m in results["Members"] if m["MessageId"] == "RAC0182"]
+        if members:
+            last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
+        logger.debug("%s: last_reboot %s", self._fqdn, last_reboot)
+        return last_reboot
+
+    @retry(
+        tries=240,
+        delay=timedelta(seconds=10),
+        backoff_mode="constant",
+        exceptions=(RedfishError,),
+    )
+    def wait_reboot_since(self, since: datetime) -> None:
+        """Wait for idrac/redfish to become responsive.
+
+        Arguments:
+            since: The datetime of the last reboot
+
+        """
+        self.check_connection()
+        if self._generation < 14:
+            # Probing the Gen13/iDRAC8 devices too early seems to cause the redfish deamon to crash
+            print("sleeping for 2 mins to let idrac boot")
+            time.sleep(120)
+        latest = self.last_reboot()
+        if since >= latest:
+            raise RedfishError("no new reboot detected")
+        logger.debug("%s: new reboot detected %s", self._fqdn, latest)
+        # Its still takes a bit of time for redfish to fully come only so
+        # We just arbitrarily sleep for a bit
+        sleep_secs = 30
+        logger.debug("%s: sleeping for %d secs", self._fqdn, sleep_secs)
+        time.sleep(sleep_secs)
 
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.

@@ -152,6 +152,92 @@ PUSHURI_RESPONSE = {
     "@odata.type": "#UpdateService.v1_8_1.UpdateService",
     "HttpPushUri": "/redfish/v1/UpdateService/FirmwareInventory",
 }
+LCLOG_RESPONSE = {
+    "@odata.context": "/redfish/v1/$metadata#LogEntryCollection.LogEntryCollection",
+    "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries",
+    "@odata.type": "#LogEntryCollection.LogEntryCollection",
+    "Description": "LC Logs for this manager",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries/1735",
+            "@odata.type": "#LogEntry.v1_6_1.LogEntry",
+            "Created": "2022-06-22T17:01:17-05:00",
+            "Description": "Log Entry 1735",
+            "EntryType": "Oem",
+            "Id": "1735",
+            "Links": {"OriginOfCondition": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1"}},
+            "Message": "Successfully logged in using root, from " "10.192.32.49 and REDFISH.",
+            "MessageArgs": ["root", "10.192.32.49", "REDFISH"],
+            "MessageArgs@odata.count": 3,
+            "MessageId": "USR0030",
+            "Name": "Log Entry 1735",
+            "Oem": {
+                "Dell": {
+                    "@odata.type": "#DellLCLogEntry.v1_0_0.DellLCLogEntry",
+                    "Category": "Audit",
+                    "Comment": None,
+                    "LastUpdatedByUser": None,
+                }
+            },
+            "OemRecordFormat": "Dell",
+            "Severity": "OK",
+        },
+        {
+            "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries/1734",
+            "@odata.type": "#LogEntry.v1_6_1.LogEntry",
+            "Created": "2022-06-22T16:58:17-05:00",
+            "Description": "Log Entry 1734",
+            "EntryType": "Oem",
+            "Id": "1734",
+            "Links": {},
+            "Message": "The (installation or configuration) job " "JID_559308065328 is successfully completed.",
+            "MessageArgs": ["JID_559308065328"],
+            "MessageArgs@odata.count": 1,
+            "MessageId": "JCP037",
+            "Name": "Log Entry 1734",
+            "Oem": {
+                "Dell": {
+                    "@odata.type": "#DellLCLogEntry.v1_0_0.DellLCLogEntry",
+                    "Category": "Configuration",
+                    "Comment": None,
+                    "LastUpdatedByUser": None,
+                }
+            },
+            "OemRecordFormat": "Dell",
+            "Severity": "OK",
+        },
+        {
+            "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries/1692",
+            "@odata.type": "#LogEntry.v1_6_1.LogEntry",
+            "Created": "2022-06-22T16:42:55-05:00",
+            "Description": "Log Entry 1692",
+            "EntryType": "Oem",
+            "Id": "1692",
+            "Links": {},
+            "Message": "The iDRAC firmware was rebooted with the " "following reason: user initiated.",
+            "MessageArgs": ["user initiated"],
+            "MessageArgs@odata.count": 1,
+            "MessageId": "RAC0182",
+            "Name": "Log Entry 1692",
+            "Oem": {
+                "Dell": {
+                    "@odata.type": "#DellLCLogEntry.v1_0_0.DellLCLogEntry",
+                    "Category": "Audit",
+                    "Comment": None,
+                    "LastUpdatedByUser": None,
+                }
+            },
+            "OemRecordFormat": "Dell",
+            "Severity": "OK",
+        },
+    ],
+    "Members@odata.count": 1735,
+    "Members@odata.nextLink": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries?$skip=50",
+    "Name": "Log Entry Collection",
+}
+
+LCLOG_RESPONSE_NO_MESSAGE = deepcopy(LCLOG_RESPONSE)
+LCLOG_RESPONSE_NO_MESSAGE["Members"] = []
 
 
 def add_accounts_mock_responses(requests_mock):
@@ -201,6 +287,59 @@ class TestRedfish:
         assert self.redfish.pushuri == "/redfish/v1/UpdateService/FirmwareInventory"
         # assert twice to check cached version
         assert self.redfish.pushuri == "/redfish/v1/UpdateService/FirmwareInventory"
+
+    def test_most_recent_member(self):
+        """It should return the item with the most recent date."""
+        data = [
+            {"date": "2022-01-01T00:00:00-00:00"},
+            {"date": "1970-01-01T00:00:00-00:00"},
+            {"date": "1971-01-01T00:00:00-00:00"},
+        ]
+        assert self.redfish.most_recent_member(data, "date") == {"date": "2022-01-01T00:00:00-00:00"}
+
+    @pytest.mark.parametrize(
+        "response, reboot_time",
+        ((LCLOG_RESPONSE, "2022-06-22T16:42:55-05:00"), (LCLOG_RESPONSE_NO_MESSAGE, "1970-01-01T00:00:00-00:00")),
+    )
+    def test_last_reboot(self, response, reboot_time):
+        """Return the last reboot time."""
+        reboot_time = datetime.fromisoformat(reboot_time)
+        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog", json=response)
+        assert self.redfish.last_reboot() == reboot_time
+
+    @pytest.mark.parametrize("generation", (1, 13, 14))
+    @mock.patch("spicerack.redfish.time.sleep")
+    @mock.patch("spicerack.redfish.Redfish.last_reboot")
+    @mock.patch("spicerack.redfish.Redfish.check_connection")
+    def test_wait_reboot_since(self, mocked_check_connection, mocked_last_reboot, mocked_sleep, generation):
+        """It should return immediately if the host has already rebooted."""
+        since = datetime.fromisoformat("2022-01-01T00:00:00-00:00")
+        mocked_check_connection.return_value = True
+        mocked_last_reboot.return_value = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
+        self.redfish._generation = generation  # pylint: disable=protected-access
+        self.redfish.wait_reboot_since(since)
+        mocked_check_connection.called_once()
+        mocked_last_reboot.called_once_with(since)
+        if generation < 14:
+            mocked_sleep.called_once_with(120)
+        mocked_sleep.called_once_with(30)
+
+    @pytest.mark.parametrize("generation", (1, 13, 14))
+    @mock.patch("spicerack.redfish.time.sleep")
+    @mock.patch("spicerack.redfish.Redfish.last_reboot")
+    @mock.patch("spicerack.redfish.Redfish.check_connection")
+    def test_wait_reboot_since_to_early(self, mocked_check_connection, mocked_last_reboot, mocked_sleep, generation):
+        """It should raise an error if the reboot time is to early."""
+        since = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
+        mocked_check_connection.return_value = True
+        mocked_last_reboot.return_value = datetime.fromisoformat("2022-01-01T00:00:00-00:00")
+        self.redfish._generation = generation  # pylint: disable=protected-access
+        with pytest.raises(redfish.RedfishError, match="no new reboot detected"):
+            self.redfish.wait_reboot_since(since)
+        mocked_check_connection.called_once()
+        mocked_last_reboot.called_once_with(since)
+        if generation < 14:
+            mocked_sleep.called_once_with(120)
 
     @pytest.mark.parametrize("method", ("get", "head"))
     def test_request_dry_run_ro(self, method):
