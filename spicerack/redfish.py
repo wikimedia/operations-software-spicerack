@@ -98,6 +98,25 @@ class Redfish:
         self._http_session.auth = (self._username, self._password)
         self._http_session.headers.update({"Accept": "application/json"})
 
+    def __str__(self) -> str:
+        """String representation of the instance.
+
+        Returns:
+            str: the string representation of the target hosts.
+
+        """
+        return f"{self._username}@{self._fqdn}"
+
+    @property
+    def fqdn(self) -> str:
+        """Getter for the fully qualified domain name.
+
+        Returns
+            str: the fqdn
+
+        """
+        return self._fqdn
+
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
 

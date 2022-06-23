@@ -165,6 +165,14 @@ class TestRedfish:
         self.redfish_dry_run = redfish.Redfish("test.example.org", "root", "mysecret", dry_run=True)
         self.requests_mock = requests_mock
 
+    def test_property_magic_str(self):
+        """It should equal the fqdn."""
+        assert str(self.redfish) == "root@test.example.org"
+
+    def test_property_fqdn(self):
+        """It should equal the fqdn."""
+        assert self.redfish.fqdn == "test.example.org"
+
     @pytest.mark.parametrize("method", ("get", "head"))
     def test_request_dry_run_ro(self, method):
         """It should perform any RO request and return the actual response also in dry_run mode."""
