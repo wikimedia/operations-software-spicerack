@@ -138,6 +138,14 @@ DELL_TASK_REPONSE_EPOC = deepcopy(DELL_TASK_REPONSE)
 DELL_TASK_REPONSE_EPOC["EndTime"] = "1969-12-31T18:00:00-06:00"
 DELL_TASK_REPONSE_BAD_TIME = deepcopy(DELL_TASK_REPONSE)
 DELL_TASK_REPONSE_BAD_TIME["EndTime"] = "bad value"
+MODEL_RESPONSE = {
+    "@odata.context": "/redfish/v1/$metadata#Manager.Manager",
+    "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1",
+    "@odata.type": "#Manager.v1_9_0.Manager",
+    "Model": "14G Monolithic",
+}
+MODEL_RESPONSE_BAD = deepcopy(MODEL_RESPONSE)
+MODEL_RESPONSE_BAD["Model"] = "Foobar"
 
 
 def add_accounts_mock_responses(requests_mock):
@@ -172,6 +180,14 @@ class TestRedfish:
     def test_property_fqdn(self):
         """It should equal the fqdn."""
         assert self.redfish.fqdn == "test.example.org"
+
+    @pytest.mark.parametrize("response, generation", ((MODEL_RESPONSE, 14), (MODEL_RESPONSE_BAD, 1)))
+    def test_property_generation(self, response, generation):
+        """It should return the generation."""
+        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1?$select=Model", json=response)
+        assert self.redfish.generation == generation
+        # assert twice to check cached version
+        assert self.redfish.generation == generation
 
     @pytest.mark.parametrize("method", ("get", "head"))
     def test_request_dry_run_ro(self, method):

@@ -1,6 +1,7 @@
 """Redfish module."""
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
@@ -97,6 +98,7 @@ class Redfish:
         self._http_session.verify = False  # The devices have a self-signed certificate
         self._http_session.auth = (self._username, self._password)
         self._http_session.headers.update({"Accept": "application/json"})
+        self._generation = 0
 
     def __str__(self) -> str:
         """String representation of the instance.
@@ -116,6 +118,31 @@ class Redfish:
 
         """
         return self._fqdn
+
+    @property
+    def generation(self) -> int:
+        """Property representing the generation of the idrac.
+
+        This is often 13 for idrac8 and 14 for idrac9.  This property allows us to add workarounds
+        for older idrac models
+
+        Returns:
+            int: representing the generation
+
+        """
+        if not self._generation:
+            result = self.request("get", "/redfish/v1/Managers/iDRAC.Embedded.1?$select=Model")
+            model = result.json()["Model"]
+            # Model e.g. '13G Monolithic'
+            match = re.search(r"\d+", model)
+            if match is None:
+                logger.error("%s: Unrecognized model %s, setting generation to 1", self._fqdn, model)
+                # Setting this to one allows use to continue but assumes the minimal level of support
+                self._generation = 1
+            else:
+                self._generation = int(match.group(0))
+        logger.debug("%s: iDRAC generation %s", self._fqdn, self._generation)
+        return self._generation
 
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
