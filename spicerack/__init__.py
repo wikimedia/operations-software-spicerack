@@ -585,6 +585,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             configuration["password"],
             configuration["timeout"],
             self.remote(),
+            self.netbox(),
         )
 
     def netbox(self, *, read_write: bool = False) -> Netbox:
