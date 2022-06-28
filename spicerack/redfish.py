@@ -224,7 +224,13 @@ class Redfish:
             message_id = message.get("MessageId", message.get("MessageID", "N.A."))
             logger.info("[%s] %s", message_id, message["Message"])
 
-        if "EndTime" not in results or results["EndTime"] == "TIME_NA":
+        try:
+            end_time = datetime.fromisoformat(results.get("EndTime", "1970-01-01T00:00:00")).timestamp()
+        except ValueError:
+            # Endtime is TIME_NA
+            end_time = 0
+
+        if end_time == 0:
             raise RedfishTaskNotCompletedError(
                 f"{results['Id']} not completed yet: status={results['TaskStatus']}, state={results['TaskState']}, "
                 f"completed={results.get('PercentComplete', 'unknown')}%"

@@ -29,6 +29,15 @@ def set_mocked_icinga_host_outputs(mocked_icinga_host, outputs):
     mocked_icinga_host.run_sync.side_effect = [iter([(NodeSet("icinga-host"), out)]) for out in outs]
 
 
+def get_default_downtime_outputs():
+    """Return the outputs suitable for set_mocked_icinga_host_outputs()."""
+    with open(get_fixture_path("icinga", "status_valid.json")) as f:
+        before = f.read()
+    with open(get_fixture_path("icinga", "status_downtimed.json")) as f:
+        after = f.read()
+    return [before, "", "", after, ""]
+
+
 def assert_has_downtime_calls(
     mocked_icinga_host: mock.MagicMock,
     hosts: Sequence[str],
@@ -194,8 +203,7 @@ class TestIcingaHosts:
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtimed(self, mocked_time):
         """It should downtime the hosts on Icinga, yield and delete the downtime once done."""
-        with open(get_fixture_path("icinga", "status_valid.json")) as f:
-            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, get_default_downtime_outputs())
         with self.icinga_hosts.downtimed(self.reason):
             assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
             self.mocked_icinga_host.run_sync.reset_mock()
@@ -215,8 +223,7 @@ class TestIcingaHosts:
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtime_is_kept_when_exception_is_raised(self, _mocked_time):
         """Downtime should not be removed if an exception is raised."""
-        with open(get_fixture_path("icinga", "status_valid.json")) as f:
-            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, get_default_downtime_outputs())
         with pytest.raises(ValueError):
             with self.icinga_hosts.downtimed(self.reason):
                 assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
@@ -226,9 +233,8 @@ class TestIcingaHosts:
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtime_is_removed_when_exception_is_raised(self, _mocked_time):
-        """Downtime should not be removed if an exception is raised."""
-        with open(get_fixture_path("icinga", "status_valid.json")) as f:
-            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        """Downtime should be removed if an exception is raised."""
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, get_default_downtime_outputs())
         with pytest.raises(ValueError):
             with self.icinga_hosts.downtimed(self.reason, remove_on_error=True):
                 assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
@@ -239,16 +245,27 @@ class TestIcingaHosts:
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtime_default_params(self, _mocked_time):
         """It should downtime the hosts on the Icinga server with the default params."""
-        with open(get_fixture_path("icinga", "status_valid.json")) as f:
-            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, get_default_downtime_outputs())
         self.icinga_hosts.downtime(self.reason)
         assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
+    @mock.patch("spicerack.icinga.time.sleep", return_value=None)
+    def test_downtime_default_params_failed_ensure(self, mocked_sleep, _mocked_time, caplog):
+        """It should not raise and just log a warning if unable to verify if the downtime was applied."""
+        caplog.set_level(logging.INFO)
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            not_downtimed = f.read()
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, [not_downtimed, "", ""] + [not_downtimed] * 13)
+        self.icinga_hosts.downtime(self.reason)
+        assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
+        assert "Some hosts are not yet downtimed: ['host1']" in caplog.text
+        mocked_sleep.assert_called()
+
+    @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtime_with_apostrophe_in_reason(self, _mocked_time):
         """It should correctly quote the apostrophe in the reason string."""
-        with open(get_fixture_path("icinga", "status_valid.json")) as f:
-            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, get_default_downtime_outputs())
         reason = Reason("An apostrophe's here", "user1", "orchestration-host", task_id="T12345")
         self.icinga_hosts.downtime(reason)
         assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], reason)
@@ -256,8 +273,7 @@ class TestIcingaHosts:
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtime_custom_duration(self, _mocked_time):
         """It should downtime the hosts for the given duration on the Icinga server."""
-        with open(get_fixture_path("icinga", "status_valid.json")) as f:
-            set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, get_default_downtime_outputs())
         self.icinga_hosts.downtime(self.reason, duration=timedelta(minutes=30))
         assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason, duration=1800)
 
@@ -273,6 +289,42 @@ class TestIcingaHosts:
             icinga.IcingaError, match="Host host1 was not found in Icinga status - no hosts have been downtimed"
         ):
             self.icinga_hosts.downtime(self.reason)
+
+    def test_wait_for_downtimed_already_downtimed(self):
+        """It should return immediately if all hosts are already downtimed."""
+        with open(get_fixture_path("icinga", "status_downtimed.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read())
+
+        self.icinga_hosts.wait_for_downtimed()
+        self.mocked_icinga_host.run_sync.assert_called_once()
+
+    @pytest.mark.parametrize("tries", range(1, 12))
+    @mock.patch("spicerack.icinga.time.sleep", return_value=None)
+    def test_wait_for_downtimed_retry(self, mocked_sleep, tries):
+        """It should poll until the host gets downtimed."""
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            not_downtimed = f.read()
+        with open(get_fixture_path("icinga", "status_downtimed.json")) as f:
+            downtimed = f.read()
+
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, [not_downtimed] * tries + [downtimed])
+
+        self.icinga_hosts.wait_for_downtimed()
+        assert self.mocked_icinga_host.run_sync.call_count == tries + 1
+        assert mocked_sleep.call_count == tries
+
+    @mock.patch("spicerack.icinga.time.sleep", return_value=None)
+    def test_wait_for_downtimed_fail(self, mocked_sleep):
+        """It should raise an IcingaCheckError if unable to verify it."""
+        with open(get_fixture_path("icinga", "status_valid.json")) as f:
+            not_downtimed = f.read()
+        set_mocked_icinga_host_outputs(self.mocked_icinga_host, [not_downtimed] * 13)
+
+        with pytest.raises(icinga.IcingaCheckError, match=re.escape("Some hosts are not yet downtimed: ['host1']")):
+            self.icinga_hosts.wait_for_downtimed()
+
+        assert self.mocked_icinga_host.run_sync.call_count == 12
+        assert mocked_sleep.call_count == 11
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_services_downtimed(self, mocked_time):

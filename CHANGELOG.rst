@@ -1,6 +1,46 @@
 Spicerack Changelog
 -------------------
 
+`v3.0.0`_ (2022-06-28)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* ganeti: refactor the Ganeti module to support the new data model in Netbox:
+
+  * With the new representation of Ganeti data in Netbox, the hardcoded matching between cluster names and Ganeti
+    RAPI FQDN endpoint would not work anymore.
+  * Refactor the module to gather the data directly from Netbox.
+  * This requires the addition of a custom field ``ip_address`` for the virtualization cluster groups model that
+    connects it to the Ganeti RAPI VIP "svc" DNS name that is assigned to the related IP address in Netbox.
+    The custom field has been already added and populated in Netbox in production.
+  * The main benefit is the removal of the hardcoded mapping between clusters and their groups (rows/racks).
+  * Add a new ``get_cluster()`` and ``get_group()`` methods in the ``Ganeti`` class to get a new ``GanetiCluster``
+    or ``GanetiGroup`` dataclass instances that represent the data required to identify the related resources.
+  * Removed the hardcoded magic logic that mapped a row ``A`` to a Ganeti group ``row_A`` as we're moving away from
+    row-level redundancy at the network layer towards a rack-level redundancy model. This allows to rename the Ganeti
+    groups at anytime freely.
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: ensure that the downtime was applied (`T309447`_):
+
+  * Add a ``wait_for_downtimed()`` method that polls the Icinga status to ensure that the hosts got downtimed.
+  * Do this best effort, just logging a warning for now in case the downtime can't be verified.
+
+Bug fixes
+"""""""""
+
+* redfish: make task polling work with older models that set the end time to Unix epoch at the task start.
+
+Miscellanea
+"""""""""""
+
+* log: stop suppressing logging exceptions, that were silenced in the logging configuration.
+* doc: fix intersphinx links.
+
 `v2.6.0`_ (2022-06-07)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1953,6 +1993,7 @@ New features
 .. _`T304434`: https://phabricator.wikimedia.org/T304434
 .. _`T306661`: https://phabricator.wikimedia.org/T306661
 .. _`T307260`: https://phabricator.wikimedia.org/T307260
+.. _`T309447`: https://phabricator.wikimedia.org/T309447
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2033,3 +2074,4 @@ New features
 .. _`v2.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.4.1
 .. _`v2.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.5.0
 .. _`v2.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.6.0
+.. _`v3.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.0.0

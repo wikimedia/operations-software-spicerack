@@ -48,7 +48,6 @@ def setup_logging(
         port (int, optional): the tcpircbot port for the IRC logging.
 
     """
-    logging.raiseExceptions = False
     base_path.mkdir(mode=0o755, parents=True, exist_ok=True)
 
     if dry_run:
