@@ -349,8 +349,9 @@ class TestKubernetesNode(KubeTestBase):
         with pytest.raises(k8s.KubernetesApiError):
             node.refresh()
 
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @pytest.mark.parametrize("label", ["unschedulable"])
-    def test_drain(self, node):
+    def test_drain(self, mocked_wmflib_sleep, node):
         """A successful drain works as expected."""
         before_drain = mock.MagicMock()
         before_drain.items = [self.pod_from_test_case(label) for label in ["replicaset", "daemonset"]]
@@ -364,6 +365,8 @@ class TestKubernetesNode(KubeTestBase):
             sl.assert_not_called()
         assert self._coreapi.create_namespaced_pod_eviction.call_count == 1
         assert self._coreapi.list_pod_for_all_namespaces.call_count == 2
+        # no retries
+        mocked_wmflib_sleep.assert_not_called()
 
     @pytest.mark.parametrize("label", ["unschedulable"])
     def test_drain_eventually_successful(self, node):
@@ -373,10 +376,11 @@ class TestKubernetesNode(KubeTestBase):
         # After draining, we expect the remaining pods to just be the unevictable ones.
         after_drain = mock.MagicMock()
         after_drain.items = [self.pod_from_test_case(label) for label in ["daemonset"]]
-        self._coreapi.list_pod_for_all_namespaces.side_effect = [before_drain, before_drain, after_drain]
+        self._coreapi.list_pod_for_all_namespaces.side_effect = [before_drain, before_drain, before_drain, after_drain]
         with mock.patch("spicerack.k8s.time.sleep") as sl:
             node.drain()
-            sl.assert_called_with(30)
+            # expect sleep to be called once for max_grace_period (30s) and once from @retry (3s)
+            assert sl.call_args_list == [((30,),), ((3,),)]
 
     @pytest.mark.parametrize("label", ["unschedulable"])
     def test_drain_leftover(self, node):

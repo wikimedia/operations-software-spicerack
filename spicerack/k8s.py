@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import kubernetes  # mypy: no-type
 from kubernetes import client, config  # mypy: no-type
 
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 logger = logging.getLogger(__name__)
@@ -254,8 +255,6 @@ class KubernetesNode:
             for p, exc in failed:
                 logger.error("Failed to evict pod %s from node %s: %s", p, self, exc)
             raise KubernetesCheckError(f"Could not evict all pods from node {self}")
-        # Eviction is blocking, so we don't really need to wait at this point.
-        # Still, we re-try once after the max_grace period just to be sure.
         self._wait_for_empty(len(unevictable), max_grace_period)
 
     def refresh(self) -> None:
@@ -318,14 +317,26 @@ class KubernetesNode:
         def num_pods() -> int:
             return len([p for p in self.get_pods() if not p.is_terminated()])
 
+        @retry(
+            tries=3,
+            backoff_mode="constant",
+            exceptions=(KubernetesCheckError,),
+            failure_message=f"Waiting for pods to be evicted from {self.name} ...",
+        )
+        def wait() -> None:
+            npods = num_pods()
+            if npods > expected:
+                raise KubernetesCheckError(f"Node {self.name} still has {npods} pods, expected {expected}")
+
+        # Wait for max grace period first, then retry 3 times (3 seconds delay) as pods need some time
+        # to actually terminate.
+        #
         # Please note that waiting for the max grace period is absolutely arbitrary and just what looks like
         # a reasonable time to wait for the api to conform its view of the node to reality.
         if num_pods() > expected:
             logger.debug("Waiting %d seconds before checking evictions again", max_grace_period)
             time.sleep(max_grace_period)
-            npods = num_pods()
-            if npods > expected:
-                raise KubernetesCheckError(f"Node {self.name} still has {npods} pods, expected {expected}")
+            wait()
 
 
 class KubernetesPod:
