@@ -3,6 +3,7 @@ from unittest import mock
 
 import kubernetes
 import pytest
+from kubernetes.client.models import V1Taint
 
 from spicerack import k8s
 
@@ -33,8 +34,12 @@ class KubeTestBase:
     """Base class for testing all subclasses."""
 
     node_test_cases = {
-        "schedulable": {"metadata": {"name": "node1"}, "spec": {"unschedulable": None}},
-        "unschedulable": {"metadata": {"name": "node2"}, "spec": {"unschedulable": True}},
+        "schedulable": {"metadata": {"name": "node1"}, "spec": {"unschedulable": None, "taints": None}},
+        "unschedulable": {"metadata": {"name": "node2"}, "spec": {"unschedulable": True, "taints": None}},
+        "tainted": {
+            "metadata": {"name": "node3"},
+            "spec": {"unschedulable": None, "taints": [V1Taint(effect="NoExecute", key="dedicated", value="kask")]},
+        },
     }
     pod_test_cases = {
         "orphaned": {
@@ -425,6 +430,15 @@ class TestKubernetesNode(KubeTestBase):
         with pytest.raises(k8s.KubernetesApiError):
             node.drain()
         self._coreapi.list_pod_for_all_namespaces.assert_called_with(field_selector="spec.nodeName=node2")
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "label,expected",
+        [("schedulable", []), ("tainted", [V1Taint(effect="NoExecute", key="dedicated", value="kask")])],
+    )
+    def test_taints(node, expected):
+        """Test fetching taints."""
+        assert node.taints == expected
 
 
 class TestKubernetesPod(KubeTestBase):

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import kubernetes  # mypy: no-type
 from kubernetes import client, config  # mypy: no-type
+from kubernetes.client.models import V1Taint
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
@@ -184,6 +185,16 @@ class KubernetesNode:
 
         """
         return self._node.metadata.name
+
+    @property
+    def taints(self) -> List[V1Taint]:
+        """The taints of the node.
+
+        Returns:
+          List[V1Taints]: the taints of the node.
+
+        """
+        return self._node.spec.taints if self._node.spec.taints is not None else []
 
     def cordon(self) -> None:
         """Makes the node unschedulable.
