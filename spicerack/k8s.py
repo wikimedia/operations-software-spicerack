@@ -1,6 +1,7 @@
 """Kubernetes module."""
 import logging
 import time
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -16,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 class KubernetesApiError(SpicerackError):
     """Custom error class for errors interacting with the kubernetes api."""
+
+
+class KubernetesApiTooManyRequests(KubernetesApiError):
+    """Custom error class for HTTP TooManyRequest errors when interacting with the kubernetes api."""
 
 
 class KubernetesError(SpicerackError):
@@ -265,7 +270,9 @@ class KubernetesNode:
         if len(failed) > 0:
             for p, exc in failed:
                 logger.error("Failed to evict pod %s from node %s: %s", p, self, exc)
+
             raise KubernetesCheckError(f"Could not evict all pods from node {self}")
+
         self._wait_for_empty(len(unevictable), max_grace_period)
 
     def refresh(self) -> None:
@@ -470,6 +477,7 @@ class KubernetesPod:
         """Submit an eviction request to the kubernetes api for this pod.
 
         Raises:
+          KubernetesApiTooManyRequests in case of a persistent HTTP 429 from the server.
           KubernetesApiError in case of a bad response from the server.
           KubernetesError if the pod is not evictable.
 
@@ -482,10 +490,26 @@ class KubernetesPod:
             return
         logger.debug("Evicting pod %s", self)
         body = kubernetes.client.V1beta1Eviction(metadata=client.V1ObjectMeta(name=self.name, namespace=self.namespace))
-        try:
-            self._api.core().create_namespaced_pod_eviction(self.name, self.namespace, body)
-        except kubernetes.client.exceptions.ApiException as e:
-            raise KubernetesApiError(e) from e
+
+        @retry(
+            tries=4,
+            backoff_mode="exponential",
+            exceptions=(KubernetesApiTooManyRequests,),
+            failure_message=f"Retrying eviction of {self}...",
+        )
+        def retry_evict() -> None:
+            try:
+                self._api.core().create_namespaced_pod_eviction(self.name, self.namespace, body)
+            except kubernetes.client.exceptions.ApiException as e:
+                # The eviction is not currently allowed because of a PodDisruptionBudget or
+                # we hit an API rate limit.
+                # In both cases we should retry the eviction.
+                if e.status == HTTPStatus.TOO_MANY_REQUESTS:
+                    logger.info("Failed to evict pod %s - HTTP response body: %s", self, e.body)
+                    raise KubernetesApiTooManyRequests(e) from e
+                raise KubernetesApiError(e) from e
+
+        retry_evict()
 
     def _get(self) -> kubernetes.client.models.v1_pod.V1Pod:
         """Get the object from the api."""

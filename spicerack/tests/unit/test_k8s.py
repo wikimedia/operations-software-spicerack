@@ -1,4 +1,5 @@
 """k8s module tests."""
+from http import HTTPStatus
 from unittest import mock
 
 import kubernetes
@@ -536,5 +537,21 @@ class TestKubernetesPod(KubeTestBase):
             k8s.KubernetesPod(
                 "bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset"), dry_run=False
             ).evict()
+        # Also test dry run. It won't raise an exception
+        k8s.KubernetesPod("bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset")).evict()
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    def test_evict_retry(self, mocked_wmflib_sleep):
+        """When a pod eviction returns 429, retry."""
+        self._coreapi.create_namespaced_pod_eviction.side_effect = kubernetes.client.exceptions.ApiException(
+            status=HTTPStatus.TOO_MANY_REQUESTS, reason="test"
+        )
+        with pytest.raises(k8s.KubernetesApiTooManyRequests):
+            k8s.KubernetesPod(
+                "bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset"), dry_run=False
+            ).evict()
+        # Check if eviction has been retried
+        assert self._coreapi.create_namespaced_pod_eviction.call_count == 4
+        assert mocked_wmflib_sleep.call_count == 3
         # Also test dry run. It won't raise an exception
         k8s.KubernetesPod("bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset")).evict()
