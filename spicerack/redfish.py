@@ -470,8 +470,9 @@ class DellSCP:
                 if attribute["Name"] != attribute_name:
                     continue
 
-                # Attribute found, update it
-                if attribute["Value"] == attribute_value:
+                # Attribute found, update it if different, consider comma-separated lists identical with both ',' and
+                # ', ' as separators.
+                if attribute["Value"].replace(", ", ",") == attribute_value.replace(", ", ","):
                     logger.info(
                         "Skipped set of attribute %s -> %s, has already the correct value: %s",
                         component_name,

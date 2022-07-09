@@ -79,6 +79,23 @@ DELL_SCP = {
                 ],
                 "FQDD": "Some.Component.1",
             },
+            {
+                "Attributes": [
+                    {
+                        "Comment": "Read and Write",
+                        "Name": "Comma.Separated.List.1",
+                        "Set On Import": "False",
+                        "Value": "value1,value2",
+                    },
+                    {
+                        "Comment": "Read and Write",
+                        "Name": "Comma.Space.Separated.List.1",
+                        "Set On Import": "False",
+                        "Value": "value1, value2",
+                    },
+                ],
+                "FQDD": "List.Component.1",
+            },
         ],
         "Model": "PowerEdge R440",
         "ServiceTag": "12ABC34",
@@ -348,6 +365,10 @@ class TestDellSCP:
                 {
                     "Some.Component.1": {"Some.Attribute.1": "value"},
                     "Some.Component.2": {"Some.Attribute.1": "value", "Some.Attribute.2": "value"},
+                    "List.Component.1": {
+                        "Comma.Separated.List.1": "value1,value2",
+                        "Comma.Space.Separated.List.1": "value1, value2",
+                    },
                 },
             ),
         ),
@@ -389,14 +410,25 @@ class TestDellSCP:
         self.config.set("Non.Existent", "Some.Attribute.1", "new_value")
         assert self.config.components["Non.Existent"]["Some.Attribute.1"] == "new_value"
 
-    def test_set_same_value(self, caplog):
+    @pytest.mark.parametrize(
+        "index, component, attribute, value",
+        (
+            (1, "Some.Component.1", "Some.Attribute.1", "value"),
+            (2, "List.Component.1", "Comma.Separated.List.1", "value1,value2"),
+            (2, "List.Component.1", "Comma.Space.Separated.List.1", "value1, value2"),
+        ),
+    )
+    def test_set_same_value(self, index, component, attribute, value, caplog):
         """It should not set the same value and log a different message if the value is already correct."""
         with caplog.at_level(logging.INFO):
-            was_changed = self.config.set("Some.Component.1", "Some.Attribute.1", "value")
+            was_changed = self.config.set(component, attribute, value)
 
         assert not was_changed
-        assert "Skipped set of attribute Some.Component.1 -> Some.Attribute.1, has already" in caplog.text
-        assert self.config.config["SystemConfiguration"]["Components"][1]["Attributes"][0]["Set On Import"] == "False"
+        assert f"Skipped set of attribute {component} -> {attribute}, has already" in caplog.text
+        assert all(
+            i["Set On Import"] == "False"
+            for i in self.config.config["SystemConfiguration"]["Components"][index]["Attributes"]
+        )
 
     def test_set_new_value(self):
         """It should set the value and mark it for import."""
