@@ -8,6 +8,7 @@ import pytest
 
 from spicerack import Spicerack, _cookbook, _menu, cookbook
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
+from spicerack.tests.unit.test__log import _reset_logging_module
 
 COOKBOOKS_BASE_PATH = Path("spicerack/tests/fixtures/cookbook")
 LIST_COOKBOOKS_ALL = """cookbooks
@@ -188,6 +189,7 @@ def test_main_wrong_instance_config(capsys):
     _, err = capsys.readouterr()
     assert ret == 1
     assert "Unable to instantiate Spicerack, check your configuration" in err
+    _reset_logging_module()
 
 
 def test_main_call_another_cookbook_ok(capsys):
@@ -205,6 +207,7 @@ def test_main_call_another_cookbook_ok(capsys):
     ]
     for line in expected:
         assert line in err
+    _reset_logging_module()
 
 
 def test_main_call_another_cookbook_not_found(capsys):
@@ -216,6 +219,7 @@ def test_main_call_another_cookbook_not_found(capsys):
     assert ret == cookbook.EXCEPTION_RETCODE
     assert "SpicerackError: Unable to find cookbook class_api.not_existent" in err
     assert "END (FAIL) - Cookbook class_api.call_another_cookbook (exit_code=99)" in err
+    _reset_logging_module()
 
 
 class TestCookbookCollection:
@@ -227,6 +231,10 @@ class TestCookbookCollection:
         self.spicerack = Spicerack(verbose=False, dry_run=False, **SPICERACK_TEST_PARAMS)
         self.spicerack_dry_run = Spicerack(verbose=False, dry_run=True, **SPICERACK_TEST_PARAMS)
         self.spicerack_verbose = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    def teardown_method(self):
+        """Tear down the test setting resetting the logging module."""
+        _reset_logging_module()
 
     @pytest.mark.parametrize(
         "path_filter, verbose, expected",

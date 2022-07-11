@@ -19,6 +19,13 @@ def _assert_match_in_tmpdir(match, tmp_dir):
             assert match in f.read()
 
 
+def _reset_logging_module():
+    """Reset the logging module removing all handlers and filters."""
+    for log_logger in (log.root_logger, log.irc_logger):
+        list(map(log_logger.removeHandler, log_logger.handlers))
+        list(map(log_logger.removeFilter, log_logger.filters))
+
+
 def test_cumin_filter_pass():
     """The FilterOutCumin filter() method should let a normal log record pass."""
     log_filter = log.FilterOutCumin()
@@ -40,6 +47,7 @@ def test_setup_logging_no_irc(tmpdir, caplog):
     logger.info(message)
     assert message in caplog.text
     _assert_match_in_tmpdir(message, tmpdir.strpath)
+    _reset_logging_module()
 
 
 @mock.patch("wmflib.irc.socket")
@@ -52,6 +60,7 @@ def test_setup_logging_with_irc(mocked_socket, tmpdir, caplog):
     assert mock.call.socket().connect(("host", 123)) in mocked_socket.mock_calls
     assert message in caplog.text
     _assert_match_in_tmpdir(message, tmpdir.strpath)
+    _reset_logging_module()
 
 
 def test_setup_logging_dry_run(capsys, tmpdir, caplog):
@@ -66,6 +75,7 @@ def test_setup_logging_dry_run(capsys, tmpdir, caplog):
     assert message in caplog.text
     _assert_match_in_tmpdir(message, tmpdir.strpath)
     _assert_match_in_tmpdir("DRY-RUN", tmpdir.strpath)
+    _reset_logging_module()
 
 
 def test_log_task_start(capsys, tmpdir, caplog):
@@ -79,6 +89,7 @@ def test_log_task_start(capsys, tmpdir, caplog):
     assert logged_message in err
     assert logged_message in caplog.text
     _assert_match_in_tmpdir(logged_message, tmpdir.strpath)
+    _reset_logging_module()
 
 
 def test_log_task_start_dry_run(capsys, tmpdir, caplog):
@@ -93,6 +104,7 @@ def test_log_task_start_dry_run(capsys, tmpdir, caplog):
     assert logged_message in caplog.text
     _assert_match_in_tmpdir(logged_message, tmpdir.strpath)
     _assert_match_in_tmpdir("DRY-RUN", tmpdir.strpath)
+    _reset_logging_module()
 
 
 def test_log_task_end(capsys, tmpdir, caplog):
@@ -106,3 +118,4 @@ def test_log_task_end(capsys, tmpdir, caplog):
     assert logged_message in err
     assert logged_message in caplog.text
     _assert_match_in_tmpdir(logged_message, tmpdir.strpath)
+    _reset_logging_module()
