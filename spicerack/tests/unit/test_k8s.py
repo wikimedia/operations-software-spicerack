@@ -400,8 +400,9 @@ class TestKubernetesNode(KubeTestBase):
                 node.drain()
                 sl.assert_called_once_with(1)
 
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @pytest.mark.parametrize("label", ["unschedulable"])
-    def test_drain_failed(self, node):
+    def test_drain_failed(self, mocked_wmflib_sleep, node):
         """Test draining when a pod doesn't evict."""
         # Patch get_pods to return a pod that will fail to evict
         pod_with_no_eviction = k8s.KubernetesPod(
@@ -412,6 +413,7 @@ class TestKubernetesNode(KubeTestBase):
 
         with pytest.raises(k8s.KubernetesCheckError, match="Could not evict all pods"):
             node.drain()
+            assert mocked_wmflib_sleep.call_count == 5
 
     @pytest.mark.parametrize("label", ["unschedulable"])
     def test_drain_dry_run(self, dry_run):
@@ -551,7 +553,7 @@ class TestKubernetesPod(KubeTestBase):
                 "bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset"), dry_run=False
             ).evict()
         # Check if eviction has been retried
-        assert self._coreapi.create_namespaced_pod_eviction.call_count == 4
-        assert mocked_wmflib_sleep.call_count == 3
+        assert self._coreapi.create_namespaced_pod_eviction.call_count == 5
+        assert mocked_wmflib_sleep.call_count == 4
         # Also test dry run. It won't raise an exception
         k8s.KubernetesPod("bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset")).evict()

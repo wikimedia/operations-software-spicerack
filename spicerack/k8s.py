@@ -336,18 +336,19 @@ class KubernetesNode:
             return len([p for p in self.get_pods() if not p.is_terminated()])
 
         @retry(
-            tries=3,
-            backoff_mode="constant",
+            tries=5,
+            backoff_mode="exponential",
             exceptions=(KubernetesCheckError,),
-            failure_message=f"Waiting for pods to be evicted from {self.name} ...",
+            failure_message="Waiting for pods to be evicted",
         )
         def wait() -> None:
             npods = num_pods()
             if npods > expected:
                 raise KubernetesCheckError(f"Node {self.name} still has {npods} pods, expected {expected}")
 
-        # Wait for max grace period first, then retry 3 times (3 seconds delay) as pods need some time
-        # to actually terminate.
+        # Wait for max grace period first, then retry 5 times with exponential backoff as pods need some time
+        # to actually terminate and API needs some time to catch up. Especially for nodes with a large number
+        # of pods.
         #
         # Please note that waiting for the max grace period is absolutely arbitrary and just what looks like
         # a reasonable time to wait for the api to conform its view of the node to reality.
@@ -492,10 +493,10 @@ class KubernetesPod:
         body = kubernetes.client.V1beta1Eviction(metadata=client.V1ObjectMeta(name=self.name, namespace=self.namespace))
 
         @retry(
-            tries=4,
+            tries=5,
             backoff_mode="exponential",
             exceptions=(KubernetesApiTooManyRequests,),
-            failure_message=f"Retrying eviction of {self}...",
+            failure_message=f"Retrying eviction of {self}. API error was",
         )
         def retry_evict() -> None:
             try:
