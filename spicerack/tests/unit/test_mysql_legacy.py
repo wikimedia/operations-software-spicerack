@@ -1,4 +1,5 @@
 """MysqlLegacy module tests."""
+import logging
 from datetime import datetime
 from unittest import mock
 
@@ -131,7 +132,8 @@ class TestMysqlLegacy:
         """It should set the masters as read-only/read-write."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet("db10[01-11]"))
         mock_cumin(self.mocked_transports, 0, retvals=[[("db10[01-11]", value)]])
-        getattr(self.mysql, "set_core_masters_" + mode)("eqiad")
+        with caplog.at_level(logging.DEBUG):
+            getattr(self.mysql, "set_core_masters_" + mode)("eqiad")
         assert "SET GLOBAL read_only=" + value.decode() in caplog.text
 
     @pytest.mark.parametrize("readonly, reply", ((True, b"1"), (False, b"0")))
@@ -139,7 +141,8 @@ class TestMysqlLegacy:
         """Should verify that the masters have the intended read-only value."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, NodeSet("db10[01-11]"))
         mock_cumin(self.mocked_transports, 0, retvals=[[("db10[01-11]", reply)]])
-        self.mysql.verify_core_masters_readonly("eqiad", readonly)
+        with caplog.at_level(logging.DEBUG):
+            self.mysql.verify_core_masters_readonly("eqiad", readonly)
         assert "SELECT @@global.read_only" in caplog.text
 
     def test_verify_core_masters_readonly_fail(self):

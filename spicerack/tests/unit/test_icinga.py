@@ -253,11 +253,11 @@ class TestIcingaHosts:
     @mock.patch("spicerack.icinga.time.sleep", return_value=None)
     def test_downtime_default_params_failed_ensure(self, mocked_sleep, _mocked_time, caplog):
         """It should not raise and just log a warning if unable to verify if the downtime was applied."""
-        caplog.set_level(logging.INFO)
         with open(get_fixture_path("icinga", "status_valid.json")) as f:
             not_downtimed = f.read()
         set_mocked_icinga_host_outputs(self.mocked_icinga_host, [not_downtimed, "", ""] + [not_downtimed] * 13)
-        self.icinga_hosts.downtime(self.reason)
+        with caplog.at_level(logging.INFO):
+            self.icinga_hosts.downtime(self.reason)
         assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
         assert "Some hosts are not yet downtimed: ['host1']" in caplog.text
         mocked_sleep.assert_called()
@@ -380,10 +380,10 @@ class TestIcingaHosts:
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
     def test_downtime_services_default_params(self, _mocked_time, caplog):
         """It should downtime the services on the Icinga server with the default params."""
-        caplog.set_level(logging.INFO)
         with open(get_fixture_path("icinga", "status_with_services.json")) as f:
             set_mocked_icinga_host_outputs(self.mocked_icinga_host, [f.read(), "", "", ""])
-        self.icinga_hosts.downtime_services(r"service\d", self.reason)
+        with caplog.at_level(logging.INFO):
+            self.icinga_hosts.downtime_services(r"service\d", self.reason)
         assert_has_service_downtime_calls(
             self.mocked_icinga_host, [("host1", "service1"), ("host1", "service2")], self.reason
         )

@@ -1,12 +1,15 @@
 """Kubernetes module."""
 import logging
 import time
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import kubernetes  # mypy: no-type
 from kubernetes import client, config  # mypy: no-type
+from kubernetes.client.models import V1Taint
 
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 logger = logging.getLogger(__name__)
@@ -14,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 class KubernetesApiError(SpicerackError):
     """Custom error class for errors interacting with the kubernetes api."""
+
+
+class KubernetesApiTooManyRequests(KubernetesApiError):
+    """Custom error class for HTTP TooManyRequest errors when interacting with the kubernetes api."""
 
 
 class KubernetesError(SpicerackError):
@@ -184,6 +191,16 @@ class KubernetesNode:
         """
         return self._node.metadata.name
 
+    @property
+    def taints(self) -> List[V1Taint]:
+        """The taints of the node.
+
+        Returns:
+          List[V1Taints]: the taints of the node.
+
+        """
+        return self._node.spec.taints if self._node.spec.taints is not None else []
+
     def cordon(self) -> None:
         """Makes the node unschedulable.
 
@@ -253,9 +270,9 @@ class KubernetesNode:
         if len(failed) > 0:
             for p, exc in failed:
                 logger.error("Failed to evict pod %s from node %s: %s", p, self, exc)
+
             raise KubernetesCheckError(f"Could not evict all pods from node {self}")
-        # Eviction is blocking, so we don't really need to wait at this point.
-        # Still, we re-try once after the max_grace period just to be sure.
+
         self._wait_for_empty(len(unevictable), max_grace_period)
 
     def refresh(self) -> None:
@@ -318,14 +335,26 @@ class KubernetesNode:
         def num_pods() -> int:
             return len([p for p in self.get_pods() if not p.is_terminated()])
 
+        @retry(
+            tries=3,
+            backoff_mode="constant",
+            exceptions=(KubernetesCheckError,),
+            failure_message=f"Waiting for pods to be evicted from {self.name} ...",
+        )
+        def wait() -> None:
+            npods = num_pods()
+            if npods > expected:
+                raise KubernetesCheckError(f"Node {self.name} still has {npods} pods, expected {expected}")
+
+        # Wait for max grace period first, then retry 3 times (3 seconds delay) as pods need some time
+        # to actually terminate.
+        #
         # Please note that waiting for the max grace period is absolutely arbitrary and just what looks like
         # a reasonable time to wait for the api to conform its view of the node to reality.
         if num_pods() > expected:
             logger.debug("Waiting %d seconds before checking evictions again", max_grace_period)
             time.sleep(max_grace_period)
-            npods = num_pods()
-            if npods > expected:
-                raise KubernetesCheckError(f"Node {self.name} still has {npods} pods, expected {expected}")
+            wait()
 
 
 class KubernetesPod:
@@ -448,6 +477,7 @@ class KubernetesPod:
         """Submit an eviction request to the kubernetes api for this pod.
 
         Raises:
+          KubernetesApiTooManyRequests in case of a persistent HTTP 429 from the server.
           KubernetesApiError in case of a bad response from the server.
           KubernetesError if the pod is not evictable.
 
@@ -460,10 +490,26 @@ class KubernetesPod:
             return
         logger.debug("Evicting pod %s", self)
         body = kubernetes.client.V1beta1Eviction(metadata=client.V1ObjectMeta(name=self.name, namespace=self.namespace))
-        try:
-            self._api.core().create_namespaced_pod_eviction(self.name, self.namespace, body)
-        except kubernetes.client.exceptions.ApiException as e:
-            raise KubernetesApiError(e) from e
+
+        @retry(
+            tries=4,
+            backoff_mode="exponential",
+            exceptions=(KubernetesApiTooManyRequests,),
+            failure_message=f"Retrying eviction of {self}...",
+        )
+        def retry_evict() -> None:
+            try:
+                self._api.core().create_namespaced_pod_eviction(self.name, self.namespace, body)
+            except kubernetes.client.exceptions.ApiException as e:
+                # The eviction is not currently allowed because of a PodDisruptionBudget or
+                # we hit an API rate limit.
+                # In both cases we should retry the eviction.
+                if e.status == HTTPStatus.TOO_MANY_REQUESTS:
+                    logger.info("Failed to evict pod %s - HTTP response body: %s", self, e.body)
+                    raise KubernetesApiTooManyRequests(e) from e
+                raise KubernetesApiError(e) from e
+
+        retry_evict()
 
     def _get(self) -> kubernetes.client.models.v1_pod.V1Pod:
         """Get the object from the api."""

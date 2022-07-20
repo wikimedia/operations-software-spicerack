@@ -1,8 +1,10 @@
 """k8s module tests."""
+from http import HTTPStatus
 from unittest import mock
 
 import kubernetes
 import pytest
+from kubernetes.client.models import V1Taint
 
 from spicerack import k8s
 
@@ -33,8 +35,12 @@ class KubeTestBase:
     """Base class for testing all subclasses."""
 
     node_test_cases = {
-        "schedulable": {"metadata": {"name": "node1"}, "spec": {"unschedulable": None}},
-        "unschedulable": {"metadata": {"name": "node2"}, "spec": {"unschedulable": True}},
+        "schedulable": {"metadata": {"name": "node1"}, "spec": {"unschedulable": None, "taints": None}},
+        "unschedulable": {"metadata": {"name": "node2"}, "spec": {"unschedulable": True, "taints": None}},
+        "tainted": {
+            "metadata": {"name": "node3"},
+            "spec": {"unschedulable": None, "taints": [V1Taint(effect="NoExecute", key="dedicated", value="kask")]},
+        },
     }
     pod_test_cases = {
         "orphaned": {
@@ -349,8 +355,9 @@ class TestKubernetesNode(KubeTestBase):
         with pytest.raises(k8s.KubernetesApiError):
             node.refresh()
 
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @pytest.mark.parametrize("label", ["unschedulable"])
-    def test_drain(self, node):
+    def test_drain(self, mocked_wmflib_sleep, node):
         """A successful drain works as expected."""
         before_drain = mock.MagicMock()
         before_drain.items = [self.pod_from_test_case(label) for label in ["replicaset", "daemonset"]]
@@ -364,6 +371,8 @@ class TestKubernetesNode(KubeTestBase):
             sl.assert_not_called()
         assert self._coreapi.create_namespaced_pod_eviction.call_count == 1
         assert self._coreapi.list_pod_for_all_namespaces.call_count == 2
+        # no retries
+        mocked_wmflib_sleep.assert_not_called()
 
     @pytest.mark.parametrize("label", ["unschedulable"])
     def test_drain_eventually_successful(self, node):
@@ -373,10 +382,11 @@ class TestKubernetesNode(KubeTestBase):
         # After draining, we expect the remaining pods to just be the unevictable ones.
         after_drain = mock.MagicMock()
         after_drain.items = [self.pod_from_test_case(label) for label in ["daemonset"]]
-        self._coreapi.list_pod_for_all_namespaces.side_effect = [before_drain, before_drain, after_drain]
+        self._coreapi.list_pod_for_all_namespaces.side_effect = [before_drain, before_drain, before_drain, after_drain]
         with mock.patch("spicerack.k8s.time.sleep") as sl:
             node.drain()
-            sl.assert_called_with(30)
+            # expect sleep to be called once for max_grace_period (30s) and once from @retry (3s)
+            assert sl.call_args_list == [((30,),), ((3,),)]
 
     @pytest.mark.parametrize("label", ["unschedulable"])
     def test_drain_leftover(self, node):
@@ -421,6 +431,15 @@ class TestKubernetesNode(KubeTestBase):
         with pytest.raises(k8s.KubernetesApiError):
             node.drain()
         self._coreapi.list_pod_for_all_namespaces.assert_called_with(field_selector="spec.nodeName=node2")
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "label,expected",
+        [("schedulable", []), ("tainted", [V1Taint(effect="NoExecute", key="dedicated", value="kask")])],
+    )
+    def test_taints(node, expected):
+        """Test fetching taints."""
+        assert node.taints == expected
 
 
 class TestKubernetesPod(KubeTestBase):
@@ -518,5 +537,21 @@ class TestKubernetesPod(KubeTestBase):
             k8s.KubernetesPod(
                 "bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset"), dry_run=False
             ).evict()
+        # Also test dry run. It won't raise an exception
+        k8s.KubernetesPod("bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset")).evict()
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    def test_evict_retry(self, mocked_wmflib_sleep):
+        """When a pod eviction returns 429, retry."""
+        self._coreapi.create_namespaced_pod_eviction.side_effect = kubernetes.client.exceptions.ApiException(
+            status=HTTPStatus.TOO_MANY_REQUESTS, reason="test"
+        )
+        with pytest.raises(k8s.KubernetesApiTooManyRequests):
+            k8s.KubernetesPod(
+                "bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset"), dry_run=False
+            ).evict()
+        # Check if eviction has been retried
+        assert self._coreapi.create_namespaced_pod_eviction.call_count == 4
+        assert mocked_wmflib_sleep.call_count == 3
         # Also test dry run. It won't raise an exception
         k8s.KubernetesPod("bar", "foo", self._api, init_obj=self.pod_from_test_case("replicaset")).evict()

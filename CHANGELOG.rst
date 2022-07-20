@@ -1,6 +1,65 @@
 Spicerack Changelog
 -------------------
 
+`v3.1.0`_ (2022-07-20)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: add support to check the reboot of the DELL iDRACs:
+
+  * add a ``most_recent_member()`` method in the ``Redfish`` class to return the most recent message from an API reply
+    with members from Dell.
+  * add a ``last_reboot()`` method to the ``Redfish`` class to get the time of the last DELL iDRAC reboot.
+  * add a ``wait_reboot_since()`` method to the ``Redfish`` class to poll until the DELL iDRAC comes back online after
+    a reboot.
+
+* redfish: add property for the ``HttpPushURI`` url, needed for pushing firmware to the DELL iDRACs.
+* redfish: add a ``generation`` property to the ``Redfish`` class to represent the DELL iDRAC genration i.e.
+  ``13`` == ``idrac8``, ``14`` == ``idrac9``, and allow us to implment workarounds for older generations.
+* redfish: add a ``fqdn()`` getter property and ``__str__()`` method to the ``Redfish`` class:
+
+  * When passing around a ``Redfish`` instance it's useful to know what host it represents as such add a getter for
+    the FQDN property and update the ``__str__()`` metbod to also return the FQDN.
+
+* k8s: Add ``KubernetesNode.taints`` propertry to return the taints of a node.
+* k8s: Retry checks for expected pods on drain as in some cases (e.g. pods not catching ``TERM``) it might take a while
+  for pods to actually terminate. Retry the check for expeced pods to reduce the chance for errors.
+* k8s: Retry pod evictions on ``HTTP 429`` from API server:
+
+  * An ``HTTP 429`` response from the API server means that the eviction is not currently allowed because of a
+    configured ``PodDisruptionBudget`` or a API server rate limit was hit. Retry ``evict()`` calls in both cases 3 times
+    with exponential backoff.
+
+* tests: reduce runtime by more than 80%:
+
+  * The logging module setup performed in the ``spicerack._log.setup_logging()`` function is not automatically reset by
+    pytest, leading to slowness in some tests, in particular those with a lot of output, for example due to a lot of
+    retries.
+  * Add a ``_reset_logging_module()`` funtion in the tests for the ``_log`` module that removes all exisiting filters
+    and handlers to both the root and the IRC loggers.
+  * Call the ``_reset_logging_module()`` function in the teardown of every test that directly or indirectly calls the
+    ``spicerack._log.setup_logging()`` function.
+  * This reduces the runtime of the unit tests by more than 80%, in my local environment for example it went from ~150s
+    to ~25s for the 825 tests run.
+
+Bug fixes
+"""""""""
+
+* redfish: better compare Dell SCP attributes:
+
+  * When comparing Dell SCP attributes for the configuration, consider them identical if they are a comma-separated
+    list both if the separator is just the comma or comma+space. Some versions of iDRAC return the values comma+space
+    separated when getting the current configuration.
+
+* tests: fix ``caplog`` usage:
+
+  * Make sure to use ``caplog.at_level()`` every time the pytest caplog fixture is used to ensure the reliability of
+    the test itself and to avoid altering the level for other tests.
+  * Rename the ``argparse.py`` test cookbook to ``argparse_ok`` to prevent any conflict with the stdlib argparse
+    module.
+
 `v3.0.0`_ (2022-06-28)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2075,3 +2134,4 @@ New features
 .. _`v2.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.5.0
 .. _`v2.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.6.0
 .. _`v3.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.0.0
+.. _`v3.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.0

@@ -1,6 +1,8 @@
 """Redfish module."""
 import json
 import logging
+import re
+import time
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
@@ -97,6 +99,140 @@ class Redfish:
         self._http_session.verify = False  # The devices have a self-signed certificate
         self._http_session.auth = (self._username, self._password)
         self._http_session.headers.update({"Accept": "application/json"})
+        self._generation = 0
+        self._pushuri = ""
+
+    def __str__(self) -> str:
+        """String representation of the instance.
+
+        Returns:
+            str: the string representation of the target hosts.
+
+        """
+        return f"{self._username}@{self._fqdn}"
+
+    @property
+    def fqdn(self) -> str:
+        """Getter for the fully qualified domain name.
+
+        Returns
+            str: the fqdn
+
+        """
+        return self._fqdn
+
+    @property
+    def generation(self) -> int:
+        """Property representing the generation of the idrac.
+
+        This is often 13 for idrac8 and 14 for idrac9.  This property allows us to add workarounds
+        for older idrac models
+
+        Returns:
+            int: representing the generation
+
+        """
+        if not self._generation:
+            result = self.request("get", "/redfish/v1/Managers/iDRAC.Embedded.1?$select=Model")
+            model = result.json()["Model"]
+            # Model e.g. '13G Monolithic'
+            match = re.search(r"\d+", model)
+            if match is None:
+                logger.error("%s: Unrecognized model %s, setting generation to 1", self._fqdn, model)
+                # Setting this to one allows use to continue but assumes the minimal level of support
+                self._generation = 1
+            else:
+                self._generation = int(match.group(0))
+        logger.debug("%s: iDRAC generation %s", self._fqdn, self._generation)
+        return self._generation
+
+    @property
+    def pushuri(self) -> str:
+        """Property representing the HttpPushUri of the idrac.
+
+        This property is used for uploading firmwares to the idrac
+
+        Returns:
+            str: representing the HttpPushUri
+
+        """
+        if not self._pushuri:
+            result = self.request("get", "/redfish/v1/UpdateService?$select=HttpPushUri")
+            self._pushuri = result.json()["HttpPushUri"]
+        logger.debug("%s: iDRAC PushUri %s", self._fqdn, self._pushuri)
+        return self._pushuri
+
+    @staticmethod
+    def most_recent_member(members: List[Dict], key: str) -> Dict:
+        """Return the most recent member of members result from dell api.
+
+        Members will be sorted on key and the most recent value is returned.
+        The value of key is assumed to be an iso date.
+
+        Arguments:
+            members: A list of dicts returned from the dell api.
+            key: The key to search on.
+
+        Returns:
+            dict: the most recent member
+
+        """
+
+        def sorter(element: Dict) -> datetime:
+            return datetime.fromisoformat(element[key])
+
+        return sorted(members, key=sorter)[-1]
+
+    def last_reboot(self) -> datetime:
+        """Ask redfish for the last reboot time.
+
+        Returns:
+            datetime: the datetime of the last reboot event
+
+        """
+        # TODO: we can possibly use filter once all idrac are updated.  e.g.
+        # iDRAC.Embedded.1/LogServices/Lclog/Entries?$filter=MessageId eq 'RAC0182'
+        # currently we get the following on some older models
+        # Message=Querying is not supported by the implementation, MessageArgs=$filter"
+        last_reboot = datetime.fromisoformat("1970-01-01T00:00:00-00:00")
+        results = self.request(
+            "get",
+            "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog",
+        ).json()
+        # idrac reboots have the message_id RAC0182
+        members = [m for m in results["Members"] if m["MessageId"] == "RAC0182"]
+        if members:
+            last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
+        logger.debug("%s: last_reboot %s", self._fqdn, last_reboot)
+        return last_reboot
+
+    @retry(
+        tries=240,
+        delay=timedelta(seconds=10),
+        backoff_mode="constant",
+        exceptions=(RedfishError,),
+    )
+    def wait_reboot_since(self, since: datetime) -> None:
+        """Wait for idrac/redfish to become responsive.
+
+        Arguments:
+            since: The datetime of the last reboot
+
+        """
+        self.check_connection()
+        if self._generation < 14:
+            # Probing the Gen13/iDRAC8 devices too early seems to cause the redfish deamon to crash
+            print("sleeping for 2 mins to let idrac boot")
+            time.sleep(120)
+        latest = self.last_reboot()
+        if since >= latest:
+            raise RedfishError("no new reboot detected")
+        logger.debug("%s: new reboot detected %s", self._fqdn, latest)
+        # Its still takes a bit of time for redfish to fully come only so
+        # We just arbitrarily sleep for a bit
+        sleep_secs = 30
+        logger.debug("%s: sleeping for %d secs", self._fqdn, sleep_secs)
+        time.sleep(sleep_secs)
 
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
@@ -470,8 +606,9 @@ class DellSCP:
                 if attribute["Name"] != attribute_name:
                     continue
 
-                # Attribute found, update it
-                if attribute["Value"] == attribute_value:
+                # Attribute found, update it if different, consider comma-separated lists identical with both ',' and
+                # ', ' as separators.
+                if attribute["Value"].replace(", ", ",") == attribute_value.replace(", ", ","):
                     logger.info(
                         "Skipped set of attribute %s -> %s, has already the correct value: %s",
                         component_name,

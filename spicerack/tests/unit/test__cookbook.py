@@ -1,4 +1,5 @@
 """Cookbook module tests."""
+import logging
 import shutil
 from pathlib import Path
 from unittest import mock
@@ -7,6 +8,7 @@ import pytest
 
 from spicerack import Spicerack, _cookbook, _menu, cookbook
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
+from spicerack.tests.unit.test__log import _reset_logging_module
 
 COOKBOOKS_BASE_PATH = Path("spicerack/tests/fixtures/cookbook")
 LIST_COOKBOOKS_ALL = """cookbooks
@@ -29,7 +31,7 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |   |   `-- group2.subgroup1.cookbook3
 |   `-- group2.zcookbook4
 |-- group3
-|   |-- group3.argparse
+|   |-- group3.argparse_ok
 |   |-- group3.argument_parser_raise_system_exit
 |   |-- group3.get_argument_parser_raise
 |   |-- group3.get_argument_parser_raise_system_exit_str
@@ -65,7 +67,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3.
 |   `-- group2.zcookbook4: UNKNOWN (unable to detect title)
 |-- group3: -
-|   |-- group3.argparse: Group3 argparse.
+|   |-- group3.argparse_ok: Group3 argparse_ok.
 |   |-- group3.argument_parser_raise_system_exit: Group3 argument_parser() raise SystemExit.
 |   |-- group3.get_argument_parser_raise: Group3 get argument_parser() raise.
 |   |-- group3.get_argument_parser_raise_system_exit_str: Group3 get argument_parser() raise SystemExit with a string.
@@ -83,7 +85,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 """
 LIST_COOKBOOKS_GROUP3 = """cookbooks
 `-- group3
-    |-- group3.argparse
+    |-- group3.argparse_ok
     |-- group3.argument_parser_raise_system_exit
     |-- group3.get_argument_parser_raise
     |-- group3.get_argument_parser_raise_system_exit_str
@@ -187,6 +189,7 @@ def test_main_wrong_instance_config(capsys):
     _, err = capsys.readouterr()
     assert ret == 1
     assert "Unable to instantiate Spicerack, check your configuration" in err
+    _reset_logging_module()
 
 
 def test_main_call_another_cookbook_ok(capsys):
@@ -204,6 +207,7 @@ def test_main_call_another_cookbook_ok(capsys):
     ]
     for line in expected:
         assert line in err
+    _reset_logging_module()
 
 
 def test_main_call_another_cookbook_not_found(capsys):
@@ -215,6 +219,7 @@ def test_main_call_another_cookbook_not_found(capsys):
     assert ret == cookbook.EXCEPTION_RETCODE
     assert "SpicerackError: Unable to find cookbook class_api.not_existent" in err
     assert "END (FAIL) - Cookbook class_api.call_another_cookbook (exit_code=99)" in err
+    _reset_logging_module()
 
 
 class TestCookbookCollection:
@@ -226,6 +231,10 @@ class TestCookbookCollection:
         self.spicerack = Spicerack(verbose=False, dry_run=False, **SPICERACK_TEST_PARAMS)
         self.spicerack_dry_run = Spicerack(verbose=False, dry_run=True, **SPICERACK_TEST_PARAMS)
         self.spicerack_verbose = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    def teardown_method(self):
+        """Tear down the test setting resetting the logging module."""
+        _reset_logging_module()
 
     @pytest.mark.parametrize(
         "path_filter, verbose, expected",
@@ -289,7 +298,7 @@ class TestCookbookCollection:
                 cookbook.NOT_FOUND_RETCODE,
                 [],
             ),
-            ("group3.argparse", [], ["START - Cookbook", "END ("], 0, ["-h"]),
+            ("group3.argparse_ok", [], ["START - Cookbook", "END ("], 0, ["-h"]),
             (
                 "group3.invalid_syntax",
                 ["invalid syntax (invalid_syntax.py, line 7)"],
@@ -320,8 +329,8 @@ class TestCookbookCollection:
             ),
             (
                 "group3.argument_parser_raise_system_exit",
-                ["group3.argument_parser_raise_system_exit"],
-                ["START - Cookbook", "END ("],
+                [],
+                ["group3.argument_parser_raise_system_exit", "START - Cookbook", "END ("],
                 2,
                 [],
             ),
@@ -423,7 +432,8 @@ class TestCookbookCollection:
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
             with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                ret = _cookbook.main([module] + args)
+                with caplog.at_level(logging.INFO):
+                    ret = _cookbook.main([module] + args)
 
         assert ret == code
         for message in err_messages:
@@ -439,11 +449,12 @@ class TestCookbookCollection:
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
             with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                ret = _cookbook.main(["group3.argparse", "--invalid"])
+                with caplog.at_level(logging.INFO):
+                    ret = _cookbook.main(["group3.argparse_ok", "--invalid"])
 
         assert ret == 2
         _, err = capsys.readouterr()
-        assert "group3.argparse: error: unrecognized arguments" in err
+        assert "group3.argparse_ok: error: unrecognized arguments" in err
         for message in ("START - Cookbook", "END ("):
             assert message not in caplog.text
 
@@ -469,7 +480,8 @@ class TestCookbookCollection:
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
             with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                ret = _cookbook.main(["-l"])
+                with caplog.at_level(logging.INFO):
+                    ret = _cookbook.main(["-l"])
 
         out, _ = capsys.readouterr()
 
@@ -503,8 +515,9 @@ class TestCookbookCollection:
     def test_cookbooks_menu_cookbook_init_fail(self, mocked_cookbook_item, caplog, monkeypatch):
         """When a CookbookItem object fail to get initialized it should catch the MenuError, log it and continue."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack, path_filter="cookbook")
-        menu = cookbooks.get_item(".".join((cookbooks.cookbooks_module_prefix, "group1")))
+        with caplog.at_level(logging.INFO):
+            cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack, path_filter="cookbook")
+            menu = cookbooks.get_item(".".join((cookbooks.cookbooks_module_prefix, "group1")))
         assert menu is None
         assert "fail to init" in caplog.text
         assert mocked_cookbook_item.called
