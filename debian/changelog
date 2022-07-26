@@ -1,3 +1,9 @@
+spicerack (3.1.1-1) unstable; urgency=medium
+
+  * v3.1.1 upstream release.
+
+ -- jbond <jbond@wikimedia.org>  Tue, 26 Jul 2022 13:13:16 -0000
+
 spicerack (3.1.0-1) unstable; urgency=medium
 
   * v3.1.0 upstream release.
