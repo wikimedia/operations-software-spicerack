@@ -1,6 +1,19 @@
 Spicerack Changelog
 -------------------
 
+`v3.1.1`_ (2022-07-26)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* k8s: Increase retry value to prevent timeouts.
+
+Miscellanea
+"""""""""""
+
+* Add support for python 3.10
+
 `v3.1.0`_ (2022-07-20)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2135,3 +2148,4 @@ New features
 .. _`v2.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v2.6.0
 .. _`v3.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.0.0
 .. _`v3.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.0
+.. _`v3.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.1
