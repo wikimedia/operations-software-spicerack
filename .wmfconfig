@@ -1,0 +1,12 @@
+[github]
+repository = operations-software-spicerack
+
+[pypi]
+name = wikimedia-spicerack
+wheels_prefix = wikimedia_spicerack
+
+[debian]
+distros = bullseye
+source_package = spicerack
+binary_package = spicerack
+
