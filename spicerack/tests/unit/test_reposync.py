@@ -80,7 +80,7 @@ class TestReposync:
         file_content = f"test data: {random.random()}"  # nosec
         with self.reposync.update("test add random data") as working_dir:
             (working_dir / "test_file.txt").write_text(file_content)
-        mock_ask_confirmation.assert_called_once_with(f"Ok to push changes to {self.bare_repo.common_dir}")
+        mock_ask_confirmation.assert_not_called()
         assert not self.bare_repo.is_dirty()
         assert len(self.bare_repo.refs) == 0
 
