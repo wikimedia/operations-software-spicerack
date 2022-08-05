@@ -17,7 +17,7 @@ INSTALL_REQUIRES = [
     "kafka-python>=1.4.3",
     "kubernetes==12.0.*",  # frozen to the version available on debian bullseye
     "pymysql>=0.9.3",
-    "pynetbox>=5.0.7",
+    "pynetbox~=6.6",
     "redis>=3.2.1,<=4.1.3",
     "requests>=2.21.0",
     "wmflib",
