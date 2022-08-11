@@ -180,7 +180,7 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_dns, read
 
     assert isinstance(spicerack.netbox(read_write=read_write), Netbox)
     # Values from fixtures/netbox/config.yaml
-    mocked_pynetbox.assert_called_once_with("https://netbox.example.com", token=token)
+    mocked_pynetbox.assert_called_once_with("https://netbox.example.com", token=token, threading=True)
     assert spicerack.netbox_master_host.hosts == "netbox-server.example.com"
 
     mocked_pynetbox.reset_mock()
