@@ -1,0 +1,35 @@
+{
+    "data": [
+      {
+        "id": 1,
+        "ix_id": 1,
+        "name": "",
+        "descr": "",
+        "mtu": null,
+        "dot1q_support": false,
+        "rs_asn": 0,
+        "arp_sponge": null,
+        "ixf_ixp_member_list_url_visible": "Private",
+        "created": "2010-07-29T00:00:00Z",
+        "updated": "2016-03-14T20:46:46Z",
+        "status": "ok"
+      },
+      {
+        "id": 2,
+        "ix_id": 2,
+        "name": "",
+        "descr": "",
+        "mtu": 1500,
+        "dot1q_support": false,
+        "rs_asn": 0,
+        "arp_sponge": null,
+        "ixf_ixp_member_list_url_visible": "Private",
+        "created": "2010-07-29T00:00:00Z",
+        "updated": "2020-12-08T14:58:34Z",
+        "status": "ok"
+      }
+    ],
+    "meta": {
+      "generated": 1659428475.954
+    }
+}

@@ -34,6 +34,7 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NetboxServer
+from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redfish import Redfish, RedfishDell
 from spicerack.redis_cluster import RedisCluster
@@ -731,3 +732,19 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             self._service_catalog = Catalog(config, self.confctl("discovery"), self.remote(), dry_run=self._dry_run)
 
         return self._service_catalog
+
+    def peeringdb(self, *, ttl: int = 86400) -> PeeringDB:
+        """Get a PeeringDB instance to interact with the PeeringDB API.
+
+        Arguments:
+            cachedir (str, optional): path in which to store on disk cache
+            ttl (int): cache timeout
+
+        Returns:
+            spicerack.peringdb.PeeringDB: the instance.
+
+        """
+        config = load_yaml_config(self._spicerack_config_dir / "peeringdb" / "config.yaml")
+        token = config["api_token_ro"]
+        cachedir = Path(config["cachedir"])
+        return PeeringDB(cachedir=cachedir, ttl=ttl, proxies=self.requests_proxies, token=token)

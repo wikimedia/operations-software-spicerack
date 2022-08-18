@@ -147,7 +147,8 @@ class RepoSync:
         copy_tree(str(data_dir), str(repo_dir), preserve_symlinks=1)
         self._commit(working_repo, message)
         print(working_repo.git.show(["--color=always", "HEAD"]))
-        ask_confirmation(f"Ok to push changes to {self._repo.common_dir}")
+        if not self._dry_run:
+            ask_confirmation(f"Ok to push changes to {self._repo.common_dir}")
         self._push(working_repo)
 
     def force_sync(self) -> None:

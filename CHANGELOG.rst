@@ -1,6 +1,18 @@
 Spicerack Changelog
 -------------------
 
+`v3.2.0`_ (2022-08-18)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+* Add new PeeringDB module for interfacing with the PeeringDB API
+
+Minor improvements
+""""""""""""""""""
+* Elasticsearch: ensure we restart masters one at a time
+* move flak8 configuration into setup.cfg
+
 `v3.1.1`_ (2022-07-26)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2149,3 +2161,4 @@ New features
 .. _`v3.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.0.0
 .. _`v3.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.0
 .. _`v3.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.1
+.. _`v3.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.0

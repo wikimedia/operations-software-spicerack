@@ -5,7 +5,7 @@ from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence
+from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence, Set
 
 import curator
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
@@ -279,6 +279,9 @@ class ElasticsearchClusters:
         before moving to the next row. Since shards cannot move to a node with an older version of elasticsearch,
         this should help to keep all shards allocated at all times.
 
+        Master capable nodes are returned after all other nodes have restarted to support version upgrades which
+        strongly suggest the masters are upgraded last.
+
         Arguments:
             started_before (datetime.datetime): the time against after which we check if the node has been restarted.
             size (int, optional): size of nodes not restarted in a row.
@@ -295,9 +298,12 @@ class ElasticsearchClusters:
         nodes_to_process = [node for node in nodes_group if not node.restarted_since(started_before)]
         if not nodes_to_process:
             return None
+        # delay master nodes until all the workers have been restarted
+        nodes_to_process = _restartable_node_groups(nodes_to_process)
         rows = ElasticsearchClusters._to_rows(nodes_to_process)
         sorted_rows = sorted(rows.values(), key=len)
-        next_nodes = sorted_rows[0][:size]
+        next_nodes = sorted_rows[0]
+        next_nodes = next_nodes[:size]
         node_names = ",".join([node.fqdn for node in next_nodes])
         return ElasticsearchHosts(self._remote.query(node_names), next_nodes, dry_run=self._dry_run)
 
@@ -312,7 +318,6 @@ class ElasticsearchClusters:
         for cluster in self._clusters:
             for json_node in cluster.get_nodes().values():
                 node_name = json_node["attributes"]["hostname"]
-
                 if node_name not in nodes_group:
                     nodes_group[node_name] = NodesGroup(json_node, cluster)
                 else:
@@ -728,10 +733,12 @@ class NodesGroup:
         """
         self._hostname: str = json_node["attributes"]["hostname"]
         self._fqdn: str = json_node["attributes"]["fqdn"]
-        self._clusters_names: List[str] = [json_node["settings"]["cluster"]["name"]]
+        cluster_name = json_node["settings"]["cluster"]["name"]
+        self._clusters_names: List[str] = [cluster_name]
         self._clusters_instances: List[ElasticsearchCluster] = [cluster]
         self._row: str = json_node["attributes"]["row"]
         self._oldest_start_time = datetime.utcfromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000)
+        self._master_capable: Set[str] = {cluster_name} if "master" in json_node["roles"] else set()
 
     def accumulate(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
         """Accumulate information from other elasticsearch instances running on the same server.
@@ -760,6 +767,8 @@ class NodesGroup:
             )
         start_time = datetime.utcfromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000)
         self._oldest_start_time = min(self._oldest_start_time, start_time)
+        if "master" in json_node["roles"]:
+            self._master_capable.add(cluster_name)
 
     @property
     def row(self) -> str:
@@ -772,9 +781,19 @@ class NodesGroup:
         return self._fqdn
 
     @property
+    def clusters_names(self) -> Sequence[str]:
+        """Names of cluster instances running on this node group."""
+        return self._clusters_names
+
+    @property
     def clusters_instances(self) -> Sequence[ElasticsearchCluster]:
         """Cluster instances running on this node group."""
         return self._clusters_instances
+
+    @property
+    def master_capable(self) -> Set[str]:
+        """Set of clusters this node is master capable on."""
+        return self._master_capable
 
     def restarted_since(self, since: datetime) -> bool:
         """Check if node has been restarted.
@@ -798,3 +817,25 @@ class NodesGroup:
         for cluster_instance in self._clusters_instances:
             if not cluster_instance.is_node_in_cluster_nodes(self._hostname):
                 raise ElasticsearchClusterCheckError("Elasticsearch is not up yet")
+
+
+def _restartable_node_groups(nodes: Sequence[NodesGroup]) -> List[NodesGroup]:
+    """Returns the subset of nodes that are restartable.
+
+    Primarily concerned with restarting nodes within a cluster prior to the
+    masters of that cluster. Any node in the group that is master to another
+    node in the group is removed.
+    """
+    masters = defaultdict(set)
+    for node in nodes:
+        for cluster_name in node.master_capable:
+            masters[cluster_name].add(node.fqdn)
+    rebootable = {node.fqdn for node in nodes}
+    for node in nodes:
+        for cluster_name in node.clusters_names:
+            if cluster_name not in node.master_capable:
+                # This node must be restarted before the masters
+                rebootable = rebootable.difference(masters[cluster_name])
+    if nodes and not rebootable:
+        raise Exception("Restart dependency graph has cycles")
+    return [node for node in nodes if node.fqdn in rebootable]
