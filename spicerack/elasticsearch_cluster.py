@@ -734,7 +734,6 @@ class NodesGroup:
         self._hostname: str = json_node["attributes"]["hostname"]
         self._fqdn: str = json_node["attributes"]["fqdn"]
         cluster_name = json_node["settings"]["cluster"]["name"]
-        self._clusters_names: List[str] = [cluster_name]
         self._clusters_instances: List[ElasticsearchCluster] = [cluster]
         self._row: str = json_node["attributes"]["row"]
         self._oldest_start_time = datetime.utcfromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000)
@@ -754,8 +753,6 @@ class NodesGroup:
             fqdn2 = json_node["attributes"]["fqdn"]
             raise AssertionError(f"Invalid data, two instances on the same node with different fqdns [{fqdn1}/{fqdn2}]")
         cluster_name = json_node["settings"]["cluster"]["name"]
-        if cluster_name not in self._clusters_names:
-            self._clusters_names.append(cluster_name)
         if cluster not in self._clusters_instances:
             self._clusters_instances.append(cluster)
         if self._row != json_node["attributes"]["row"]:
@@ -779,11 +776,6 @@ class NodesGroup:
     def fqdn(self) -> str:
         """Fully Qualified Domain Name."""
         return self._fqdn
-
-    @property
-    def clusters_names(self) -> Sequence[str]:
-        """Names of cluster instances running on this node group."""
-        return self._clusters_names
 
     @property
     def clusters_instances(self) -> Sequence[ElasticsearchCluster]:
@@ -819,23 +811,15 @@ class NodesGroup:
                 raise ElasticsearchClusterCheckError("Elasticsearch is not up yet")
 
 
-def _restartable_node_groups(nodes: Sequence[NodesGroup]) -> List[NodesGroup]:
+def _restartable_node_groups(nodes: List[NodesGroup]) -> List[NodesGroup]:
     """Returns the subset of nodes that are restartable.
 
     Primarily concerned with restarting nodes within a cluster prior to the
-    masters of that cluster. Any node in the group that is master to another
-    node in the group is removed.
+    masters.
     """
-    masters = defaultdict(set)
-    for node in nodes:
-        for cluster_name in node.master_capable:
-            masters[cluster_name].add(node.fqdn)
-    rebootable = {node.fqdn for node in nodes}
-    for node in nodes:
-        for cluster_name in node.clusters_names:
-            if cluster_name not in node.master_capable:
-                # This node must be restarted before the masters
-                rebootable = rebootable.difference(masters[cluster_name])
-    if nodes and not rebootable:
-        raise Exception("Restart dependency graph has cycles")
-    return [node for node in nodes if node.fqdn in rebootable]
+    # If everything remaining is a master somewhere that means most of the cluster
+    # has restarted and we are safe to restart masters
+    if all(node.master_capable for node in nodes):
+        return nodes
+    # Else return all the non-master instances
+    return [node for node in nodes if not node.master_capable]

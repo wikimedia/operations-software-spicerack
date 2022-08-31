@@ -643,34 +643,6 @@ def test_get_next_nodes_returns_less_nodes_than_specified():
     assert nodes_not_restarted == ["elastic1001.example.com", "elastic1002.example.com"]
 
 
-def test_get_next_clusters_nodes_fails_with_masters_depending_on_each_other():
-    """Tests that the restart fails in an obvious manner when nothing is restartable."""
-    remote = mock.Mock(spec_set=Remote)
-    since = datetime.utcfromtimestamp(20 / 1000)
-    elasticsearch_clusters = ec.ElasticsearchClusters(
-        mock_node_info(
-            [
-                {
-                    "x1": json_node(
-                        "elastic1001.example.com", cluster_name="alpha", start_time=10, master_capable=True
-                    ),
-                    "x2": json_node("elastic1002.example.com", cluster_name="alpha", start_time=10),
-                },
-                {
-                    "x1": json_node("elastic1001.example.com", cluster_name="beta", start_time=10),
-                    "x2": json_node("elastic1002.example.com", cluster_name="beta", start_time=10, master_capable=True),
-                },
-            ]
-        ),
-        remote,
-        None,
-        ["eqiad", "codfw"],
-    )
-    with pytest.raises(Exception) as excinfo:
-        elasticsearch_clusters.get_next_clusters_nodes(since, 4)
-    assert "graph has cycles" in str(excinfo.value)
-
-
 def _eval_get_next_nodes(node_info, batch_size=4):
     def update_start(start_time, accept):
         for cluster in node_info:
@@ -750,8 +722,7 @@ def test_get_next_nodes_returns_masters_after_other_nodes():
 
     expect_batches = [
         {"elastic1005.example.com", "elastic1006.example.com"},
-        {"elastic1003.example.com", "elastic1004.example.com"},
-        {"elastic1001.example.com", "elastic1002.example.com"},
+        {"elastic1001.example.com", "elastic1002.example.com", "elastic1003.example.com", "elastic1004.example.com"},
     ]
     expect_batch = None
     for batch in _eval_get_next_nodes(node_info):
