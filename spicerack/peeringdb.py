@@ -3,7 +3,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Dict, MutableMapping, Optional
+from typing import Dict, MutableMapping, Optional, cast
 
 from wmflib.requests import http_session
 
@@ -23,9 +23,11 @@ class CacheMiss(SpicerackError):
 class PeeringDB:
     """Basic dumb wrapper over the PeeringDB API.
 
-    Implements the beta/v0 PeeringDB API. Tries to be smart by a) keeping a
-    persistent keep-alived session for multiple requests and b) operating a
-    local filesystem cache, if so desired.
+    Implements the beta/v0 PeeringDB API. Tries to be smart by:
+
+        a) keeping a persistent keep-alived session for multiple requests
+        b) operating a local filesystem cache, if so desired.
+
     """
 
     baseurl = "https://www.peeringdb.com/api/"
@@ -36,29 +38,30 @@ class PeeringDB:
         ttl: int = 86400,
         cachedir: Optional[Path] = None,
         proxies: Optional[MutableMapping[str, str]] = None,
-        token: Optional[str] = None,
+        token: str = "",
     ):
         """Initiliaze the module.
 
         Arguments:
-            ttl (int): TTL for cached objects
-            cachedir (Path, optional): Root path for objects caching
-            proxies (MutableMapping, optional): Proxies for Internet access
-            token (str, optional): PeeringDB read-only token
-
-        Returns:
-            str: a path like string encoding all the arguments
+            ttl (int): TTL for cached objects.
+            cachedir (Path, optional): Root path for objects caching.
+            proxies (MutableMapping, optional): Proxies for Internet access.
+            token (str, optional): PeeringDB read-only token.
 
         """
         self.session = http_session(".".join((self.__module__, self.__class__.__name__)))
         if token:
             self.session.headers.update({"Authorization": f"Api-Key {token}"})
+
         if proxies:
             self.session.proxies = proxies
-        self.cachedir = cachedir
+
         self.ttl = ttl
-        self.use_cache = self.cachedir is not None and self.ttl > 0
-        if self.cachedir is not None:
+        self.use_cache = cachedir is not None and self.ttl > 0
+
+        self.cachedir: Path
+        if cachedir is not None:
+            self.cachedir = cast(Path, cachedir)
             self.cachedir.mkdir(exist_ok=True)
 
     @staticmethod
@@ -121,7 +124,7 @@ class PeeringDB:
             raw_response = self.session.get(url, params=filters)
             if not raw_response.ok:
                 raise PeeringDBError(
-                    f"Server response with status {raw_response.status_code}" f" ({raw_response.content.decode()})"
+                    f"Server response with status {raw_response.status_code}" f" ({raw_response.text})"
                 ) from e
             json_response = raw_response.json()
             self._cache_put(json_response, cache_key)
@@ -139,8 +142,8 @@ class PeeringDB:
         """
         if not self.use_cache:
             raise CacheMiss()
-        # TODO: check with riccardo why we need to ignore this
-        cachefile = Path(self.cachedir, cache_key)  # type: ignore[arg-type]
+
+        cachefile = self.cachedir / cache_key
         try:
             mtime = cachefile.stat().st_mtime
             age = time.time() - mtime
@@ -162,6 +165,6 @@ class PeeringDB:
         if not self.use_cache:
             return
 
-        cachefile = Path(self.cachedir, cache_key)  # type: ignore[arg-type]
+        cachefile = self.cachedir / cache_key
         cachefile.parent.mkdir(exist_ok=True, parents=True)
         cachefile.write_text(json.dumps(content, indent=2))

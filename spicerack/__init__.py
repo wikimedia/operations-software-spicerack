@@ -737,14 +737,17 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a PeeringDB instance to interact with the PeeringDB API.
 
         Arguments:
-            cachedir (str, optional): path in which to store on disk cache
-            ttl (int): cache timeout
+            ttl (int): the cache timeout in seconds. If cached items are older than the given TTL they will be ignored
+                and fetched again.
 
         Returns:
             spicerack.peringdb.PeeringDB: the instance.
 
         """
         config = load_yaml_config(self._spicerack_config_dir / "peeringdb" / "config.yaml")
-        token = config["api_token_ro"]
-        cachedir = Path(config["cachedir"])
+        token = config.get("api_token_ro", "")
+        cachedir = config.get("cachedir")
+        if cachedir is not None:
+            cachedir = Path(cachedir)
+
         return PeeringDB(cachedir=cachedir, ttl=ttl, proxies=self.requests_proxies, token=token)
