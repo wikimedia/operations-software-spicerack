@@ -1,6 +1,30 @@
 Spicerack Changelog
 -------------------
 
+`v3.2.1`_ (2022-08-31)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* elasticsearch_cluster: simplify routine to start masters last. Due to the multiple clusters an host can be a master
+  in one instance and a child of another instance, bringing the process to a halt using the previous logic. The new
+  logic returns all the hosts that are child for all instances first and after that the remaining ones that are
+  master for at least one instance.
+* peeringdb: minor fixes:
+
+  * Make the ``Spicerack.peeringdb()`` accessor more flexible allowing the configuration file to miss non mandatory
+    keys.
+  * Add tests for the ``Spicerack.peeringdb()`` accessor.
+  * Use empty string as default value for the token to avoid the ``Optional`` type.
+  * Fix mypy ignore for type mismatch.
+  * Fix various docstrings.
+
+Miscellanea
+"""""""""""
+
+* CHANGELOG: fix typos and uniform format.
+
 `v3.2.0`_ (2022-08-18)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2172,3 +2196,4 @@ New features
 .. _`v3.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.0
 .. _`v3.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.1
 .. _`v3.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.0
+.. _`v3.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.1
