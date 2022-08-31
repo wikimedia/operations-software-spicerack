@@ -29,6 +29,7 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NetboxServer
+from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster
 from spicerack.redfish import RedfishDell
 from spicerack.redis_cluster import RedisCluster
@@ -247,3 +248,26 @@ def test_spicerack_alerting(mocked_command_file, mocked_remote_query, mocked_dns
     assert spicerack.icinga_master_host.hosts == "icinga-server.example.com"
     assert isinstance(spicerack.alerting_hosts(["host1", "host2"]), AlertingHosts)
     mocked_hostname.assert_called_once_with()
+
+
+@pytest.mark.parametrize("ttl", (None, 3600))
+@pytest.mark.parametrize("api_token_ro", ("", "sometoken"))
+@pytest.mark.parametrize("cachedir", (None, ""))
+@mock.patch("spicerack.load_yaml_config")
+def test_spicerack_peeringdb(mocked_load_yaml_config, cachedir, api_token_ro, ttl, tmp_path):
+    """An instance of Spicerack should allow to get a PeeringDB instance."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    config = {}
+    if api_token_ro:
+        config["api_token_ro"] = api_token_ro
+    if cachedir is not None:
+        config["cachedir"] = str(tmp_path)
+    mocked_load_yaml_config.return_value = config
+
+    if ttl is not None:
+        instance = spicerack.peeringdb(ttl=ttl)
+    else:
+        instance = spicerack.peeringdb()
+
+    assert isinstance(instance, PeeringDB)

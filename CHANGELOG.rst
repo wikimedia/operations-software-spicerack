@@ -1,17 +1,46 @@
 Spicerack Changelog
 -------------------
 
+`v3.2.1`_ (2022-08-31)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* elasticsearch_cluster: simplify routine to start masters last. Due to the multiple clusters an host can be a master
+  in one instance and a child of another instance, bringing the process to a halt using the previous logic. The new
+  logic returns all the hosts that are child for all instances first and after that the remaining ones that are
+  master for at least one instance.
+* peeringdb: minor fixes:
+
+  * Make the ``Spicerack.peeringdb()`` accessor more flexible allowing the configuration file to miss non mandatory
+    keys.
+  * Add tests for the ``Spicerack.peeringdb()`` accessor.
+  * Use empty string as default value for the token to avoid the ``Optional`` type.
+  * Fix mypy ignore for type mismatch.
+  * Fix various docstrings.
+
+Miscellanea
+"""""""""""
+
+* CHANGELOG: fix typos and uniform format.
+
 `v3.2.0`_ (2022-08-18)
 ^^^^^^^^^^^^^^^^^^^^^^
 
 New features
 """"""""""""
-* Add new PeeringDB module for interfacing with the PeeringDB API
+* peeringdb: add a new module to interact with the PeeringDB API.
 
 Minor improvements
 """"""""""""""""""
-* Elasticsearch: ensure we restart masters one at a time
-* move flak8 configuration into setup.cfg
+
+* elasticsearch_cluster: ensure to restart masters one at a time.
+
+Miscellanea
+"""""""""""
+
+* flake8: move flake8's configuration all into ``setup.cfg``.
 
 `v3.1.1`_ (2022-07-26)
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -24,7 +53,7 @@ Bug fixes
 Miscellanea
 """""""""""
 
-* Add support for python 3.10
+* Add support for python 3.10.
 
 `v3.1.0`_ (2022-07-20)
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -54,8 +83,8 @@ Minor improvements
 * k8s: Retry pod evictions on ``HTTP 429`` from API server:
 
   * An ``HTTP 429`` response from the API server means that the eviction is not currently allowed because of a
-    configured ``PodDisruptionBudget`` or a API server rate limit was hit. Retry ``evict()`` calls in both cases 3 times
-    with exponential backoff.
+    configured ``PodDisruptionBudget`` or a API server rate limit was hit. Retry ``evict()`` calls in both cases 3
+    times with exponential backoff.
 
 * tests: reduce runtime by more than 80%:
 
@@ -151,7 +180,7 @@ API breaking changes
 """"""""""""""""""""
 
 * redfish: update signature of the ``request()`` method to support dynamic keyword arguments that will be passed
-  directly to the requests library.
+  directly to the requests library:
 
   * Although this breaks backward compatibility of the existing API for the ``request()`` method, it's not currently
     used directly anywhere and so it was deemed ok to not justify a new major release for this.
@@ -207,7 +236,7 @@ Miscellanea
 Minor improvements
 """"""""""""""""""
 
-* elasticsearch: don't wait for green on first node.
+* elasticsearch_cluster: don't wait for green on first node.
 * alertmanager: improve downtime:
 
   * Allow to pass hosts with already a specific port. If the port is present no port-related regex is added, if the
@@ -220,7 +249,7 @@ Minor improvements
 Bug fixes
 """""""""
 
-* alertmanager: fix downtime
+* alertmanager: fix downtime:
 
   * Fix the way the matchers for the silence are created. Because AlertManager and Prometheus will evaluate all
     matchers in AND, we can only add one single matcher for the instance property, that has to match all given hosts,
@@ -276,7 +305,7 @@ Bug fixes
 Minor improvements
 """"""""""""""""""
 
-* spicerack: make ``http_session`` more flexible.
+* spicerack: make ``http_session`` more flexible:
 
   * Instead of updating the signature with the new parameters available in wmflib, relax the signature here in
     spicerack and delegate to wmflib what are the accepted parameters.
@@ -284,7 +313,7 @@ Minor improvements
 Bug fixes
 """""""""
 
-* alertmanager: do not retry on HTTP 500 responses
+* alertmanager: do not retry on HTTP 500 responses:
 
   * The Alertmanager API can respond with an HTTP Status Code of 500 on some requests with a valid JSON response,
     although there was no server error (i.e. trying to delete an already deleted silence).
@@ -306,7 +335,7 @@ Minor improvements
   * In orther to achieve this, change the ``AlertmanagerError`` exception to accept an optional parameter with the API
     response object.
 
-* elasticsearch: load the configuration from a yaml file, remove the hardcoded one (`T278378`_).
+* elasticsearch_cluster: load the configuration from a yaml file, remove the hardcoded one (`T278378`_).
 
 Miscellanea
 """""""""""
@@ -319,14 +348,14 @@ Miscellanea
 New features
 """"""""""""
 
-* alertmanager: introduced a new module to manage resources on AlertManager (`T293209`_).
+* alertmanager: introduced a new module to manage resources on AlertManager (`T293209`_):
 
   * It has an ``AlertmanagerHosts`` class that currently supports creating a silence (downtime in Icinga terminology)
-    and removing it given its ID. It also provides a context manager to perform the silence similarly to the icinga module.
+    and removing it given its ID. It also provides a context manager to perform the silence similarly to the icinga
+    module.
 
 * alerting: introduced new alerting module with an ``AlertingHosts`` class as a wrapper around the ``IcingaHosts`` and
   ``AlertmanagerHosts`` classes so that the same actions are performed on both instances.
-
 * spicerack: add accessors for the new ``AlertmanagerHosts`` and ``AlertingHosts`` classes as ``alertmanager_hosts``
   and ``alerting_hosts`` respectively. The preferred way is to use the ``alerting_hosts`` accessor so that actions like
   the downtime are performed on both systems.
@@ -347,7 +376,7 @@ New features
 Minor improvements
 """"""""""""""""""
 
-* redfish: ``DellSCP``, allow creation of new entities
+* redfish: ``DellSCP``, allow creation of new entities:
 
   * So far the ``DellSCP`` class allowed only to modify existing attributes in existing components.
   * When dealing with a ``DellSCP`` configuration, there are cases in which it might be necessary to create attributes
@@ -370,24 +399,24 @@ Bug fixes
 Miscellanea
 """""""""""
 
-* setup.py: temporary limit redis library.
+* setup.py: temporary limit redis library:
 
   * The latest ``redis`` release v4.1.4 creates some dependency issue, for now limit the upper version as we're anyway
     using v3 in production as that's the version up to Debian Bullseye.
 
-* setup.py: upper limit for black
+* setup.py: upper limit for black:
 
   * On Debian bullseye ``elastcisearch-curator`` latest release dependencies have a conflict with black's dependencies
     and it's not possible to put an upper limit to ``elastcisearch-curator`` because previous version don't build
     properly on Bullseye from pip (the debian package version of it has a patch to override its dependency constraints).
   * To prevent conflicts force an upper limit on the black version for now.
 
-* bandit: ignore hardcoded password in tests
+* bandit: ignore hardcoded password in tests:
 
   * Ignore the ``B105:hardcoded_password_string`` and ``B106:hardcoded_password_funcarg`` checks in test directories.
   * Removed related #nosec comments unnecessary now.
 
-* prospector: ignore deprecation message
+* prospector: ignore deprecation message:
 
   * The latest ``prospector`` issues a deprecated message for the ``pep8`` and ``pep257`` tools that have been renamed
     to ``pycodestyle`` and ``pydocstyle`` respectively. The new names are incompatible with ``prospector < 1.7.0``,
@@ -404,7 +433,7 @@ API breaking changes
 New features
 """"""""""""
 
-* spicerack: allow to execute another cookbook from within a cookbook.
+* spicerack: allow to execute another cookbook from within a cookbook:
 
   * Add the capability from within a cookbook to call another cookbook with custom parameters using the
     ``run_cookbook()`` method in the Spicerack class.
@@ -414,21 +443,21 @@ New features
 Minor improvements
 """"""""""""""""""
 
-* redfish: better support of parsing JSON responses (`T299123`_).
+* redfish: better support of parsing JSON responses (`T299123`_):
 
   * In some older Dell servers the Redfish API sometimes replies with different casing for the ``MessageId`` key, like
     ``MessageID``.
   * It's also possible that Oem custom messages are reported in the same replies with a different structure.
   * Skip the Oem messages and try both keys cases when parsing the reply.
 
-* redfish: improve support for DRY-RUN mode.
+* redfish: improve support for DRY-RUN mode:
 
   * In DRY-RUN mode allow read-only requests to be performed (only GET and HEAD) but return a dummy successful
     responses in case of an exception raised by requests (timeout, connection error, etc).
   * In DRY-RUN mode don't allow read-write requests and return a successful dummy response instead.
   * In various methods return a dummy response in DRY-RUN mode.
 
-* dhcp: case-insensitive match of the serial number for the Dell management DHCP requests.
+* dhcp: case-insensitive match of the serial number for the Dell management DHCP requests:
 
  * When matching the serial number in the DHCP request for the management interfaces of Dell servers, match them in a
    case-insensitive way because the data sent varies between hosts (``idrac-ABC1234`` or ``iDRAC-ABC1234``).
@@ -556,7 +585,7 @@ Bug fixes
 New features
 """"""""""""
 
-* dhcp: use IP address instead of DNS name
+* dhcp: use IP address instead of DNS name:
 
   * Given that all the required data comes from Netbox there is no point to depend on the DNS when generating the DHCP
     snippets, require to pass the IPv4 instead of the FQDN.
@@ -601,7 +630,7 @@ Bug fixes
 Minor improvements
 """"""""""""""""""
 
-* remote: refactor ``wait_reboot_since()``
+* remote: refactor ``wait_reboot_since()``:
 
   * As the check for uptime is currently either returning a value for all hosts or raising an exception, remove the
     existing logic to check for a partial result as that can't happen.
@@ -612,7 +641,7 @@ Minor improvements
 Miscellanea
 """""""""""
 
-* setup.py: limit elasticsearch max version
+* setup.py: limit elasticsearch max version:
 
   * The latest 7.15.0 release has started to deprecate things for the upcoming 8.0.0 release, and mypy started
     complaining about some return types.
@@ -683,7 +712,7 @@ Miscellanea
 API breaking changes
 """"""""""""""""""""
 
-* ipmi: refactor class signature
+* ipmi: refactor class signature:
 
   * API breaking change, but the ``Spicerack.ipmi()`` accessor is used only in the ``sre.hosts.decommission`` and
     ``sre.hosts.ipmi-password-reset cookbooks``, so it should be trivial to change both at once.
@@ -692,15 +721,15 @@ API breaking changes
   * The caching of the management password is done transparently by the ``Spicerack.ipmi()`` accessor to avoid the
     anoyance of being asked the management password for each host.
 
-* dhcp: small refactor (the module is still unused)
+* dhcp: small refactor (the module is still unused):
 
   * Rename ``switch_port`` to ``switch_iface`` to avoid confusions.
   * Rename the context manager from ``dhcp_push()`` to ``config()`` as it's more natural to use:
-    ``with dhcp.config(my_config): # do something``
+    ``with dhcp.config(my_config): # do something``.
   * Simplify formatting of templates, added ignores to vulture for false positives
   * Add constructor documentation to the dataclasses.
 
-* icinga: remove the deprecated ``Icinga`` class
+* icinga: remove the deprecated ``Icinga`` class:
 
   * The Icinga class has been deprecated for a while now and it's time to remove it completely. No cookbook is using
     it anymore.
@@ -708,7 +737,7 @@ API breaking changes
 New features
 """"""""""""
 
-* remote: add support for the installer key
+* remote: add support for the installer key:
 
   * When instantiating a ``remote()`` instance, allow to pass a new parameter ``installer``, defaulted to ``False``,
     that when ``True`` will use the special installer key for the remote instances that allow to connect to the
@@ -727,14 +756,14 @@ New features
 Minor improvements
 """"""""""""""""""
 
-* puppet: minor improvements
+* puppet: minor improvements:
 
   * Return the results from the ``Puppet.first_run()`` method to allow to save it to a file like the current reimage
     script does.
   * Add an accessor for the ``master_host`` property in the ``PuppetMaster`` class as this is created and instantiated
     by Spicerack and was hidden from the user of the API.
 
-* decorators: migrate to the wmflib version of ``@retry`` (`T257905`_)
+* decorators: migrate to the wmflib version of ``@retry`` (`T257905`_):
 
   * Use the wmflib version of ``@retry`` while keeping the dry-run awareness and default to catching ``SpicerackError``
     instead of ``WmflibError`` like the pre-exsiting version was doing.
@@ -770,11 +799,11 @@ Minor improvements
 Bug fixes
 """""""""
 
-* icinga: use shlex to quote the command string for bash (`T288558`_).
+* icinga: use shlex to quote the command string for bash (`T288558`_):
 
   * This fixes the downtiming that would fail if the admin reason contains an apostrophe, due to lack of escaping.
 
-* mediawiki: ignore php-fpm when stopping cronjobs (`T285804`_).
+* mediawiki: ignore php-fpm when stopping cronjobs (`T285804`_):
 
   * On mwmaint, php-fpm is used to serve noc.wikimedia.org so we want to keep it running even when stopping cronjobs.
 
@@ -791,7 +820,7 @@ Minor improvements
   it was used so that the whole module now interacts directly with the Icinga command file. This opens up the route
   for further improvements (`T285803`_).
 * ganeti: add ganeti test cluster to the possible Ganeti locations (`T286206`_).
-* mysql_legacy: re-add ``x2`` database section and add support for active/active core sections (`T285519`_).
+* mysql_legacy: re-add ``x2`` database section and add support for active/active core sections (`T285519`_):
 
   * ``get_core_dbs()`` now supports excluding sections from its cumin query. All of the functions that call it in
     the context of setting the database read-only or read-write will now exclude sections listed in
@@ -825,7 +854,7 @@ Bug fixes
 API breaking changes
 """"""""""""""""""""
 
-* mediawiki: Update cronjob code now that most are systemd timers.
+* mediawiki: Update cronjob code now that most are systemd timers:
 
   * Removed ``check_cronjobs_enabled()``.
   * Renamed ``stop_cronjobs()`` to ``stop_periodic_jobs()``.
@@ -880,7 +909,7 @@ New features
 Bug fixes
 """""""""
 
-*  netbox: fix check for server role.
+*  netbox: fix check for server role:
 
   * The physical devices and virtual machines objects in Netbox have different names for the role property
     (``device_role`` vs ``role``). Use the correct property each time.
@@ -976,15 +1005,15 @@ Bug fixes
 * remote: fix ``use_sudo`` on ``split()``.
 * netbox: fix object type returned for status. The status should be returned as string and not as a Netbox object.
 * doc: add documentation for the toolforge package.
-* doc: remove obsolete configuration
+* doc: remove obsolete configuration.
 * setup.py: add missing tag for Python 3.9, already supported.
 * tests: fix pip backtracking separating the prospector tests into its own virtualenv.
-* tests: fix format checking
+* tests: fix format checking:
 
   * If no Python files were modified at all, the latest isort would bail out. Skipping the checks if no Python files
     were modified at all.
 
-* doc: fix documentation checker for sub-packages
+* doc: fix documentation checker for sub-packages:
 
   * The existing checker was assuming a flat space of modules inside spicerack, while now we have also subpackages.
     Adapt the checker to detect those too.
@@ -993,8 +1022,8 @@ Bug fixes
 Miscellanea
 """""""""""
 
-* doc: move ClusterShell URL to HTTPS
-* netbox: refactor unit tests
+* doc: move ClusterShell URL to HTTPS.
+* netbox: refactor unit tests.
 
 `v0.0.49`_ (2021-03-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1019,7 +1048,7 @@ Minor improvements
 """"""""""""""""""
 
 * config: allow to use paths relative to the user's ``$HOME`` directory expanding ``~``.
-* logging: improve logging format
+* logging: improve logging format:
 
   * Add the ``DRY-RUN`` prefix also to file logs to allow to distinguish dry-run executions from the real ones just
     looking at the logs.
@@ -1038,7 +1067,8 @@ Bug fixes
 * cookbooks: force the title to be one line. When reading the title from the cookbooks, pick only the first line to
   prevent the UI to be cluttered by a title erroneously set to multi-line.
 * tox: fix for when the system setuptools is too old.
-* elasticsearch: Revert the return the cluster name in ``ElasticsearchCluster.__str__`` change added in ``v0.0.32``.
+* elasticsearch_cluster: Revert the return the cluster name in ``ElasticsearchCluster.__str__`` change added in
+  ``v0.0.32``.
 * remote: fix pylint typing confusion.
 
 Miscellanea
@@ -1093,8 +1123,8 @@ Bug fixes
 Miscellanea
 """""""""""
 
-* dnsdisc: improve test coverage
-* tests: fix deprecated pytest argument
+* dnsdisc: improve test coverage.
+* tests: fix deprecated pytest argument.
 * tox: Remove ``--skip B322`` from Bandit config not supported by newer Bandit versions.
 
 `v0.0.46`_ (2020-12-10)
@@ -1193,7 +1223,7 @@ Miscellanea
 Minor improvements
 """"""""""""""""""
 
-* elasticsearch: Store which datacenters to query for metrics in Prometheus.
+* elasticsearch_cluster: Store which datacenters to query for metrics in Prometheus.
 
 `v0.0.42`_ (2020-08-31)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1201,7 +1231,7 @@ Minor improvements
 Bug Fixes
 """""""""
 
-* elasticsearch: fix prometheus query syntax.
+* elasticsearch_cluster: fix prometheus query syntax.
 
 `v0.0.41`_ (2020-08-31)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1343,13 +1373,13 @@ Miscellanea
     class without repetition of code.
 
 * tests: fix newly reported flake8 issues.
-* tests: relax Prospector dependency
+* tests: relax Prospector dependency:
 
   * The upstream bug that required to set an upper limit on the version of Prospector has been fixed.
   * Removing the upper bound to get newer features.
   * Fix newly reported issues.
 
-* tests: relax Bandit dependency
+* tests: relax Bandit dependency:
 
   * The upstream bug that required to set an upper limit on the version of Bandit has now a workaround using a specific
     syntax for the exclude files.
@@ -1379,7 +1409,7 @@ Miscellanea
 """""""""""
 
 * doc: set min version of sphinx_rtd_theme to 0.1.9 to match Debian Stetch.
-* doc: fix documentation generation for Sphinx 3
+* doc: fix documentation generation for Sphinx 3.
 * changelog: specify breaking change for v0.0.33.
 
 `v0.0.33`_ (2020-05-04)
@@ -1408,7 +1438,7 @@ New features
 Minor improvements
 """"""""""""""""""
 
-* include the username in logfiles
+* include the username in logfiles.
 
 `v0.0.32`_ (2020-03-11)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1420,13 +1450,13 @@ Minor improvements
 * spicerack: allow to cache the ``Ipmi`` instance so that it can be re-used without re-asking the management password.
 * spicerack: expose to cookbooks the ``_spicerack_config_dir`` parameter via a getter.
 * netbox: fine tune log and exception messages.
-* elasticsearch: return the cluster name in ``ElasticsearchCluster.__str__``.
+* elasticsearch_cluster: return the cluster name in ``ElasticsearchCluster.__str__``.
 * mysql: update ``CORE_SECTIONS`` for external storage RW instances (`T226704`_).
 
 Bug Fixes
 """""""""
 
-* elasticsearch: add ``https://`` to relforge endpoints.
+* elasticsearch_cluster: add ``https://`` to relforge endpoints.
 
 Miscellanea
 """""""""""
@@ -1550,23 +1580,23 @@ Minor improvements
 New features
 """"""""""""
 
-* Add Netbox module
-* Add the ``LBRemoteCluster`` class to manage cluster behind a load balancer
+* Add Netbox module.
+* Add the ``LBRemoteCluster`` class to manage cluster behind a load balancer.
 
 Minor improvements
 """"""""""""""""""
 
-* icinga: Add a function to force a recheck of all sevices
-* confctl: Add ``filter_objects`` and ``update_objects``
-* confctl: add ``change_and_revert`` contextmanager
+* icinga: Add a function to force a recheck of all sevices.
+* confctl: Add ``filter_objects`` and ``update_objects``.
+* confctl: add ``change_and_revert`` contextmanager.
 
 Bug Fixes
 """""""""
 
-* elasticsearch_cluster: correct ports for relforge cluster
-* elasticsearch_cluster: fix ``mypy`` newly reported bug
-* tests: fix ``pytest`` ``caplog`` matching
-* tests: fix ``pep257`` newly reported issues
+* elasticsearch_cluster: correct ports for relforge cluster.
+* elasticsearch_cluster: fix ``mypy`` newly reported bug.
+* tests: fix ``pytest`` ``caplog`` matching.
+* tests: fix ``pep257`` newly reported issues.
 
 `v0.0.25`_ (2019-05-10)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1574,17 +1604,17 @@ Bug Fixes
 Bug Fixes
 """""""""
 
-* setup.py: fix ``urllib3`` dependency
+* setup.py: fix ``urllib3`` dependency:
 
   * In order to build on Debian Stretch without backported packages, relax a bit the urllib3 dependency as the only
     goal for to specify it is to avoid conflicts with the latest version.
 
-* documentations: fix Sphinx configuration
+* documentations: fix Sphinx configuration:
 
   * In order to avoid issues while building the Debian package on Stretch where Sphinx ``1.4.9`` is available, change
     configuration to:
 
-    * Reduce minimum Sphinx version to ``1.4.9`` in ``setup.py``
+    * Reduce minimum Sphinx version to ``1.4.9`` in ``setup.py``.
     * Remove the ``warning-is-error`` configuration from ``setup.cfg`` that is applied to every Sphinx run, and move
       it directly into ``tox.ini`` as a command line ``-W`` option, that will be executed only by ``tox`` and not
       during the Debian package build process.
@@ -1595,42 +1625,43 @@ Bug Fixes
 Minor improvements
 """"""""""""""""""
 
-* prometheus: add timeout support to ``query()`` method
-* ganeti: add timeout support
-* cookbook API: drop ``get_title()`` support
+* prometheus: add timeout support to ``query()`` method.
+* ganeti: add timeout support.
+* cookbook API: drop ``get_title()`` support:
 
-  * No current cookbook is using the dynamic way to provide a title through ``get_title(args)``
+  * No current cookbook is using the dynamic way to provide a title through ``get_title(args)``.
   * This abstraction has not proven to be useful and the fact to mangle dynamically the title of a cookbook based on
     the current parameter while you can then execute it with different ones doesn't seem very useful, dropping it
-    completely from the Cookbook API
+    completely from the Cookbook API.
 
-* doc: mark Sphinx warnings as error
+* doc: mark Sphinx warnings as error:
 
-  * To make the documentation building process more robust make Sphinx fail on warnings too
-  * This requires ``Sphinx > 1.5`` and will require to use the backport version while building the package on Debian Stretch
+  * To make the documentation building process more robust make Sphinx fail on warnings too.
+  * This requires ``Sphinx > 1.5`` and will require to use the backport version while building the package on Debian
+    Stretch.
 
-* doc: add checker to ensure modules are documented
+* doc: add checker to ensure modules are documented:
 
-  * It's common when adding a new module to forget to add the few bits required to auto-generated its documentation
+  * It's common when adding a new module to forget to add the few bits required to auto-generated its documentation.
   * Add a check to ensure that all Spicerack modules are listed in the documentation API index and that the linked
-    files exists
+    files exists.
 
 Bug Fixes
 """""""""
 
-* ganeti: Fix RAPI port
-* prometheus: fix base URL template
-* doc: autodoc missing API modules
+* ganeti: Fix RAPI port.
+* prometheus: fix base URL template.
+* doc: autodoc missing API modules.
 
 Miscellanea
 """""""""""
 
-* setup.py: force ``urllib3`` version due to ``pip`` bug
-* Add emacs ignores to gitignore
-* tests: temporarily force ``bandit < 1.6.0``
+* setup.py: force ``urllib3`` version due to ``pip`` bug.
+* Add emacs ignores to gitignore.
+* tests: temporarily force ``bandit < 1.6.0``:
 
     * Due to a bug upstream bandit 1.6.0 doesn't honor the excluded directories, causing the failure of the bandit tox
-      environments. Temporarily forcing its version
+      environments. Temporarily forcing its version.
 
 `v0.0.23`_ (2019-04-19)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1638,31 +1669,32 @@ Miscellanea
 New features
 """"""""""""
 
-* Add basic Ganeti RAPI support
-* Add basic Prometheus support
+* Add basic Ganeti RAPI support.
+* Add basic Prometheus support.
 
 Minor improvements
 """"""""""""""""""
 
-* elasticsearch: add reset all indices to read/write capability (`T219799`_)
+* elasticsearch_cluster: add reset all indices to read/write capability (`T219799`_).
 
 Bug Fixes
 """""""""
 
-* elasticsearch: logging during shard allocation was too verbose, some messages lowered to debug level
+* elasticsearch_cluster: logging during shard allocation was too verbose, some messages lowered to debug level.
 
 Miscellanea
 """""""""""
 
-* flake8: enforce import order and adopt ``W504``
+* flake8: enforce import order and adopt ``W504``:
 
   * Add ``flake8-import-order`` to enforce the import order using the ``edited`` style that corresponds to our
-    styleguide, see: `mediawiki.org: Coding_conventions/Python`_
+    styleguide, see: `mediawiki.org: Coding_conventions/Python`_.
   * Mark spicerack as local and do not specify any organization-specific packages to avoid to keep a manually curated
-    list of packages
-  * Fix all out of order imports
-  * For line breaks around binary operators, adopt ``W504`` (breaking before the operator) and ignore ``W503``, following PEP8 suggestion, see: `PEP0008#line_break_binary_operator`_
-  * Fix all line breaks around binary operators to follow ``W504``
+    list of packages.
+  * Fix all out of order imports.
+  * For line breaks around binary operators, adopt ``W504`` (breaking before the operator) and ignore ``W503``,
+    following PEP8 suggestion, see: `PEP0008#line_break_binary_operator`_.
+  * Fix all line breaks around binary operators to follow ``W504``.
 
 `v0.0.22`_ (2019-04-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1670,7 +1702,7 @@ Miscellanea
 Bug Fixes
 """""""""
 
-* elasticsearch: use NodesGroup instead of free form JSON
+* elasticsearch_cluster: use NodesGroup instead of free form JSON.
 
 `v0.0.21`_ (2019-04-03)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1678,22 +1710,22 @@ Bug Fixes
 Minor improvements
 """"""""""""""""""
 
-* elasticsearch: Retrieve hostname and fqdn from node attributes
-* elasticsearch: make unfreezing writes more robust (`T219640`_)
-* elasticsearch: cleanup test by introducing a method to mock API calls
-* elasticsearch: rename elasticsearchclusters to elasticsearch_clusters
+* elasticsearch_cluster: Retrieve hostname and fqdn from node attributes.
+* elasticsearch_cluster: make unfreezing writes more robust (`T219640`_).
+* elasticsearch_cluster: cleanup test by introducing a method to mock API calls.
+* elasticsearch_cluster: rename ``elasticsearchclusters`` to ``elasticsearch_clusters``.
 
 Bug Fixes
 """""""""
 
-* tox: fix typo in environment name
+* tox: fix typo in environment name.
 
 Miscellanea
 """""""""""
 
-* Add Python type hints and mypy check, not for variables and properties as we're still supporting Python 3.5
-* setup.py: revert commit 3d7ab9b that forced the ``urllib3`` version installed as it's not needed anymore
-* tests/docs: unify usage of ``example.com`` domain
+* Add Python type hints and mypy check, not for variables and properties as we're still supporting Python 3.5.
+* setup.py: revert commit 3d7ab9b that forced the ``urllib3`` version installed as it's not needed anymore.
+* tests/docs: unify usage of ``example.com`` domain.
 
 `v0.0.20`_ (2019-03-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1701,29 +1733,29 @@ Miscellanea
 New features
 """"""""""""
 
-* ipmi: add password reset functionality
+* ipmi: add password reset functionality.
 
 Minor improvements
 """"""""""""""""""
 
-* elasticsearch: upgrade rows one after the other
-* remote: suppress Cumin's output. As a workaround for a regression in colorama for stretch
+* elasticsearch_cluster: upgrade rows one after the other.
+* remote: suppress Cumin's output. As a workaround for a regression in colorama for stretch.
 * Expose hostname from Reason.
-* elasticsearch: use the admin Reason to get current hostname
+* elasticsearch_cluster: use the admin Reason to get current hostname.
 
 Bug Fixes
 """""""""
 
-* debmonitor: fix missing variable for logging line
-* elasticsearch: fix typo (xarg instead of xargs)
-* doc: fix reStructuredText formatting
+* debmonitor: fix missing variable for logging line.
+* elasticsearch_cluster: fix typo (xarg instead of xargs).
+* doc: fix reStructuredText formatting.
 
 Miscellanea
 """""""""""
 
-* Drop support for Python 3.4
-* Add support for Python 3.7
-* tests: refactor tox environments
+* Drop support for Python 3.4.
+* Add support for Python 3.7.
+* tests: refactor tox environments.
 
 `v0.0.19`_ (2019-02-21)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1731,9 +1763,9 @@ Miscellanea
 Bug Fixes
 """""""""
 
-* elasticsearch: support cluster names which have ``-`` in them.
-* elasticsearch: ``get_next_clusters_nodes()`` raises ``ElasticsearchClusterError``.
-* elasticsearch: systemctl iterates explicitly on elasticsearch instances.
+* elasticsearch_cluster: support cluster names which have ``-`` in them.
+* elasticsearch_cluster: ``get_next_clusters_nodes()`` raises ``ElasticsearchClusterError``.
+* elasticsearch_cluster: systemctl iterates explicitly on elasticsearch instances.
 
 Miscellanea
 """""""""""
@@ -1746,7 +1778,7 @@ Miscellanea
 Bug Fixes
 """""""""
 
-* elasticsearch: access production clusters over HTTPS.
+* elasticsearch_cluster: access production clusters over HTTPS.
 
 `v0.0.17`_ (2019-02-20)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1760,8 +1792,8 @@ Minor improvements
 Bug Fixes
 """""""""
 
-* elasticsearch: raise logging level to ERROR for elasticsearch
-* elasticsearch: retry on all urllib3 exceptions
+* elasticsearch_cluster: raise logging level to ERROR for elasticsearch.
+* elasticsearch_cluster: retry on all urllib3 exceptions.
 
 `v0.0.16`_ (2019-02-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1769,7 +1801,7 @@ Bug Fixes
 Bug Fixes
 """""""""
 
-* elasticsearch: retry on TransportError while waiting for node to be up
+* elasticsearch_cluster: retry on TransportError while waiting for node to be up.
 * Change !log formatting to match Stashbot expectations.
 
 `v0.0.15`_ (2019-02-14)
@@ -1778,7 +1810,7 @@ Bug Fixes
 Bug Fixes
 """""""""
 
-* elasticsearch: add doc type to delete query.
+* elasticsearch_cluster: add doc type to delete query.
 
 `v0.0.14`_ (2019-02-13)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1788,7 +1820,8 @@ New features
 
 * icinga: add context manager for downtimed hosts:
 
-  * Add a context manager to allow to execute other commands while the hosts are downtimed, removing the downtime at the end.
+  * Add a context manager to allow to execute other commands while the hosts are downtimed, removing the downtime at
+    the end.
 
 * management: add management module:
 
@@ -1809,7 +1842,8 @@ New features
 * spicerack: expose the ``icinga_master_host`` property.
 * administrative: add ``owner`` getter to Reason class:
 
-  * Add a public getter for the owner part of a reason, that retuns in a standard format the user running the code and the host where it's running.
+  * Add a public getter for the owner part of a reason, that retuns in a standard format the user running the code and
+    the host where it's running.
 
 Minor improvements
 """"""""""""""""""
@@ -1842,15 +1876,15 @@ Bug Fixes
 New features
 """"""""""""
 
-* ipmi: add support for DRY RUN mode
+* ipmi: add support for DRY RUN mode.
 * config: add load_ini_config() function to parse INI files.
-* debmonitor: use the existing configuration file
+* debmonitor: use the existing configuration file:
 
   * Instead of requiring a new configuration file, use the existing one already setup by Puppet for the debmonitor
     client.
   * Inject the path of the Debmonitor config into the ctor with a default value.
 
-* puppet: add default ``batch_size`` when running puppet
+* puppet: add default ``batch_size`` when running puppet:
 
   * Allow to specify the ``batch_size`` when running puppet on a set of hosts.
   * Add a default ``batch_size`` to avoid to overload the Puppet master hosts.
@@ -1858,14 +1892,14 @@ New features
 Bug Fixes
 """""""""
 
-* phabricator: remove unneded pylint ignore
-* mediawiki: update maintenance host Cumin query
-* remote: add workaround for Cumin bug
+* phabricator: remove unneded pylint ignore.
+* mediawiki: update maintenance host Cumin query.
+* remote: add workaround for Cumin bug.
 
   * To avoid unnecessary waiting on the most common use case of ``reboot()``, that is with only one host, unset the
     default ``batch_sleep`` as a workaround for `T213296`_.
 
-* puppet: fix regenerate_certificate()
+* puppet: fix regenerate_certificate().
 
   * When re-generating the certificate, Puppet will exit with status code ``1`` both if successful or on failure.
   * Restrict the accepted exit codes to ``1``.
@@ -1877,16 +1911,16 @@ Bug Fixes
 New features
 """"""""""""
 
-* debmonitor: add debmonitor module
-* phabricator: add phabricator module
+* debmonitor: add debmonitor module.
+* phabricator: add phabricator module.
 
 Bug Fixes
 """""""""
 
-* icinga: fix ``command_file`` property
-* puppet: fix ``subprocess`` call to ``check_output()``
-* dns: include ``NXDOMAIN`` in the ``DnsNotFound`` exception
-* admin_reason: fix default value for task
+* icinga: fix ``command_file`` property.
+* puppet: fix ``subprocess`` call to ``check_output()``.
+* dns: include ``NXDOMAIN`` in the ``DnsNotFound`` exception.
+* admin_reason: fix default value for task.
 
 `v0.0.10`_ (2018-12-19)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1919,7 +1953,7 @@ Minor improvements
 Bug Fixes
 """""""""
 
-* administrative: fix Reason's signature
+* administrative: fix Reason's signature.
 * elasticsearch_cluster: fix tests for Python 3.5.
 * icinga: fix typo in test docstring.
 * interactive: check TTY in ``ask_confirmation()``.
@@ -2162,3 +2196,4 @@ New features
 .. _`v3.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.0
 .. _`v3.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.1
 .. _`v3.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.0
+.. _`v3.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.1
