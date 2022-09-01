@@ -199,7 +199,9 @@ class HostStatus:
 class IcingaHosts:
     """Class to manage the Icinga checks of a given set of hosts."""
 
-    def __init__(self, icinga_host: RemoteHosts, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> None:
+    def __init__(
+        self, icinga_host: RemoteHosts, target_hosts: TypeHosts, *, verbatim_hosts: bool = False, dry_run: bool = True
+    ) -> None:
         """Initialize the instance.
 
         Arguments:
@@ -209,6 +211,7 @@ class IcingaHosts:
             verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
                 :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
                 be used in Icinga.
+            dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
         if not verbatim_hosts:
@@ -225,6 +228,7 @@ class IcingaHosts:
         self._command_file = CommandFile(icinga_host)  # This validates also that icinga_host matches a single server.
         self._icinga_host = icinga_host
         self._verbatim_hosts = verbatim_hosts
+        self._dry_run = dry_run
 
     @contextmanager
     def downtimed(

@@ -170,7 +170,7 @@ class TestIcingaHosts:
         self.mocked_icinga_host.__len__.return_value = 1
         self.hosts = ["host1.example.com"]
         set_mocked_icinga_host_output(self.mocked_icinga_host, "/var/lib/icinga/rw/icinga.cmd")
-        self.icinga_hosts = icinga.IcingaHosts(self.mocked_icinga_host, self.hosts)
+        self.icinga_hosts = icinga.IcingaHosts(self.mocked_icinga_host, self.hosts, dry_run=False)
         self.mocked_icinga_host.reset_mock()
 
     def test_init_no_hosts(self):

@@ -480,7 +480,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             spicerack.icinga.IcingaHosts: IcingaHosts instance.
 
         """
-        return IcingaHosts(self.icinga_master_host, target_hosts, verbatim_hosts=verbatim_hosts)
+        return IcingaHosts(self.icinga_master_host, target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run)
 
     def puppet(self, remote_hosts: RemoteHosts) -> PuppetHosts:
         """Get a PuppetHosts instance for the given remote hosts.
