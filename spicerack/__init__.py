@@ -1,4 +1,5 @@
 """Spicerack package."""
+from ipaddress import ip_interface
 from logging import Logger, getLogger
 from pathlib import Path
 from socket import gethostname
@@ -33,7 +34,7 @@ from spicerack.kafka import Kafka
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
-from spicerack.netbox import Netbox, NetboxServer
+from spicerack.netbox import MANAGEMENT_IFACE_NAME, Netbox, NetboxServer
 from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, get_puppet_ca_hostname
 from spicerack.redfish import Redfish, RedfishDell
@@ -663,17 +664,20 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         return Kafka(kafka_config=configuration, dry_run=self._dry_run)
 
-    def redfish(self, mgmt_fqdn: str, username: str, password: str = "") -> Redfish:  # nosec
+    def redfish(self, hostname: str, username: str = "root", password: str = "") -> Redfish:  # nosec
         """Get an instance to talk to the Redfish API of a physical server.
 
         Notes:
             At the moment only Dell hardware is supported.
 
         Arguments:
-            mgmt_fqdn (str): the management console FQDN to target.
-            username (str): the username for the management console (usually 'root').
+            hostname (str): the hostname (not FQDN) of the physical server to manage.
+            username (str, optional): the username for the management console.
             password (str, optional): the password for the management console for the given user. If empty or not
                 provided would use the production management password and ask the user for it if not already in memory.
+
+        Raises:
+            spicerack.exceptions.SpicerackError: if not a physical server or unable to find the management IP.
 
         Returns:
             spicerack.redfish.Redfish: the instance.
@@ -682,8 +686,14 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         if not password:
             password = self.management_password
 
+        netbox = self.netbox()
+        if netbox.get_server(hostname).virtual:
+            raise SpicerackError(f"Host {hostname} is not a Physical server, Redfish is not supported.")
+
+        netbox_ip = netbox.api.ipam.ip_addresses.get(device=hostname, interface=MANAGEMENT_IFACE_NAME)
+
         # TODO: generalize when support for additional vendors will be added.
-        return RedfishDell(mgmt_fqdn, username, password, dry_run=self._dry_run)
+        return RedfishDell(hostname, ip_interface(netbox_ip), username, password, dry_run=self._dry_run)
 
     def alertmanager_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertmanagerHosts:
         """Get an AlertmanagerHosts instance.

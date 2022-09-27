@@ -139,14 +139,33 @@ def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostn
     assert mocked_remote_query.called
 
 
-def test_spicerack_management_password_instances(monkeypatch):
+@mock.patch("spicerack.Netbox")
+def test_spicerack_management_consoles(mocked_netbox, monkeypatch):
     """Should instantiate the instances that require the management password."""
     monkeypatch.setenv("MGMT_PASSWORD", "env_password")
+    mocked_netbox.return_value.get_server.return_value.virtual = False
+    mocked_netbox.return_value.api.ipam.ip_addresses.get.return_value = "10.0.0.1/16"
+
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
     assert spicerack.management_password == "env_password"
     assert isinstance(spicerack.ipmi("test-mgmt.example.com"), Ipmi)
-    assert isinstance(spicerack.redfish("test-mgmt.example.com", "root"), RedfishDell)
-    assert isinstance(spicerack.redfish("test-mgmt.example.com", "root", "other_password"), RedfishDell)
+    assert isinstance(spicerack.redfish("test-mgmt01"), RedfishDell)
+    assert isinstance(spicerack.redfish("test-mgmt01", "root", "other_password"), RedfishDell)
+    assert mocked_netbox.called
+
+
+@mock.patch("spicerack.Netbox")
+def test_spicerack_redfish_not_physical(mocked_netbox, monkeypatch):
+    """Should raise a SpicerackError if trying to get a management console for a non-physical device."""
+    monkeypatch.setenv("MGMT_PASSWORD", "env_password")
+    mocked_netbox.return_value.get_server.return_value.virtual = True
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    with pytest.raises(SpicerackError, match="Host test-mgmt01 is not a Physical server, Redfish is not supported"):
+        spicerack.redfish("test-mgmt01")
+
+    assert mocked_netbox.called
 
 
 def test_spicerack_management_password_cached(monkeypatch):
