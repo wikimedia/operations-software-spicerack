@@ -1,6 +1,46 @@
 Spicerack Changelog
 -------------------
 
+`v4.0.0`_ (2022-09-28)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* redfish: use the management IP instead of FQDN to connect to the management console:
+
+  * Some DELL hosts come with the ``idrac.webserver.HostHeaderCheck`` setting set to ``1``, that prevents to connect
+    to the Redfish API unless the hostname is set in the configuration, creating a chicken and egg problem to automate
+    the initial setup of the hosts.
+  * To prevent this switch the whole module to use directly IPs for now. We might want to improve this later setting
+    the hostname in the iDRAC settings and then switching to use the FQDN once that is configured, but because most of
+    the automation will be already done by that time it's not clear if it would be a real win.
+  * [BREAKING API] this changes the ``spicerack.Spicerack.redfish()`` signature to require a hostname instead of a
+    management FQDN and also makes the username parameter optional, defaulting to use ``root``.
+  * [BREAKING API] this changes the ``spicerack.redfish.Redfish`` class signature to require a hostname and management
+    IP address instead of a single parameter with the FQDN. Although breaking, no cookbook usage should instantiate
+    this class directly, but always via the above accessor.
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: add explicit support of the DRY-RUN mode (`T315537`_):
+
+  * While the DRY-RUN compatibility of the ``icinga`` module was guaranteed by the ``remote`` module, there was a
+    usage of the ``@retry`` decorator that wasn't able to detect when in DRY-RUN mode and accordingly reduce the
+    number of retries.
+
+* Bump ``pynetbox`` dependency to ``~= 6.6`` (`T310745`_).
+* netbox: enable pynetbox threading (`T311486`_).
+
+Miscellanea
+"""""""""""
+
+* doc: fix ``sphinx_checker`` script for Python 3.10.
+* doc: add an example on how to use the ``TOX_SKIP_ENV`` environmental variable to run only certain tox environments
+  when in development.
+* doc: improve documentation of the ``CookbookBase`` classes usage.
+
 `v3.2.1`_ (2022-08-31)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2112,6 +2152,9 @@ New features
 .. _`T306661`: https://phabricator.wikimedia.org/T306661
 .. _`T307260`: https://phabricator.wikimedia.org/T307260
 .. _`T309447`: https://phabricator.wikimedia.org/T309447
+.. _`T310745`: https://phabricator.wikimedia.org/T310745
+.. _`T311486`: https://phabricator.wikimedia.org/T311486
+.. _`T315537`: https://phabricator.wikimedia.org/T315537
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2197,3 +2240,4 @@ New features
 .. _`v3.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.1.1
 .. _`v3.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.0
 .. _`v3.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.1
+.. _`v4.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v4.0.0
