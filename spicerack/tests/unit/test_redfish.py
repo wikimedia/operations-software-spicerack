@@ -1,4 +1,5 @@
 """Netbox module tests."""
+import ipaddress
 import logging
 from copy import deepcopy
 from datetime import datetime
@@ -261,17 +262,23 @@ class TestRedfish:
     def setup_method(self, requests_mock):
         """Initialize the test instance."""
         # pylint: disable=attribute-defined-outside-init
-        self.redfish = redfish.Redfish("test.example.org", "root", "mysecret", dry_run=False)
-        self.redfish_dry_run = redfish.Redfish("test.example.org", "root", "mysecret", dry_run=True)
+        interface = ipaddress.ip_interface("10.0.0.1/16")
+        self.redfish = redfish.Redfish("test01", interface, "root", "mysecret", dry_run=False)
+        self.redfish_dry_run = redfish.Redfish("test01", interface, "root", "mysecret", dry_run=True)
         self.requests_mock = requests_mock
 
     def test_property_magic_str(self):
         """It should equal the fqdn."""
-        assert str(self.redfish) == "root@test.example.org"
+        assert str(self.redfish) == "root@test01 (10.0.0.1)"
 
-    def test_property_fqdn(self):
+    def test_property_hostname(self):
         """It should equal the fqdn."""
-        assert self.redfish.fqdn == "test.example.org"
+        assert self.redfish.hostname == "test01"
+
+    def test_property_interface(self):
+        """It should equal the fqdn."""
+        assert isinstance(self.redfish.interface, ipaddress.IPv4Interface)
+        assert str(self.redfish.interface.ip) == "10.0.0.1"
 
     @pytest.mark.parametrize("response, generation", ((MODEL_RESPONSE, 14), (MODEL_RESPONSE_BAD, 1)))
     def test_property_generation(self, response, generation):
@@ -365,7 +372,7 @@ class TestRedfish:
             response = self.redfish_dry_run.request("get", "/redfish")
 
         assert response.status_code == 200
-        assert "Failed to perform GET request to https://test.example.org/redfish" in caplog.text
+        assert "Failed to perform GET request to https://10.0.0.1/redfish" in caplog.text
 
     def test_request_ok(self):
         """It should perform the provided request and return it."""
@@ -377,17 +384,13 @@ class TestRedfish:
     def test_request_response_wrong_status_code(self):
         """It should raise a RedfishError if the request returns an error status code."""
         self.requests_mock.post("/redfish", json={"error": {"code": "1.0", "message": "error"}}, status_code=405)
-        with pytest.raises(
-            redfish.RedfishError, match="POST https://test.example.org/redfish returned HTTP 405 with message"
-        ):
+        with pytest.raises(redfish.RedfishError, match="POST https://10.0.0.1/redfish returned HTTP 405 with message"):
             self.redfish.request("post", "/redfish", json={"key": "value"})
 
     def test_request_response_raises(self):
         """It should raise a RedfishError if the request failes to be performed."""
         self.requests_mock.get("/redfish", exc=requests.exceptions.ConnectTimeout)
-        with pytest.raises(
-            redfish.RedfishError, match="Failed to perform GET request to https://test.example.org/redfish"
-        ):
+        with pytest.raises(redfish.RedfishError, match="Failed to perform GET request to https://10.0.0.1/redfish"):
             self.redfish.request("get", "/redfish")
 
     def test_request_invalid_uri(self):
@@ -432,7 +435,7 @@ class TestRedfish:
     def test_connection_fail(self):
         """It should raise a RedfishError if unable to connect to the Redfish API."""
         self.requests_mock.get("/redfish", status_code=400)
-        with pytest.raises(redfish.RedfishError, match="GET https://test.example.org/redfish returned HTTP 400"):
+        with pytest.raises(redfish.RedfishError, match="GET https://10.0.0.1/redfish returned HTTP 400"):
             self.redfish.check_connection()
 
     def test_poll_task_dry_run(self):
@@ -649,7 +652,8 @@ class TestRedfishDell:
     def setup_method(self, requests_mock):
         """Initialize the test instance."""
         # pylint: disable=attribute-defined-outside-init
-        self.redfish = redfish.RedfishDell("test.example.org", "root", "mysecret", dry_run=False)
+        interface = ipaddress.ip_interface("10.0.0.1/16")
+        self.redfish = redfish.RedfishDell("test01", interface, "root", "mysecret", dry_run=False)
         self.requests_mock = requests_mock
 
     @pytest.mark.parametrize("allow_new", (False, True))

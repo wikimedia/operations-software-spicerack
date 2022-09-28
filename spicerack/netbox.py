@@ -37,7 +37,7 @@ class Netbox:
             dry_run (bool, optional): set to False to cause writes to Netbox to occur
 
         """
-        self._api = pynetbox.api(url, token=token)
+        self._api = pynetbox.api(url, token=token, threading=True)
         self._api.http_session = http_session(".".join((self.__module__, self.__class__.__name__)))
         self._dry_run = dry_run
 

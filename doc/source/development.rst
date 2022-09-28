@@ -67,6 +67,13 @@ To run one specific environment only:
 
     tox -e py39-flake8
 
+To run all environments for a specific Python version, exclude all the others using the ``TOX_SKIP_ENV`` environmental
+variable that accepts a regular expression:
+
+.. code-block:: bash
+
+    TOX_SKIP_ENV='py3(7|8|10)-.*' tox
+
 It's possible to pass extra arguments to the underlying environment:
 
 .. code-block:: bash

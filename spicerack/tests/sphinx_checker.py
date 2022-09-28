@@ -29,7 +29,7 @@ def main(base_path):
         if package != "spicerack":  # Do not include the main spicerack package.
             spicerack_modules.add(package)
         package_path = base_path / package.replace(".", "/")
-        for module_info in iter_modules([package_path]):
+        for module_info in iter_modules([str(package_path)]):
             if not module_info.ispkg and not module_info.name.startswith("_"):
                 spicerack_modules.add(f"{package}.{module_info.name}")
 

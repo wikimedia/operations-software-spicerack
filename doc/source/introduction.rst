@@ -48,18 +48,70 @@ Each cookbook must follow one of the two available API interfaces:
 Class interface
 """""""""""""""
 
-A more integrated class-based API interface. Each cookbook must define two classes that extends
-:py:class:`spicerack.cookbook.CookbookBase` and :py:class:`spicerack.cookbook.CookbookRunnerBase` respectively,
-defining the required abstract methods and optionally overriding the default implementation of the concrete ones.
+When using the class interface, you will need to define two classes:
 
-The Spicerack framework will instantiate the class derived from ``CookbookBase`` passing to it an initialized
-:py:class:`spicerack.Spicerack` instance. Then it will call its ``argument_parser`` method to get the ``argparse``
-instance and with that parse the CLI arguments. After that it will call the ``get_runner`` method that must return
-an instance of a class derived from ``CookbookRunnerBase``. The ``runtime_description`` property will be used to
-customize the default ``START``/``STOP`` IRC messages. Up to this point any exception raised will be considered a
-pre-failure and make the cookbook fail before IRC-logging its start.
+* one *runner* class that extends :py:class:`spicerack.cookbook.CookbookRunnerBase` and implements the ``__init__``, ``run``
+  and (optionally) ``rollback`` and ``runtime_description`` methods
+* one *base* class that extends :py:class:`spicerack.cookbook.CookbookBase`  and implements the ``argument_parser`` and
+  ``get_runner`` methods.
 
-Then the ``run`` method will be called to actually run the cookbook.
+Let's see how to implement a simple cookbook that depools a service from dns discovery.
+Our cookbook will accept three command-line arguments: the service name, the datacenter and the action to perform.
+::
+
+    import argparse
+    from spicerack.cookbook import CookbookRunnerBase, CookbookBase
+    from spicerack.constants import CORE_DATACENTERS
+    class ServiceRouter(CookbookBase):
+        def argument_parser(self) -> argparse.ArgumentParser:
+            parser = super().argument_parser() # returns a bare ArgumentParser with the correct defaults
+            parser.add_argument("service")
+            parser.add_argument("datacenter", choice=CORE_DATACENTERS)
+            parser.add_argument("action", choice=("pool", "depool"))
+            return parser
+
+        def get_runner(self, args) -> CookbookRunnerBase:
+            return ServiceRouterRunner(args, self.spicerack)
+
+Here, `self.spicerack` is a an initialized :py:class:`spicerack.Spicerack` instance.
+Now we need to implement the class that will actually do the work.
+There are four methods to implement:
+
+* `__init__(args, spicerack)` to set up the properties of the class
+* `runtime_description`, returning a string that will be used to log the cookbook action to SAL
+* `run` that should contain the cookbook operations.
+* `rollback` an optional rollback method. Typically for a rollback method to work, you'll need to store some
+  state in the class.
+
+So here is our *runner* class:
+::
+
+    class ServiceRouterRunner(CookbookRunnerBase):
+        def __init__(args, spicerack):
+            # args here is the result of CookbookBase.argument_parser().parse_args()
+            self.service = args.service
+            self.datacenter = args.datacenter
+            self.action = args.action
+            self.discovery = spicerack.discovery(self.service)
+            # Save the initial state for eventual rollback
+            state = self.discovery.active_datacenters
+            self.was_pooled = self.datacenter in state[self.service]
+
+        def runtime_description(self) -> str:
+            return f"{self.action} service {self.service} in {self.datacenter}"
+
+        def run(self):
+            if self.action == "pool":
+                self.discovery.pool(self.datacenter)
+            else:
+                self.discovery.depool(self.datacenter)
+
+        def rollback(self):
+            if self.was_pooled:
+                self.discovery.pool(self.datacenter)
+            else:
+                self.discovery.depool(self.datacenter)
+
 
 If the ``run`` method returns a non-zero exit code or raises any exception the optional ``rollback`` method will be
 called to allow the cookbook to perform any cleanup action. Any exception raised by the ``rollback`` method will be

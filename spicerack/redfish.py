@@ -1,11 +1,12 @@
 """Redfish module."""
+import ipaddress
 import json
 import logging
 import re
 import time
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import urllib3
 from requests import Response
@@ -80,18 +81,29 @@ class DellSCPTargetPolicy(Enum):
 class Redfish:
     """Manage Redfish operations on a specific device."""
 
-    def __init__(self, fqdn: str, username: str, password: str, *, dry_run: bool = True):
+    def __init__(
+        self,
+        hostname: str,
+        interface: Union[ipaddress.IPv4Interface, ipaddress.IPv6Interface],
+        username: str,
+        password: str,
+        *,
+        dry_run: bool = True,
+    ):
         """Initialize the instance.
 
         Arguments:
-            fqdn (str): the FQDN of the management console to connect to.
+            hostname (str): the hostname (not FQDN) the management console belongs to.
+            interface (ipaddress.IPv4Interface, ipaddress.IPv6Interface): the interface of the management console to
+                connect to.
             username (str): the API username.
             password (str): the API password.
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
         self._dry_run = dry_run
-        self._fqdn = fqdn
+        self._hostname = hostname
+        self._interface = interface
         self._username = username
         self._password = password
         self._http_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
@@ -109,17 +121,27 @@ class Redfish:
             str: the string representation of the target hosts.
 
         """
-        return f"{self._username}@{self._fqdn}"
+        return f"{self._username}@{self._hostname} ({self._interface.ip})"
 
     @property
-    def fqdn(self) -> str:
-        """Getter for the fully qualified domain name.
+    def hostname(self) -> str:
+        """Getter for the device hostname.
 
         Returns
-            str: the fqdn
+            str: the hostname
 
         """
-        return self._fqdn
+        return self._hostname
+
+    @property
+    def interface(self) -> Union[ipaddress.IPv4Interface, ipaddress.IPv6Interface]:
+        """Getter for the management interface address with netmask.
+
+        Returns
+            ipaddress.IPv4Interface, ipaddress.IPv6Interface: the interface.
+
+        """
+        return self._interface
 
     @property
     def generation(self) -> int:
@@ -138,12 +160,12 @@ class Redfish:
             # Model e.g. '13G Monolithic'
             match = re.search(r"\d+", model)
             if match is None:
-                logger.error("%s: Unrecognized model %s, setting generation to 1", self._fqdn, model)
+                logger.error("%s: Unrecognized iDRAC model %s, setting generation to 1", self._hostname, model)
                 # Setting this to one allows use to continue but assumes the minimal level of support
                 self._generation = 1
             else:
                 self._generation = int(match.group(0))
-        logger.debug("%s: iDRAC generation %s", self._fqdn, self._generation)
+        logger.debug("%s: iDRAC generation %s", self._hostname, self._generation)
         return self._generation
 
     @property
@@ -159,7 +181,7 @@ class Redfish:
         if not self._pushuri:
             result = self.request("get", "/redfish/v1/UpdateService?$select=HttpPushUri")
             self._pushuri = result.json()["HttpPushUri"]
-        logger.debug("%s: iDRAC PushUri %s", self._fqdn, self._pushuri)
+        logger.debug("%s: iDRAC PushUri %s", self._hostname, self._pushuri)
         return self._pushuri
 
     @staticmethod
@@ -203,7 +225,7 @@ class Redfish:
         members = [m for m in results["Members"] if m["MessageId"] == "RAC0182"]
         if members:
             last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
-        logger.debug("%s: last_reboot %s", self._fqdn, last_reboot)
+        logger.debug("%s: iDRAC last reboot %s", self._hostname, last_reboot)
         return last_reboot
 
     @retry(
@@ -227,11 +249,11 @@ class Redfish:
         latest = self.last_reboot()
         if since >= latest:
             raise RedfishError("no new reboot detected")
-        logger.debug("%s: new reboot detected %s", self._fqdn, latest)
+        logger.debug("%s: new management console reboot detected %s", self._hostname, latest)
         # Its still takes a bit of time for redfish to fully come only so
         # We just arbitrarily sleep for a bit
         sleep_secs = 30
-        logger.debug("%s: sleeping for %d secs", self._fqdn, sleep_secs)
+        logger.debug("%s: sleeping for %d secs", self._hostname, sleep_secs)
         time.sleep(sleep_secs)
 
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
@@ -253,7 +275,7 @@ class Redfish:
         if uri[0] != "/":
             raise RedfishError(f"Invalid uri {uri}, it must start with a /")
 
-        url = f"https://{self._fqdn}{uri}"
+        url = f"https://{self._interface.ip}{uri}"
 
         if self._dry_run and method.lower() not in ("head", "get"):  # RW call
             logger.info("Would have called %s on %s", method, url)
@@ -317,7 +339,7 @@ class Redfish:
             spicerack.redfish.RedfishError: if unable to connect to Redfish API.
 
         """
-        logger.info("Testing Redfish API connection to %s", self._fqdn)
+        logger.info("Testing Redfish API connection to %s (%s)", self._hostname, self._interface.ip)
         self.request("get", "/redfish")
 
     @retry(
@@ -449,7 +471,7 @@ class Redfish:
             spicerack.redfish.RedfishError: if unable to perform the reset.
 
         """
-        logger.info("Resetting chassis power status for %s to %s", self._fqdn, action.value)
+        logger.info("Resetting chassis power status for %s to %s", self._hostname, action.value)
         response = self.request(
             "post",
             "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset",
