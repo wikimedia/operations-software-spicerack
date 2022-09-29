@@ -113,6 +113,7 @@ class Redfish:
         self._http_session.auth = (self._username, self._password)
         self._http_session.headers.update({"Accept": "application/json"})
         self._pushuri = ""
+        self._oob_info: Dict = {}
 
     def __str__(self) -> str:
         """String representation of the instance.
@@ -147,6 +148,24 @@ class Redfish:
 
         """
         return self._interface
+
+    @property
+    def oob_info(self) -> Dict:
+        """Property to return a dict of manager metadata."""
+        if not self._oob_info:
+            result = self.request("get", self.oob_manager)
+            self._oob_info = result.json()
+        return self._oob_info
+
+    @property
+    def oob_model(self) -> str:
+        """Property to return a string representing the model."""
+        return self.oob_info["Model"]
+
+    @property
+    def firmware_version(self) -> str:
+        """Property to return a string representing the model."""
+        return self.oob_info["FirmwareVersion"]
 
     @property
     def pushuri(self) -> str:
@@ -695,13 +714,10 @@ class RedfishDell(Redfish):
             int: representing the generation
 
         """
-        if not self._generation:
-            result = self.request("get", f"{self.oob_manager}?$select=Model")
-            model = result.json()["Model"]
-            # Model e.g. '13G Monolithic'
-            match = re.search(r"\d+", model)
+        if self._generation == 0:
+            match = re.search(r"\d+", self.oob_model)
             if match is None:
-                logger.error("%s: Unrecognized iDRAC model %s, setting generation to 1", self._hostname, model)
+                logger.error("%s: Unrecognized iDRAC model %s, setting generation to 1", self._hostname, self.oob_model)
                 # Setting this to one allows use to continue but assumes the minimal level of support
                 self._generation = 1
             else:

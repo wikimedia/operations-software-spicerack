@@ -139,14 +139,45 @@ DELL_TASK_REPONSE_EPOC = deepcopy(DELL_TASK_REPONSE)
 DELL_TASK_REPONSE_EPOC["EndTime"] = "1969-12-31T18:00:00-06:00"
 DELL_TASK_REPONSE_BAD_TIME = deepcopy(DELL_TASK_REPONSE)
 DELL_TASK_REPONSE_BAD_TIME["EndTime"] = "bad value"
-MODEL_RESPONSE = {
+MANAGER_RESPONSE = {
     "@odata.context": "/redfish/v1/$metadata#Manager.Manager",
     "@odata.id": "/redfish/v1/Managers/Testing_oob.1",
-    "@odata.type": "#Manager.v1_9_0.Manager",
+    "@odata.type": "#Manager.v1_12_0.Manager",
+    "Actions": {
+        "#Manager.Reset": {
+            "ResetType@Redfish.AllowableValues": ["GracefulRestart"],
+            "target": "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Manager.Reset",
+        },
+        "#Manager.ResetToDefaults": {
+            "ResetType@Redfish.AllowableValues": ["ResetAll", "PreserveNetworkAndUsers"],
+            "target": "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Manager.ResetToDefaults",
+        },
+    },
+    "DateTime": "2023-01-30T14:23:51-06:00",
+    "DateTimeLocalOffset": "-06:00",
+    "Description": "BMC",
+    "EthernetInterfaces": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces"},
+    "FirmwareVersion": "6.00.30.00",
+    "HostInterfaces": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/HostInterfaces"},
+    "Id": "iDRAC.Embedded.1",
+    "LastResetTime": "2022-11-17T17:56:11-06:00",
+    "LogServices": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices"},
+    "ManagerType": "BMC",
     "Model": "14G Monolithic",
+    "Name": "Manager",
+    "NetworkProtocol": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/NetworkProtocol"},
+    "PowerState": "On",
+    "SerialConsole": {
+        "ConnectTypesSupported": [],
+        "ConnectTypesSupported@odata.count": 0,
+        "MaxConcurrentSessions": 0,
+        "ServiceEnabled": False,
+    },
+    "SerialInterfaces": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/SerialInterfaces"},
+    "Status": {"Health": "OK", "State": "Enabled"},
 }
-MODEL_RESPONSE_BAD = deepcopy(MODEL_RESPONSE)
-MODEL_RESPONSE_BAD["Model"] = "Foobar"
+MANAGER_RESPONSE_BAD = deepcopy(MANAGER_RESPONSE)
+MANAGER_RESPONSE_BAD["Model"] = "Foobar"
 PUSHURI_RESPONSE = {
     "@odata.context": "/redfish/v1/$metadata#UpdateService.UpdateService",
     "@odata.id": "/redfish/v1/UpdateService",
@@ -309,6 +340,20 @@ class TestRedfish:
         since = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
         with pytest.raises(redfish.RedfishError, match="no new reboot detected"):
             self.redfish.wait_reboot_since(since)
+
+    def test_property_firmware(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
+        assert self.redfish.firmware_version == "6.00.30.00"
+        # assert twice to check cached version
+        assert self.redfish.firmware_version == "6.00.30.00"
+
+    def test_property_model(self):
+        """It should return the model."""
+        self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
+        assert self.redfish.oob_model == "14G Monolithic"
+        # assert twice to check cached version
+        assert self.redfish.oob_model == "14G Monolithic"
 
     def test_property_pushuri(self):
         """It should return the pushuri."""
@@ -638,10 +683,10 @@ class TestRedfishDell:
         """It should return the oob_manager."""
         assert self.redfish.oob_manager == "/redfish/v1/Managers/iDRAC.Embedded.1"
 
-    @pytest.mark.parametrize("response, generation", ((MODEL_RESPONSE, 14), (MODEL_RESPONSE_BAD, 1)))
+    @pytest.mark.parametrize("response, generation", ((MANAGER_RESPONSE, 14), (MANAGER_RESPONSE_BAD, 1)))
     def test_property_generation(self, response, generation):
         """It should return the generation."""
-        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1?$select=Model", json=response)
+        self.requests_mock.get(self.redfish.oob_manager, json=response)
         assert self.redfish.generation == generation
         # assert twice to check cached version
         assert self.redfish.generation == generation
