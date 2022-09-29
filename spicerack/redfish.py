@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import time
+from abc import abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -111,7 +112,6 @@ class Redfish:
         self._http_session.verify = False  # The devices have a self-signed certificate
         self._http_session.auth = (self._username, self._password)
         self._http_session.headers.update({"Accept": "application/json"})
-        self._generation = 0
         self._pushuri = ""
 
     def __str__(self) -> str:
@@ -122,6 +122,11 @@ class Redfish:
 
         """
         return f"{self._username}@{self._hostname} ({self._interface.ip})"
+
+    @property
+    @abstractmethod
+    def oob_manager(self) -> str:
+        """Property to return the Out of Band manager."""
 
     @property
     def hostname(self) -> str:
@@ -142,31 +147,6 @@ class Redfish:
 
         """
         return self._interface
-
-    @property
-    def generation(self) -> int:
-        """Property representing the generation of the idrac.
-
-        This is often 13 for idrac8 and 14 for idrac9.  This property allows us to add workarounds
-        for older idrac models
-
-        Returns:
-            int: representing the generation
-
-        """
-        if not self._generation:
-            result = self.request("get", "/redfish/v1/Managers/iDRAC.Embedded.1?$select=Model")
-            model = result.json()["Model"]
-            # Model e.g. '13G Monolithic'
-            match = re.search(r"\d+", model)
-            if match is None:
-                logger.error("%s: Unrecognized iDRAC model %s, setting generation to 1", self._hostname, model)
-                # Setting this to one allows use to continue but assumes the minimal level of support
-                self._generation = 1
-            else:
-                self._generation = int(match.group(0))
-        logger.debug("%s: iDRAC generation %s", self._hostname, self._generation)
-        return self._generation
 
     @property
     def pushuri(self) -> str:
@@ -205,6 +185,7 @@ class Redfish:
 
         return sorted(members, key=sorter)[-1]
 
+    @abstractmethod
     def last_reboot(self) -> datetime:
         """Ask redfish for the last reboot time.
 
@@ -212,22 +193,6 @@ class Redfish:
             datetime: the datetime of the last reboot event
 
         """
-        # TODO: we can possibly use filter once all idrac are updated.  e.g.
-        # iDRAC.Embedded.1/LogServices/Lclog/Entries?$filter=MessageId eq 'RAC0182'
-        # currently we get the following on some older models
-        # Message=Querying is not supported by the implementation, MessageArgs=$filter"
-        last_reboot = datetime.fromisoformat("1970-01-01T00:00:00-00:00")
-        results = self.request(
-            "get",
-            "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog",
-        ).json()
-        # idrac reboots have the message_id RAC0182
-        # use ends with as sometimes there is an additional string prefix to the code e.g. IDRAC.2.7.RAC0182
-        members = [m for m in results["Members"] if m["MessageId"].endswith("RAC0182")]
-        if members:
-            last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
-        logger.debug("%s: iDRAC last reboot %s", self._hostname, last_reboot)
-        return last_reboot
 
     @retry(
         tries=240,
@@ -243,19 +208,10 @@ class Redfish:
 
         """
         self.check_connection()
-        if self._generation < 14:
-            # Probing the Gen13/iDRAC8 devices too early seems to cause the redfish deamon to crash
-            print("sleeping for 2 mins to let idrac boot")
-            time.sleep(120)
         latest = self.last_reboot()
         if since >= latest:
             raise RedfishError("no new reboot detected")
         logger.debug("%s: new management console reboot detected %s", self._hostname, latest)
-        # Its still takes a bit of time for redfish to fully come only so
-        # We just arbitrarily sleep for a bit
-        sleep_secs = 30
-        logger.debug("%s: sleeping for %d secs", self._hostname, sleep_secs)
-        time.sleep(sleep_secs)
 
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
@@ -410,7 +366,7 @@ class Redfish:
             spicerack.redfish.RedfishError: if unable to find the account.
 
         """
-        accounts = self.request("get", "/redfish/v1/Managers/iDRAC.Embedded.1/Accounts").json()
+        accounts = self.request("get", f"{self.oob_manager}/Accounts").json()
         uris = [account["@odata.id"] for account in accounts["Members"]]
         for uri in uris:
             response = self.request("get", uri)
@@ -709,6 +665,100 @@ class RedfishDell(Redfish):
     """Dell specific Redfish support."""
 
     scp_base_uri = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
+
+    def __init__(
+        self,
+        hostname: str,
+        interface: Union[ipaddress.IPv4Interface, ipaddress.IPv6Interface],
+        username: str,
+        password: str,
+        *,
+        dry_run: bool = True,
+    ):
+        """Override parent's constructor."""
+        super().__init__(hostname, interface, username, password, dry_run=dry_run)
+        self._generation = 0
+
+    @property
+    def oob_manager(self) -> str:
+        """String representing the Out of Band manager key."""
+        return "/redfish/v1/Managers/iDRAC.Embedded.1"
+
+    @property
+    def generation(self) -> int:
+        """Property representing the generation of the idrac.
+
+        This is often 13 for idrac8 and 14 for idrac9.  This property allows us to add workarounds
+        for older idrac models
+
+        Returns:
+            int: representing the generation
+
+        """
+        if not self._generation:
+            result = self.request("get", f"{self.oob_manager}?$select=Model")
+            model = result.json()["Model"]
+            # Model e.g. '13G Monolithic'
+            match = re.search(r"\d+", model)
+            if match is None:
+                logger.error("%s: Unrecognized iDRAC model %s, setting generation to 1", self._hostname, model)
+                # Setting this to one allows use to continue but assumes the minimal level of support
+                self._generation = 1
+            else:
+                self._generation = int(match.group(0))
+        logger.debug("%s: iDRAC generation %s", self._hostname, self._generation)
+        return self._generation
+
+    def last_reboot(self) -> datetime:
+        """Ask redfish for the last reboot time.
+
+        Returns:
+            datetime: the datetime of the last reboot event
+
+        """
+        # TODO: we can possibly use filter once all idrac are updated.  e.g.
+        # iDRAC.Embedded.1/LogServices/Lclog/Entries?$filter=MessageId eq 'RAC0182'
+        # currently we get the following on some older models
+        # Message=Querying is not supported by the implementation, MessageArgs=$filter"
+        last_reboot = datetime.fromisoformat("1970-01-01T00:00:00-00:00")
+        results = self.request(
+            "get",
+            f"{self.oob_manager}/Logs/Lclog",
+        ).json()
+        # use ends with as sometimes there is an additional string prefix to the code e.g. IDRAC.2.7.RAC0182
+        members = [m for m in results["Members"] if m["MessageId"].endswith("RAC0182")]
+        if members:
+            last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
+        logger.debug("%s: iDRAC last reboot %s", self._hostname, last_reboot)
+        return last_reboot
+
+    @retry(
+        tries=240,
+        delay=timedelta(seconds=10),
+        backoff_mode="constant",
+        exceptions=(RedfishError,),
+    )
+    def wait_reboot_since(self, since: datetime) -> None:
+        """Wait for idrac/redfish to become responsive.
+
+        Arguments:
+            since: The datetime of the last reboot
+
+        """
+        self.check_connection()
+        if self._generation < 14:
+            # Probing the Gen13/iDRAC8 devices too early seems to cause the redfish deamon to crash
+            print("sleeping for 2 mins to let idrac boot")
+            time.sleep(120)
+        latest = self.last_reboot()
+        if since >= latest:
+            raise RedfishError("no new reboot detected")
+        logger.debug("%s: new management console reboot detected %s", self._hostname, latest)
+        # Its still takes a bit of time for redfish to fully come only so
+        # We just arbitrarily sleep for a bit
+        sleep_secs = 30
+        logger.debug("%s: sleeping for %d secs", self._hostname, sleep_secs)
+        time.sleep(sleep_secs)
 
     def scp_dump(
         self, target: DellSCPTargetPolicy = DellSCPTargetPolicy.ALL, *, allow_new_attributes: bool = False
