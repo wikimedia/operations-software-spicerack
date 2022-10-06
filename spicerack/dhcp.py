@@ -38,7 +38,8 @@ class DHCPConfiguration(ABC):
         """Return the rendered DHCP configuration snippet."""
         return textwrap.dedent(self._template.format(s=self))
 
-    @property
+    # TODO: remove the chaining of decorators
+    @property  # type: ignore
     @classmethod
     @abstractmethod
     def _template(cls) -> str:

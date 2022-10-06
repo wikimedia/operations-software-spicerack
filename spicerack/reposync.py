@@ -1,7 +1,7 @@
 """Manage updates to automated git repositories."""
 import os
 from contextlib import contextmanager
-from distutils.dir_util import copy_tree
+from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module, useless-suppression
 from logging import getLogger
 from pathlib import Path
 from tempfile import TemporaryDirectory
