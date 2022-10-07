@@ -35,6 +35,9 @@ whitelist_dnsdisc.Discovery._resolvers.nameservers
 
 whitelist_icinga = Whitelist()
 whitelist_icinga.CommandFile.__new__
+whitelist_icinga.IcingaStatus.OK
+whitelist_icinga.IcingaStatus.WARNING
+whitelist_icinga.IcingaStatus.UNKNOWN
 
 whitelist_mysql = Whitelist()
 whitelist_mysql.set_core_masters_readonly

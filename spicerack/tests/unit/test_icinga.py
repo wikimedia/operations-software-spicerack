@@ -457,6 +457,39 @@ class TestIcingaHosts:
         )
         assert mocked_time.called
 
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    @pytest.mark.parametrize(
+        "skip_acked,match",
+        [
+            (False, "Not all services are recovered: host2:check_name1,check_name2"),
+            (True, "Not all services are recovered"),
+        ],
+    )
+    def test_check_failed_services_partly_acknowledged(self, mocked_time, skip_acked, match):
+        """Test that situations where only a subset of alerts are ack'ed."""
+        with open(get_fixture_path("icinga", "status_with_acknowledged_failures.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
+
+        status = self.icinga_hosts.get_status()
+        assert len(status.acked_services) == 1
+
+        with pytest.raises(icinga.IcingaError, match=match):
+            self.icinga_hosts.wait_for_optimal(skip_acked=skip_acked)
+
+        assert mocked_time.called
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    def test_check_failed_services_all_acknowledged(self, mocked_time):
+        """Skip acked, and all alerts acknowledged."""
+        with open(get_fixture_path("icinga", "status_with_all_acknowledged_failures.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
+
+        with pytest.raises(icinga.IcingaError, match="Not all services are recovered: host2:check_name1,check_name2"):
+            self.icinga_hosts.wait_for_optimal()
+
+        self.icinga_hosts.wait_for_optimal(skip_acked=True)
+        assert mocked_time.called
+
     def test_recheck_failed_services_optimal(self):
         """It should force a recheck of all services for the hosts on the Icinga server."""
         with open(get_fixture_path("icinga", "status_with_services.json")) as f:
@@ -607,8 +640,8 @@ def _get_hoststatus(hostname, down=False, failed=False):
     }
 
     failed_services = [
-        {"host": hostname, "name": "check_name1", "status": {}},
-        {"host": hostname, "name": "check_name2", "status": {}},
+        {"host": hostname, "name": "check_name1", "status": {"current_state": 2}},
+        {"host": hostname, "name": "check_name2", "status": {"current_state": 2}},
     ]
 
     if down:

@@ -13,14 +13,16 @@
                 "host": "host2",
                 "name": "check_name1",
                 "status": {
-                    "current_state": 2
+                    "current_state": 2,
+                    "problem_has_been_acknowledged": "0"
                 }
             },
             {
                 "host": "host2",
                 "name": "check_name2",
                 "status": {
-                    "current_state": 2
+                    "current_state": 2,
+                    "problem_has_been_acknowledged": "1"
                 }
             }
         ],
