@@ -3,10 +3,10 @@ import logging
 from typing import Any, Dict, Tuple
 
 from cumin.transports import Command
+from wmflib.constants import CORE_DATACENTERS
 from wmflib.requests import http_session
 
 from spicerack.confctl import ConftoolEntity
-from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts

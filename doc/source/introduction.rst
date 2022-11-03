@@ -60,8 +60,8 @@ Our cookbook will accept three command-line arguments: the service name, the dat
 ::
 
     import argparse
+    from wmflib.constants import CORE_DATACENTERS
     from spicerack.cookbook import CookbookRunnerBase, CookbookBase
-    from spicerack.constants import CORE_DATACENTERS
     class ServiceRouter(CookbookBase):
         def argument_parser(self) -> argparse.ArgumentParser:
             parser = super().argument_parser() # returns a bare ArgumentParser with the correct defaults
