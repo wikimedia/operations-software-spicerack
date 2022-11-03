@@ -504,17 +504,17 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         return PuppetMaster(self.remote().query(get_puppet_ca_hostname()))
 
-    def ipmi(self, mgmt_fqdn: str) -> Ipmi:
+    def ipmi(self, target: str) -> Ipmi:
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
 
         Arguments:
-            mgmt_fqdn (str): the management console FQDN to target.
+            target (str): the management console FQDN or IP to target.
 
         Returns:
             spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
 
         """
-        return Ipmi(mgmt_fqdn, self.management_password, dry_run=self._dry_run)
+        return Ipmi(target, self.management_password, dry_run=self._dry_run)
 
     def phabricator(self, bot_config_file: str, section: str = "phabricator_bot") -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.
