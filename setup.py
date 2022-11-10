@@ -31,7 +31,7 @@ EXTRAS_REQUIRE = {
         "black<=21.12b0",  # this is needed so that it doesn't confict with curator
         "flake8>=3.6.0",
         "isort",
-        "mypy>=0.670,<0.800",
+        "mypy>=0.670",
         "pytest-cov>=2.6.0",
         "pytest-xdist>=1.26.1",
         "pytest>=3.10.1",
@@ -43,6 +43,10 @@ EXTRAS_REQUIRE = {
         "sphinx_rtd_theme>=0.4.3",
         "sphinx-argparse>=0.2.2",
         "Sphinx>=1.8.4",
+        "types-PyMySQL",
+        "types-redis",
+        "types-requests",
+        "types-setuptools",
     ],
     "prospector": [
         "prospector[with_everything]>=0.12.4",

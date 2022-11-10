@@ -33,21 +33,21 @@ class IpmiCheckError(SpicerackCheckError):
 class Ipmi:
     """Class to manage remote IPMI via ipmitool."""
 
-    def __init__(self, mgmt_fqdn: str, password: str, dry_run: bool = True) -> None:
+    def __init__(self, target: str, password: str, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
-            mgmt_fqdn (str): the management console FQDN to target.
+            target (str): the management console FQDN or IP to target.
             password (str): the password to use to connect via IPMI.
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
         self.env: Dict[str, str] = {"IPMITOOL_PASSWORD": password}
-        self._mgmt_fqdn = mgmt_fqdn
+        self._target = target
         self._dry_run = dry_run
 
     def command(self, command_parts: List[str], is_safe: bool = False, hide_parts: Tuple = ()) -> str:
-        """Run an ipmitool command for a remote management console FQDN.
+        """Run an ipmitool command for a remote management console.
 
         Arguments:
             command_parts (list): a list of :py:class:`str` with the IPMI command components to execute.
@@ -68,7 +68,7 @@ class Ipmi:
             "-I",
             "lanplus",
             "-H",
-            self._mgmt_fqdn,
+            self._target,
             "-U",
             "root",
             "-E",
@@ -85,14 +85,14 @@ class Ipmi:
         try:
             output = run(command + command_parts, env=self.env.copy(), stdout=PIPE, check=True).stdout.decode()
         except CalledProcessError as e:
-            raise IpmiError(f"Remote IPMI for {self._mgmt_fqdn} failed (exit={e.returncode}): {e.output}") from e
+            raise IpmiError(f"Remote IPMI for {self._target} failed (exit={e.returncode}): {e.output}") from e
 
         logger.debug(output)
 
         return output
 
     def check_connection(self) -> None:
-        """Ensure that remote IPMI is working for the management console FQDN.
+        """Ensure that remote IPMI is working for the management console.
 
         Raises:
             spicerack.ipmi.IpmiError: if unable to connect or execute a test command.
@@ -101,7 +101,7 @@ class Ipmi:
         self.power_status()
 
     def power_status(self) -> str:
-        """Get the current power status for the management console FQDN.
+        """Get the current power status for the management console.
 
         Raises:
             spicerack.ipmi.IpmiError: if unable to get the power status.

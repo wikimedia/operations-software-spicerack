@@ -10,8 +10,8 @@ from typing import Dict, Iterator, Optional, Tuple, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
+from wmflib.constants import CORE_DATACENTERS
 
-from spicerack.constants import CORE_DATACENTERS
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import Remote, RemoteHostsAdapter

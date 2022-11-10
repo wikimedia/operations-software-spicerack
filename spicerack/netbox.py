@@ -238,11 +238,10 @@ class NetboxServer:
 
     allowed_status_transitions = {
         "spare": ("planned", "failed", "decommissioned"),
-        "planned": ("staged", "failed"),
-        "failed": ("spare", "planned", "staged", "decommissioned"),
-        "staged": ("failed", "active", "decommissioned"),
-        "active": ("staged", "decommissioned"),
-        "decommissioned": ("staged", "spare"),
+        "planned": ("active", "failed", "decommissioned"),
+        "failed": ("spare", "planned", "active", "decommissioned"),
+        "active": ("failed", "decommissioned"),
+        "decommissioned": ("planned", "spare"),
     }
     """dict: See https://wikitech.wikimedia.org/wiki/Server_Lifecycle#/media/File:Server_Lifecycle_Statuses.png"""
 

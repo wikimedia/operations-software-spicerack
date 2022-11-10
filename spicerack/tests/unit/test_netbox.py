@@ -251,7 +251,7 @@ class TestNetboxServer:
 
     def test_status_setter_ok(self):
         """It should set the status of the server to its new value, if it's an allowed transition."""
-        self.physical_server.status = "staged"
+        self.physical_server.status = "failed"
         assert self.netbox_host.save.called_once_with()
 
     def test_status_setter_virtual(self):
@@ -260,7 +260,7 @@ class TestNetboxServer:
             NetboxError,
             match="Server virtual is a virtual machine, its Netbox status is automatically synced from Ganeti",
         ):
-            self.virtual_server.status = "staged"
+            self.virtual_server.status = "failed"
 
     def test_status_setter_invalid_transition(self):
         """It should raise a NetboxError if trying to make an invalid status transition."""
@@ -272,7 +272,7 @@ class TestNetboxServer:
     def test_status_setter_dry_run(self):
         """It should skip setting the status of the server to its new value in dry-run mode."""
         physical_server = NetboxServer(api=self.mocked_api, server=self.netbox_host, dry_run=True)
-        physical_server.status = "staged"
+        physical_server.status = "failed"
         self.netbox_host.save.assert_not_called()
         assert self.physical_server.status == "active"
 
