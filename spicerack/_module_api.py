@@ -32,7 +32,7 @@ class CookbooksModuleInterface:
     """str: the cookbook static title."""
 
     @staticmethod
-    def argument_parser() -> argparse.ArgumentParser:
+    def argument_parser() -> argparse.ArgumentParser:  # type: ignore[empty-body]
         """Optional module function to define if the cookbook should accept command line arguments."""
 
     @staticmethod
