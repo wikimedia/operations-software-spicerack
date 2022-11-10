@@ -1,6 +1,36 @@
 Spicerack Changelog
 -------------------
 
+`v5.0.0`_ (2022-11-10)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* constants: remove ``CORE_DATACENTERS`` constant:
+
+  * Remove the constant from Spicerack as it's a duplicate of the one already present in ``wmflib``.
+  * Convert all Spicerack code to use the same variable from ``wmflib``.
+  * All the cookbooks have been already migrated to use the ``wmflib`` one.
+
+Minor improvements
+""""""""""""""""""
+
+* ipmi: clarify that the target can also be an IP address. The ipmi module works the same as with a management FQDN.
+
+Bug fixes
+"""""""""
+
+* netbox: update allowed state transitions:
+
+  * As the way we use Netbox status is changed as part of the work in `T320696`_ and the ``staged`` status is not
+    anymore used, update the allowed transitions based on the new `Server Lifecycle Diagram`_.
+
+Miscellanea
+"""""""""""
+
+* mypy: remove upper limit and refactor mypy configuration to properly work with newer versions.
+
 `v4.0.0`_ (2022-09-28)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2115,6 +2145,7 @@ New features
 .. _`elasticsearch compatibility matrix`: https://elasticsearch-py.readthedocs.io/en/stable/#compatibility
 .. _`elasticsearch curator compatibility matrix`: https://www.elastic.co/guide/en/elasticsearch/client/curator/current/version-compatibility.html
 .. _`service module example usage`: https://phabricator.wikimedia.org/P24020
+.. _`Server Lifecycle Diagram`: https://upload.wikimedia.org/wikipedia/labs/5/56/Server_Lifecycle_Statuses.png
 
 .. _`T147074`: https://phabricator.wikimedia.org/T147074
 .. _`T211750`: https://phabricator.wikimedia.org/T211750
@@ -2155,6 +2186,7 @@ New features
 .. _`T310745`: https://phabricator.wikimedia.org/T310745
 .. _`T311486`: https://phabricator.wikimedia.org/T311486
 .. _`T315537`: https://phabricator.wikimedia.org/T315537
+.. _`T320696`: https://phabricator.wikimedia.org/T320696
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2241,3 +2273,4 @@ New features
 .. _`v3.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.0
 .. _`v3.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.1
 .. _`v4.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v4.0.0
+.. _`v5.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.0
