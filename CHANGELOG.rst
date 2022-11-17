@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v5.0.2`_ (2022-11-17)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* redfish: fix the reboot message ID check for new iDRAC versions.
+
 `v5.0.1`_ (2022-11-17)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2295,3 +2303,4 @@ New features
 .. _`v4.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v4.0.0
 .. _`v5.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.0
 .. _`v5.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.1
+.. _`v5.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.2
