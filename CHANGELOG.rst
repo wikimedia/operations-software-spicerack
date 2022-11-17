@@ -1,8 +1,28 @@
 Spicerack Changelog
 -------------------
 
+`v5.0.1`_ (2022-11-17)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* redfish: add reboot message ID for new iDRAC versions.
+
+Miscellanea
+"""""""""""
+
+setup.py: remove support from Python 3.7 and 3.8.
+tox.ini: remove support from Python 3.7 and 3.8.
+
 `v5.0.0`_ (2022-11-10)
 ^^^^^^^^^^^^^^^^^^^^^^
+
+Dependencies breaking changes
+"""""""""""""""""""""""""""""
+
+* Starting with Spicerack v5.0.0 the support for Python 3.7 and 3.8 is dropped. For now there are no breaking changes
+  but it's not guaranteed to work with those versions anymore.
 
 API breaking changes
 """"""""""""""""""""
@@ -2274,3 +2294,4 @@ New features
 .. _`v3.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v3.2.1
 .. _`v4.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v4.0.0
 .. _`v5.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.0
+.. _`v5.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.1
