@@ -222,7 +222,11 @@ class Redfish:
             "/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog",
         ).json()
         # idrac reboots have the message_id RAC0182
-        members = [m for m in results["Members"] if m["MessageId"] == "RAC0182"]
+        reboot_message_ids = [
+            "IDRAC.2.7.SYS1003",  # idrac_version >= 6
+            "RAC0182",  # idrac_version < 6
+        ]
+        members = [m for m in results["Members"] if m["MessageId"] in reboot_message_ids]
         if members:
             last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
         logger.debug("%s: iDRAC last reboot %s", self._hostname, last_reboot)
