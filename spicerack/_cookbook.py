@@ -9,7 +9,7 @@ from typing import List, Optional, Sequence, Type, cast
 
 from wmflib.config import load_yaml_config
 
-from spicerack import Spicerack, _log, _module_api, cookbook
+from spicerack import Spicerack, SpicerackExtenderBase, _log, _module_api, cookbook
 from spicerack._menu import BaseItem, CookbookItem, MenuError, TreeItem
 from spicerack.exceptions import SpicerackError
 
@@ -382,7 +382,26 @@ def import_module(module_name: str) -> _module_api.CookbooksModuleInterface:
     return cast(_module_api.CookbooksModuleInterface, module)
 
 
-def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:
+def _import_extender_class(extender_class_param: str) -> SpicerackExtenderBase:
+    """Import the extender class and ensure it's a subclass of SpicerackExtenderBase.
+
+    Arguments:
+        extender_class_param (str): the configuration file parameter with the fully qualified class name.
+
+    Returns:
+        type: the class object that is a subclass of :py:class:`spicerack.SpicerackExtenderBase`.
+
+    """
+    extender_module_name, extender_class_name = extender_class_param.rsplit(".", 1)
+    extender_module = import_module(extender_module_name)
+    extender_class = getattr(extender_module, extender_class_name)
+    if issubclass(extender_class, SpicerackExtenderBase):
+        return extender_class
+
+    raise TypeError(f"Extender class {extender_class_param} is not a subclass of spicerack.SpicerackExtenderBase.")
+
+
+def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
     """Entry point, run the tool.
 
     Arguments:
@@ -399,6 +418,8 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:
     config = load_yaml_config(args.config_file)
     cookbooks_base_dir = Path(config["cookbooks_base_dir"]).expanduser()
     sys.path.append(str(cookbooks_base_dir))
+    if config.get("external_modules_dir") is not None:
+        sys.path.append(str(Path(config["external_modules_dir"]).expanduser()))
 
     def get_cookbook(spicerack: Spicerack, cookbook_path: str, cookbook_args: Sequence[str] = ()) -> Optional[BaseItem]:
         """Run a single cookbook.
@@ -416,15 +437,17 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:
 
     params = config.get("instance_params", {})
     params.update({"verbose": args.verbose, "dry_run": args.dry_run, "get_cookbook_callback": get_cookbook})
+    if "extender_class" in params:
+        try:
+            params["extender_class"] = _import_extender_class(params["extender_class"])
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Failed to import the extender_class {params['extender_class']}:", e, file=sys.stderr)
+            return 1
 
     try:
         spicerack = Spicerack(**params)
     except TypeError as e:
-        print(
-            "Unable to instantiate Spicerack, check your configuration:",
-            e,
-            file=sys.stderr,
-        )
+        print("Unable to instantiate Spicerack, check your configuration:", e, file=sys.stderr)
         return 1
 
     cookbooks = CookbookCollection(cookbooks_base_dir, args.cookbook_args, spicerack, path_filter=args.cookbook)

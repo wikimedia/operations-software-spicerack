@@ -21,7 +21,8 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |   |-- class_api.rollback
 |   |-- class_api.rollback_raise
 |   |-- class_api.runtime_description
-|   `-- class_api.runtime_description_raise
+|   |-- class_api.runtime_description_raise
+|   `-- class_api.use_external_modules
 |-- cookbook
 |-- group1
 |   `-- group1.cookbook1
@@ -57,7 +58,8 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |-- class_api.rollback: Class API rollback cookbook.
 |   |-- class_api.rollback_raise: Class API rollback_raise cookbook.
 |   |-- class_api.runtime_description: Class API cookbook that overrides runtime_description.
-|   `-- class_api.runtime_description_raise: Class API runtime_description raise cookbook.
+|   |-- class_api.runtime_description_raise: Class API runtime_description raise cookbook.
+|   `-- class_api.use_external_modules: Call a Spicerack extender accessor.
 |-- cookbook: Top level class cookbook.
 |-- group1: Group1 Test Cookbooks.
 |   `-- group1.cookbook1: Group1 Cookbook1.
@@ -104,7 +106,7 @@ LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
         `-- group3.subgroup3.cookbook4
 """
 COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
-[0/9] class_api: Class API Test Cookbooks.
+[0/10] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -116,7 +118,7 @@ q - Quit
 h - Help
 """
 COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
-[0/9] class_api: Class API Test Cookbooks.
+[0/10] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -219,6 +221,34 @@ def test_main_call_another_cookbook_not_found(capsys):
     assert ret == cookbook.EXCEPTION_RETCODE
     assert "SpicerackError: Unable to find cookbook class_api.not_existent" in err
     assert "END (FAIL) - Cookbook class_api.call_another_cookbook (exit_code=99)" in err
+    _reset_logging_module()
+
+
+def test_main_use_external_modules_and_extender_ok(capsys):
+    """It should inject the external module into the path and execute the cookbook with the extender."""
+    ret = _cookbook.main(
+        ["-c", str(get_fixture_path("config_external_modules.yaml")), "class_api.use_external_modules"]
+    )
+    _, err = capsys.readouterr()
+    assert ret == 0
+    expected = [
+        "START - Cookbook class_api.use_external_modules",
+        "Extender is a cool feature!",
+        "END (PASS) - Cookbook class_api.use_external_modules (exit_code=0)",
+    ]
+    for line in expected:
+        assert line in err
+    _reset_logging_module()
+
+
+def test_main_use_external_modules_and_extender_raise(capsys):
+    """It should exit with 1 if unable to load the extender class."""
+    ret = _cookbook.main(
+        ["-c", str(get_fixture_path("config_bad_external_modules.yaml")), "class_api.use_external_modules"]
+    )
+    _, err = capsys.readouterr()
+    assert ret == 1
+    assert "Failed to import the extender_class spicerack_extender.SpicerackBadExtender" in err
     _reset_logging_module()
 
 
@@ -499,7 +529,7 @@ class TestCookbookCollection:
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack)
         menu = cookbooks.get_item("")
-        assert menu.status == "0/28"
+        assert menu.status == "0/29"
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a TreeItem with all tasks completed should return DONE."""

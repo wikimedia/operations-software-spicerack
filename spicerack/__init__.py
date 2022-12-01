@@ -74,6 +74,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         spicerack_config_dir: str = "/etc/spicerack",
         http_proxy: str = "",
         get_cookbook_callback: Optional[Callable[["Spicerack", str, Sequence[str]], Optional["BaseItem"]]] = None,
+        extender_class: Optional[type["SpicerackExtenderBase"]] = None,
     ) -> None:
         """Initialize the service locator for the Spicerack library.
 
@@ -97,6 +98,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             http_proxy (str, optional): the scheme://url:port of the HTTP proxy to use for external calls.
             get_cookbook_callback (callable, optional): a callable to retrieve a CookbookItem to execute a cookbook
                 from inside another cookbook.
+            extender_class (type, optional): an optional class object that inherits from
+                :py:class:`spicerack.SpicerackExtenderBase` to dynamically add accessors to Spicerack. If not set no
+                extenders will be registered, even if ``external_modules_dir`` is specified in the configuration.
 
         """
         # Attributes
@@ -118,6 +122,24 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._service_catalog: Optional[Catalog] = None
         self._management_password: str = ""
         self._actions = ActionsDict()
+
+        self._extender = None
+        if extender_class is not None:  # If present, instantiate it with the current instance as parameter
+            self._extender = extender_class(spicerack=self)
+
+    def __getattr__(self, name: str) -> Any:
+        """Attribute accessor to dynamically load external accessors when present.
+
+        This method is called only if a method or attribute with the given name is not present in the current instance.
+
+        :Parameters:
+            according to Python's Data model :py:meth:`object.__getattr__`.
+
+        """
+        if self._extender is not None:
+            return getattr(self._extender, name)
+
+        raise AttributeError(f"AttributeError: '{self.__class__.__name__}' object has no attribute '{name}'")
 
     @property
     def dry_run(self) -> bool:
@@ -761,3 +783,16 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             cachedir = Path(cachedir)
 
         return PeeringDB(cachedir=cachedir, ttl=ttl, proxies=self.requests_proxies, token=token)
+
+
+class SpicerackExtenderBase:
+    """Base class to create a Spicerack extender. Necessary when the ``external_modules_dir`` configuration is set."""
+
+    def __init__(self, *, spicerack: Spicerack):
+        """Initialize the instance.
+
+        Arguments:
+            spicerack (spicerack.Spicerack): the Spicerack instance.
+
+        """
+        self._spicerack = spicerack
