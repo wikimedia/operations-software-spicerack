@@ -27,7 +27,7 @@ class CookbookCollection:
 
     def __init__(
         self,
-        base_dir: Path,
+        base_dirs: list[Path],
         args: Sequence[str],
         spicerack: Spicerack,
         path_filter: str = "",
@@ -35,21 +35,22 @@ class CookbookCollection:
         """Initialize the class and collect all the cookbook menu items.
 
         Arguments:
-            base_dir (str): the base directory from where to start looking for cookbooks.
+            base_dirs (list): the list of base directories from where to start looking for cookbooks.
             args (list): the list of arguments to pass to the collected items.
             spicerack (spicerack.Spicerack): the initialized instance of the library.
             path_filter (str, optional): an optional relative module path to filter for. If set, only cookbooks that
                 are part of this subtree will be collected.
 
         """
-        self.base_dir = base_dir / self.cookbooks_module_prefix
+        self.base_dirs = [base_dir / self.cookbooks_module_prefix for base_dir in base_dirs]
         self.args = args
         self.spicerack = spicerack
         self.path_filter = path_filter
 
         module = import_module(self.cookbooks_module_prefix)
         self.menu = TreeItem(module, self.args, self.spicerack, self.cookbooks_module_prefix)
-        self._collect()
+        for base_dir in self.base_dirs:
+            self._collect(base_dir)
 
     def get_item(self, path: str) -> Optional[BaseItem]:
         """Retrieve the item for a given path.
@@ -121,13 +122,13 @@ class CookbookCollection:
 
         return item
 
-    def _collect(self) -> None:
+    def _collect(self, base_dir: Path) -> None:
         """Collect available cookbooks starting from a base path."""
-        for dirpath in self.base_dir.rglob(""):  # Selects only directories
+        for dirpath in base_dir.rglob(""):  # Selects only directories
             if dirpath.name == "__pycache__":
                 continue
 
-            relpath = dirpath.relative_to(self.base_dir)
+            relpath = dirpath.relative_to(base_dir)
             if relpath.name:
                 prefix = str(relpath).replace("/", ".").rstrip(".")
                 module_prefix = f"{self.cookbooks_module_prefix}.{prefix}"
@@ -416,8 +417,19 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
         args.cookbook = ""
 
     config = load_yaml_config(args.config_file)
-    cookbooks_base_dir = Path(config["cookbooks_base_dir"]).expanduser()
-    sys.path.append(str(cookbooks_base_dir))
+    cookbooks_base_dirs = []
+    for base_dir in config["cookbooks_base_dirs"]:
+        base_dir_path = Path(base_dir).expanduser()
+        cookbooks_base_dirs.append(base_dir_path)
+        sys.path.append(str(base_dir_path))
+
+    if not cookbooks_base_dirs:
+        print(
+            "No cookbooks paths are specified in the `cookbooks_base_dirs` key of the configuration file.",
+            file=sys.stderr,
+        )
+        return 1
+
     if config.get("external_modules_dir") is not None:
         sys.path.append(str(Path(config["external_modules_dir"]).expanduser()))
 
@@ -432,7 +444,7 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
             int: the return code, zero on success, non-zero on failure.
 
         """
-        cookbooks = CookbookCollection(cookbooks_base_dir, cookbook_args, spicerack, path_filter=cookbook_path)
+        cookbooks = CookbookCollection(cookbooks_base_dirs, cookbook_args, spicerack, path_filter=cookbook_path)
         return cookbooks.get_item(cookbook_path)
 
     params = config.get("instance_params", {})
@@ -450,7 +462,7 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
         print("Unable to instantiate Spicerack, check your configuration:", e, file=sys.stderr)
         return 1
 
-    cookbooks = CookbookCollection(cookbooks_base_dir, args.cookbook_args, spicerack, path_filter=args.cookbook)
+    cookbooks = CookbookCollection(cookbooks_base_dirs, args.cookbook_args, spicerack, path_filter=args.cookbook)
     if args.list:
         print(cookbooks.menu.get_tree(), end="")
         return 0
