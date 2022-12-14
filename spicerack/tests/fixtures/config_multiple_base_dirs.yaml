@@ -1,3 +1,4 @@
 cookbooks_base_dirs:
   - spicerack/tests/fixtures/cookbook
+  - spicerack/tests/fixtures/external_cookbook
 logs_base_dir: logs

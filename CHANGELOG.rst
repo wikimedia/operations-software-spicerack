@@ -1,6 +1,45 @@
 Spicerack Changelog
 -------------------
 
+`v6.0.0`_ (2022-12-14)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Configuration breaking changes
+""""""""""""""""""""""""""""""
+
+* The ``cookbooks_base_dir`` config key has been renamed to ``cookbooks_base_dirs`` and must be a list of paths.
+
+New features
+""""""""""""
+
+* Add support for multiple cookbooks paths to be loaded. All the cookbooks paths must have a directory inside named
+  ``cookbooks/`` and this directory must not have an ``__init__.py`` file as Namespace Packages are used (see
+  `PEP 420`_) (`T325168`_).
+
+* Add module injection support (`T319401`_):
+
+  * Add an optional configuration key ``external_modules_dir`` to define an external modules directory that will be
+    injected in the Python path to allow to use also external modules not present in spicerack.
+  * Add a new ``spicerack.SpicerackExtenderBase`` class to inherit from in order to define an external accessor class
+    that will be used by Spicerack to allow to use external accessors.
+  * Add an optional configuration key ``extender_class`` in the ``instance_params`` configuration key for specifying
+    the fully qualified name of the Python class to use as the extender class.
+
+Miscellanea
+"""""""""""
+
+* setup.py: Add ``python_requires`` metadata. The latest pyroma does check for its presence and it makes sense to add
+  it to prevent from installing the spicerack package on the wrong Python version.
+* setup.py: Revert old upper limit for ``GitPython``, there are no more issue with more recent versions.
+* setup.py: Set an upper limit for ``pylint`` and ``prospector`` for upstream issues.
+* setup.py: Split the python auto-formatter test dependencies on their own extra group so that they can be installed
+  alone in the already split virtual environment for the tox envs ``py3-style`` and ``py3-format``. This way there are
+  no conflicts between other test dependencies and ``black`` and ``isort``.
+* setup.py: Add specific style tox environments for each Python version to avoid the CI jobs to pick Python 3.7 that
+  has a pip backtracking issue with the latest versions of the dependencies. Keep the ``py3-{style,format}``
+  environments for ease of use locally and to not break compatibility but make the ``py3-style`` one not run
+  automatically in CI.
+
 `v5.0.2`_ (2022-11-17)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2174,6 +2213,7 @@ New features
 .. _`elasticsearch curator compatibility matrix`: https://www.elastic.co/guide/en/elasticsearch/client/curator/current/version-compatibility.html
 .. _`service module example usage`: https://phabricator.wikimedia.org/P24020
 .. _`Server Lifecycle Diagram`: https://upload.wikimedia.org/wikipedia/labs/5/56/Server_Lifecycle_Statuses.png
+.. _`PEP 420`: https://peps.python.org/pep-0420/
 
 .. _`T147074`: https://phabricator.wikimedia.org/T147074
 .. _`T211750`: https://phabricator.wikimedia.org/T211750
@@ -2214,7 +2254,9 @@ New features
 .. _`T310745`: https://phabricator.wikimedia.org/T310745
 .. _`T311486`: https://phabricator.wikimedia.org/T311486
 .. _`T315537`: https://phabricator.wikimedia.org/T315537
+.. _`T319401`: https://phabricator.wikimedia.org/T319401
 .. _`T320696`: https://phabricator.wikimedia.org/T320696
+.. _`T325168`: https://phabricator.wikimedia.org/T325168
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2304,3 +2346,4 @@ New features
 .. _`v5.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.0
 .. _`v5.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.1
 .. _`v5.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.2
+.. _`v6.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.0.0

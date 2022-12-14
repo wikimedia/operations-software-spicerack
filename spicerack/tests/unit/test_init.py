@@ -1,5 +1,7 @@
 """Initialization tests."""
 import logging
+import sys
+from importlib import import_module
 from unittest import mock
 
 import pytest
@@ -95,6 +97,10 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
     assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
     assert mocked_remote_query.called
     assert mocked_dns_resolver.Resolver.called
+
+    with pytest.raises(AttributeError, match="AttributeError: 'Spicerack' object has no attribute 'nonexistent'"):
+        # Test that non-existent accessors raise when there is no extender
+        spicerack.nonexistent()
 
 
 def test_spicerack_http_proxy():
@@ -290,3 +296,16 @@ def test_spicerack_peeringdb(mocked_load_yaml_config, cachedir, api_token_ro, tt
         instance = spicerack.peeringdb()
 
     assert isinstance(instance, PeeringDB)
+
+
+def test_spicerack_extender():
+    """An instance of Spicerack with an extender should allow to access the extender accessors."""
+    sys.path.append(str(get_fixture_path("external_modules")))
+    loader_module = import_module("spicerack_extender")
+    spicerack = Spicerack(extender_class=getattr(loader_module, "SpicerackExtender"), **SPICERACK_TEST_PARAMS)
+
+    assert str(spicerack.cool_feature("Extender")) == "Extender is a cool feature!"
+
+    with pytest.raises(AttributeError, match="'SpicerackExtender' object has no attribute 'nonexistent'"):
+        # Test that non-existent accessors raise when there is an extender.
+        spicerack.nonexistent()

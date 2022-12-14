@@ -11,6 +11,8 @@ from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
 from spicerack.tests.unit.test__log import _reset_logging_module
 
 COOKBOOKS_BASE_PATH = Path("spicerack/tests/fixtures/cookbook")
+COOKBOOKS_BASE_PATHS = [COOKBOOKS_BASE_PATH]
+COOKBOOKS_BASE_PATHS_MULTI = COOKBOOKS_BASE_PATHS + [Path("spicerack/tests/fixtures/external_cookbook")]
 LIST_COOKBOOKS_ALL = """cookbooks
 |-- class_api
 |   |-- class_api.call_another_cookbook
@@ -21,8 +23,9 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |   |-- class_api.rollback
 |   |-- class_api.rollback_raise
 |   |-- class_api.runtime_description
-|   `-- class_api.runtime_description_raise
-|-- cookbook
+|   |-- class_api.runtime_description_raise
+|   `-- class_api.use_external_modules
+|-- cookbook{external_cookbooks}
 |-- group1
 |   `-- group1.cookbook1
 |-- group2
@@ -47,6 +50,10 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |-- multiple.CookbookB
 `-- root
 """
+LIST_EXTERNAL_COOKBOOKS = """
+|-- external_cookbook
+|-- external_group
+|   `-- external_group.cookbook1"""
 LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |-- class_api: Class API Test Cookbooks.
 |   |-- class_api.call_another_cookbook: A cookbook that calls another cookbook.
@@ -57,7 +64,8 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |-- class_api.rollback: Class API rollback cookbook.
 |   |-- class_api.rollback_raise: Class API rollback_raise cookbook.
 |   |-- class_api.runtime_description: Class API cookbook that overrides runtime_description.
-|   `-- class_api.runtime_description_raise: Class API runtime_description raise cookbook.
+|   |-- class_api.runtime_description_raise: Class API runtime_description raise cookbook.
+|   `-- class_api.use_external_modules: Call a Spicerack extender accessor.
 |-- cookbook: Top level class cookbook.
 |-- group1: Group1 Test Cookbooks.
 |   `-- group1.cookbook1: Group1 Cookbook1.
@@ -104,7 +112,7 @@ LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
         `-- group3.subgroup3.cookbook4
 """
 COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
-[0/9] class_api: Class API Test Cookbooks.
+[0/10] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -116,7 +124,7 @@ q - Quit
 h - Help
 """
 COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
-[0/9] class_api: Class API Test Cookbooks.
+[0/10] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -222,6 +230,43 @@ def test_main_call_another_cookbook_not_found(capsys):
     _reset_logging_module()
 
 
+def test_main_use_external_modules_and_extender_ok(capsys):
+    """It should inject the external module into the path and execute the cookbook with the extender."""
+    ret = _cookbook.main(
+        ["-c", str(get_fixture_path("config_external_modules.yaml")), "class_api.use_external_modules"]
+    )
+    _, err = capsys.readouterr()
+    assert ret == 0
+    expected = [
+        "START - Cookbook class_api.use_external_modules",
+        "Extender is a cool feature!",
+        "END (PASS) - Cookbook class_api.use_external_modules (exit_code=0)",
+    ]
+    for line in expected:
+        assert line in err
+    _reset_logging_module()
+
+
+def test_main_use_external_modules_and_extender_raise(capsys):
+    """It should exit with 1 if unable to load the extender class."""
+    ret = _cookbook.main(
+        ["-c", str(get_fixture_path("config_bad_external_modules.yaml")), "class_api.use_external_modules"]
+    )
+    _, err = capsys.readouterr()
+    assert ret == 1
+    assert "Failed to import the extender_class spicerack_extender.SpicerackBadExtender" in err
+    _reset_logging_module()
+
+
+def test_main_empty_cookbooks_base_dirs_raise(capsys):
+    """It should exit with 1 if there are no cookbooks paths specified in cookbooks_base_dirs."""
+    ret = _cookbook.main(["-c", str(get_fixture_path("config_empty_base_dirs.yaml")), "-l"])
+    _, err = capsys.readouterr()
+    assert ret == 1
+    assert "No cookbooks paths are specified in the `cookbooks_base_dirs` key of the configuration file." in err
+    _reset_logging_module()
+
+
 class TestCookbookCollection:
     """Test class for the CookbookCollection class."""
 
@@ -239,7 +284,7 @@ class TestCookbookCollection:
     @pytest.mark.parametrize(
         "path_filter, verbose, expected",
         (
-            ("", False, LIST_COOKBOOKS_ALL),
+            ("", False, LIST_COOKBOOKS_ALL.format(external_cookbooks="")),
             ("", True, LIST_COOKBOOKS_ALL_VERBOSE),
             ("group3", False, LIST_COOKBOOKS_GROUP3),
             ("group3.subgroup3", False, LIST_COOKBOOKS_GROUP3_SUBGROUP3),
@@ -255,12 +300,22 @@ class TestCookbookCollection:
         spicerack = self.spicerack
         if verbose:
             spicerack = self.spicerack_verbose
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], spicerack, path_filter=path_filter)
+        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS, [], spicerack, path_filter=path_filter)
         assert cookbooks.menu.get_tree() == expected
+
+    def test_cookbooks_multiple_dirs_str(self, monkeypatch):
+        """The string representation of the CookbookCollection should print all the cookbooks from multiple dirs."""
+        for base_path in COOKBOOKS_BASE_PATHS_MULTI:
+            monkeypatch.syspath_prepend(base_path)
+            shutil.rmtree(base_path / "cookbooks" / "__pycache__", ignore_errors=True)
+
+        spicerack = self.spicerack
+        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS_MULTI, [], spicerack)
+        assert cookbooks.menu.get_tree() == LIST_COOKBOOKS_ALL.format(external_cookbooks=LIST_EXTERNAL_COOKBOOKS)
 
     def test_cookbooks_non_existent(self):
         """The CookbookCollection class initialized with an empty path should not collect any cookbook."""
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH / "non_existent", [], self.spicerack)
+        cookbooks = _cookbook.CookbookCollection([COOKBOOKS_BASE_PATH / "non_existent"], [], self.spicerack)
         assert cookbooks.menu.get_tree() == ""
 
     @pytest.mark.parametrize(
@@ -427,7 +482,7 @@ class TestCookbookCollection:
     ):
         """Calling main with the given cookbook and args should execute it."""
         config = {
-            "cookbooks_base_dir": COOKBOOKS_BASE_PATH,
+            "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
@@ -441,10 +496,31 @@ class TestCookbookCollection:
         for message in absent_err_messages:
             assert message not in caplog.text
 
+    @pytest.mark.parametrize("module", ("external_cookbook", "external_group.cookbook1"))
+    def test_main_execute_external_cookbook(self, tmpdir, caplog, module):
+        """Calling main with the given external cookbook and args should execute it."""
+        config = {
+            "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS_MULTI,
+            "logs_base_dir": tmpdir.strpath,
+        }
+        with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
+            with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
+                with caplog.at_level(logging.INFO):
+                    ret = _cookbook.main([module])
+
+        assert ret == 0
+        err_messages = [
+            f"START - Cookbook {module}",
+            f"END (PASS) - Cookbook {module} (exit_code=0)",
+        ]
+        assert ret == 0
+        for message in err_messages:
+            assert message in caplog.text
+
     def test_main_execute_cookbook_invalid_args(self, tmpdir, capsys, caplog):
         """Calling a cookbook with the wrong args should let argparse print its message."""
         config = {
-            "cookbooks_base_dir": COOKBOOKS_BASE_PATH,
+            "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
@@ -461,7 +537,7 @@ class TestCookbookCollection:
     def test_main_execute_dry_run(self, capsys, tmpdir):
         """Calling main() with a cookbook and dry_run mode should execute it and set the dry run mode."""
         config = {
-            "cookbooks_base_dir": COOKBOOKS_BASE_PATH,
+            "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
@@ -475,7 +551,7 @@ class TestCookbookCollection:
     def test_main_list(self, tmpdir, capsys, caplog):
         """Calling main() with the -l/--list option should print the available cookbooks."""
         config = {
-            "cookbooks_base_dir": COOKBOOKS_BASE_PATH,
+            "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
@@ -486,7 +562,7 @@ class TestCookbookCollection:
         out, _ = capsys.readouterr()
 
         assert ret == 0
-        assert out == LIST_COOKBOOKS_ALL
+        assert out == LIST_COOKBOOKS_ALL.format(external_cookbooks="")
         lines = [
             "Failed to import module cookbooks.group3.invalid_syntax: invalid syntax (invalid_syntax.py, line 7)",
             "Failed to import module cookbooks.group3.invalid_subgroup: invalid syntax (__init__.py, line 2)",
@@ -497,14 +573,14 @@ class TestCookbookCollection:
     def test_cookbooks_menu_status(self, monkeypatch):
         """Calling status on a TreeItem should show the completed and total tasks."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack)
+        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS, [], self.spicerack)
         menu = cookbooks.get_item("")
-        assert menu.status == "0/28"
+        assert menu.status == "0/29"
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a TreeItem with all tasks completed should return DONE."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack, path_filter="group1")
+        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS, [], self.spicerack, path_filter="group1")
         menu = cookbooks.get_item("group1")
         assert menu.status == "0/1"
         item = cookbooks.get_item("group1.cookbook1")
@@ -516,7 +592,7 @@ class TestCookbookCollection:
         """When a CookbookItem object fail to get initialized it should catch the MenuError, log it and continue."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         with caplog.at_level(logging.INFO):
-            cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATH, [], self.spicerack, path_filter="cookbook")
+            cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS, [], self.spicerack, path_filter="cookbook")
             menu = cookbooks.get_item(".".join((cookbooks.cookbooks_module_prefix, "group1")))
         assert menu is None
         assert "fail to init" in caplog.text
@@ -591,7 +667,7 @@ class TestCookbookCollection:
         mocked_tty.return_value = tty
         mocked_input.side_effect = answer
         config = {
-            "cookbooks_base_dir": COOKBOOKS_BASE_PATH,
+            "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
@@ -609,7 +685,7 @@ class TestCookbookCollection:
         mocked_tty.return_value = True
         mocked_input.side_effect = ["subgroup1", "b", "q"]
         config = {
-            "cookbooks_base_dir": COOKBOOKS_BASE_PATH,
+            "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):

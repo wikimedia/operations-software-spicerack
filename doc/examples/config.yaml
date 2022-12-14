@@ -1,10 +1,16 @@
 # Base path of the cookbooks. It's usually a checkout of a different repository that has all the cookbooks.
-cookbooks_base_dir: /path/to/cookbooks/checkout
+# Multiple paths can be specified and relative paths to the user's home are also accepted (e.g. ~/cookbooks)
+cookbooks_base_dirs:
+  - /path/to/cookbooks/checkout
+  - /path/to/other/cookbooks
 # Base directory for cookbook's logs.
 logs_base_dir: /var/log/spicerack
 # [optional] Hostname and port to use for the special IRC logging using tcpircbot.
 tcpircbot_host: tcpircbot.example.com
 tcpircbot_port: 1234
+# [optional] A directory where there are importable Python modules that can be imported within Spicerack and Cookbooks
+# Relative paths to the user's home are also accepted (e.g. ~/spicerack_external_modules)
+external_modules_dir: /path/to/custom/spicerack/external_modules
 
 # [optional] Key-value hash of additional parameters to pass to the Spicerack constructor. All keys are optional.
 instance_params:
@@ -14,3 +20,6 @@ instance_params:
   debmonitor_config: /etc/debmonitor.conf  # Debmonitor's INI configuration file.
   spicerack_config_dir: /etc/spicerack  # Path to the modules and cookbooks specific configuration files.
   http_proxy: http://proxy.example.com:8080  # HTTP/HTTPS proxy scheme://url:port to use for external calls.
+  # The qualified name of the Python class that inherits from `spicerack.SpicerackExtenderBase` to be used in
+  # conjunction with the the `external_modules_dir` to inject additional accessors in the Spicerack instance.
+  extender_class: mypackage.mymodule.MyLoaderClass

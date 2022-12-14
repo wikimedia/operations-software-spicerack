@@ -1,0 +1,7 @@
+cookbooks_base_dirs:
+  - spicerack/tests/fixtures/cookbook
+logs_base_dir: logs
+external_modules_dir: spicerack/tests/fixtures/external_modules
+
+instance_params:
+  extender_class: spicerack_extender.SpicerackExtender
