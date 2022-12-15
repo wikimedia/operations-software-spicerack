@@ -295,7 +295,11 @@ def argument_parser() -> argparse.ArgumentParser:
         argparse.ArgumentParser: the argument parser instance.
 
     """
-    parser = argparse.ArgumentParser(description="Spicerack Cookbook Runner")
+    parser = argparse.ArgumentParser(
+        description="Spicerack Cookbook Runner",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        epilog="See also https://wikitech.wikimedia.org/wiki/Spicerack/Cookbooks",
+    )
     parser.add_argument(
         "-l",
         "--list",
@@ -330,9 +334,11 @@ def argument_parser() -> argparse.ArgumentParser:
         type=cookbook_path_type,
         default="",
         help=(
-            "Either a relative path of the Python file to execute (group/cookbook.py) or the name of the Python "
-            "module to execute (group.cookbook). If the selected path/module is a directory or is not set, an "
-            "interactive menu will be shown."
+            "Either the name of the Python module to execute (sre.hosts.downtime) or the relative path of the Python "
+            "file to execute (sre/hosts/downtime.py).  If the selected path/module is a directory (sre.hosts) or is "
+            "not set, an interactive menu will be shown. Each directory listed in the `cookbooks_base_dirs` key of the"
+            "configuration file represents a checked out cookbook repository containing a `cookbooks` subfolder. All "
+            "paths specified must be relative to theses subfolders."
         ),
     )
     parser.add_argument(
