@@ -61,19 +61,20 @@ class PuppetHosts(RemoteHostsAdapter):
     """Class to manage Puppet on the target hosts."""
 
     @contextmanager
-    def disabled(self, reason: Reason) -> Iterator[None]:
+    def disabled(self, reason: Reason, verbatim_reason: bool = False) -> Iterator[None]:
         """Context manager to perform actions while puppet is disabled.
 
         Arguments:
             reason (spicerack.administrative.Reason): the reason to set for the Puppet disable and to use for the
                 Puppet enable.
+            verbatim_reason: (bool): if true use the reason value verbatim
 
         """
-        self.disable(reason)
+        self.disable(reason, verbatim_reason)
         try:
             yield
         finally:
-            self.enable(reason)
+            self.enable(reason, verbatim_reason)
 
     def get_ca_servers(self) -> Dict[str, str]:
         """Retrieve the ca_servers of the nodes.
@@ -92,7 +93,20 @@ class PuppetHosts(RemoteHostsAdapter):
 
         return host_to_ca_server
 
-    def disable(self, reason: Reason) -> None:
+    @staticmethod
+    def _puppet_reason(reason: Reason, verbatim_reason: bool = False) -> str:
+        """Return a correctly quoted puppet message.
+
+        Arguments:
+            reason (spicerack.administrative.Reason): the reason to set for the Puppet disable.
+            verbatim_reason: (bool): if true use the reason value verbatim
+
+        """
+        if verbatim_reason:
+            return f'"{reason.reason}"'
+        return reason.quoted()
+
+    def disable(self, reason: Reason, verbatim_reason: bool = False) -> None:
         """Disable puppet with a specific reason.
 
         If Puppet was already disabled on a host with a different reason, the reason will not be overriden, allowing to
@@ -100,6 +114,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
         Arguments:
             reason (spicerack.administrative.Reason): the reason to set for the Puppet disable.
+            verbatim_reason: (bool): if true use the reason value verbatim
 
         """
         logger.info(
@@ -108,9 +123,9 @@ class PuppetHosts(RemoteHostsAdapter):
             len(self),
             self,
         )
-        self._remote_hosts.run_sync(f"disable-puppet {reason.quoted()}")
+        self._remote_hosts.run_sync("disable-puppet " + self._puppet_reason(reason, verbatim_reason))
 
-    def enable(self, reason: Reason) -> None:
+    def enable(self, reason: Reason, verbatim_reason: bool = False) -> None:
         """Enable Puppet with a specific reason, it must be the same used to disable it.
 
         Puppet will be re-enabled only if it was disable with the same reason. If it was disable with a different reason
@@ -118,6 +133,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
         Arguments:
             reason (spicerack.administrative.Reason): the reason to use for the Puppet enable.
+            verbatim_reason: (bool): if true use the reason value verbatim
 
         """
         logger.info(
@@ -126,7 +142,7 @@ class PuppetHosts(RemoteHostsAdapter):
             len(self),
             self,
         )
-        self._remote_hosts.run_sync(f"enable-puppet {reason.quoted()}")
+        self._remote_hosts.run_sync("enable-puppet " + self._puppet_reason(reason, verbatim_reason))
 
     def check_enabled(self) -> None:
         """Check if Puppet is enabled on all hosts.

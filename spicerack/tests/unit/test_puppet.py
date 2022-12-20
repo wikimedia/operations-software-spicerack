@@ -86,23 +86,32 @@ class TestPuppetHosts:
         self.mocked_remote_hosts.__len__.return_value = 1
         self.puppet_hosts = puppet.PuppetHosts(self.mocked_remote_hosts)
 
-    def test_disable(self):
+    @pytest.mark.parametrize(
+        "verbatim_reason, result",
+        ((False, f"disable-puppet {REASON.quoted()}"), (True, f'disable-puppet "{REASON.reason}"')),
+    )
+    def test_disable(self, verbatim_reason, result):
         """It should disable Puppet on the hosts."""
-        self.puppet_hosts.disable(REASON)
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"disable-puppet {REASON.quoted()}")
+        self.puppet_hosts.disable(REASON, verbatim_reason)
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(result)
 
-    def test_enable(self):
+    @pytest.mark.parametrize(
+        "verbatim_reason, result",
+        ((False, f"enable-puppet {REASON.quoted()}"), (True, f'enable-puppet "{REASON.reason}"')),
+    )
+    def test_enable(self, verbatim_reason, result):
         """It should enable Puppet on the hosts."""
-        self.puppet_hosts.enable(REASON)
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {REASON.quoted()}")
+        self.puppet_hosts.enable(REASON, verbatim_reason)
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(result)
 
-    def test_disabled(self):
+    @pytest.mark.parametrize("verbatim_reason, result", ((False, REASON.quoted()), (True, f'"{REASON.reason}"')))
+    def test_disabled(self, verbatim_reason, result):
         """It should disable Puppet, yield and enable Puppet on the hosts."""
-        with self.puppet_hosts.disabled(REASON):
-            self.mocked_remote_hosts.run_sync.assert_called_once_with(f"disable-puppet {REASON.quoted()}")
+        with self.puppet_hosts.disabled(REASON, verbatim_reason):
+            self.mocked_remote_hosts.run_sync.assert_called_once_with(f"disable-puppet {result}")
             self.mocked_remote_hosts.run_sync.reset_mock()
 
-        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {REASON.quoted()}")
+        self.mocked_remote_hosts.run_sync.assert_called_once_with(f"enable-puppet {result}")
 
     def test_disabled_on_raise(self):
         """It should re-enable Puppet even if the yielded code raises exception.."""
