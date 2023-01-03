@@ -478,7 +478,7 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
         logger.error("Unable to find cookbook %s", args.cookbook)
         return cookbook.NOT_FOUND_RETCODE
 
-    base_path = Path(config["logs_base_dir"]) / cookbook_item.path.replace(".", os.sep)
+    base_path = Path(config["logs_base_dir"]).expanduser() / cookbook_item.path.replace(".", os.sep)
     _log.setup_logging(
         base_path,
         cookbook_item.name,

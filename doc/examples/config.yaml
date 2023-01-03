@@ -1,9 +1,9 @@
 # Base path of the cookbooks. It's usually a checkout of a different repository that has all the cookbooks.
-# Multiple paths can be specified and relative paths to the user's home are also accepted (e.g. ~/cookbooks)
+# Multiple paths can be specified and relative paths to the user's home are also accepted (e.g. ~/cookbooks).
 cookbooks_base_dirs:
   - /path/to/cookbooks/checkout
   - /path/to/other/cookbooks
-# Base directory for cookbook's logs.
+# Base directory for cookbook's logs, relative paths to the user's home are also accepted (e.g. ~/logs/cookbooks).
 logs_base_dir: /var/log/spicerack
 # [optional] Hostname and port to use for the special IRC logging using tcpircbot.
 tcpircbot_host: tcpircbot.example.com
