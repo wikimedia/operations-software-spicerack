@@ -3,6 +3,8 @@ import ipaddress
 import logging
 from copy import deepcopy
 from datetime import datetime
+from io import BytesIO
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -178,12 +180,6 @@ MANAGER_RESPONSE = {
 }
 MANAGER_RESPONSE_BAD = deepcopy(MANAGER_RESPONSE)
 MANAGER_RESPONSE_BAD["Model"] = "Foobar"
-PUSHURI_RESPONSE = {
-    "@odata.context": "/redfish/v1/$metadata#UpdateService.UpdateService",
-    "@odata.id": "/redfish/v1/UpdateService",
-    "@odata.type": "#UpdateService.v1_8_1.UpdateService",
-    "HttpPushUri": "/redfish/v1/UpdateService/FirmwareInventory",
-}
 LCLOG_RESPONSE = {
     "@odata.context": "/redfish/v1/$metadata#LogEntryCollection.LogEntryCollection",
     "@odata.id": "/redfish/v1/Managers/Testing_oob.1/LogServices/Lclog/Entries",
@@ -310,6 +306,22 @@ SYSTEM_MANAGER_RESPONSE = {
     "SystemType": "Physical",
     "UUID": "4c4c4544-0058-3810-8032-b2c04f525032",
 }
+UPDATE_SERVICE_RESPONSE = {
+    "@odata.context": "/redfish/v1/$metadata#UpdateService.UpdateService",
+    "@odata.id": "/redfish/v1/UpdateService",
+    "@odata.type": "#UpdateService.v1_11_0.UpdateService",
+    "FirmwareInventory": {"@odata.id": "/redfish/v1/UpdateService/FirmwareInventory"},
+    "HttpPushUri": "/redfish/v1/UpdateService/FirmwareInventory",
+    "Id": "UpdateService",
+    "MaxImageSizeBytes": None,
+    "MultipartHttpPushUri": "/redfish/v1/UpdateService/MultipartUpload",
+    "Name": "Update Service",
+    "ServiceEnabled": True,
+    "SoftwareInventory": {"@odata.id": "/redfish/v1/UpdateService/SoftwareInventory"},
+    "Status": {"Health": "OK", "State": "Enabled"},
+}
+UPDATE_SERVICE_RESPONSE_NO_HTTP_PUSH = deepcopy(UPDATE_SERVICE_RESPONSE)
+del UPDATE_SERVICE_RESPONSE_NO_HTTP_PUSH["HttpPushUri"]
 
 
 def add_accounts_mock_responses(requests_mock):
@@ -393,6 +405,18 @@ class TestRedfish:
         # try again to hit the cached version
         assert self.redfish.system_info == SYSTEM_MANAGER_RESPONSE
 
+    def test_property_updateservice_info(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.update_service, json=UPDATE_SERVICE_RESPONSE)
+        assert self.redfish.updateservice_info == UPDATE_SERVICE_RESPONSE
+        # try again to hit the cached version
+        assert self.redfish.updateservice_info == UPDATE_SERVICE_RESPONSE
+
+    def test_property_multipushuri(self):
+        """It should return the multipushuri."""
+        self.requests_mock.get(self.redfish.update_service, json=UPDATE_SERVICE_RESPONSE)
+        assert self.redfish.multipushuri == "/redfish/v1/UpdateService/MultipartUpload"
+
     def test_property_bios(self):
         """It should return the firmware."""
         self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
@@ -422,12 +446,11 @@ class TestRedfish:
         # assert twice to check cached version
         assert self.redfish.oob_model == "14G Monolithic"
 
-    def test_property_pushuri(self):
+    def test_property_missing_pushuri(self):
         """It should return the pushuri."""
-        self.requests_mock.get("/redfish/v1/UpdateService?$select=HttpPushUri", json=PUSHURI_RESPONSE)
-        assert self.redfish.pushuri == "/redfish/v1/UpdateService/FirmwareInventory"
-        # assert twice to check cached version
-        assert self.redfish.pushuri == "/redfish/v1/UpdateService/FirmwareInventory"
+        self.requests_mock.get(self.redfish.update_service, json=UPDATE_SERVICE_RESPONSE_NO_HTTP_PUSH)
+        with pytest.raises(NotImplementedError):
+            assert self.redfish.pushuri is None
 
     def test_most_recent_member(self):
         """It should return the item with the most recent date."""
@@ -521,6 +544,36 @@ class TestRedfish:
         """It should not raise if able to connect to the Redfish API."""
         self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
         self.redfish.check_connection()
+
+    def test_submit_task_file(self):
+        """It should submit the request and return the URI for polling the task results."""
+        self.requests_mock.get(self.redfish.update_service, json=UPDATE_SERVICE_RESPONSE)
+        self.requests_mock.post(
+            self.redfish.multipushuri,
+            status_code=202,
+            headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
+        )
+        assert self.redfish.submit_files({}) == "/redfish/v1/TaskService/Tasks/JID_1234567890"
+
+    def test_submit_file_dry_run(self):
+        """In dry-run mode should not submit a task and return a dummy location."""
+        assert self.redfish_dry_run.submit_files({}) == "/"
+
+    @mock.patch("spicerack.redfish.Path.open")
+    @mock.patch("spicerack.redfish.Redfish.submit_files")
+    def test_submit_upload_file(self, mock_submit_files, mocked_path_open):
+        """In dry-run mode should not submit a task and return a dummy location."""
+        mock_submit_files.return_value = "/redfish/v1/TaskService/Tasks/JID_1234567890"
+        assert self.redfish.upload_file(Path("/foo/test")) == "/redfish/v1/TaskService/Tasks/JID_1234567890"
+        mocked_path_open.called_once_with("rb")
+
+    @pytest.mark.parametrize("reboot", (True, False))
+    @mock.patch("spicerack.redfish.Redfish.submit_files")
+    def test_submit_multipush_upload(self, mock_submit_files, reboot):
+        """In dry-run mode should not submit a task and return a dummy location."""
+        mock_submit_files.return_value = "/redfish/v1/TaskService/Tasks/JID_1234567890"
+        data = BytesIO()
+        assert self.redfish.multipush_upload("test", data, reboot) == "/redfish/v1/TaskService/Tasks/JID_1234567890"
 
     def test_connection_fail(self):
         """It should raise a RedfishError if unable to connect to the Redfish API."""

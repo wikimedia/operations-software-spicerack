@@ -7,6 +7,8 @@ import time
 from abc import abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
+from io import BufferedReader
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import urllib3
@@ -107,14 +109,21 @@ class Redfish:
         self._interface = interface
         self._username = username
         self._password = password
+
         self._http_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
         # TODO: evaluate if we should create an intermediate CA for managament consoles
         self._http_session.verify = False  # The devices have a self-signed certificate
         self._http_session.auth = (self._username, self._password)
         self._http_session.headers.update({"Accept": "application/json"})
-        self._pushuri = ""
+
+        self._upload_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=60 * 30)
+        self._upload_session.verify = False  # The devices have a self-signed certificate
+        self._upload_session.auth = (self._username, self._password)
+        self._upload_session.headers.update({"Accept": "application/json"})
+
         self._oob_info: Dict = {}
         self._system_info: Dict = {}
+        self._updateservice_info: Dict = {}
 
     def __str__(self) -> str:
         """String representation of the instance.
@@ -142,6 +151,12 @@ class Redfish:
     def _update_oob_info(self) -> None:
         """Update the data Out of Band manager info."""
         self._oob_info = self.request("get", self.oob_manager).json()
+
+    @property
+    def update_service(self) -> str:
+        """Property to return the Out of Band manager."""
+        # for now this is the same for both dell and supermicro
+        return "/redfish/v1/UpdateService"
 
     @property
     def hostname(self) -> str:
@@ -176,6 +191,14 @@ class Redfish:
         if not self._oob_info:
             self._update_oob_info()
         return self._oob_info
+
+    @property
+    def updateservice_info(self) -> Dict:
+        """Property to return a dict of manager metadata."""
+        if not self._updateservice_info:
+            result = self.request("get", self.update_service)
+            self._updateservice_info = result.json()
+        return self._updateservice_info
 
     @property
     def oob_model(self) -> str:
@@ -214,11 +237,58 @@ class Redfish:
             str: representing the HttpPushUri
 
         """
-        if not self._pushuri:
-            result = self.request("get", "/redfish/v1/UpdateService?$select=HttpPushUri")
-            self._pushuri = result.json()["HttpPushUri"]
-        logger.debug("%s: iDRAC PushUri %s", self._hostname, self._pushuri)
-        return self._pushuri
+        try:
+            return self.updateservice_info["HttpPushUri"]
+        except KeyError:
+            raise NotImplementedError from KeyError
+
+    @property
+    def multipushuri(self) -> str:
+        """Property representing the HttpPushUri of the idrac.
+
+        This property is used for uploading firmwares to the idrac
+
+        Returns:
+            str: representing the MultipartHttpPushUri
+
+        """
+        return self.updateservice_info["MultipartHttpPushUri"]
+
+    def upload_file(self, file_path: Path, reboot: bool = False) -> str:
+        """Upload a file to the firmware directory via redfish.
+
+        Arguments:
+            file_path: The file path to upload
+            reboot: if true immediately reboot the server
+
+        Returns:
+            str: string of the job_id uri
+
+        """
+        with file_path.open("rb") as file_handle:
+            return self.multipush_upload(file_handle, file_path.name, reboot)
+
+    def multipush_upload(self, file_handle: BufferedReader, filename: str, reboot: bool = False) -> str:
+        """Upload a file to via redfish.
+
+        Arguments:
+            file_handle: On open file handle to the object to upload
+            fiename: filename name to use for upload
+            reboot: if true immediately reboot the server
+
+        Returns:
+            str: string of the job_id uri
+
+        """
+        operation = "Immediate" if reboot else "OnReset"
+        payload = {"Targets": [], "@Redfish.OperationApplyTime": operation, "Oem": {}}
+        files = {
+            "UpdateParameters": (None, json.dumps(payload), "application/json"),
+            "UpdateFile": (filename, file_handle, "application/octet-stream"),
+        }
+        job_id = self.submit_files(files)
+        logger.debug("upload has task ID: %s", job_id)
+        return job_id
 
     @staticmethod
     def most_recent_member(members: List[Dict], key: str) -> Dict:
@@ -311,13 +381,11 @@ class Redfish:
 
         return response
 
-    def submit_task(self, uri: str, data: Optional[Dict] = None, method: str = "post") -> str:
+    def _parse_submit_task(self, response: Response) -> str:
         """Submit a request that generates a task, return the URI of the submitted task.
 
         Arguments:
-            uri (str): the relative URI to request.
-            data (dict, optional): the data to send in the request.
-            method (str, optional): the HTTP method to use, if not the default one.
+            response (Response): the response to parse
 
         Returns:
             str: the URI of the task ID to poll the results.
@@ -326,10 +394,7 @@ class Redfish:
             spicerack.redfish.RedfishError: if the response status code is not 202 or there is no Location header.
 
         """
-        if self._dry_run:
-            return "/"
-
-        response = self.request(method, uri, json=data)
+        uri = response.request.path_url
         if response.status_code != 202:
             raise RedfishError(
                 f"Unable to start task for {uri}, expected HTTP 202, "
@@ -344,6 +409,43 @@ class Redfish:
             )
 
         return response.headers["Location"]
+
+    def submit_files(self, files: Dict) -> str:
+        """Submit a upload file request that generates a task, return the URI of the submitted task.
+
+        Arguments:
+            uri (str): the relative URI to request.
+            files (dict): the files to upload to send in the request.
+
+        Returns:
+            str: the URI of the task ID to poll the results.
+
+        """
+        if self._dry_run:
+            return "/"
+
+        # BUG: timeout is not honoured by self.request
+        # response = self.request('post', self.multipushuri, files=files)
+        response = self._upload_session.post(f"https://{self.interface.ip}{self.multipushuri}", files=files)
+        return self._parse_submit_task(response)
+
+    def submit_task(self, uri: str, data: Optional[Dict] = None, method: str = "post") -> str:
+        """Submit a request that generates a task, return the URI of the submitted task.
+
+        Arguments:
+            uri (str): the relative URI to request.
+            data (dict, optional): the data to send in the request.
+            method (str, optional): the HTTP method to use, if not the default one.
+
+        Returns:
+            str: the URI of the task ID to poll the results.
+
+        """
+        if self._dry_run:
+            return "/"
+
+        response = self.request(method, uri, json=data)
+        return self._parse_submit_task(response)
 
     def check_connection(self) -> None:
         """Check the connection with the Redfish API.
