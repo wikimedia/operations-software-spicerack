@@ -114,6 +114,7 @@ class Redfish:
         self._http_session.headers.update({"Accept": "application/json"})
         self._pushuri = ""
         self._oob_info: Dict = {}
+        self._system_info: Dict = {}
 
     def __str__(self) -> str:
         """String representation of the instance.
@@ -123,6 +124,11 @@ class Redfish:
 
         """
         return f"{self._username}@{self._hostname} ({self._interface.ip})"
+
+    @property
+    @abstractmethod
+    def system_manager(self) -> str:
+        """Property to return the System manager."""
 
     @property
     @abstractmethod
@@ -150,6 +156,14 @@ class Redfish:
         return self._interface
 
     @property
+    def system_info(self) -> Dict:
+        """Property to return a dict of manager metadata."""
+        if not self._system_info:
+            result = self.request("get", self.system_manager)
+            self._system_info = result.json()
+        return self._system_info
+
+    @property
     def oob_info(self) -> Dict:
         """Property to return a dict of manager metadata."""
         if not self._oob_info:
@@ -166,6 +180,21 @@ class Redfish:
     def firmware_version(self) -> str:
         """Property to return a string representing the model."""
         return self.oob_info["FirmwareVersion"]
+
+    @property
+    def bios_version(self) -> str:
+        """Property to return a string representing the model."""
+        return self.system_info["BiosVersion"]
+
+    @property
+    def model(self) -> str:
+        """Property to return a string representing the model."""
+        return self.system_info["Model"]
+
+    @property
+    def manufacturer(self) -> str:
+        """Property to return a string representing the model."""
+        return self.system_info["Manufacturer"]
 
     @property
     def pushuri(self) -> str:
@@ -697,6 +726,11 @@ class RedfishDell(Redfish):
         """Override parent's constructor."""
         super().__init__(hostname, interface, username, password, dry_run=dry_run)
         self._generation = 0
+
+    @property
+    def system_manager(self) -> str:
+        """Property to return the System manager."""
+        return "/redfish/v1/Systems/System.Embedded.1"
 
     @property
     def oob_manager(self) -> str:

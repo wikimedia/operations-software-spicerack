@@ -270,6 +270,46 @@ LCLOG_RESPONSE = {
 
 LCLOG_RESPONSE_NO_MESSAGE = deepcopy(LCLOG_RESPONSE)
 LCLOG_RESPONSE_NO_MESSAGE["Members"] = []
+# The below is trimmed output
+SYSTEM_MANAGER_RESPONSE = {
+    "@odata.context": "/redfish/v1/$metadata#ComputerSystem.ComputerSystem",
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1",
+    "@odata.type": "#ComputerSystem.v1_16_0.ComputerSystem",
+    "Actions": {
+        "#ComputerSystem.Reset": {
+            "ResetType@Redfish.AllowableValues": [
+                "On",
+                "ForceOff",
+                "ForceRestart",
+                "GracefulRestart",
+                "GracefulShutdown",
+                "PushPowerButton",
+                "Nmi",
+                "PowerCycle",
+            ],
+            "target": "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset",
+        }
+    },
+    "AssetTag": "",
+    "Bios": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Bios"},
+    "BiosVersion": "2.15.1",
+    "EthernetInterfaces": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces"},
+    "HostName": "",
+    "HostWatchdogTimer": {"FunctionEnabled": False, "Status": {"State": "Disabled"}, "TimeoutAction": "None"},
+    "HostingRoles": [],
+    "HostingRoles@odata.count": 0,
+    "Id": "System.Embedded.1",
+    "IndicatorLED": "Lit",
+    "LastResetTime": "2023-01-23T09:35:39-06:00",
+    "Manufacturer": "Dell Inc.",
+    "Model": "PowerEdge R440",
+    "Name": "System",
+    "NetworkInterfaces": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/NetworkInterfaces"},
+    "PowerState": "On",
+    "Status": {"Health": "OK", "HealthRollup": "OK", "State": "Enabled"},
+    "SystemType": "Physical",
+    "UUID": "4c4c4544-0058-3810-8032-b2c04f525032",
+}
 
 
 def add_accounts_mock_responses(requests_mock):
@@ -290,6 +330,11 @@ class RedfishTest(redfish.Redfish):
     """An inherited class used for testing."""
 
     last_reboot_time = "1970-01-01T00:00:00-00:00"
+
+    @property
+    def system_manager(self) -> str:
+        """Property to return the System manager."""
+        return "/redfish/v1/Systems/Testing_system.1"
 
     @property
     def oob_manager(self) -> str:
@@ -341,6 +386,28 @@ class TestRedfish:
         with pytest.raises(redfish.RedfishError, match="no new reboot detected"):
             self.redfish.wait_reboot_since(since)
 
+    def test_property_system_info(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.system_info == SYSTEM_MANAGER_RESPONSE
+        # try again to hit the cached version
+        assert self.redfish.system_info == SYSTEM_MANAGER_RESPONSE
+
+    def test_property_bios(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.bios_version == "2.15.1"
+
+    def test_property_model(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.model == "PowerEdge R440"
+
+    def test_property_manufacturer(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.manufacturer == "Dell Inc."
+
     def test_property_firmware(self):
         """It should return the firmware."""
         self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
@@ -348,7 +415,7 @@ class TestRedfish:
         # assert twice to check cached version
         assert self.redfish.firmware_version == "6.00.30.00"
 
-    def test_property_model(self):
+    def test_property_oob_model(self):
         """It should return the model."""
         self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
         assert self.redfish.oob_model == "14G Monolithic"
@@ -678,6 +745,10 @@ class TestRedfishDell:
         interface = ipaddress.ip_interface("10.0.0.1/16")
         self.redfish = redfish.RedfishDell("test01", interface, "root", "mysecret", dry_run=False)
         self.requests_mock = requests_mock
+
+    def test_property_system_manager(self):
+        """It should return the oob_manager."""
+        assert self.redfish.system_manager == "/redfish/v1/Systems/System.Embedded.1"
 
     def test_property_oob_manager(self):
         """It should return the oob_manager."""
