@@ -1,4 +1,5 @@
 """Redfish module."""
+# pylint: disable=too-many-lines
 import ipaddress
 import json
 import logging
@@ -160,6 +161,16 @@ class Redfish:
         return "/redfish/v1/UpdateService"
 
     @property
+    @abstractmethod
+    def log_entries(self) -> str:
+        """Property to return the uri for the log entries."""
+
+    @property
+    @abstractmethod
+    def reboot_message_id(self) -> str:
+        """Property to return the Message Id for reboot log entries."""
+
+    @property
     def hostname(self) -> str:
         """Getter for the device hostname.
 
@@ -312,7 +323,6 @@ class Redfish:
 
         return sorted(members, key=sorter)[-1]
 
-    @abstractmethod
     def last_reboot(self) -> datetime:
         """Ask redfish for the last reboot time.
 
@@ -320,6 +330,18 @@ class Redfish:
             datetime: the datetime of the last reboot event
 
         """
+        # TODO: we can possibly use filter once all OOB's are updated.  e.g.
+        # Lclog/Entries?$filter=MessageId eq 'reboot_code'
+        # currently we get the following on some older models
+        # Message=Querying is not supported by the implementation, MessageArgs=$filter"
+        last_reboot = datetime.fromisoformat("1970-01-01T00:00:00-00:00")
+        results = self.request("get", self.log_entries).json()
+        # use ends with as sometimes there is an additional string prefix to the code e.g. IDRAC.2.7.RAC0182
+        members = [m for m in results["Members"] if m["MessageId"].endswith(self.reboot_message_id)]
+        if members:
+            last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
+        logger.debug("%s: last reboot %s", self._hostname, last_reboot)
+        return last_reboot
 
     @retry(
         tries=240,
@@ -820,6 +842,30 @@ class DellSCP:
         self._emptied_components = True
 
 
+class RedfishSupermicro(Redfish):
+    """Redfish class for SuperMicro servers."""
+
+    @property
+    def system_manager(self) -> str:
+        """Property to return the System manager."""
+        return "/redfish/v1/Systems/1"
+
+    @property
+    def oob_manager(self) -> str:
+        """String representing the Out of Band manager key."""
+        return "/redfish/v1/Managers/1"
+
+    @property
+    def log_entries(self) -> str:
+        """String representing the log entries uri."""
+        return "/redfish/v1/Managers/1/LogServices/Log1/Entries"
+
+    @property
+    def reboot_message_id(self) -> str:
+        """String representing the message Id of the reboot."""
+        return "Event.1.0.SystemPowerAction"
+
+
 class RedfishDell(Redfish):
     """Dell specific Redfish support."""
 
@@ -849,6 +895,16 @@ class RedfishDell(Redfish):
         return "/redfish/v1/Managers/iDRAC.Embedded.1"
 
     @property
+    def log_entries(self) -> str:
+        """String representing the log entries uri."""
+        return "/redfish/v1/Managers/Logs/Lclog"
+
+    @property
+    def reboot_message_id(self) -> str:
+        """String representing the message Id of the reboot."""
+        return "RAC0182"
+
+    @property
     def generation(self) -> int:
         """Property representing the generation of the idrac.
 
@@ -869,29 +925,6 @@ class RedfishDell(Redfish):
                 self._generation = int(match.group(0))
         logger.debug("%s: iDRAC generation %s", self._hostname, self._generation)
         return self._generation
-
-    def last_reboot(self) -> datetime:
-        """Ask redfish for the last reboot time.
-
-        Returns:
-            datetime: the datetime of the last reboot event
-
-        """
-        # TODO: we can possibly use filter once all idrac are updated.  e.g.
-        # iDRAC.Embedded.1/LogServices/Lclog/Entries?$filter=MessageId eq 'RAC0182'
-        # currently we get the following on some older models
-        # Message=Querying is not supported by the implementation, MessageArgs=$filter"
-        last_reboot = datetime.fromisoformat("1970-01-01T00:00:00-00:00")
-        results = self.request(
-            "get",
-            f"{self.oob_manager}/Logs/Lclog",
-        ).json()
-        # use ends with as sometimes there is an additional string prefix to the code e.g. IDRAC.2.7.RAC0182
-        members = [m for m in results["Members"] if m["MessageId"].endswith("RAC0182")]
-        if members:
-            last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
-        logger.debug("%s: iDRAC last reboot %s", self._hostname, last_reboot)
-        return last_reboot
 
     @retry(
         tries=240,

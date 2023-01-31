@@ -246,7 +246,7 @@ LCLOG_RESPONSE = {
             "Message": "The iDRAC firmware was rebooted with the " "following reason: user initiated.",
             "MessageArgs": ["user initiated"],
             "MessageArgs@odata.count": 1,
-            "MessageId": "RAC0182",
+            "MessageId": "REBOOT_MSG_ID",
             "Name": "Log Entry 1692",
             "Oem": {
                 "Dell": {
@@ -342,8 +342,6 @@ def add_accounts_mock_responses(requests_mock):
 class RedfishTest(redfish.Redfish):
     """An inherited class used for testing."""
 
-    last_reboot_time = "1970-01-01T00:00:00-00:00"
-
     @property
     def system_manager(self) -> str:
         """Property to return the System manager."""
@@ -354,9 +352,15 @@ class RedfishTest(redfish.Redfish):
         """String representing the Out of Band manager key."""
         return "/redfish/v1/Managers/Testing_oob.1"
 
-    def last_reboot(self) -> str:
-        """String representing the system manager key."""
-        return datetime.fromisoformat(self.last_reboot_time)
+    @property
+    def log_entries(self) -> str:
+        """String representing the uri for the log entries."""
+        return "/redfish/v1/Managers/Testing_oob.1/Logs"
+
+    @property
+    def reboot_message_id(self) -> str:
+        """Property to return the Message Id for reboot log entries."""
+        return "REBOOT_MSG_ID"
 
 
 class TestRedfish:
@@ -384,17 +388,28 @@ class TestRedfish:
         assert isinstance(self.redfish.interface, ipaddress.IPv4Interface)
         assert str(self.redfish.interface.ip) == "10.0.0.1"
 
+    @pytest.mark.parametrize(
+        "response, reboot_time",
+        ((LCLOG_RESPONSE, "2022-06-22T16:42:55-05:00"), (LCLOG_RESPONSE_NO_MESSAGE, "1970-01-01T00:00:00-00:00")),
+    )
+    def test_last_reboot(self, response, reboot_time):
+        """Return the last reboot time."""
+        reboot_time = datetime.fromisoformat(reboot_time)
+        self.requests_mock.get(self.redfish.log_entries, json=response)
+        assert self.redfish.last_reboot() == reboot_time
+
     def test_wait_reboot_since(self):
         """It should raise an error if the reboot time is to early."""
         self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
+        self.requests_mock.get(self.redfish.log_entries, json=LCLOG_RESPONSE)
         since = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
-        self.redfish.last_reboot_time = "2022-01-01T00:05:05-00:00"
         self.redfish.wait_reboot_since(since)
 
     @mock.patch("spicerack.redfish.time.sleep")
     def test_wait_reboot_since_to_early(self, _mocked_sleep):
         """It should raise an error if the reboot time is to early."""
         self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
+        self.requests_mock.get(self.redfish.log_entries, json=LCLOG_RESPONSE_NO_MESSAGE)
         since = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
         with pytest.raises(redfish.RedfishError, match="no new reboot detected"):
             self.redfish.wait_reboot_since(since)
@@ -808,6 +823,14 @@ class TestRedfishDell:
         """It should return the oob_manager."""
         assert self.redfish.oob_manager == "/redfish/v1/Managers/iDRAC.Embedded.1"
 
+    def test_property_log_entries(self) -> str:
+        """String representing the uri for the log entries."""
+        assert self.redfish.log_entries == "/redfish/v1/Managers/Logs/Lclog"
+
+    def test_property_reboot_message_id(self) -> str:
+        """Property to return the Message Id for reboot log entries."""
+        assert self.redfish.reboot_message_id == "RAC0182"
+
     @pytest.mark.parametrize("response, generation", ((MANAGER_RESPONSE, 14), (MANAGER_RESPONSE_BAD, 1)))
     def test_property_generation(self, response, generation):
         """It should return the generation."""
@@ -832,16 +855,6 @@ class TestRedfishDell:
         if generation < 14:
             mocked_sleep.called_once_with(120)
         mocked_sleep.called_once_with(30)
-
-    @pytest.mark.parametrize(
-        "response, reboot_time",
-        ((LCLOG_RESPONSE, "2022-06-22T16:42:55-05:00"), (LCLOG_RESPONSE_NO_MESSAGE, "1970-01-01T00:00:00-00:00")),
-    )
-    def test_last_reboot(self, response, reboot_time):
-        """Return the last reboot time."""
-        reboot_time = datetime.fromisoformat(reboot_time)
-        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog", json=response)
-        assert self.redfish.last_reboot() == reboot_time
 
     @pytest.mark.parametrize("generation", (1, 13, 14))
     @mock.patch("spicerack.redfish.time.sleep")
@@ -907,3 +920,31 @@ class TestRedfishDell:
         result = self.redfish.scp_push(redfish.DellSCP(DELL_SCP, redfish.DellSCPTargetPolicy.ALL), preview=preview)
         assert result == expected
         assert mocked_sleep.called
+
+
+class TestRedfishSupermicro:
+    """Tests for the RedfishSupermicro class."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, requests_mock):
+        """Initialize the test instance."""
+        # pylint: disable=attribute-defined-outside-init
+        interface = ipaddress.ip_interface("10.0.0.1/16")
+        self.redfish = redfish.RedfishSupermicro("test01", interface, "root", "mysecret", dry_run=False)
+        self.requests_mock = requests_mock
+
+    def test_property_system_manager(self):
+        """It should return the oob_manager."""
+        assert self.redfish.system_manager == "/redfish/v1/Systems/1"
+
+    def test_property_oob_manager(self):
+        """It should return the oob_manager."""
+        assert self.redfish.oob_manager == "/redfish/v1/Managers/1"
+
+    def test_property_log_entries(self) -> str:
+        """String representing the uri for the log entries."""
+        assert self.redfish.log_entries == "/redfish/v1/Managers/1/LogServices/Log1/Entries"
+
+    def test_property_reboot_message_id(self) -> str:
+        """Property to return the Message Id for reboot log entries."""
+        assert self.redfish.reboot_message_id == "Event.1.0.SystemPowerAction"
