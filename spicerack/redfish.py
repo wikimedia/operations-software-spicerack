@@ -135,6 +135,14 @@ class Redfish:
     def oob_manager(self) -> str:
         """Property to return the Out of Band manager."""
 
+    def _update_system_info(self) -> None:
+        """Property to return a dict of manager metadata."""
+        self._system_info = self.request("get", self.system_manager).json()
+
+    def _update_oob_info(self) -> None:
+        """Update the data Out of Band manager info."""
+        self._oob_info = self.request("get", self.oob_manager).json()
+
     @property
     def hostname(self) -> str:
         """Getter for the device hostname.
@@ -157,18 +165,16 @@ class Redfish:
 
     @property
     def system_info(self) -> Dict:
-        """Property to return a dict of manager metadata."""
+        """Property to return the system info as a dict."""
         if not self._system_info:
-            result = self.request("get", self.system_manager)
-            self._system_info = result.json()
+            self._update_system_info()
         return self._system_info
 
     @property
     def oob_info(self) -> Dict:
-        """Property to return a dict of manager metadata."""
+        """Property to return the oob info as a dict."""
         if not self._oob_info:
-            result = self.request("get", self.oob_manager)
-            self._oob_info = result.json()
+            self._update_oob_info()
         return self._oob_info
 
     @property
@@ -178,12 +184,14 @@ class Redfish:
 
     @property
     def firmware_version(self) -> str:
-        """Property to return a string representing the model."""
+        """Property to return a string representing the firmware version."""
+        self._update_oob_info()
         return self.oob_info["FirmwareVersion"]
 
     @property
     def bios_version(self) -> str:
-        """Property to return a string representing the model."""
+        """Property to return a string representing the Bios version."""
+        self._update_system_info()
         return self.system_info["BiosVersion"]
 
     @property
