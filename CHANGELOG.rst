@@ -1,6 +1,33 @@
 Spicerack Changelog
 -------------------
 
+`v6.1.0`_ (2023-02-10)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* puppet: allow to specify the exact message when disabling/enabling puppet.
+* config: expand user's home (``~``) for logs dir.
+* cookbook: improve help message.
+* redfish: move Dell specific functionalities to the Dell class.
+* redfish: store all OOB info for later use.
+* redfish: add ``system_manager`` info and properties for ``bios_version``, ``model``, ``manufacturer``.
+
+Bug fixes
+"""""""""
+
+* Fix incorrect usage of ClusterShell's ``NodeSet`` using the Cumin's ``nodeset`` and ``nodeset_fromlist`` instead.
+
+Miscellanea
+"""""""""""
+
+* reposync: switch from ``copy_tree`` to ``copytree``.
+* kafka: fix typo in docstring.
+* dhcp: fix tests using unnecessary hack.
+* setup.py: force a newer ``sphinx_rtd_theme``.
+* setup.py: pin elasticsearch-curator ``~=5.0``.
+
 `v6.0.0`_ (2022-12-14)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2347,3 +2374,4 @@ New features
 .. _`v5.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.1
 .. _`v5.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.2
 .. _`v6.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.0.0
+.. _`v6.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.1.0
