@@ -342,7 +342,7 @@ class TestDHCP:
         config = get_mock_config()
         hosts = self._setup_dhcp_mocks()
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
-            configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+            configsha256 = sha256(str(config).encode()).hexdigest()
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             self.dhcp.remove_configuration(config)
 
@@ -386,7 +386,7 @@ class TestDHCP:
         """Test remove_configuration where sha256sum and the locally computed sum mismatch."""
         config = get_mock_config()
         self._setup_dhcp_mocks()
-        configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+        configsha256 = sha256(str(config).encode()).hexdigest()
         config.__str__.return_value = "different test configuration"
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
@@ -400,7 +400,7 @@ class TestDHCP:
         """Test remove_configuration where there is a sha256 mismatch but we pass force=True."""
         config = get_mock_config()
         hosts = self._setup_dhcp_mocks()
-        configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+        configsha256 = sha256(str(config).encode()).hexdigest()
         config.__str__.return_value = "different test configuration"
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
@@ -421,7 +421,7 @@ class TestDHCP:
         self._setup_dhcp_mocks(hosts=get_mock_suc_fail_hosts())
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
-            configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+            configsha256 = sha256(str(config).encode()).hexdigest()
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
 
             with pytest.raises(dhcp.DHCPError) as exc:
@@ -444,7 +444,7 @@ class TestDHCP:
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
-            configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+            configsha256 = sha256(str(config).encode()).hexdigest()
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
 
             with self.dhcp.config(config):
@@ -481,7 +481,7 @@ class TestDHCP:
         call_refresh = mock.call("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
-            configsha256 = sha256(str(config.__str__.return_value).encode()).hexdigest()
+            configsha256 = sha256(str(config).encode()).hexdigest()
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             with pytest.raises(Exception):
                 with self.dhcp.config(config):

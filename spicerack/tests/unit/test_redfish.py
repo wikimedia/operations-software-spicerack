@@ -139,14 +139,45 @@ DELL_TASK_REPONSE_EPOC = deepcopy(DELL_TASK_REPONSE)
 DELL_TASK_REPONSE_EPOC["EndTime"] = "1969-12-31T18:00:00-06:00"
 DELL_TASK_REPONSE_BAD_TIME = deepcopy(DELL_TASK_REPONSE)
 DELL_TASK_REPONSE_BAD_TIME["EndTime"] = "bad value"
-MODEL_RESPONSE = {
+MANAGER_RESPONSE = {
     "@odata.context": "/redfish/v1/$metadata#Manager.Manager",
-    "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1",
-    "@odata.type": "#Manager.v1_9_0.Manager",
+    "@odata.id": "/redfish/v1/Managers/Testing_oob.1",
+    "@odata.type": "#Manager.v1_12_0.Manager",
+    "Actions": {
+        "#Manager.Reset": {
+            "ResetType@Redfish.AllowableValues": ["GracefulRestart"],
+            "target": "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Manager.Reset",
+        },
+        "#Manager.ResetToDefaults": {
+            "ResetType@Redfish.AllowableValues": ["ResetAll", "PreserveNetworkAndUsers"],
+            "target": "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Manager.ResetToDefaults",
+        },
+    },
+    "DateTime": "2023-01-30T14:23:51-06:00",
+    "DateTimeLocalOffset": "-06:00",
+    "Description": "BMC",
+    "EthernetInterfaces": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/EthernetInterfaces"},
+    "FirmwareVersion": "6.00.30.00",
+    "HostInterfaces": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/HostInterfaces"},
+    "Id": "iDRAC.Embedded.1",
+    "LastResetTime": "2022-11-17T17:56:11-06:00",
+    "LogServices": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices"},
+    "ManagerType": "BMC",
     "Model": "14G Monolithic",
+    "Name": "Manager",
+    "NetworkProtocol": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/NetworkProtocol"},
+    "PowerState": "On",
+    "SerialConsole": {
+        "ConnectTypesSupported": [],
+        "ConnectTypesSupported@odata.count": 0,
+        "MaxConcurrentSessions": 0,
+        "ServiceEnabled": False,
+    },
+    "SerialInterfaces": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/SerialInterfaces"},
+    "Status": {"Health": "OK", "State": "Enabled"},
 }
-MODEL_RESPONSE_BAD = deepcopy(MODEL_RESPONSE)
-MODEL_RESPONSE_BAD["Model"] = "Foobar"
+MANAGER_RESPONSE_BAD = deepcopy(MANAGER_RESPONSE)
+MANAGER_RESPONSE_BAD["Model"] = "Foobar"
 PUSHURI_RESPONSE = {
     "@odata.context": "/redfish/v1/$metadata#UpdateService.UpdateService",
     "@odata.id": "/redfish/v1/UpdateService",
@@ -155,18 +186,18 @@ PUSHURI_RESPONSE = {
 }
 LCLOG_RESPONSE = {
     "@odata.context": "/redfish/v1/$metadata#LogEntryCollection.LogEntryCollection",
-    "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries",
+    "@odata.id": "/redfish/v1/Managers/Testing_oob.1/LogServices/Lclog/Entries",
     "@odata.type": "#LogEntryCollection.LogEntryCollection",
     "Description": "LC Logs for this manager",
     "Members": [
         {
-            "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries/1735",
+            "@odata.id": "/redfish/v1/Managers/Testing_oob.1/LogServices/Lclog/Entries/1735",
             "@odata.type": "#LogEntry.v1_6_1.LogEntry",
             "Created": "2022-06-22T17:01:17-05:00",
             "Description": "Log Entry 1735",
             "EntryType": "Oem",
             "Id": "1735",
-            "Links": {"OriginOfCondition": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1"}},
+            "Links": {"OriginOfCondition": {"@odata.id": "/redfish/v1/Managers/Testing_oob.1"}},
             "Message": "Successfully logged in using root, from " "10.192.32.49 and REDFISH.",
             "MessageArgs": ["root", "10.192.32.49", "REDFISH"],
             "MessageArgs@odata.count": 3,
@@ -184,7 +215,7 @@ LCLOG_RESPONSE = {
             "Severity": "OK",
         },
         {
-            "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries/1734",
+            "@odata.id": "/redfish/v1/Managers/Testing_oob.1/LogServices/Lclog/Entries/1734",
             "@odata.type": "#LogEntry.v1_6_1.LogEntry",
             "Created": "2022-06-22T16:58:17-05:00",
             "Description": "Log Entry 1734",
@@ -208,7 +239,7 @@ LCLOG_RESPONSE = {
             "Severity": "OK",
         },
         {
-            "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries/1692",
+            "@odata.id": "/redfish/v1/Managers/Testing_oob.1/LogServices/Lclog/Entries/1692",
             "@odata.type": "#LogEntry.v1_6_1.LogEntry",
             "Created": "2022-06-22T16:42:55-05:00",
             "Description": "Log Entry 1692",
@@ -233,17 +264,57 @@ LCLOG_RESPONSE = {
         },
     ],
     "Members@odata.count": 1735,
-    "Members@odata.nextLink": "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries?$skip=50",
+    "Members@odata.nextLink": "/redfish/v1/Managers/Testing_oob.1/LogServices/Lclog/Entries?$skip=50",
     "Name": "Log Entry Collection",
 }
 
 LCLOG_RESPONSE_NO_MESSAGE = deepcopy(LCLOG_RESPONSE)
 LCLOG_RESPONSE_NO_MESSAGE["Members"] = []
+# The below is trimmed output
+SYSTEM_MANAGER_RESPONSE = {
+    "@odata.context": "/redfish/v1/$metadata#ComputerSystem.ComputerSystem",
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1",
+    "@odata.type": "#ComputerSystem.v1_16_0.ComputerSystem",
+    "Actions": {
+        "#ComputerSystem.Reset": {
+            "ResetType@Redfish.AllowableValues": [
+                "On",
+                "ForceOff",
+                "ForceRestart",
+                "GracefulRestart",
+                "GracefulShutdown",
+                "PushPowerButton",
+                "Nmi",
+                "PowerCycle",
+            ],
+            "target": "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset",
+        }
+    },
+    "AssetTag": "",
+    "Bios": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/Bios"},
+    "BiosVersion": "2.15.1",
+    "EthernetInterfaces": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces"},
+    "HostName": "",
+    "HostWatchdogTimer": {"FunctionEnabled": False, "Status": {"State": "Disabled"}, "TimeoutAction": "None"},
+    "HostingRoles": [],
+    "HostingRoles@odata.count": 0,
+    "Id": "System.Embedded.1",
+    "IndicatorLED": "Lit",
+    "LastResetTime": "2023-01-23T09:35:39-06:00",
+    "Manufacturer": "Dell Inc.",
+    "Model": "PowerEdge R440",
+    "Name": "System",
+    "NetworkInterfaces": {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/NetworkInterfaces"},
+    "PowerState": "On",
+    "Status": {"Health": "OK", "HealthRollup": "OK", "State": "Enabled"},
+    "SystemType": "Physical",
+    "UUID": "4c4c4544-0058-3810-8032-b2c04f525032",
+}
 
 
 def add_accounts_mock_responses(requests_mock):
     """Setup requests mock URLs and return payloads for all the existing users."""
-    requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1/Accounts", json=ACCOUNTS_RESPONSE)
+    requests_mock.get("/redfish/v1/Managers/Testing_oob.1/Accounts", json=ACCOUNTS_RESPONSE)
     users = {"1": "user", "2": "root", "3": "guest"}
     for user_id, username in users.items():
         response = deepcopy(ACCOUNT_RESPONSE)
@@ -255,6 +326,26 @@ def add_accounts_mock_responses(requests_mock):
         )
 
 
+class RedfishTest(redfish.Redfish):
+    """An inherited class used for testing."""
+
+    last_reboot_time = "1970-01-01T00:00:00-00:00"
+
+    @property
+    def system_manager(self) -> str:
+        """Property to return the System manager."""
+        return "/redfish/v1/Systems/Testing_system.1"
+
+    @property
+    def oob_manager(self) -> str:
+        """String representing the Out of Band manager key."""
+        return "/redfish/v1/Managers/Testing_oob.1"
+
+    def last_reboot(self) -> str:
+        """String representing the system manager key."""
+        return datetime.fromisoformat(self.last_reboot_time)
+
+
 class TestRedfish:
     """Tests for the Redfish class."""
 
@@ -263,8 +354,8 @@ class TestRedfish:
         """Initialize the test instance."""
         # pylint: disable=attribute-defined-outside-init
         interface = ipaddress.ip_interface("10.0.0.1/16")
-        self.redfish = redfish.Redfish("test01", interface, "root", "mysecret", dry_run=False)
-        self.redfish_dry_run = redfish.Redfish("test01", interface, "root", "mysecret", dry_run=True)
+        self.redfish = RedfishTest("test01", interface, "root", "mysecret", dry_run=False)
+        self.redfish_dry_run = RedfishTest("test01", interface, "root", "mysecret", dry_run=True)
         self.requests_mock = requests_mock
 
     def test_property_magic_str(self):
@@ -280,13 +371,56 @@ class TestRedfish:
         assert isinstance(self.redfish.interface, ipaddress.IPv4Interface)
         assert str(self.redfish.interface.ip) == "10.0.0.1"
 
-    @pytest.mark.parametrize("response, generation", ((MODEL_RESPONSE, 14), (MODEL_RESPONSE_BAD, 1)))
-    def test_property_generation(self, response, generation):
-        """It should return the generation."""
-        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1?$select=Model", json=response)
-        assert self.redfish.generation == generation
+    def test_wait_reboot_since(self):
+        """It should raise an error if the reboot time is to early."""
+        self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
+        since = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
+        self.redfish.last_reboot_time = "2022-01-01T00:05:05-00:00"
+        self.redfish.wait_reboot_since(since)
+
+    @mock.patch("spicerack.redfish.time.sleep")
+    def test_wait_reboot_since_to_early(self, _mocked_sleep):
+        """It should raise an error if the reboot time is to early."""
+        self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
+        since = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
+        with pytest.raises(redfish.RedfishError, match="no new reboot detected"):
+            self.redfish.wait_reboot_since(since)
+
+    def test_property_system_info(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.system_info == SYSTEM_MANAGER_RESPONSE
+        # try again to hit the cached version
+        assert self.redfish.system_info == SYSTEM_MANAGER_RESPONSE
+
+    def test_property_bios(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.bios_version == "2.15.1"
+
+    def test_property_model(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.model == "PowerEdge R440"
+
+    def test_property_manufacturer(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.manufacturer == "Dell Inc."
+
+    def test_property_firmware(self):
+        """It should return the firmware."""
+        self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
+        assert self.redfish.firmware_version == "6.00.30.00"
         # assert twice to check cached version
-        assert self.redfish.generation == generation
+        assert self.redfish.firmware_version == "6.00.30.00"
+
+    def test_property_oob_model(self):
+        """It should return the model."""
+        self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
+        assert self.redfish.oob_model == "14G Monolithic"
+        # assert twice to check cached version
+        assert self.redfish.oob_model == "14G Monolithic"
 
     def test_property_pushuri(self):
         """It should return the pushuri."""
@@ -303,50 +437,6 @@ class TestRedfish:
             {"date": "1971-01-01T00:00:00-00:00"},
         ]
         assert self.redfish.most_recent_member(data, "date") == {"date": "2022-01-01T00:00:00-00:00"}
-
-    @pytest.mark.parametrize(
-        "response, reboot_time",
-        ((LCLOG_RESPONSE, "2022-06-22T16:42:55-05:00"), (LCLOG_RESPONSE_NO_MESSAGE, "1970-01-01T00:00:00-00:00")),
-    )
-    def test_last_reboot(self, response, reboot_time):
-        """Return the last reboot time."""
-        reboot_time = datetime.fromisoformat(reboot_time)
-        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog", json=response)
-        assert self.redfish.last_reboot() == reboot_time
-
-    @pytest.mark.parametrize("generation", (1, 13, 14))
-    @mock.patch("spicerack.redfish.time.sleep")
-    @mock.patch("spicerack.redfish.Redfish.last_reboot")
-    @mock.patch("spicerack.redfish.Redfish.check_connection")
-    def test_wait_reboot_since(self, mocked_check_connection, mocked_last_reboot, mocked_sleep, generation):
-        """It should return immediately if the host has already rebooted."""
-        since = datetime.fromisoformat("2022-01-01T00:00:00-00:00")
-        mocked_check_connection.return_value = True
-        mocked_last_reboot.return_value = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
-        self.redfish._generation = generation  # pylint: disable=protected-access
-        self.redfish.wait_reboot_since(since)
-        mocked_check_connection.called_once()
-        mocked_last_reboot.called_once_with(since)
-        if generation < 14:
-            mocked_sleep.called_once_with(120)
-        mocked_sleep.called_once_with(30)
-
-    @pytest.mark.parametrize("generation", (1, 13, 14))
-    @mock.patch("spicerack.redfish.time.sleep")
-    @mock.patch("spicerack.redfish.Redfish.last_reboot")
-    @mock.patch("spicerack.redfish.Redfish.check_connection")
-    def test_wait_reboot_since_to_early(self, mocked_check_connection, mocked_last_reboot, mocked_sleep, generation):
-        """It should raise an error if the reboot time is to early."""
-        since = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
-        mocked_check_connection.return_value = True
-        mocked_last_reboot.return_value = datetime.fromisoformat("2022-01-01T00:00:00-00:00")
-        self.redfish._generation = generation  # pylint: disable=protected-access
-        with pytest.raises(redfish.RedfishError, match="no new reboot detected"):
-            self.redfish.wait_reboot_since(since)
-        mocked_check_connection.called_once()
-        mocked_last_reboot.called_once_with(since)
-        if generation < 14:
-            mocked_sleep.called_once_with(120)
 
     @pytest.mark.parametrize("method", ("get", "head"))
     def test_request_dry_run_ro(self, method):
@@ -655,6 +745,66 @@ class TestRedfishDell:
         interface = ipaddress.ip_interface("10.0.0.1/16")
         self.redfish = redfish.RedfishDell("test01", interface, "root", "mysecret", dry_run=False)
         self.requests_mock = requests_mock
+
+    def test_property_system_manager(self):
+        """It should return the oob_manager."""
+        assert self.redfish.system_manager == "/redfish/v1/Systems/System.Embedded.1"
+
+    def test_property_oob_manager(self):
+        """It should return the oob_manager."""
+        assert self.redfish.oob_manager == "/redfish/v1/Managers/iDRAC.Embedded.1"
+
+    @pytest.mark.parametrize("response, generation", ((MANAGER_RESPONSE, 14), (MANAGER_RESPONSE_BAD, 1)))
+    def test_property_generation(self, response, generation):
+        """It should return the generation."""
+        self.requests_mock.get(self.redfish.oob_manager, json=response)
+        assert self.redfish.generation == generation
+        # assert twice to check cached version
+        assert self.redfish.generation == generation
+
+    @pytest.mark.parametrize("generation", (1, 13, 14))
+    @mock.patch("spicerack.redfish.time.sleep")
+    @mock.patch("spicerack.redfish.RedfishDell.last_reboot")
+    @mock.patch("spicerack.redfish.RedfishDell.check_connection")
+    def test_wait_reboot_since(self, mocked_check_connection, mocked_last_reboot, mocked_sleep, generation):
+        """It should return immediately if the host has already rebooted."""
+        since = datetime.fromisoformat("2022-01-01T00:00:00-00:00")
+        mocked_check_connection.return_value = True
+        mocked_last_reboot.return_value = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
+        self.redfish._generation = generation  # pylint: disable=protected-access
+        self.redfish.wait_reboot_since(since)
+        mocked_check_connection.called_once()
+        mocked_last_reboot.called_once_with(since)
+        if generation < 14:
+            mocked_sleep.called_once_with(120)
+        mocked_sleep.called_once_with(30)
+
+    @pytest.mark.parametrize(
+        "response, reboot_time",
+        ((LCLOG_RESPONSE, "2022-06-22T16:42:55-05:00"), (LCLOG_RESPONSE_NO_MESSAGE, "1970-01-01T00:00:00-00:00")),
+    )
+    def test_last_reboot(self, response, reboot_time):
+        """Return the last reboot time."""
+        reboot_time = datetime.fromisoformat(reboot_time)
+        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1/Logs/Lclog", json=response)
+        assert self.redfish.last_reboot() == reboot_time
+
+    @pytest.mark.parametrize("generation", (1, 13, 14))
+    @mock.patch("spicerack.redfish.time.sleep")
+    @mock.patch("spicerack.redfish.RedfishDell.last_reboot")
+    @mock.patch("spicerack.redfish.RedfishDell.check_connection")
+    def test_wait_reboot_since_to_early(self, mocked_check_connection, mocked_last_reboot, mocked_sleep, generation):
+        """It should raise an error if the reboot time is to early."""
+        since = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
+        mocked_check_connection.return_value = True
+        mocked_last_reboot.return_value = datetime.fromisoformat("2022-01-01T00:00:00-00:00")
+        self.redfish._generation = generation  # pylint: disable=protected-access
+        with pytest.raises(redfish.RedfishError, match="no new reboot detected"):
+            self.redfish.wait_reboot_since(since)
+        mocked_check_connection.called_once()
+        mocked_last_reboot.called_once_with(since)
+        if generation < 14:
+            mocked_sleep.called_once_with(120)
 
     @pytest.mark.parametrize("allow_new", (False, True))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)

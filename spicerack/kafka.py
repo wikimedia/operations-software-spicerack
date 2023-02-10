@@ -322,7 +322,7 @@ class Kafka:
             client (spicerack.kafka.KafkaClient): Kafka consumer and site prefix for a given cluster.
             timestamps (dict[kafka.structs.TopicPartition, int]): Mapping of topic partitions to their timestamps.
 
-        Raise:
+        Raises:
             spicerack.kafka.KafkaError: When local offset couldn't be located (e.g. because of no messages).
 
         """

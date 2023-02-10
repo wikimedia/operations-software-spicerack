@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 import requests
-from cumin import NodeSet
+from cumin import nodeset
 
 from spicerack import alertmanager
 from spicerack.administrative import Reason
@@ -133,7 +133,7 @@ class TestAlertmanager:
     def test_nodeset_hosts(self):
         """It should expand NodeSet hosts."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
-        am_hosts = alertmanager.AlertmanagerHosts(NodeSet("host[1-2]"), verbatim_hosts=True, dry_run=False)
+        am_hosts = alertmanager.AlertmanagerHosts(nodeset("host[1-2]"), verbatim_hosts=True, dry_run=False)
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [

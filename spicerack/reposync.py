@@ -1,9 +1,9 @@
 """Manage updates to automated git repositories."""
 import os
 from contextlib import contextmanager
-from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module, useless-suppression
 from logging import getLogger
 from pathlib import Path
+from shutil import copytree
 from tempfile import TemporaryDirectory
 from typing import Generator, Optional
 
@@ -143,8 +143,7 @@ class RepoSync:
         working_repo = self._repo.clone(repo_dir)
         # Delete all existing files to ensure removal of stale data
         working_repo.git.rm("./", r=True, ignore_unmatch=True)
-        # TODO: on python >= 3.8 we can use shutil.copytree with dirs_exist_ok=True
-        copy_tree(str(data_dir), str(repo_dir), preserve_symlinks=1)
+        copytree(data_dir, repo_dir, dirs_exist_ok=True, symlinks=True)
         self._commit(working_repo, message)
         print(working_repo.git.show(["--color=always", "HEAD"]))
         if not self._dry_run:

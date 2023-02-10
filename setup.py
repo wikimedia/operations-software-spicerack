@@ -11,7 +11,7 @@ INSTALL_REQUIRES = [
     "cumin>=3.0.2",
     "dnspython>=1.16.0,<2.2.0",  # Temporary upper limit to prevent mypy failures
     "elasticsearch>=5.0.0,<7.15.0",
-    "elasticsearch-curator>=5.0.0",
+    "elasticsearch-curator~=5.0",
     "gitpython>=3.1.14",
     "kafka-python>=1.4.3",
     "kubernetes==12.0.*",  # frozen to the version available on debian bullseye
@@ -37,7 +37,7 @@ EXTRAS_REQUIRE = {
         # setuptools comes boundled is usually way older (debian sid has 44 as
         # of writing this).
         "setuptools>=53.0",
-        "sphinx_rtd_theme>=0.4.3",
+        "sphinx_rtd_theme>=1.0",
         "sphinx-argparse>=0.2.2",
         "Sphinx>=1.8.4",
         "types-PyMySQL",

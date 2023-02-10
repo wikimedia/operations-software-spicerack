@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 import requests
 from ClusterShell.MsgTree import MsgTreeElem
-from cumin import NodeSet
+from cumin import nodeset
 
 from spicerack import ganeti
 from spicerack.netbox import Netbox
@@ -251,7 +251,7 @@ class TestGaneti:
         instance = self.ganeti.instance(self.instance)
         results = [
             (
-                NodeSet("ganeti-master.example.com"),
+                nodeset("ganeti-master.example.com"),
                 MsgTreeElem(b"creation logs", parent=MsgTreeElem()),
             )
         ]
