@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Iterator, Mapping, Optional, Sequence, Tuple, Union
 
-from cumin import NodeSet
+from cumin import NodeSet, nodeset_fromlist
 from requests import Response
 from requests.exceptions import RequestException
 from wmflib.requests import DEFAULT_RETRY_STATUS_CODES, http_session
@@ -56,7 +56,7 @@ class AlertmanagerHosts:
         if isinstance(target_hosts, NodeSet):
             self._target_hosts = target_hosts
         else:
-            self._target_hosts = NodeSet.fromlist(target_hosts)
+            self._target_hosts = nodeset_fromlist(target_hosts)
 
         if not self._target_hosts:
             raise AlertmanagerError("Got empty target hosts list.")

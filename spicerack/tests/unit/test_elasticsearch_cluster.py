@@ -5,7 +5,7 @@ from typing import Dict
 from unittest import mock
 
 import pytest
-from cumin import NodeSet
+from cumin import nodeset
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
 from wmflib.config import load_yaml_config
 from wmflib.prometheus import Prometheus
@@ -34,7 +34,7 @@ def test_create_elasticsearch_clusters_fail():
 def test_get_remote_hosts():
     """Test that RemoteHosts instance is returned."""
     mocked_remote_hosts = mock.Mock(spec_set=RemoteHosts)
-    mocked_remote_hosts.hosts = NodeSet("el[1-2]")
+    mocked_remote_hosts.hosts = nodeset("el[1-2]")
     elastic_hosts = ec.ElasticsearchHosts(mocked_remote_hosts, None)
     result = elastic_hosts.get_remote_hosts()
     assert isinstance(result, RemoteHosts)

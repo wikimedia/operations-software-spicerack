@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from subprocess import CalledProcessError, check_output
 from typing import Dict, Iterator, List, Optional, Tuple, Union, cast
 
-from cumin import NodeSet
+from cumin import NodeSet, nodeset
 from cumin.transports import Command
 
 from spicerack.administrative import Reason
@@ -255,10 +255,10 @@ class PuppetHosts(RemoteHostsAdapter):
         # output.
         command = Command("puppet agent --test --color=false", ok_codes=[])
         logger.info("Generating a new Puppet certificate on %d hosts: %s", len(self), self)
-        for nodeset, output in self._remote_hosts.run_sync(command, print_output=False):
+        for node_set, output in self._remote_hosts.run_sync(command, print_output=False):
             for line in output.message().decode().splitlines():
                 if line.startswith("Error:"):
-                    errors.append((nodeset, line))
+                    errors.append((node_set, line))
                     continue
 
                 if "Certificate Request fingerprint" not in line:
@@ -268,14 +268,14 @@ class PuppetHosts(RemoteHostsAdapter):
                 if not fingerprint:
                     continue
 
-                logger.info("Generated CSR for host %s: %s", nodeset, fingerprint)
-                for host in nodeset:
+                logger.info("Generated CSR for host %s: %s", node_set, fingerprint)
+                for host in node_set:
                     fingerprints[host] = fingerprint
 
         if len(fingerprints) != len(self):
             raise PuppetHostsError(
                 "Unable to find CSR fingerprints for all hosts, detected errors are:\n"
-                + "\n".join(f"{nodeset}: {line}" for nodeset, line in errors)
+                + "\n".join(f"{node_set}: {line}" for node_set, line in errors)
             )
 
         return fingerprints
@@ -308,14 +308,14 @@ class PuppetHosts(RemoteHostsAdapter):
 
         logger.debug("Polling the completion of a successful Puppet run")
         try:
-            for nodeset, output in self._remote_hosts.run_sync(
+            for node_set, output in self._remote_hosts.run_sync(
                 command, is_safe=True, print_output=False, print_progress_bars=False
             ):
                 last_run = datetime.utcfromtimestamp(int(output.message().decode()))
                 if last_run <= start:
-                    raise PuppetHostsCheckError(f"Successful Puppet run too old ({last_run} <= {start}) on: {nodeset}")
+                    raise PuppetHostsCheckError(f"Successful Puppet run too old ({last_run} <= {start}) on: {node_set}")
 
-                remaining_nodes.difference_update(nodeset, strict=False)
+                remaining_nodes.difference_update(node_set, strict=False)
 
         except RemoteExecutionError as e:
             raise PuppetHostsCheckError("Unable to find a successful Puppet run") from e
@@ -340,10 +340,10 @@ class PuppetHosts(RemoteHostsAdapter):
             print_progress_bars=False,
         )
 
-        disabled = {True: NodeSet(), False: NodeSet()}
-        for nodeset, output in results:
+        disabled = {True: nodeset(), False: nodeset()}
+        for node_set, output in results:
             result = bool(int(output.message().decode().strip()))
-            disabled[result] |= nodeset
+            disabled[result] |= node_set
 
         return disabled
 

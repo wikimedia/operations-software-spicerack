@@ -8,7 +8,7 @@ from unittest import mock
 
 import pytest
 from ClusterShell.MsgTree import MsgTreeElem
-from cumin import NodeSet
+from cumin import nodeset
 from cumin.transports import Command
 
 from spicerack import icinga
@@ -20,13 +20,13 @@ from spicerack.tests import get_fixture_path
 def set_mocked_icinga_host_output(mocked_icinga_host, output, n_hosts=1):
     """Setup the mocked icinga_host return value with the given output."""
     out = MsgTreeElem(output.encode(), parent=MsgTreeElem())
-    mocked_icinga_host.run_sync.return_value = iter(n_hosts * [(NodeSet("icinga-host"), out)])
+    mocked_icinga_host.run_sync.return_value = iter(n_hosts * [(nodeset("icinga-host"), out)])
 
 
 def set_mocked_icinga_host_outputs(mocked_icinga_host, outputs):
     """Setup the mocked icinga_host side effect to return the given outputs, one after another."""
     outs = [MsgTreeElem(output.encode(), parent=MsgTreeElem()) for output in outputs]
-    mocked_icinga_host.run_sync.side_effect = [iter([(NodeSet("icinga-host"), out)]) for out in outs]
+    mocked_icinga_host.run_sync.side_effect = [iter([(nodeset("icinga-host"), out)]) for out in outs]
 
 
 def get_default_downtime_outputs():
@@ -181,10 +181,10 @@ class TestIcingaHosts:
     @pytest.mark.parametrize(
         "target_hosts, verbatim_hosts, effective_hosts",
         (
-            (["host1.example.com", "host2.example.com"], False, NodeSet("host[1-2]")),
-            (["host1.example.com", "host2.example.com"], True, NodeSet("host[1-2].example.com")),
-            (NodeSet("host1.example.com"), False, NodeSet("host1")),
-            (NodeSet("host1.example.com"), True, NodeSet("host1.example.com")),
+            (["host1.example.com", "host2.example.com"], False, nodeset("host[1-2]")),
+            (["host1.example.com", "host2.example.com"], True, nodeset("host[1-2].example.com")),
+            (nodeset("host1.example.com"), False, nodeset("host1")),
+            (nodeset("host1.example.com"), True, nodeset("host1.example.com")),
         ),
     )
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)

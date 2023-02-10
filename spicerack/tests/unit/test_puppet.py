@@ -6,7 +6,7 @@ from unittest import mock
 
 import pytest
 from ClusterShell.MsgTree import MsgTreeElem
-from cumin import NodeSet
+from cumin import nodeset
 
 from spicerack import puppet
 from spicerack.administrative import Reason
@@ -124,8 +124,8 @@ class TestPuppetHosts:
 
     def test_check_enabled_ok(self):
         """It should check that all hosts have Puppet enabled."""
-        host1 = NodeSet("test1.example.com")
-        host2 = NodeSet("test2.example.com")
+        host1 = nodeset("test1.example.com")
+        host2 = nodeset("test2.example.com")
         results = [
             (host1, MsgTreeElem(b"0", parent=MsgTreeElem())),
             (host2, MsgTreeElem(b"0", parent=MsgTreeElem())),
@@ -135,8 +135,8 @@ class TestPuppetHosts:
 
     def test_check_enabled_raise(self):
         """It should raise PuppetHostsCheckError if Puppet is disabled on some hosts."""
-        host1 = NodeSet("test1.example.com")
-        host2 = NodeSet("test2.example.com")
+        host1 = nodeset("test1.example.com")
+        host2 = nodeset("test2.example.com")
         results = [
             (host1, MsgTreeElem(b"0", parent=MsgTreeElem())),
             (host2, MsgTreeElem(b"1", parent=MsgTreeElem())),
@@ -150,8 +150,8 @@ class TestPuppetHosts:
 
     def test_check_disabled_ok(self):
         """It should check that all hosts have Puppet disabled."""
-        host1 = NodeSet("test1.example.com")
-        host2 = NodeSet("test2.example.com")
+        host1 = nodeset("test1.example.com")
+        host2 = nodeset("test2.example.com")
         results = [
             (host1, MsgTreeElem(b"1", parent=MsgTreeElem())),
             (host2, MsgTreeElem(b"1", parent=MsgTreeElem())),
@@ -161,8 +161,8 @@ class TestPuppetHosts:
 
     def test_check_disabled_raise(self):
         """It should raise PuppetHostsCheckError if Puppet is disabled on some hosts."""
-        host1 = NodeSet("test1.example.com")
-        host2 = NodeSet("test2.example.com")
+        host1 = nodeset("test1.example.com")
+        host2 = nodeset("test2.example.com")
         results = [
             (host1, MsgTreeElem(b"1", parent=MsgTreeElem())),
             (host2, MsgTreeElem(b"0", parent=MsgTreeElem())),
@@ -238,7 +238,7 @@ class TestPuppetHosts:
         """It should delete and regenerate the Puppet certificate."""
         results = [
             (
-                NodeSet("test.example.com"),
+                nodeset("test.example.com"),
                 MsgTreeElem(PUPPET_GENERATE_CERTIFICATE_SUCCESS, parent=MsgTreeElem()),
             )
         ]
@@ -257,7 +257,7 @@ class TestPuppetHosts:
     def test_regenerate_certificate_raise(self):
         """It should raise PuppetHostsError if unable to find any of the fingerprint."""
         message = PUPPET_GENERATE_CERTIFICATE_SUCCESS.decode().replace(": 00:FF", "").encode()
-        results = [(NodeSet("test.example.com"), MsgTreeElem(message, parent=MsgTreeElem()))]
+        results = [(nodeset("test.example.com"), MsgTreeElem(message, parent=MsgTreeElem()))]
         self.mocked_remote_hosts.run_sync.side_effect = [iter(()), iter(results)]
 
         with pytest.raises(
@@ -270,7 +270,7 @@ class TestPuppetHosts:
         """It should raise PuppetHostsError and print the Puppet errors if unable to find any of the fingerprint."""
         results = [
             (
-                NodeSet("test.example.com"),
+                nodeset("test.example.com"),
                 MsgTreeElem(PUPPET_GENERATE_CERTIFICATE_FAILED, parent=MsgTreeElem()),
             )
         ]
@@ -292,7 +292,7 @@ class TestPuppetHosts:
         last_run_string = str(int(last_run.replace(tzinfo=timezone.utc).timestamp()))
         start = last_run - timedelta(seconds=1)
 
-        nodes = NodeSet("test.example.com")
+        nodes = nodeset("test.example.com")
         results = [(nodes, MsgTreeElem(last_run_string.encode(), parent=MsgTreeElem()))]
         self.mocked_remote_hosts.run_sync.return_value = iter(results)
         self.mocked_remote_hosts.hosts = nodes
@@ -319,7 +319,7 @@ class TestPuppetHosts:
         last_run_string = str(int(last_run.replace(tzinfo=timezone.utc).timestamp()))
         start = last_run + timedelta(seconds=1)
 
-        nodes = NodeSet("test.example.com")
+        nodes = nodeset("test.example.com")
         results = [(nodes, MsgTreeElem(last_run_string.encode(), parent=MsgTreeElem()))]
         self.mocked_remote_hosts.run_sync.side_effect = [results] * 60
         self.mocked_remote_hosts.hosts = nodes
@@ -333,7 +333,7 @@ class TestPuppetHosts:
     def test_wait_since_failed_execution(self, mocked_sleep):
         """It should raise PuppetHostsCheckError if fails to get the successful Puppet run within the timeout."""
         self.mocked_remote_hosts.run_sync.side_effect = RemoteExecutionError(1, "fail")
-        self.mocked_remote_hosts.hosts = NodeSet("test.example.com")
+        self.mocked_remote_hosts.hosts = nodeset("test.example.com")
 
         with pytest.raises(puppet.PuppetHostsCheckError, match="Unable to find a successful Puppet run"):
             self.puppet_hosts.wait_since(datetime.utcnow())
@@ -348,10 +348,10 @@ class TestPuppetHosts:
         last_run_string = str(int(last_run.replace(tzinfo=timezone.utc).timestamp()))
         start = last_run - timedelta(seconds=1)
 
-        nodes = NodeSet("test[1-2].example.com")
+        nodes = nodeset("test[1-2].example.com")
         results = [
             (
-                NodeSet("test1.example.com"),
+                nodeset("test1.example.com"),
                 MsgTreeElem(last_run_string.encode(), parent=MsgTreeElem()),
             )
         ]
@@ -372,7 +372,7 @@ class TestPuppetHosts:
         # timestamp() consider naive datetime objects as local time.
         last_run_string = str(int(last_run.replace(tzinfo=timezone.utc).timestamp()))
 
-        nodes = NodeSet("test.example.com")
+        nodes = nodeset("test.example.com")
         results = [(nodes, MsgTreeElem(last_run_string.encode(), parent=MsgTreeElem()))]
         self.mocked_remote_hosts.run_sync.return_value = iter(results)
         self.mocked_remote_hosts.hosts = nodes
@@ -394,7 +394,7 @@ class TestPuppetHosts:
         expected_puppetmaster = "dummy.puppetmast.er"
         self.mocked_remote_hosts.run_sync.return_value = [
             (
-                NodeSet("test[0-1].example.com"),
+                nodeset("test[0-1].example.com"),
                 MsgTreeElem(expected_puppetmaster.encode(), parent=MsgTreeElem()),
             ),
         ]
@@ -420,11 +420,11 @@ class TestPuppetHosts:
         """Test test get ca servers handles multiple results."""
         self.mocked_remote_hosts.run_sync.return_value = [
             (
-                NodeSet("test0.example.com"),
+                nodeset("test0.example.com"),
                 MsgTreeElem(b"test0.puppetmast.er", parent=MsgTreeElem()),
             ),
             (
-                NodeSet("test1.example.com"),
+                nodeset("test1.example.com"),
                 MsgTreeElem(b"test1.puppetmast.er", parent=MsgTreeElem()),
             ),
         ]
@@ -441,7 +441,7 @@ class TestPuppetHosts:
         """Test test get ca servers handles multiple results."""
         self.mocked_remote_hosts.run_sync.return_value = [
             (
-                NodeSet("test0.example.com"),
+                nodeset("test0.example.com"),
                 MsgTreeElem(
                     b"test0.puppetmast.er",
                     parent=MsgTreeElem(b"some message that should be ignored", parent=MsgTreeElem()),
@@ -498,7 +498,7 @@ class TestPuppetMaster:
         json_output = b'{"host":"test.example.com","valid":true}'
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(json_output, parent=MsgTreeElem()),
             )
         ]
@@ -517,7 +517,7 @@ class TestPuppetMaster:
         json_output = b'{"host":"test.example.com","valid":false,"error":"Error message"}'
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(json_output, parent=MsgTreeElem()),
             )
         ]
@@ -553,7 +553,7 @@ class TestPuppetMaster:
         json_output = b'{"host":"test.example.com",,}'
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(json_output, parent=MsgTreeElem()),
             )
         ]
@@ -572,13 +572,13 @@ class TestPuppetMaster:
         """It should sign the certificate in the Puppet CA."""
         requested_results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_REQUESTED, parent=MsgTreeElem()),
             )
         ]
         signed_results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_SIGNED, parent=MsgTreeElem()),
             )
         ]
@@ -618,13 +618,13 @@ class TestPuppetMaster:
         """It should pass the --allow-dns-alt-names option while signing the certificate."""
         requested_results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_REQUESTED, parent=MsgTreeElem()),
             )
         ]
         signed_results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_SIGNED, parent=MsgTreeElem()),
             )
         ]
@@ -664,7 +664,7 @@ class TestPuppetMaster:
         """It should raise PuppetMasterError if the certificate is not in the requested state."""
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_SIGNED, parent=MsgTreeElem()),
             )
         ]
@@ -680,7 +680,7 @@ class TestPuppetMaster:
         """It should raise PuppetMasterError if the fingerprint doesn't match the one in the CSR."""
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_REQUESTED, parent=MsgTreeElem()),
             )
         ]
@@ -696,19 +696,19 @@ class TestPuppetMaster:
         """It should raise PuppetMasterError if the sign operation fails."""
         requested_results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_REQUESTED, parent=MsgTreeElem()),
             )
         ]
         sign_results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(b"sign error", parent=MsgTreeElem()),
             )
         ]
         signed_results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_REQUESTED, parent=MsgTreeElem()),
             )
         ]
@@ -728,7 +728,7 @@ class TestPuppetMaster:
         """It should return immediately if the certificate is already requested."""
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_REQUESTED, parent=MsgTreeElem()),
             )
         ]
@@ -748,7 +748,7 @@ class TestPuppetMaster:
         """It should raise PuppetMasterError if the certificate is in a wrong state."""
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_SIGNED, parent=MsgTreeElem()),
             )
         ]
@@ -765,7 +765,7 @@ class TestPuppetMaster:
         """It should raise PuppetMasterCheckError if the certificate request doesn't appear."""
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(b"[]", parent=MsgTreeElem()),
             )
         ]
@@ -783,7 +783,7 @@ class TestPuppetMaster:
         """It should return the metadata of the certificate for the host in the Puppet CA."""
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(PUPPET_CA_CERT_METADATA_SIGNED, parent=MsgTreeElem()),
             )
         ]
@@ -817,7 +817,7 @@ class TestPuppetMaster:
         """It should raise PuppetMasterError if the Puppet CA returns multiple certificates metadata."""
         results = [
             (
-                NodeSet("puppetmaster.example.com"),
+                nodeset("puppetmaster.example.com"),
                 MsgTreeElem(json_output, parent=MsgTreeElem()),
             )
         ]

@@ -3,7 +3,7 @@ from typing import List, Optional
 from unittest import TestCase, mock
 
 from ClusterShell.MsgTree import MsgTreeElem
-from cumin import Config, NodeSet
+from cumin import Config, nodeset
 
 from spicerack.remote import RemoteHosts
 from spicerack.toolforge.etcdctl import EtcdctlController, HealthStatus, TooManyHosts, UnableToParseOutput
@@ -55,7 +55,7 @@ class TestEtcdctlController(TestCase):
 
     def test_raises_if_more_than_one_node_is_used(self):
         """Test that raises if more than one node is used."""
-        nodes = RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test[0,1].local.host"))
+        nodes = RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test[0,1].local.host"))
 
         with self.assertRaises(TooManyHosts):
             EtcdctlController(remote_host=nodes)
@@ -74,7 +74,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -95,7 +95,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -116,7 +116,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -137,7 +137,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -158,7 +158,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -181,7 +181,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -204,7 +204,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -223,7 +223,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -242,7 +242,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -259,7 +259,7 @@ class TestGetHealth(TestCase):
             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -277,7 +277,7 @@ class TestGetClusterInfo(TestCase):
         expected_cert_file = "/etc/etcd/ssl/test0.local.host.pem"
         mock_run_sync = _get_mock_run_sync(return_value=b"")
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -293,7 +293,7 @@ class TestGetClusterInfo(TestCase):
         expected_ca_file = "/etc/etcd/ssl/ca.pem"
         mock_run_sync = _get_mock_run_sync(return_value=b"")
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -309,7 +309,7 @@ class TestGetClusterInfo(TestCase):
         expected_key_file = "/etc/etcd/ssl/test0.local.host.priv"
         mock_run_sync = _get_mock_run_sync(return_value=b"")
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -325,7 +325,7 @@ class TestGetClusterInfo(TestCase):
         expected_endpoints = "https://test0.local.host:2379"
         mock_run_sync = _get_mock_run_sync(return_value=b"")
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -352,7 +352,7 @@ class TestGetClusterInfo(TestCase):
                             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -390,7 +390,7 @@ class TestGetClusterInfo(TestCase):
                             """,  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -423,7 +423,7 @@ class TestGetClusterInfo(TestCase):
             """  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -441,7 +441,7 @@ class TestGetClusterInfo(TestCase):
             """  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with self.assertRaises(UnableToParseOutput):
@@ -464,7 +464,7 @@ class TestEnsureNodeExists(TestCase):
             """.encode()  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -496,7 +496,7 @@ class TestEnsureNodeExists(TestCase):
             ]
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -526,7 +526,7 @@ class TestEnsureNodeExists(TestCase):
             ]
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -552,7 +552,7 @@ class TestEnsureNodeExists(TestCase):
             ]
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -574,7 +574,7 @@ class TestEnsureNodeDoesNotExist(TestCase):
             """.encode()  # noqa: E501
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
@@ -600,7 +600,7 @@ class TestEnsureNodeDoesNotExist(TestCase):
             ]
         )
         controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=NodeSet("test0.local.host")),
+            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
 
         with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):

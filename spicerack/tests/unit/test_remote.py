@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 from ClusterShell.MsgTree import MsgTreeElem
-from cumin import Config, NodeSet
+from cumin import Config, nodeset
 from cumin.transports import Target, clustershell
 
 from spicerack import confctl, remote
@@ -20,7 +20,7 @@ def mock_cumin(mocked_transports, retcode, retvals=None):
     for retval in retvals:
         result = []
         for host, message in retval:
-            result.append((NodeSet(host), MsgTreeElem(message, parent=MsgTreeElem())))
+            result.append((nodeset(host), MsgTreeElem(message, parent=MsgTreeElem())))
 
         results.append(result)
 
@@ -45,7 +45,7 @@ class TestRemoteHostsAdapter:
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
         config = get_fixture_path("remote", "config.yaml")
-        self.hosts = NodeSet("host[1-9]")
+        self.hosts = nodeset("host[1-9]")
         self.remote_hosts = remote.RemoteHostsAdapter(remote.RemoteHosts(config, self.hosts, dry_run=False))
 
     def test_str(self):
@@ -64,7 +64,7 @@ class TestLBRemoteCluster:
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
         config = get_fixture_path("remote", "config.yaml")
-        self.hosts = NodeSet("host[1-10]")
+        self.hosts = nodeset("host[1-10]")
         # We want to mock out ConftoolEntity completely here. As far as we're concerned it's just an interface
         self.conftool = mock.MagicMock(spec=confctl.ConftoolEntity)
         self.remote_hosts = remote.RemoteHosts(config, self.hosts, dry_run=False)
@@ -109,7 +109,7 @@ class TestLBRemoteCluster:
     def test_run_depool(self, run_async):
         """Test a run with services to depool."""
         self.conftool.change_and_revert = mock.MagicMock()
-        run_async.return_value = [(NodeSet("host1"), None), (NodeSet("host2"), None)]
+        run_async.return_value = [(nodeset("host1"), None), (nodeset("host2"), None)]
         res = self.lbcluster.run(
             "test -d /tmp",
             svc_to_depool=["service1", "service2"],
@@ -119,10 +119,10 @@ class TestLBRemoteCluster:
         # Run has been sliced in two
         assert run_async.call_count == 2
         assert res == [
-            (NodeSet("host1"), None),
-            (NodeSet("host2"), None),
-            (NodeSet("host1"), None),
-            (NodeSet("host2"), None),
+            (nodeset("host1"), None),
+            (nodeset("host2"), None),
+            (nodeset("host1"), None),
+            (nodeset("host2"), None),
         ]
         # The depool is called on subsequent groups of servers.
         self.conftool.change_and_revert.assert_called_with(
@@ -138,7 +138,7 @@ class TestLBRemoteCluster:
         """Test a run with services to depool where a failure is caused."""
         # Case 1: run_async fails, no max_failed_batches
         run_async.side_effect = [
-            [(NodeSet("host1"), None)],
+            [(nodeset("host1"), None)],
             remote.RemoteExecutionError(message="foobar!", retcode=10),
             remote.RemoteExecutionError(message="barbaz!", retcode=10),
         ]
@@ -154,7 +154,7 @@ class TestLBRemoteCluster:
         assert run_async.call_count == 2
 
         run_async.side_effect = [
-            [(NodeSet("host1"), None)],
+            [(nodeset("host1"), None)],
             remote.RemoteExecutionError(message="foobar!", retcode=10),
             remote.RemoteExecutionError(message="barbaz!", retcode=10),
         ]
@@ -239,7 +239,7 @@ class TestRemote:
         remote_hosts = self.remote.query(query)
 
         assert isinstance(remote_hosts, remote.RemoteHosts)
-        assert remote_hosts.hosts == NodeSet(query)
+        assert remote_hosts.hosts == nodeset(query)
         assert str(remote_hosts) == "host[1-9]"
         assert len(remote_hosts) == 9
 
@@ -249,7 +249,7 @@ class TestRemote:
         remote_hosts = self.remote.query(query, use_sudo=True)
 
         assert isinstance(remote_hosts, remote.RemoteHosts)
-        assert remote_hosts.hosts == NodeSet(query)
+        assert remote_hosts.hosts == nodeset(query)
         assert str(remote_hosts) == "host[1-9]"
         assert len(remote_hosts) == 9
         assert remote_hosts._use_sudo  # pylint: disable=protected-access
@@ -289,15 +289,15 @@ class TestRemoteHosts:
         # pylint: disable=attribute-defined-outside-init
         self.config = Config(get_fixture_path("remote", "config.yaml"))
         self.mocked_transports = mocked_transports
-        self.hosts = NodeSet("host[1-9]")
+        self.hosts = nodeset("host[1-9]")
         self.remote_hosts = remote.RemoteHosts(self.config, self.hosts, dry_run=False)
         self.remote_hosts_dry_run = remote.RemoteHosts(self.config, self.hosts)
-        self.expected = [(NodeSet("host1"), "output1")]
+        self.expected = [(nodeset("host1"), "output1")]
 
     def test_init_no_hosts(self):
         """Should raise RemoteError if initialized without hosts."""
         with pytest.raises(remote.RemoteError, match="No hosts provided"):
-            remote.RemoteHosts(self.config, NodeSet(), dry_run=False)
+            remote.RemoteHosts(self.config, nodeset(), dry_run=False)
 
     @pytest.mark.parametrize("func_name", ("run_sync", "run_async"))
     def test_execute(self, func_name):
@@ -343,7 +343,7 @@ class TestRemoteHosts:
     @mock.patch("spicerack.remote.transports.Target")
     def test_reboot_single(self, mocked_target):
         """It should call the reboot script on the target host with default batch size and no sleep."""
-        hosts = NodeSet("host1")
+        hosts = nodeset("host1")
         remote_hosts = remote.RemoteHosts(self.config, hosts, dry_run=False)
         mock_cumin(self.mocked_transports, 0)
         remote_hosts.reboot()
@@ -394,7 +394,7 @@ class TestRemoteHosts:
     def test_wait_reboot_since_uptime_too_big(self, mocked_uptime, mocked_sleep):
         """It should raise RemoteCheckError if any host doesn't have a small-enough uptime."""
         since = datetime.utcnow()
-        mocked_uptime.return_value = [(NodeSet("host[1-9]"), 30.0)]
+        mocked_uptime.return_value = [(nodeset("host[1-9]"), 30.0)]
         with pytest.raises(
             remote.RemoteCheckError,
             match=r"Uptime for host\[1-9\] higher than threshold",
@@ -414,7 +414,7 @@ class TestRemoteHosts:
             retvals=[[(nodes_a, b"1514768400"), (nodes_b, b"1514768401")]],
         )
         uptimes = self.remote_hosts.uptime()
-        assert sorted(uptimes) == sorted([(NodeSet(nodes_a), 1514768400.0), (NodeSet(nodes_b), 1514768401.0)])
+        assert sorted(uptimes) == sorted([(nodeset(nodes_a), 1514768400.0), (nodeset(nodes_b), 1514768401.0)])
 
     def test_uptime_invalid(self):
         """It should raise RemoteError if unable to parse the output as uptime."""
@@ -468,7 +468,7 @@ class TestRemoteHosts:
         mocked_worker.execute.return_value = 0
         mocked_transport_new.return_value = mocked_worker
 
-        remote.RemoteHosts(self.config, NodeSet(nodes_a), dry_run=False, use_sudo=True).run_sync("command")
+        remote.RemoteHosts(self.config, nodeset(nodes_a), dry_run=False, use_sudo=True).run_sync("command")
 
         assert mocked_worker.commands == ["sudo -i command"]
 
@@ -482,7 +482,7 @@ class TestRemoteHosts:
         mocked_worker.execute.return_value = 0
         mocked_transport_new.return_value = mocked_worker
 
-        remote.RemoteHosts(self.config, NodeSet(nodes_a), dry_run=False, use_sudo=True).run_sync(
+        remote.RemoteHosts(self.config, nodeset(nodes_a), dry_run=False, use_sudo=True).run_sync(
             remote.Command("command")
         )
 
@@ -498,7 +498,7 @@ class TestRemoteHosts:
         mocked_worker.execute.return_value = 0
         mocked_transport_new.return_value = mocked_worker
 
-        remote.RemoteHosts(self.config, NodeSet(nodes_a), dry_run=False, use_sudo=True).run_sync(
+        remote.RemoteHosts(self.config, nodeset(nodes_a), dry_run=False, use_sudo=True).run_sync(
             remote.Command("command"), "command"
         )
 
