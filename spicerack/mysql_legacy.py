@@ -28,13 +28,10 @@ CORE_SECTIONS: Tuple[str, ...] = (
     "s7",
     "s8",
     "x1",
-    "x2",
     "es4",
     "es5",
 )
 """tuple: list of valid MySQL RW section names (external storage RO sections are not included here)."""
-ACTIVE_ACTIVE_SECTIONS: Tuple[str] = ("x2",)
-"""tuple: active/active sections that should not go read-only"""
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +191,7 @@ class MysqlLegacy:
 
         """
         logger.debug("Setting core DB masters in %s to be read-only", datacenter)
-        target = self.get_core_dbs(datacenter=datacenter, replication_role="master", excludes=ACTIVE_ACTIVE_SECTIONS)
+        target = self.get_core_dbs(datacenter=datacenter, replication_role="master")
         target.run_query("SET GLOBAL read_only=1")
         self.verify_core_masters_readonly(datacenter, True)
 
@@ -210,7 +207,7 @@ class MysqlLegacy:
 
         """
         logger.debug("Setting core DB masters in %s to be read-write", datacenter)
-        target = self.get_core_dbs(datacenter=datacenter, replication_role="master", excludes=ACTIVE_ACTIVE_SECTIONS)
+        target = self.get_core_dbs(datacenter=datacenter, replication_role="master")
         target.run_query("SET GLOBAL read_only=0")
         self.verify_core_masters_readonly(datacenter, False)
 
@@ -230,7 +227,7 @@ class MysqlLegacy:
             datacenter,
             is_read_only,
         )
-        target = self.get_core_dbs(datacenter=datacenter, replication_role="master", excludes=ACTIVE_ACTIVE_SECTIONS)
+        target = self.get_core_dbs(datacenter=datacenter, replication_role="master")
         expected = str(int(is_read_only))  # Convert it to the returned value from MySQL: 1 or 0.
         failed = False
 
