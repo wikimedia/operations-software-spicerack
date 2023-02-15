@@ -31,8 +31,7 @@ whitelist_dhcp.DHCPConfMgmt.lserial
 whitelist_dhcp.DHCPConfMgmt.ipv4
 
 whitelist_dnsdisc = Whitelist()
-whitelist_dnsdisc.pool
-whitelist_dnsdisc.depool
+whitelist_dnsdisc.Discovery._resolvers.nameservers
 
 whitelist_icinga = Whitelist()
 whitelist_icinga.CommandFile.__new__

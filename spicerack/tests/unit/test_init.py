@@ -42,9 +42,7 @@ from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
 from spicerack.toolforge.etcdctl import EtcdctlController
 
 
-@mock.patch("spicerack.remote.Remote.query", autospec=True)
-@mock.patch("wmflib.dns.resolver", autospec=True)
-def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
+def test_spicerack(monkeypatch):
     """An instance of Spicerack should allow to access all the library features."""
     monkeypatch.setenv("SUDO_USER", "user1")
     verbose = True
@@ -95,8 +93,6 @@ def test_spicerack(mocked_dns_resolver, mocked_remote_query, monkeypatch):
     service_catalog = spicerack.service_catalog()
     assert isinstance(service_catalog, Catalog)
     assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
-    assert mocked_remote_query.called
-    assert mocked_dns_resolver.Resolver.called
 
     with pytest.raises(AttributeError, match="AttributeError: 'Spicerack' object has no attribute 'nonexistent'"):
         # Test that non-existent accessors raise when there is no extender

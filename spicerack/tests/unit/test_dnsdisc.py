@@ -5,8 +5,10 @@ from unittest import mock
 
 import pytest
 from dns.exception import DNSException
+from wmflib.config import load_yaml_config
 
 from spicerack.dnsdisc import Discovery, DiscoveryCheckError, DiscoveryError
+from spicerack.tests import get_fixture_path
 
 MockedRecord = namedtuple("Record", ["address"])
 
@@ -50,36 +52,21 @@ class TestDiscovery:
         # pylint: disable=attribute-defined-outside-init
         self.records = ["record1", "record2"]
         self.conftool_records = "(" + "|".join(self.records) + ")"
-        self.nameservers = ["authdns1", "authdns2"]
 
         self.mocked_confctl = mock.MagicMock()
-        self.mocked_remote = mock.MagicMock()
-        self.mocked_remote.query.return_value.hosts = self.nameservers
-
+        self.authdns_servers = load_yaml_config(get_fixture_path("discovery", "authdns.yaml"))
         self.mocked_resolver = mocked_resolver
         self.mocked_resolver.Resolver.return_value.query = MockedQuery
 
-        self.discovery = Discovery(self.mocked_confctl, self.mocked_remote, self.records, dry_run=False)
-        self.discovery_single = Discovery(self.mocked_confctl, self.mocked_remote, self.records[0:1], dry_run=False)
-        self.discovery_dry_run = Discovery(self.mocked_confctl, self.mocked_remote, self.records)
-
-    def test_init(self):
-        """Creating a Discovery instance should initialize the resolvers based on a cumin query."""
-        self.mocked_remote.query.assert_has_calls([mock.call("A:dns-auth")] * 2)
-        self.mocked_resolver.Resolver.assert_called_with(configure=False)
-        assert self.mocked_resolver.Resolver.call_count == 6
-        self.mocked_resolver.query.assert_has_calls(
-            [mock.call(self.nameservers[0]), mock.call(self.nameservers[1])],
-            any_order=True,
+        self.discovery = Discovery(
+            conftool=self.mocked_confctl, authdns_servers=self.authdns_servers, records=self.records, dry_run=False
         )
-        assert self.mocked_resolver.query.call_count == 6
-
-    @mock.patch("spicerack.dnsdisc.resolver", autospec=True)
-    def test_init_ko(self, mocked_resolver):
-        """Creating a Discovery instance should raise DiscoveryError if unable to initialize the resolvers."""
-        mocked_resolver.query.side_effect = DNSException
-        with pytest.raises(DiscoveryError, match="Unable to resolve authdns1"):
-            Discovery(self.mocked_confctl, self.mocked_remote, self.records, dry_run=False)
+        self.discovery_single = Discovery(
+            conftool=self.mocked_confctl, authdns_servers=self.authdns_servers, records=self.records[0:1], dry_run=False
+        )
+        self.discovery_dry_run = Discovery(
+            conftool=self.mocked_confctl, authdns_servers=self.authdns_servers, records=self.records
+        )
 
     def test_resolve_address(self):
         """Calling resolve_address() sould raise DiscoveryError if unable to resolve the address."""
