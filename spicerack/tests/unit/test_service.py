@@ -24,9 +24,10 @@ class TestCatalog:
         """Initialize the tests."""
         # pylint: disable=attribute-defined-outside-init
         self.mocked_confctl = mock.MagicMock()
-        self.mocked_remote = mock.MagicMock()
+        self.authdns_servers = load_yaml_config(get_fixture_path("discovery", "authdns.yaml"))
+
         catalog = load_yaml_config(get_fixture_path("service", "service.yaml"))
-        self.catalog = service.Catalog(catalog, self.mocked_confctl, self.mocked_remote)
+        self.catalog = service.Catalog(catalog, confctl=self.mocked_confctl, authdns_servers=self.authdns_servers)
 
     def test_init(self):
         """It should instantiate a Catalog instance properly."""
@@ -61,10 +62,12 @@ class TestService:
         """Initialize the tests."""
         # pylint: disable=attribute-defined-outside-init
         self.mocked_confctl = mock.MagicMock()
-        self.mocked_remote = mock.MagicMock()
+        self.authdns_servers = load_yaml_config(get_fixture_path("discovery", "authdns.yaml"))
 
         catalog = load_yaml_config(get_fixture_path("service", "service.yaml"))
-        self.catalog = service.Catalog(catalog, self.mocked_confctl, self.mocked_remote, dry_run=False)
+        self.catalog = service.Catalog(
+            catalog, confctl=self.mocked_confctl, authdns_servers=self.authdns_servers, dry_run=False
+        )
 
         self.service1 = self.catalog.get("service1")
         self.service2 = self.catalog.get("service2")
@@ -228,13 +231,11 @@ class TestService:
         """It should depool the correct service from DNS Discovery from the given site."""
         self.service1.discovery.depool("codfw")
         self.mocked_confctl.set_and_verify.assert_called_once_with("pooled", False, dnsdisc="(service1)", name="codfw")
-        self.mocked_remote.query.assert_any_call("A:dns-auth")
 
     def test_discovery_pool(self):
         """It should pool the correct service from DNS Discovery from the given site."""
         self.service1.discovery.pool("codfw")
         self.mocked_confctl.set_and_verify.assert_called_once_with("pooled", True, dnsdisc="(service1)", name="codfw")
-        self.mocked_remote.query.assert_any_call("A:dns-auth")
 
     def test_discovery_pooled_ok(self):
         """It should depool, give control and repool the correct service from DNS Discovery from the given site."""

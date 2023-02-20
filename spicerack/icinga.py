@@ -4,8 +4,10 @@ import logging
 import re
 import shlex
 import time
+from collections import UserDict
 from contextlib import contextmanager
 from datetime import timedelta
+from enum import Enum
 from typing import Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, cast
 
 from cumin import NodeSet
@@ -20,6 +22,15 @@ from spicerack.typing import TypeHosts
 ICINGA_DOMAIN: str = "icinga.wikimedia.org"
 MIN_DOWNTIME_SECONDS: int = 60  # Minimum time in seconds the downtime can be set
 logger = logging.getLogger(__name__)
+
+
+class IcingaStatus(Enum):
+    """String class to represent an Icinga status."""
+
+    OK = 0
+    WARNING = 1
+    CRITICAL = 2
+    UNKNOWN = 3
 
 
 class CommandFile(str):
@@ -143,6 +154,50 @@ class HostsStatus(dict):
         """
         return [status.name for status in self.values() if status.state != HostStatus.STATE_UP]
 
+    @property
+    def acked_services(self) -> Dict[str, List[str]]:
+        """Return a list of services which have failed, but are acknowledged in Icinga.
+
+        Returns:
+            Dict[str, List[str]]: a dict with hostnames as keys and list of failing service name strings as values.
+
+        """
+        acked: Dict[str, List[str]] = {}
+        for status in self.values():
+            acked_services = [service["name"] for service in status.services if service.acked]
+
+            if acked_services:
+                acked[status.name] = acked_services
+        return acked
+
+
+class ServiceStatus(UserDict):
+    """Represent the current status of a service."""
+
+    @property
+    def failed(self) -> bool:
+        """Icinga has indicated that the service is in a critcal state.
+
+        Returns:
+            bool: True is service is in state 2 (critical), else False
+
+        """
+        current_state = IcingaStatus(self.get("status", {}).get("current_state", 0))
+        return current_state == IcingaStatus.CRITICAL
+
+    @property
+    def acked(self) -> bool:
+        """Failure has been acknowledged.
+
+        The services has failed,and an operator have acknowledged the error.
+
+        Returns:
+            bool: True is alert is acknowledged, else False.
+
+        """
+        is_acked = self.get("status", {}).get("problem_has_been_acknowledged", "0")
+        return is_acked == "1"
+
 
 class HostStatus:
     """Represent the status of all Icinga checks for a single host."""
@@ -181,9 +236,15 @@ class HostStatus:
         self.optimal = optimal
         self.downtimed = downtimed
         self.notifications_enabled = notifications_enabled
-        # TODO: could be improved creating a ServiceStatus class
-        self.services = services if services is not None else []
-        self.failed_services_raw = failed_services if failed_services is not None else []
+        self.services = []
+        if services:
+            for service in services:
+                self.services.append(ServiceStatus(service))
+
+        if failed_services:
+            for service in failed_services:
+                service_status = ServiceStatus(service)
+                self.services.append(service_status)
 
     @property
     def failed_services(self) -> List[str]:
@@ -193,7 +254,7 @@ class HostStatus:
             list: a list of strings with the check names.
 
         """
-        return [service["name"] for service in self.failed_services_raw]
+        return [service["name"] for service in self.services if service.failed]
 
 
 class IcingaHosts:
@@ -557,12 +618,16 @@ class IcingaHosts:
 
         return HostsStatus({hostname: HostStatus(**host_status) for hostname, host_status in status.items()})
 
-    def wait_for_optimal(self) -> None:
+    def wait_for_optimal(self, *, skip_acked: bool = False) -> None:
         """Waits for an icinga optimal status, else raises an exception.
 
         This function will first instruct icinga to recheck all failed services
         and then wait until all services are in an optimal status.  If an
         optimal status is not reached in 6 minutes then we raise IcingaError
+
+        Arguments:
+            skip_acked: Ignore any acknowledge alerts when determining if a device is in
+            optimal state.
 
         Raises:
             IcingaError: if the status is not optimal.
@@ -577,9 +642,27 @@ class IcingaHosts:
         )
         def check() -> None:
             status = self.get_status()
-            if not status.optimal:
-                failed = [f"{k}:{','.join(v)}" for k, v in status.failed_services.items()]
-                raise IcingaError("Not all services are recovered: " + " ".join(failed))
+
+            if status.optimal:
+                return
+
+            if skip_acked:
+                # Loop over each host and it's failed services.
+                # Find any services which has not been acknowledged,
+                # that is the "diff". If unacknowledge services are
+                # found, add them to the new failed dict.
+                failed: Dict[str, List[str]] = {}
+                acked = status.acked_services
+                for k, v in status.failed_services.items():
+                    diff = set(v) - set(acked[k])
+                    if diff:
+                        failed[k] = list(diff)
+            else:
+                failed = status.failed_services
+
+            if failed:
+                err_msg = [f"{k}:{','.join(v)}" for k, v in failed.items()]
+                raise IcingaError("Not all services are recovered: " + " ".join(err_msg))
 
         self.recheck_failed_services()
         check()

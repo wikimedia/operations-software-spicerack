@@ -1,6 +1,54 @@
 Spicerack Changelog
 -------------------
 
+`v6.2.0`_ (2023-02-20)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Internal API breaking changes
+"""""""""""""""""""""""""""""
+
+* spicerack: get authdns servers from config file (`T329773`_):
+
+  * The list of all authdns servers was retrieved via the cumin alias ``A:dns-auth``, which itself comes from Puppet
+    resources (query ``P{R:Class = profile::dns::auth}``).
+  * This leads to cookbooks using dnsdisc or service modules failing whenever and authdns is unavailable for
+    maintenance.
+  * The source of truth for active authdns servers is hiera, so refactor the modules to use a configuration file
+    populated by Puppet instead.
+  * Using the configuration file from Puppet also removes the need to query the IP of the DNS servers and allows to use
+    the Discovery class also withouth a fully working DNS.
+  * Use keywords only for most parameters of the touched classes.
+  * This change breaks the internal spicerack APIs while the cookbook-facing Spicerack class API has been left
+    untouched.
+
+New features
+""""""""""""
+
+* alertmanager: add parent ``Alertmanager`` class:
+
+  * In some use cases we need to silence alerts in alertmanager that are not attached to any host via the ``instance``
+    label.
+  * In order to do so abstract away a higher level ``Alertmanager`` class with the generic bits to interact with the
+    Alertmanager APIs and make the existing ``AlertmanagerHosts`` class a derived class of that one.
+  * Add a new Spicerack accessor ``alertmanager()`` to get an instance of a generic Alertmanager without relations to
+    hosts.
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: allow ``wait_for_optimal`` to ignore acknowledged alerts (`T319277`_).
+* redfish: allow for refreshing the manager info. Some of the iDRAC info such as firmware and BIOS version are more
+  dynamic and as such we gather them every time, however some other data such as the model is fairly static and can
+  benefit from being cached. As such update the interface so that we can refresh the specific data block for functions
+  that need to.
+* redfish: add upload/update methods to push firmware upgrades.
+
+Bug fixes
+"""""""""
+
+* mysql_legacy: remove ``x2`` handling logic as it's read-write in both datacenters, and actively written to.
+  Remove it from the module's logic completely to avoid confusion and desync with cumin's list of core-db.
+
 `v6.1.0`_ (2023-02-10)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2281,9 +2329,11 @@ New features
 .. _`T310745`: https://phabricator.wikimedia.org/T310745
 .. _`T311486`: https://phabricator.wikimedia.org/T311486
 .. _`T315537`: https://phabricator.wikimedia.org/T315537
+.. _`T319277`: https://phabricator.wikimedia.org/T319277
 .. _`T319401`: https://phabricator.wikimedia.org/T319401
 .. _`T320696`: https://phabricator.wikimedia.org/T320696
 .. _`T325168`: https://phabricator.wikimedia.org/T325168
+.. _`T329773`: https://phabricator.wikimedia.org/T329773
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2375,3 +2425,4 @@ New features
 .. _`v5.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v5.0.2
 .. _`v6.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.0.0
 .. _`v6.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.1.0
+.. _`v6.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.0

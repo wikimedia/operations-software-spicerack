@@ -11,8 +11,8 @@ from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import get_fixture_path
 from spicerack.tests.unit.test_remote import mock_cumin
 
-EQIAD_CORE_MASTERS_QUERY = "db10[01-12]"
-CODFW_CORE_MASTERS_QUERY = "db20[01-12]"
+EQIAD_CORE_MASTERS_QUERY = "db10[01-11]"
+CODFW_CORE_MASTERS_QUERY = "db20[01-11]"
 
 
 class TestMysqlLegacyRemoteHosts:
@@ -79,9 +79,9 @@ class TestMysqlLegacy:
                 EQIAD_CORE_MASTERS_QUERY,
             ),
             (
-                {"datacenter": "eqiad", "replication_role": "master", "excludes": ("x2",)},
-                "A:db-core and A:eqiad and not A:db-section-x2 and A:db-role-master",
-                "db10[01-11]",
+                {"datacenter": "eqiad", "replication_role": "master", "excludes": ("s2",)},
+                "A:db-core and A:eqiad and not A:db-section-s2 and A:db-role-master",
+                "db10[01-10]",
             ),
             (
                 {"section": "s1", "replication_role": "master"},
@@ -122,7 +122,7 @@ class TestMysqlLegacy:
     def test_get_core_dbs_fail_sanity_check(self):
         """It should raise MysqlLegacyError if matching an invalid number of hosts when looking for masters."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db1001"))
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Matched 1 masters, expected 12"):
+        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Matched 1 masters, expected 11"):
             self.mysql.get_core_dbs(datacenter="eqiad", replication_role="master")
 
         assert self.mocked_remote.query.called

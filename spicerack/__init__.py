@@ -18,7 +18,7 @@ from wmflib.prometheus import Prometheus, Thanos
 from spicerack._log import irc_logger
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
-from spicerack.alertmanager import AlertmanagerHosts
+from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
@@ -122,6 +122,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._service_catalog: Optional[Catalog] = None
         self._management_password: str = ""
         self._actions = ActionsDict()
+        self._authdns_servers: Dict[str, str] = {}
 
         self._extender = None
         if extender_class is not None:  # If present, instantiate it with the current instance as parameter
@@ -263,6 +264,20 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         return self._management_password
 
+    @property
+    def authdns_servers(self) -> Dict[str, str]:
+        """Getter for the authoritative DNS nameservers currently active in production.
+
+        Returns:
+            dict: a dictionary where keys are the hostnames and values are the IPs of the active authoritative
+            nameservers.
+
+        """
+        if not self._authdns_servers:
+            self._authdns_servers = load_yaml_config(self._spicerack_config_dir / "discovery" / "authdns.yaml")
+
+        return self._authdns_servers
+
     def run_cookbook(self, cookbook: str, args: Sequence[str] = ()) -> int:
         """Run another Cookbook within the current run.
 
@@ -358,9 +373,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         """
         return Discovery(
-            self.confctl("discovery"),
-            self.remote(),
-            list(records),
+            conftool=self.confctl("discovery"),
+            authdns_servers=self.authdns_servers,
+            records=list(records),
             dry_run=self._dry_run,
         )
 
@@ -491,6 +506,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
     def icinga_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> IcingaHosts:
         """Get an IcingaHosts instance.
+
+        Note:
+            To interact with both Icinga and Alertmanager alerts, use
+            :py:meth:`spicerack.Spicerack.alerting_hosts` instead.
 
         Arguments:
             target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
@@ -720,6 +739,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
     def alertmanager_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertmanagerHosts:
         """Get an AlertmanagerHosts instance.
 
+        Note:
+            To interact with both Icinga and Alertmanager alerts, use
+            :py:meth:`spicerack.Spicerack.alerting_hosts` instead.
+
         Arguments:
             target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
                 of strings.
@@ -728,10 +751,23 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
                 be used in Icinga.
 
         Returns:
-            spicerack.alertmanager.AlertmanagerHosts: AlertmanagerHosts instance.
+            spicerack.alertmanager.AlertmanagerHosts: the AlertmanagerHosts instance.
 
         """
         return AlertmanagerHosts(target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run)
+
+    def alertmanager(self) -> Alertmanager:
+        """Get an Alertmanager instance.
+
+        Note:
+            To interact with Alertmanager alerts attached to an ``instance`` use
+            :py:meth:`spicerack.Spicerack.alertmanager_hosts` instead.
+
+        Returns:
+            spicerack.alertmanager.Alertmanager: the Alertmanager instance.
+
+        """
+        return Alertmanager(dry_run=self._dry_run)
 
     def alerting_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertingHosts:
         """Get an AlertingHosts instance.
@@ -761,7 +797,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         if self._service_catalog is None:
             config = load_yaml_config(self._spicerack_config_dir / "service" / "service.yaml")
-            self._service_catalog = Catalog(config, self.confctl("discovery"), self.remote(), dry_run=self._dry_run)
+            self._service_catalog = Catalog(
+                config, confctl=self.confctl("discovery"), authdns_servers=self.authdns_servers, dry_run=self._dry_run
+            )
 
         return self._service_catalog
 

@@ -13,7 +13,6 @@ from spicerack.alertmanager import AlertmanagerHosts, MatchersType
 from spicerack.confctl import ConftoolEntity
 from spicerack.dnsdisc import Discovery
 from spicerack.exceptions import SpicerackError
-from spicerack.remote import Remote
 
 logger = logging.getLogger(__name__)
 
@@ -471,19 +470,22 @@ class Catalog:
 
     """
 
-    def __init__(self, catalog: Dict, confctl: ConftoolEntity, remote: Remote, dry_run: bool = True):
+    def __init__(
+        self, catalog: Dict, *, confctl: ConftoolEntity, authdns_servers: Dict[str, str], dry_run: bool = True
+    ):
         """Initialize the instance.
 
         Args:
             catalog (dict): the content of Puppet's ``hieradata/common/service.yaml``.
             confctl (spicerack.confctl.ConftoolEntity): the instance to interact with confctl.
-            remote (spicerack.remote.Remote): the instance to execute remote commands.
+            authdns_servers (dict): a dictionary where keys are the hostnames and values are the IPs of the
+                authoritative nameservers to be used.
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
         self._catalog = catalog
         self._confctl = confctl
-        self._remote = remote
+        self._authdns_servers = authdns_servers
         self._dry_run = dry_run
 
     def __iter__(self) -> Iterator[Service]:
@@ -544,7 +546,12 @@ class Catalog:
         if "discovery" in params:
             discovery = []
             for disc in params["discovery"]:
-                instance = Discovery(self._confctl, self._remote, [disc["dnsdisc"]], dry_run=self._dry_run)
+                instance = Discovery(
+                    conftool=self._confctl,
+                    authdns_servers=self._authdns_servers,
+                    records=[disc["dnsdisc"]],
+                    dry_run=self._dry_run,
+                )
                 discovery.append(ServiceDiscoveryRecord(instance=instance, **disc))
             params["discovery"] = ServiceDiscovery(discovery)
 

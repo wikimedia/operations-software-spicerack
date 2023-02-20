@@ -9,7 +9,6 @@ from dns.exception import DNSException
 from spicerack.confctl import ConftoolEntity
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
-from spicerack.remote import Remote
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +26,9 @@ class Discovery:
 
     def __init__(
         self,
+        *,
         conftool: ConftoolEntity,
-        remote: Remote,
+        authdns_servers: Dict[str, str],
         records: List[str],
         dry_run: bool = True,
     ) -> None:
@@ -36,7 +36,8 @@ class Discovery:
 
         Arguments:
             conftool (spicerack.confctl.ConftoolEntity): the conftool instance for the discovery type objects.
-            remote (spicerack.remote.Remote): the Remote instance.
+            authdns_servers (dict): a dictionary where keys are the hostnames and values are the IPs of the
+                authoritative nameservers to be used.
             records (list): list of strings, each one must be a Discovery DNS record name.
             dry_run (bool, optional): whether this is a DRY-RUN.
 
@@ -45,18 +46,14 @@ class Discovery:
 
         """
         self._conftool = conftool
-        self._remote = remote
         self._records = records
         self._dry_run = dry_run
 
         self._resolvers: Dict[str, resolver.Resolver] = {}
-        for nameserver in self._remote.query("A:dns-auth").hosts:
+        for nameserver, nameserver_ip in authdns_servers.items():
             self._resolvers[nameserver] = resolver.Resolver(configure=False)
             self._resolvers[nameserver].port = 5353
-            try:
-                self._resolvers[nameserver].nameservers = [rdata.address for rdata in resolver.query(nameserver)]
-            except DNSException as e:
-                raise DiscoveryError(f"Unable to resolve {nameserver}") from e
+            self._resolvers[nameserver].nameservers = [nameserver_ip]
 
     @property
     def _conftool_selector(self) -> str:
