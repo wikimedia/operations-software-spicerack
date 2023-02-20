@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v6.2.1`_ (2023-02-20)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* tests: revert removal of mocked DNS resolver that prevented the tests to run without network access.
+
 `v6.2.0`_ (2023-02-20)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2426,3 +2434,4 @@ New features
 .. _`v6.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.0.0
 .. _`v6.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.1.0
 .. _`v6.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.0
+.. _`v6.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.1
