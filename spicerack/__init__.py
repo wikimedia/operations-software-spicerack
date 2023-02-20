@@ -18,7 +18,7 @@ from wmflib.prometheus import Prometheus, Thanos
 from spicerack._log import irc_logger
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
-from spicerack.alertmanager import AlertmanagerHosts
+from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
@@ -507,6 +507,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
     def icinga_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> IcingaHosts:
         """Get an IcingaHosts instance.
 
+        Note:
+            To interact with both Icinga and Alertmanager alerts, use
+            :py:meth:`spicerack.Spicerack.alerting_hosts` instead.
+
         Arguments:
             target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
                 of strings.
@@ -735,6 +739,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
     def alertmanager_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertmanagerHosts:
         """Get an AlertmanagerHosts instance.
 
+        Note:
+            To interact with both Icinga and Alertmanager alerts, use
+            :py:meth:`spicerack.Spicerack.alerting_hosts` instead.
+
         Arguments:
             target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
                 of strings.
@@ -743,10 +751,23 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
                 be used in Icinga.
 
         Returns:
-            spicerack.alertmanager.AlertmanagerHosts: AlertmanagerHosts instance.
+            spicerack.alertmanager.AlertmanagerHosts: the AlertmanagerHosts instance.
 
         """
         return AlertmanagerHosts(target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run)
+
+    def alertmanager(self) -> Alertmanager:
+        """Get an Alertmanager instance.
+
+        Note:
+            To interact with Alertmanager alerts attached to an ``instance`` use
+            :py:meth:`spicerack.Spicerack.alertmanager_hosts` instead.
+
+        Returns:
+            spicerack.alertmanager.Alertmanager: the Alertmanager instance.
+
+        """
+        return Alertmanager(dry_run=self._dry_run)
 
     def alerting_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertingHosts:
         """Get an AlertingHosts instance.

@@ -18,6 +18,126 @@ class TestAlertmanager:
     def setup_method(self, requests_mock):
         """Initialize the test instance."""
         # pylint: disable=attribute-defined-outside-init
+        self.matchers = [
+            {"name": "site", "value": "dc1", "isRegex": False},
+            {"name": "label1", "value": "value1", "isRegex": False},
+        ]
+        self.alertmanager = alertmanager.Alertmanager(dry_run=False)
+        self.am_dry_run = alertmanager.Alertmanager(dry_run=True)
+        self.requests_mock = requests_mock
+        self.reason = Reason("test", "user", "host")
+
+    def test_add_silence_basic(self):
+        """It should issue a silence with all the matchers."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        response = self.alertmanager.downtime(self.reason, matchers=self.matchers)
+        assert response == "foobar"
+        assert self.requests_mock.last_request.hostname == "alertmanager-eqiad.wikimedia.org"
+        request_json = self.requests_mock.last_request.json()
+        assert request_json["matchers"] == self.matchers
+        assert request_json["comment"] == "test - user@host"
+        assert request_json["createdBy"] == "user@host"
+
+    def test_add_silence_no_matchers(self):
+        """It should raise an AlertmanagerError if there are no matchers specified."""
+        with pytest.raises(alertmanager.AlertmanagerError, match="No matchers provided"):
+            self.alertmanager.downtime(self.reason, matchers=[])
+
+    def test_add_silence_duration(self):
+        """It should issue a silence with a given duration."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        with mock.patch("spicerack.alertmanager.datetime") as dt_mock:
+            dt_mock.utcnow.return_value = datetime(2022, 6, 6, 10, 00, 00, tzinfo=timezone.utc)
+            self.alertmanager.downtime(self.reason, matchers=self.matchers, duration=timedelta(hours=6))
+        request_json = self.requests_mock.last_request.json()
+        assert request_json["startsAt"] == "2022-06-06T10:00:00+00:00"
+        assert request_json["endsAt"] == "2022-06-06T16:00:00+00:00"
+
+    def test_add_silence_dry_run(self):
+        """It should not create a silence because in dry-run mode."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        response = self.am_dry_run.downtime(self.reason, matchers=self.matchers)
+        assert response == ""
+        assert self.requests_mock.call_count == 0
+
+    def test_delete_silence_dry_run(self):
+        """It should delete a downtime."""
+        self.requests_mock.delete("/api/v2/silence/foobar")
+        self.am_dry_run.remove_downtime("nonexistent")
+        assert self.requests_mock.call_count == 0
+
+    def test_delete_silence_basic(self):
+        """It should delete a downtime."""
+        self.requests_mock.delete("/api/v2/silence/foobar")
+        self.alertmanager.remove_downtime("foobar")
+        assert self.requests_mock.call_count == 1
+
+    def test_delete_silence_already_deleted(self, caplog):
+        """It should not error if the downtime has been already deleted or is expired."""
+        self.requests_mock.delete("/api/v2/silence/foobar", status_code=500, json="silence foobar already expired")
+        with caplog.at_level(logging.WARNING):
+            self.alertmanager.remove_downtime("foobar")
+
+        assert "Silence ID foobar has been already deleted or is expired" in caplog.text
+        assert self.requests_mock.call_count == 2
+
+    def test_delete_silence_error(self, caplog):
+        """It should raise an AlertmanagerError on any other error."""
+        self.requests_mock.delete("/api/v2/silence/foobar", status_code=500, json="silence not found")
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(alertmanager.AlertmanagerError, match="Unable to DELETE to any Alertmanager"):
+                self.alertmanager.remove_downtime("foobar")
+
+        assert "already deleted" not in caplog.text
+        assert self.requests_mock.call_count == 2
+
+    def test_downtimed(self):
+        """It should issue a silence and then delete it."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        self.requests_mock.delete("/api/v2/silence/foobar")
+        with self.alertmanager.downtimed(self.reason, matchers=self.matchers):
+            assert self.requests_mock.call_count == 1
+        assert self.requests_mock.call_count == 2
+
+    @pytest.mark.parametrize(
+        "remove_on_error, total_call_count",
+        (
+            (True, 2),
+            (False, 1),
+        ),
+    )
+    def test_downtimed_remove_on_error(self, remove_on_error, total_call_count):
+        """It should issue a silence and then delete it even with errors."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        self.requests_mock.delete("/api/v2/silence/foobar")
+        with pytest.raises(ValueError):
+            with self.alertmanager.downtimed(self.reason, matchers=self.matchers, remove_on_error=remove_on_error):
+                assert self.requests_mock.call_count == 1
+                raise ValueError()
+        assert self.requests_mock.call_count == total_call_count
+
+    def test_connection_errors(self):
+        """It should raise AlertmanagerError when unable to contact the API."""
+        self.requests_mock.post("/api/v2/silences", exc=requests.exceptions.ConnectionError)
+        with pytest.raises(alertmanager.AlertmanagerError):
+            self.alertmanager.downtime(self.reason, matchers=self.matchers)
+
+    def test_fallback_on_error(self):
+        """It should fallback to the next Alertmanager on error."""
+        ams = alertmanager.ALERTMANAGER_URLS
+        self.requests_mock.post(f"{ams[0]}/api/v2/silences", exc=requests.exceptions.ConnectionError)
+        self.requests_mock.post(f"{ams[1]}/api/v2/silences", json={"silenceID": "foobar"})
+        assert "foobar" == self.alertmanager.downtime(self.reason, matchers=self.matchers)
+        assert self.requests_mock.last_request.hostname == "alertmanager-codfw.wikimedia.org"
+
+
+class TestAlertmanagerHosts:
+    """Tests for the AlertmanagerHosts class."""
+
+    @pytest.fixture(autouse=True)
+    def setup_method(self, requests_mock):
+        """Initialize the test instance."""
+        # pylint: disable=attribute-defined-outside-init
         self.am_hosts = alertmanager.AlertmanagerHosts(["host1", "host2"], dry_run=False)
         self.am_hosts_dry_run = alertmanager.AlertmanagerHosts(["host1", "host2"], dry_run=True)
         self.requests_mock = requests_mock
@@ -87,37 +207,6 @@ class TestAlertmanager:
         assert response == ""
         assert self.requests_mock.call_count == 0
 
-    def test_delete_silence_dry_run(self):
-        """It should delete a downtime."""
-        self.requests_mock.delete("/api/v2/silence/foobar")
-        self.am_hosts_dry_run.remove_downtime("nonexistent")
-        assert self.requests_mock.call_count == 0
-
-    def test_delete_silence_basic(self):
-        """It should delete a downtime."""
-        self.requests_mock.delete("/api/v2/silence/foobar")
-        self.am_hosts.remove_downtime("foobar")
-        assert self.requests_mock.call_count == 1
-
-    def test_delete_silence_already_deleted(self, caplog):
-        """It should not error if the downtime has been already deleted or is expired."""
-        self.requests_mock.delete("/api/v2/silence/foobar", status_code=500, json="silence foobar already expired")
-        with caplog.at_level(logging.WARNING):
-            self.am_hosts.remove_downtime("foobar")
-
-        assert "Silence ID foobar has been already deleted or is expired" in caplog.text
-        assert self.requests_mock.call_count == 2
-
-    def test_delete_silence_error(self, caplog):
-        """It should raise an AlertmanagerError on any other error."""
-        self.requests_mock.delete("/api/v2/silence/foobar", status_code=500, json="silence not found")
-        with caplog.at_level(logging.WARNING):
-            with pytest.raises(alertmanager.AlertmanagerError, match="Unable to DELETE to any Alertmanager"):
-                self.am_hosts.remove_downtime("foobar")
-
-        assert "already deleted" not in caplog.text
-        assert self.requests_mock.call_count == 2
-
     def test_verbatim_hosts(self):
         """It should issue silences for verbatim hosts."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
@@ -169,16 +258,3 @@ class TestAlertmanager:
                 assert self.requests_mock.call_count == 1
                 raise ValueError()
         assert self.requests_mock.call_count == total_call_count
-
-    def test_connection_errors(self):
-        """It should raise AlertmanagerError when unable to contact the API."""
-        self.requests_mock.post("/api/v2/silences", exc=requests.exceptions.ConnectionError)
-        with pytest.raises(alertmanager.AlertmanagerError):
-            self.am_hosts.downtime(self.reason)
-
-    def test_fallback_on_error(self):
-        """It should fallback to the next Alertmanager on error."""
-        ams = alertmanager.ALERTMANAGER_URLS
-        self.requests_mock.post(f"{ams[0]}/api/v2/silences", exc=requests.exceptions.ConnectionError)
-        self.requests_mock.post(f"{ams[1]}/api/v2/silences", json={"silenceID": "foobar"})
-        assert "foobar" == self.am_hosts.downtime(self.reason)

@@ -15,7 +15,7 @@ from wmflib.prometheus import Prometheus, Thanos
 from spicerack import Spicerack
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
-from spicerack.alertmanager import AlertmanagerHosts
+from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
 from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
@@ -90,6 +90,7 @@ def test_spicerack(monkeypatch):
     )
     assert isinstance(spicerack.kafka(), Kafka)
     assert isinstance(spicerack.alertmanager_hosts(["host1", "host2"]), AlertmanagerHosts)
+    assert isinstance(spicerack.alertmanager(), Alertmanager)
     service_catalog = spicerack.service_catalog()
     assert isinstance(service_catalog, Catalog)
     assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
