@@ -19,6 +19,7 @@ from spicerack._log import irc_logger
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
+from spicerack.apt import AptGetHosts
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
@@ -821,6 +822,24 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             cachedir = Path(cachedir)
 
         return PeeringDB(cachedir=cachedir, ttl=ttl, proxies=self.requests_proxies, token=token)
+
+    def apt_get(self, remote_hosts: RemoteHosts) -> AptGetHosts:
+        """Get an APTGet instance for the given remote hosts.
+
+        Examples:
+            ::
+
+                >>> hosts = spicerack.remote().query('A:myalias')
+                >>> apt_get = spicerack.apt_get(hosts)
+
+        Arguments:
+            remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
+
+        Returns:
+            spicerack.apt.AptGetHosts: the instance to manage apt-get on the target hosts.
+
+        """
+        return AptGetHosts(remote_hosts)
 
 
 class SpicerackExtenderBase:

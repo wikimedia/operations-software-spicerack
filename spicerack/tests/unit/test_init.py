@@ -16,6 +16,7 @@ from spicerack import Spicerack
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
+from spicerack.apt import AptGetHosts
 from spicerack.confctl import ConftoolEntity
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
@@ -95,6 +96,8 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     service_catalog = spicerack.service_catalog()
     assert isinstance(service_catalog, Catalog)
     assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
+    assert isinstance(spicerack.apt_get(mock.MagicMock(spec_set=RemoteHosts)), AptGetHosts)
+
     assert mocked_dns_resolver.Resolver.called
 
     with pytest.raises(AttributeError, match="AttributeError: 'Spicerack' object has no attribute 'nonexistent'"):
