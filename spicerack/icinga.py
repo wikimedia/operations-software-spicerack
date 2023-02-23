@@ -164,10 +164,8 @@ class HostsStatus(dict):
         """
         acked: Dict[str, List[str]] = {}
         for status in self.values():
-            acked_services = [service["name"] for service in status.services if service.acked]
+            acked[status.name] = [service["name"] for service in status.services if service.acked]
 
-            if acked_services:
-                acked[status.name] = acked_services
         return acked
 
 
@@ -497,17 +495,29 @@ class IcingaHosts:
     def recheck_all_services(self) -> None:
         """Force recheck of all services associated with a set of hosts."""
         self.run_icinga_command("SCHEDULE_FORCED_HOST_SVC_CHECKS", str(int(time.time())))
+        self.run_icinga_command("SCHEDULE_FORCED_HOST_CHECK", str(int(time.time())))
 
     def recheck_failed_services(self) -> None:
         """Force recheck of all failed associated with a set of hosts."""
         status = self.get_status()
+
         if status.optimal:
             return
+
+        self.run_icinga_command("SCHEDULE_FORCED_HOST_CHECK", str(int(time.time())))
+
         commands = [
             self._get_command_string("SCHEDULE_FORCED_SVC_CHECK", hostname, service_name, str(int(time.time())))
             for hostname, failed in status.failed_services.items()
             for service_name in failed
         ]
+
+        if not commands:
+            logger.debug(
+                "Status not optimal, with no failed service, for hosts: %s, status: %s", self._target_hosts, status
+            )
+            return
+
         self._icinga_host.run_sync(*commands, print_output=False, print_progress_bars=False)
 
     def remove_downtime(self) -> None:

@@ -432,12 +432,24 @@ class TestIcingaHosts:
     def test_recheck_all_services(self, mocked_time):
         """It should force a recheck of all services for the hosts on the Icinga server."""
         self.icinga_hosts.recheck_all_services()
-        self.mocked_icinga_host.run_sync.assert_called_once_with(
-            'bash -c \'echo -n "[1514764800] SCHEDULE_FORCED_HOST_SVC_CHECKS;host1;1514764800" > '
-            "/var/lib/icinga/rw/icinga.cmd '",
-            print_output=False,
-            print_progress_bars=False,
+
+        self.mocked_icinga_host.run_sync.assert_has_calls(
+            [
+                mock.call(
+                    'bash -c \'echo -n "[1514764800] SCHEDULE_FORCED_HOST_SVC_CHECKS;host1;1514764800" > '
+                    "/var/lib/icinga/rw/icinga.cmd '",
+                    print_output=False,
+                    print_progress_bars=False,
+                ),
+                mock.call(
+                    'bash -c \'echo -n "[1514764800] SCHEDULE_FORCED_HOST_CHECK;host1;1514764800" > '
+                    "/var/lib/icinga/rw/icinga.cmd '",
+                    print_output=False,
+                    print_progress_bars=False,
+                ),
+            ]
         )
+
         assert mocked_time.called
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
@@ -471,7 +483,7 @@ class TestIcingaHosts:
             set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
 
         status = self.icinga_hosts.get_status()
-        assert len(status.acked_services) == 1
+        assert len(status.acked_services["host2"]) == 1
 
         with pytest.raises(icinga.IcingaError, match=match):
             self.icinga_hosts.wait_for_optimal(skip_acked=skip_acked)
@@ -492,10 +504,25 @@ class TestIcingaHosts:
             set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
 
         status = self.icinga_hosts.get_status()
-        assert len(status.acked_services) == 1
+        assert len(status.acked_services["host1"]) == 0
+        assert len(status.acked_services["host2"]) == 1
 
         with pytest.raises(icinga.IcingaError, match=match):
             self.icinga_hosts.wait_for_optimal(skip_acked=skip_acked)
+
+        assert mocked_time.called
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    def test_check_failed_host_empty_services(self, mocked_time):
+        """Test that situations where a subset of alerts are ack'ed and alerts are both critical and warning."""
+        with open(get_fixture_path("icinga", "status_with_empty_failed_services.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
+
+        status = self.icinga_hosts.get_status()
+        assert sum(len(value.services) for value in status.values()) == 0
+
+        with pytest.raises(icinga.IcingaError, match="Not all services are recovered: host1:"):
+            self.icinga_hosts.wait_for_optimal(skip_acked=False)
 
         assert mocked_time.called
 
