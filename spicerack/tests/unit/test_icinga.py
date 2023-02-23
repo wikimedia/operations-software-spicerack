@@ -479,6 +479,27 @@ class TestIcingaHosts:
         assert mocked_time.called
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    @pytest.mark.parametrize(
+        "skip_acked,match",
+        [
+            (False, "Not all services are recovered: host2:check_name1,check_name2"),
+            (True, "Not all services are recovered"),
+        ],
+    )
+    def test_check_warning_services_partly_acknowledged(self, mocked_time, skip_acked, match):
+        """Test that situations where a subset of alerts are ack'ed and alerts are both critical and warning."""
+        with open(get_fixture_path("icinga", "status_with_acknowledged_warnings.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
+
+        status = self.icinga_hosts.get_status()
+        assert len(status.acked_services) == 1
+
+        with pytest.raises(icinga.IcingaError, match=match):
+            self.icinga_hosts.wait_for_optimal(skip_acked=skip_acked)
+
+        assert mocked_time.called
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_failed_services_all_acknowledged(self, mocked_time):
         """Skip acked, and all alerts acknowledged."""
         with open(get_fixture_path("icinga", "status_with_all_acknowledged_failures.json")) as f:

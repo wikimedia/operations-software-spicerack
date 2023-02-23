@@ -37,6 +37,7 @@ whitelist_icinga = Whitelist()
 whitelist_icinga.CommandFile.__new__
 whitelist_icinga.IcingaStatus.OK
 whitelist_icinga.IcingaStatus.WARNING
+whitelist_icinga.IcingaStatus.CRITICAL
 whitelist_icinga.IcingaStatus.UNKNOWN
 
 whitelist_mysql = Whitelist()

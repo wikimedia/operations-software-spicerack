@@ -179,11 +179,11 @@ class ServiceStatus(UserDict):
         """Icinga has indicated that the service is in a critcal state.
 
         Returns:
-            bool: True is service is in state 2 (critical), else False
+            bool: True is service is not in state 0 (OK), else False
 
         """
-        current_state = IcingaStatus(self.get("status", {}).get("current_state", 0))
-        return current_state == IcingaStatus.CRITICAL
+        current_state = IcingaStatus(self.get("status", {}).get("current_state", 3))
+        return current_state != IcingaStatus.OK
 
     @property
     def acked(self) -> bool:
