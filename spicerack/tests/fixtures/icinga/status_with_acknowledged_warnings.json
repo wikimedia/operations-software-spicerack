@@ -1,0 +1,35 @@
+{
+    "host1": {
+        "failed_services": [],
+        "name": "host1",
+        "optimal": true,
+        "state": "UP",
+        "downtimed": false,
+        "notifications_enabled": true
+    },
+    "host2": {
+        "failed_services": [
+            {
+                "host": "host2",
+                "name": "check_name1",
+                "status": {
+                    "current_state": 2,
+                    "problem_has_been_acknowledged": "0"
+                }
+            },
+            {
+                "host": "host2",
+                "name": "check_name2",
+                "status": {
+                    "current_state": 1,
+                    "problem_has_been_acknowledged": "1"
+                }
+            }
+        ],
+        "name": "host2",
+        "optimal": false,
+        "state": "UP",
+        "downtimed": false,
+        "notifications_enabled": true
+    }
+}

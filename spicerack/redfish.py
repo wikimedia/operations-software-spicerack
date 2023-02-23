@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import urllib3
+from packaging import version
 from requests import Response
 from requests.exceptions import RequestException
 from wmflib.requests import http_session
@@ -206,16 +207,16 @@ class Redfish:
         return self.oob_info["Model"]
 
     @property
-    def firmware_version(self) -> str:
-        """Property to return a string representing the firmware version."""
+    def firmware_version(self) -> version.Version:
+        """Property to return a version instance representing the firmware version."""
         self._update_oob_info()
-        return self.oob_info["FirmwareVersion"]
+        return version.parse(self.oob_info["FirmwareVersion"])
 
     @property
-    def bios_version(self) -> str:
-        """Property to return a string representing the Bios version."""
+    def bios_version(self) -> version.Version:
+        """Property to return a instance representing the Bios version."""
         self._update_system_info()
-        return self.system_info["BiosVersion"]
+        return version.parse(self.system_info["BiosVersion"])
 
     @property
     def model(self) -> str:

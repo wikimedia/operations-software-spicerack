@@ -9,6 +9,7 @@ from unittest import mock
 
 import pytest
 import requests
+from packaging import version
 
 from spicerack import redfish
 
@@ -420,7 +421,7 @@ class TestRedfish:
     def test_property_bios(self):
         """It should return the firmware."""
         self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
-        assert self.redfish.bios_version == "2.15.1"
+        assert self.redfish.bios_version == version.parse("2.15.1")
 
     def test_property_model(self):
         """It should return the firmware."""
@@ -435,9 +436,9 @@ class TestRedfish:
     def test_property_firmware(self):
         """It should return the firmware."""
         self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
-        assert self.redfish.firmware_version == "6.00.30.00"
+        assert self.redfish.firmware_version == version.parse("6.00.30.00")
         # assert twice to check cached version
-        assert self.redfish.firmware_version == "6.00.30.00"
+        assert self.redfish.firmware_version == version.parse("6.00.30.00")
 
     def test_property_oob_model(self):
         """It should return the model."""

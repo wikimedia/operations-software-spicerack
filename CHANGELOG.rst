@@ -1,6 +1,15 @@
 Spicerack Changelog
 -------------------
 
+`v6.2.2`_ (2023-02-23)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* icinga: fix condition that determines if a service status is failed or not (`T330318`_).
+* redfish: ensure versions are parsed as ``packging.version.Version`` instances.
+
 `v6.2.1`_ (2023-02-20)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2342,6 +2351,7 @@ New features
 .. _`T320696`: https://phabricator.wikimedia.org/T320696
 .. _`T325168`: https://phabricator.wikimedia.org/T325168
 .. _`T329773`: https://phabricator.wikimedia.org/T329773
+.. _`T330318`: https://phabricator.wikimedia.org/T330318
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2435,3 +2445,4 @@ New features
 .. _`v6.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.1.0
 .. _`v6.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.0
 .. _`v6.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.1
+.. _`v6.2.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.2

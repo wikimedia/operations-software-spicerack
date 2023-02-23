@@ -15,6 +15,7 @@ INSTALL_REQUIRES = [
     "gitpython>=3.1.14",
     "kafka-python>=1.4.3",
     "kubernetes==12.0.*",  # frozen to the version available on debian bullseye
+    "packaging",
     "pymysql>=0.9.3",
     "pynetbox~=6.6",
     "redis>=3.2.1,<=4.1.3",
