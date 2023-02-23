@@ -1,3 +1,10 @@
+spicerack (6.2.2-1) unstable; urgency=medium
+
+  * v6.2.2 upstream release.
+  * Add python3-packaging as dependency.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Thu, 23 Feb 2023 14:22:55 -0000
+
 spicerack (6.2.1-1) unstable; urgency=medium
 
   * v6.2.1 upstream release.
