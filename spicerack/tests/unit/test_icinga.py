@@ -504,7 +504,7 @@ class TestIcingaHosts:
             set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
 
         status = self.icinga_hosts.get_status()
-        assert len(status.acked_services["host1"]) == 0
+        assert "host1" not in status.acked_services
         assert len(status.acked_services["host2"]) == 1
 
         with pytest.raises(icinga.IcingaError, match=match):
@@ -658,13 +658,18 @@ class TestIcingaHosts:
         assert not mocked_sleep.called
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_wait_for_optimal_timeout(self, mocked_sleep):
-        """It should raise icinga.IcingaError if host is optimal in the required time."""
+    @pytest.mark.parametrize("skip_acked", (True, False, None))
+    def test_wait_for_optimal_timeout(self, mocked_sleep, skip_acked):
+        """It should raise icinga.IcingaError if the host is not optimal within the required time."""
         with open(get_fixture_path("icinga", "status_with_failed_services.json")) as f:
             set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 20)
 
+        kwargs = {}
+        if skip_acked is not None:
+            kwargs["skip_acked"] = skip_acked
+
         with pytest.raises(icinga.IcingaError, match="Not all services are recovered"):
-            self.icinga_hosts.wait_for_optimal()
+            self.icinga_hosts.wait_for_optimal(**kwargs)
 
         assert mocked_sleep.called
 

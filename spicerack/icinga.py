@@ -159,14 +159,10 @@ class HostsStatus(dict):
         """Return a list of services which have failed, but are acknowledged in Icinga.
 
         Returns:
-            Dict[str, List[str]]: a dict with hostnames as keys and list of failing service name strings as values.
+            dict: a dict with hostnames as keys and list of acknowledged service name strings as values.
 
         """
-        acked: Dict[str, List[str]] = {}
-        for status in self.values():
-            acked[status.name] = [service["name"] for service in status.services if service.acked]
-
-        return acked
+        return {status.name: status.acked_services for status in self.values() if not status.optimal}
 
 
 class ServiceStatus(UserDict):
@@ -253,6 +249,16 @@ class HostStatus:
 
         """
         return [service["name"] for service in self.services if service.failed]
+
+    @property
+    def acked_services(self) -> List[str]:
+        """Return a list of services which have failed, but are acknowledged in Icinga.
+
+        Returns:
+            list: a list of strings with the check names.
+
+        """
+        return [service["name"] for service in self.services if service.acked]
 
 
 class IcingaHosts:
@@ -662,9 +668,8 @@ class IcingaHosts:
                 # that is the "diff". If unacknowledge services are
                 # found, add them to the new failed dict.
                 failed: Dict[str, List[str]] = {}
-                acked = status.acked_services
                 for k, v in status.failed_services.items():
-                    diff = set(v) - set(acked[k])
+                    diff = set(v) - set(status.acked_services[k])
                     if diff:
                         failed[k] = list(diff)
             else:
