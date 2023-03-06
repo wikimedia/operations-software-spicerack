@@ -2,8 +2,12 @@
 import logging
 from collections import defaultdict
 from collections.abc import Iterator
-from typing import Optional
+from ipaddress import IPv4Address, IPv6Address, ip_address
+from typing import Optional, Union
 
+import dns
+
+# you might be tempted to remove this import. Don't, or dnspython won't work.
 from dns import resolver
 from dns.exception import DNSException
 
@@ -283,3 +287,48 @@ class Discovery:
                 logger.debug(message)
             else:
                 raise DiscoveryError(message)
+
+    def resolve_with_client_ip(
+        self, record: str, client_ip: Union[IPv4Address, IPv6Address]
+    ) -> dict[str, Union[IPv4Address, IPv6Address]]:
+        """Resolves a discovery record with a specific client ip.
+
+        Arguments:
+            record (str): record name to use for the resolution.
+            client_ip (Union[IPv4Address, IPv6Address]): IP address to be used in EDNS client subnet.
+
+        Returns:
+            List[Union[IPv4Address, IPv6Address]]: the ip addresses returned by the resolvers.
+
+        Raises:
+            spicerack.discovery.DiscoveryError: if unable to resolve the address.
+
+        """
+        ips_by_ns: dict[str, Union[IPv4Address, IPv6Address]] = {}
+        if record not in self._records:
+            raise DiscoveryError(f"Record '{record}' not found")
+        # Craft a query message
+        record_name = dns.name.from_text(f"{record}.discovery.wmnet")
+        rdtype = dns.rdatatype.from_text("A")
+        ecs_option_client_ip = dns.edns.ECSOption(str(client_ip))
+        query_msg = dns.message.make_query(record_name, rdtype)
+        query_msg.use_edns(options=[ecs_option_client_ip])
+
+        for nameserver, dns_resolver in self._resolvers.items():
+            # Make the query. We catch generic exceptions as
+            # dns.query.udp can raise many exceptions.
+            try:
+                query_response = dns.query.udp_with_fallback(
+                    query_msg, dns_resolver.nameservers[0], port=dns_resolver.port
+                )
+            except Exception as exc:
+                raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}") from exc
+            # Build an Answer instance as a Stub Resolver would
+            try:
+                response = resolver.Answer(record_name, rdtype, dns.rdataclass.IN, query_response)
+                # If no IN record was present in the response, the constructor raises an exception
+                # so we don't need to check for the presence of at least one RRset in the Answer object.
+                ips_by_ns[nameserver] = ip_address(response[0].address)
+            except DNSException as exc:
+                raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}: {exc}") from exc
+        return ips_by_ns

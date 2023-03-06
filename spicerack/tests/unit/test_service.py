@@ -7,6 +7,7 @@ from wmflib.config import load_yaml_config
 
 from spicerack import service
 from spicerack.administrative import Reason
+from spicerack.dnsdisc import DiscoveryError
 from spicerack.tests import get_fixture_path
 
 
@@ -73,6 +74,7 @@ class TestService:
         self.service2 = self.catalog.get("service2")
         self.service3 = self.catalog.get("service3")
         self.service_no_lvs = self.catalog.get("service_no_lvs")
+        self.subnets = {"eqiad": ip_address("10.10.0.1"), "codfw": ip_address("10.20.0.1")}
 
     @pytest.mark.parametrize(
         "attrs, obj_type",
@@ -304,3 +306,61 @@ class TestService:
             ]
         assert requests_mock.call_count == 2
         assert requests_mock.request_history[-1].method == "DELETE"
+
+    def test_is_pooled_in(self):
+        """A discovery record correctly reports if a datacenter is pooled or not."""
+        with mock.patch(
+            "spicerack.service.Discovery.active_datacenters", new_callable=mock.PropertyMock
+        ) as act_dc_mock:
+            act_dc_mock.return_value = {"service1": ["eqiad"]}
+            record = self.service1.discovery.records[0]
+            assert record.is_pooled_in("eqiad")
+            assert record.is_pooled_in("codfw") is False
+
+    @pytest.mark.parametrize(
+        "active_dcs, is_ok",
+        [(["codfw"], True), (["codfw", "eqiad"], False), (["eqiad"], False)],
+    )
+    def test_check_dns_state(self, active_dcs, is_ok):
+        """It should raise a DiscoveryStateError if the dns responses do not correspond to the etcd discovery state."""
+        record = self.service1.discovery.records[0]
+        # Always return the IP of codfw
+        record.instance.resolve_with_client_ip = mock.MagicMock(
+            return_value={"eqiad": ip_address("10.2.1.1"), "codfw": ip_address("10.2.1.1")}
+        )
+        # Also set the pooled state
+        with mock.patch(
+            "spicerack.service.Discovery.active_datacenters", new_callable=mock.PropertyMock
+        ) as act_dc_mock:
+            act_dc_mock.return_value = {"service1": active_dcs}
+            if is_ok:
+                self.service1.check_dns_state(self.subnets)
+            else:
+                with pytest.raises(service.DiscoveryStateError):
+                    self.service1.check_dns_state(self.subnets, tries=1)
+
+    def test_check_dns_state_resolve_error(self):
+        """It should raise a DiscoveryStateError if the name resolution fails."""
+        record = self.service1.discovery.records[0]
+        record.instance.resolve_with_client_ip = mock.MagicMock(side_effect=DiscoveryError("pinkunicorn"))
+        with pytest.raises(service.DiscoveryStateError, match="pinkunicorn"):
+            self.service1.check_dns_state(self.subnets, tries=1)
+
+    def test_check_dns_state_no_discovery(self):
+        """It should return if there is no discovery record."""
+        assert self.service2.check_dns_state(self.subnets) is None
+
+    def test_check_dns_state_wrong_record(self):
+        """It should raise a DiscoveryNotFoundError if a bad record is passed."""
+        with pytest.raises(
+            service.DiscoveryRecordNotFoundError, match="Unable to find DNS Discovery record nonexistent."
+        ):
+            self.service1.check_dns_state(self.subnets, "nonexistent", tries=1)
+
+    def test_check_dns_state_too_many_records(self):
+        """It should raise a TooManyDiscoveryRecordsError if more than one record can be selected."""
+        with pytest.raises(
+            service.TooManyDiscoveryRecordsError,
+            match="There are 2 DNS Discovery records matching name service_no_lvs.",
+        ):
+            self.service_no_lvs.check_dns_state(self.subnets, "service_no_lvs", tries=1)

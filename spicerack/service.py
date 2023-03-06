@@ -12,7 +12,8 @@ from typing import Optional, Union
 from spicerack.administrative import Reason
 from spicerack.alertmanager import AlertmanagerHosts, MatchersType
 from spicerack.confctl import ConftoolEntity
-from spicerack.dnsdisc import Discovery
+from spicerack.decorators import retry, set_tries
+from spicerack.dnsdisc import Discovery, DiscoveryError
 from spicerack.exceptions import SpicerackError
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,10 @@ class DiscoveryRecordNotFoundError(ServiceError):
     """Exception class raised when a DNS Discovery record is not found by name or there is none."""
 
 
+class DiscoveryStateError(ServiceError):
+    """Exception class raised when a dns discovery record does not correspond to its conftool state."""
+
+
 @dataclass(frozen=True)
 class ServiceDiscoveryRecord:
     """Represents the DNS Discovery attributes of the service.
@@ -51,6 +56,66 @@ class ServiceDiscoveryRecord:
     active_active: bool
     dnsdisc: str
     instance: Discovery
+
+    @property
+    def state(self) -> set[str]:
+        """The state of the dnsdisc object.
+
+        Returns a set with the names of the datacenters where the record is pooled.
+        """
+        return set(self.instance.active_datacenters[self.dnsdisc])
+
+    @property
+    def fqdn(self) -> str:
+        """The fqdn of the record."""
+        return f"{self.dnsdisc}.discovery.wmnet"
+
+    def is_pooled_in(self, datacenter: str) -> bool:
+        """True if the dnsdisc object is pooled in the datacenter."""
+        return datacenter in self.state
+
+    def check_service_ips(
+        self, service_ips: "ServiceIPs", ip_per_dc_map: dict[str, Union[IPv4Address, IPv6Address]]
+    ) -> None:
+        """Check the DNS records.
+
+        For every datacenter the service is present in, we check that:
+        * If the datacenter is pooled, resolving the name from a client in that datacenter
+        returns the local IP of the service
+        * If it's depooled, resolving the name from a client in that datacenter returns a
+        non-local ip for the service.
+
+        The most important function of this check is to ensure the etcd change has been
+        propagated before we cleare the dns recursor caches.
+
+        Arguments:
+            service_ips (spicerack.service.ServiceIPs): An instance of service IPs related to this record
+            ip_per_dc_map (dict): map of client IPs from the different datacenters
+
+        Raises:
+            spicerack.serviceDiscoveryStateError on failure
+
+        """
+        for datacenter in service_ips.sites:
+            is_pooled = self.is_pooled_in(datacenter)
+            local_ip = service_ips.get(datacenter)
+            try:
+                ip_by_ns = self.instance.resolve_with_client_ip(self.dnsdisc, ip_per_dc_map[datacenter])
+            except DiscoveryError as exc:
+                raise DiscoveryStateError(str(exc)) from exc
+
+            for nameserver, actual_ip in ip_by_ns.items():
+                resolves_locally = ip_address(actual_ip) == local_ip
+                if is_pooled and not resolves_locally:
+                    raise DiscoveryStateError(
+                        f"Error checking auth dns for {self.fqdn} from {datacenter}: "
+                        f"nameserver {nameserver} resolved to {actual_ip}, expected: {local_ip}"
+                    )
+                if not is_pooled and resolves_locally:
+                    raise DiscoveryStateError(
+                        f"Error checking auth dns for {self.fqdn} in {datacenter}: "
+                        f"resolved to {local_ip}, a different IP was expected."
+                    )
 
 
 class ServiceDiscovery(abc.Iterable):
@@ -452,6 +517,36 @@ class Service:  # pylint: disable=too-many-instance-attributes
             {"name": "site", "value": site, "isRegex": False},
             {"name": "job", "value": r"^probes/.*", "isRegex": True},
         ]
+
+    @retry(backoff_mode="constant", exceptions=(DiscoveryStateError,), dynamic_params_callbacks=(set_tries,))
+    def check_dns_state(
+        self, ip_per_dc_map: dict[str, Union[IPv4Address, IPv6Address]], record_name: str = "", tries: int = 15
+    ) -> None:
+        """Checks the state of dns discovery is consistent.
+
+        Checks that a discovery record state on the dns servers corresponds to the state in the conftool discovery
+        backend.
+
+        Arguments:
+            ip_per_dc_map (Dict[str, Union[IPv4Address, IPv6Address]]): mapping of datacenter -> client ip to use.
+            record_name (str): the discovery record name to inspect. If left empty,
+                it will pick up the only discovery record.
+            tries (int): the number of retries to attempt before failing. 15 by default.
+
+        Raises:
+            spicerack.service.DiscoveryStateError: if the two states don't correspond
+            spicerack.service.DiscoveryRecordNotFoundError: if there are no records at all or the record with the given
+            name can't be found.
+            spicerack.service.TooManyDiscoveryRecordsError: if the name is an empty string and there is more than one
+            record.
+
+        """
+        if tries < 0:
+            raise ValueError("Cannot work with negative retries.")
+        # No discovery records, nothing to check.
+        if self.discovery is None:
+            return
+        self.discovery.get(record_name).check_service_ips(self.ip, ip_per_dc_map)
 
 
 class Catalog:

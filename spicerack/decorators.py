@@ -54,6 +54,21 @@ def get_effective_tries(params: RetryParams, func: Callable, args: tuple, kwargs
         params.tries = 1
 
 
+def set_tries(params: RetryParams, _func: Callable, _params: tuple, kwargs: dict) -> None:
+    """Simple function to allow adapting the number of retries.
+
+    Arguments:
+        params (wmflib.decorators.RetryParams): the decorator original parameters.
+        _func (Callable): the decorated callable. Unused.
+        _args (tuple): the decorated callable positional arguments as tuple. Unused.
+        kwargs (dict): the decorated callable keyword arguments as dictionary.
+
+    """
+    override_default_retries = kwargs.get("tries", 0)
+    if override_default_retries:
+        params.tries = override_default_retries
+
+
 @ensure_wrap
 def retry(*args: Any, **kwargs: Any) -> Callable:
     """Decorator to retry a function or method if it raises certain exceptions with customizable backoff.
