@@ -1,12 +1,13 @@
 """Service module."""
 import logging
 from collections import abc
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import timedelta
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Iterator, Optional, Sequence, Union
+from typing import Optional, Union
 
 from spicerack.administrative import Reason
 from spicerack.alertmanager import AlertmanagerHosts, MatchersType

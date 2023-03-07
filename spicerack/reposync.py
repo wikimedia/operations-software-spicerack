@@ -1,11 +1,12 @@
 """Manage updates to automated git repositories."""
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
 from logging import getLogger
 from pathlib import Path
 from shutil import copytree
 from tempfile import TemporaryDirectory
-from typing import Generator, Optional
+from typing import Optional
 
 from git import Actor, Repo
 from git.exc import GitError

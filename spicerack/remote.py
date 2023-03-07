@@ -2,8 +2,9 @@
 import logging
 import math
 import time
+from collections.abc import Callable, Iterator, Sequence
 from datetime import datetime, timedelta
-from typing import Any, Callable, Iterator, Optional, Sequence, Union
+from typing import Any, Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, CuminError, NodeSet, query, transport, transports

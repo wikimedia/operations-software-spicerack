@@ -1,11 +1,12 @@
 """ElasticsearchCluster module."""
 import logging
 from collections import defaultdict
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import Iterable, Iterator, Optional, Sequence
+from typing import Optional
 
 import curator
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError

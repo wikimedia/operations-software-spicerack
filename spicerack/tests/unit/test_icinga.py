@@ -2,8 +2,8 @@
 import logging
 import re
 import shlex
+from collections.abc import Sequence
 from datetime import timedelta
-from typing import Sequence
 from unittest import mock
 
 import pytest

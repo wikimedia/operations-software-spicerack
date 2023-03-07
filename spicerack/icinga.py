@@ -5,10 +5,11 @@ import re
 import shlex
 import time
 from collections import UserDict
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import timedelta
 from enum import Enum
-from typing import Iterator, Mapping, Optional, Sequence, cast
+from typing import Optional, cast
 
 from cumin import NodeSet
 from cumin.transports import Command

@@ -5,8 +5,9 @@ Todo:
 
 """
 import logging
+from collections.abc import Iterator
 from datetime import datetime
-from typing import Iterator, Optional, Union
+from typing import Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet

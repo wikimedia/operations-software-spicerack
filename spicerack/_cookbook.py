@@ -4,8 +4,9 @@ import importlib
 import logging
 import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Sequence, cast
+from typing import Optional, cast
 
 from wmflib.config import load_yaml_config
 

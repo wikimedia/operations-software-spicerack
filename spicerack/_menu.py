@@ -4,7 +4,8 @@ import logging
 import shlex
 import sys
 from abc import abstractmethod
-from typing import Any, Callable, Optional, Sequence, cast
+from collections.abc import Callable, Sequence
+from typing import Any, Optional, cast
 
 from spicerack import Spicerack, _log, _module_api, cookbook
 from spicerack.exceptions import SpicerackError

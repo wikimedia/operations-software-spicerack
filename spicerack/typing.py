@@ -1,5 +1,6 @@
 """Custom Spicerack type hints."""
-from typing import Sequence, TypeVar
+from collections.abc import Sequence
+from typing import TypeVar
 
 from cumin import NodeSet
 

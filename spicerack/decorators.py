@@ -1,7 +1,8 @@
 """Decorators module."""
 import inspect
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from wmflib.decorators import RetryParams, ensure_wrap
 from wmflib.decorators import retry as wmflib_retry

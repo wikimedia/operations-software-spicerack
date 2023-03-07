@@ -1,6 +1,7 @@
 """APT module."""
 import logging
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from ClusterShell.MsgTree import MsgTreeElem
 from ClusterShell.NodeSet import NodeSet

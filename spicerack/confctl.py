@@ -1,8 +1,9 @@
 """Confctl module to abstract Conftool."""
 import logging
 import re
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
-from typing import Iterable, Iterator, Union
+from typing import Union
 
 from conftool import configuration, kvobject, loader
 from conftool.drivers import BackendError

@@ -1,10 +1,11 @@
 """Puppet module."""
 import json
 import logging
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from subprocess import CalledProcessError, check_output
-from typing import Iterator, Optional, Union, cast
+from typing import Optional, Union, cast
 
 from cumin import NodeSet, nodeset
 from cumin.transports import Command

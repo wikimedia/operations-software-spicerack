@@ -2,8 +2,9 @@
 import json
 import logging
 import time
+from collections.abc import MutableMapping
 from pathlib import Path
-from typing import MutableMapping, Optional, cast
+from typing import Optional, cast
 
 from wmflib.requests import http_session
 

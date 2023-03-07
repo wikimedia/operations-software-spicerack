@@ -1,8 +1,8 @@
 """MySQL module (native)."""
-
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Generator, Optional
+from typing import Any, Optional
 
 from pymysql.connections import Connection
 

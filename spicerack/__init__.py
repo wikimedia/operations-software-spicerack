@@ -1,9 +1,10 @@
 """Spicerack package."""
+from collections.abc import Callable, Sequence
 from ipaddress import ip_interface
 from logging import Logger, getLogger
 from pathlib import Path
 from socket import gethostname
-from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Optional
 
 from git import Repo
 from pkg_resources import DistributionNotFound, get_distribution

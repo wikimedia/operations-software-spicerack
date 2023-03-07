@@ -4,11 +4,11 @@ import base64
 import re
 import textwrap
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import sha256
 from ipaddress import IPv4Address
-from typing import Iterator
 
 from wmflib.constants import ALL_DATACENTERS
 

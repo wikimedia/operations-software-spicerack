@@ -1,8 +1,8 @@
 """Alerting module."""
 import logging
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import Iterator
 
 from spicerack.administrative import Reason
 from spicerack.alertmanager import AlertmanagerHosts

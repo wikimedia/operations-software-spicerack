@@ -1,9 +1,10 @@
 """Alertmanager module."""
 import logging
 import re
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Iterator, Mapping, Optional, Sequence, Union
+from typing import Optional, Union
 
 from cumin import NodeSet, nodeset_fromlist
 from requests import Response

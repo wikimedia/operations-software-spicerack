@@ -1,7 +1,8 @@
 """DNS Discovery module."""
 import logging
 from collections import defaultdict
-from typing import Iterator, Optional
+from collections.abc import Iterator
+from typing import Optional
 
 from dns import resolver
 from dns.exception import DNSException
