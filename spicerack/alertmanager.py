@@ -16,7 +16,7 @@ from spicerack.typing import TypeHosts
 
 logger = logging.getLogger(__name__)
 MatchersType = Sequence[Dict[str, Union[str, int, float, bool]]]
-PORT_REGEX = "(:[0-9]+)?"
+PORT_REGEX = r"(\..+)?(:[0-9]+)?"
 ALERTMANAGER_URLS: Tuple[str, str] = (
     "http://alertmanager-eqiad.wikimedia.org",
     "http://alertmanager-codfw.wikimedia.org",
@@ -289,11 +289,11 @@ class AlertmanagerHosts(Alertmanager):
             if group_port or ":" in host:
                 target_hosts.append(re.escape(host))
             else:
-                target_hosts.append(f"{re.escape(host)}{PORT_REGEX}")
+                target_hosts.append(fr"{re.escape(host)}{PORT_REGEX}")
 
         target_regex = "|".join(target_hosts)
         target_matchers = list(matchers)
-        target_matchers.append({"name": "instance", "value": f"^({target_regex}){group_port_regex}$", "isRegex": True})
+        target_matchers.append({"name": "instance", "value": fr"^({target_regex}){group_port_regex}$", "isRegex": True})
         return super().downtime(reason, matchers=target_matchers, duration=duration)
 
 
