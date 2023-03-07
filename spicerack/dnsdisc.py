@@ -1,7 +1,7 @@
 """DNS Discovery module."""
 import logging
 from collections import defaultdict
-from typing import Dict, Iterator, List, Optional
+from typing import Iterator, Optional
 
 from dns import resolver
 from dns.exception import DNSException
@@ -28,8 +28,8 @@ class Discovery:
         self,
         *,
         conftool: ConftoolEntity,
-        authdns_servers: Dict[str, str],
-        records: List[str],
+        authdns_servers: dict[str, str],
+        records: list[str],
         dry_run: bool = True,
     ) -> None:
         """Initialize the instance.
@@ -49,7 +49,7 @@ class Discovery:
         self._records = records
         self._dry_run = dry_run
 
-        self._resolvers: Dict[str, resolver.Resolver] = {}
+        self._resolvers: dict[str, resolver.Resolver] = {}
         for nameserver, nameserver_ip in authdns_servers.items():
             self._resolvers[nameserver] = resolver.Resolver(configure=False)
             self._resolvers[nameserver].port = 5353

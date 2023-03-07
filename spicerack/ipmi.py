@@ -7,14 +7,13 @@ Todo:
 import logging
 from datetime import timedelta
 from subprocess import PIPE, CalledProcessError, run
-from typing import Dict, List, Tuple
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 IPMI_PASSWORD_MAX_LEN: int = 20
 IPMI_PASSWORD_MIN_LEN: int = 16
-IPMI_SAFE_BOOT_PARAMS: Tuple[str, ...] = (
+IPMI_SAFE_BOOT_PARAMS: tuple[str, ...] = (
     "0000000000",  # No overrides
     "8000000000",  # Boot Flag Valid
     "8000020000",  # Boot Flag Valid and Screen blank
@@ -42,11 +41,11 @@ class Ipmi:
             dry_run (bool, optional): whether this is a DRY-RUN.
 
         """
-        self.env: Dict[str, str] = {"IPMITOOL_PASSWORD": password}
+        self.env: dict[str, str] = {"IPMITOOL_PASSWORD": password}
         self._target = target
         self._dry_run = dry_run
 
-    def command(self, command_parts: List[str], is_safe: bool = False, hide_parts: Tuple = ()) -> str:
+    def command(self, command_parts: list[str], is_safe: bool = False, hide_parts: tuple = ()) -> str:
         """Run an ipmitool command for a remote management console.
 
         Arguments:

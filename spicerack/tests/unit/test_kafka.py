@@ -1,6 +1,6 @@
 """Kafka Module test."""
 from collections import namedtuple
-from typing import List, Union
+from typing import Union
 from unittest import mock
 
 import pytest
@@ -66,7 +66,7 @@ def _answer_offsets_for_times(timestamps):
     return {tp: OffsetAndTimestamp(ts - 100, ts) for tp, ts in timestamps.items()}
 
 
-def _answer_partitions_for_topic(topic) -> Union[List[int], None]:
+def _answer_partitions_for_topic(topic) -> Union[list[int], None]:
     return [0] if topic.startswith("eqiad.") or topic.startswith("codfw.") else []
 
 

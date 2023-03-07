@@ -2,7 +2,7 @@
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Generator, Optional
 
 from pymysql.connections import Connection
 
@@ -39,7 +39,7 @@ class Mysql:
         charset: str = "utf8mb4",
         read_default_file: Optional[str] = "",
         read_default_group: Optional[str] = None,
-        ssl: Optional[Dict] = None,
+        ssl: Optional[dict] = None,
         **kwargs: Any
     ) -> Generator:
         """Context-manager for a mysql connection to a remote host.

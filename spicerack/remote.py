@@ -3,7 +3,7 @@ import logging
 import math
 import time
 from datetime import datetime, timedelta
-from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Iterator, Optional, Sequence, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, CuminError, NodeSet, query, transport, transports
@@ -40,8 +40,8 @@ class RemoteClusterExecutionError(RemoteError):
 
     def __init__(
         self,
-        results: List[Tuple[NodeSet, MsgTreeElem]],
-        failures: List[RemoteExecutionError],
+        results: list[tuple[NodeSet, MsgTreeElem]],
+        failures: list[RemoteExecutionError],
     ):
         """Override the parent constructor to add failures and results as attributes."""
         super().__init__(f"{len(failures)} hosts have failed execution")
@@ -105,14 +105,14 @@ class LBRemoteCluster(RemoteHostsAdapter):
     def run(
         self,
         *commands: Union[str, Command],
-        svc_to_depool: Optional[List[str]] = None,
+        svc_to_depool: Optional[list[str]] = None,
         batch_size: int = 1,
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
         max_failed_batches: int = 0,
         print_output: bool = True,
         print_progress_bars: bool = True,
-    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> list[tuple[NodeSet, MsgTreeElem]]:
         """Run commands while depooling servers in groups of batch_size.
 
         For clusters behind a load balancer, we typically want to be able to
@@ -208,13 +208,13 @@ class LBRemoteCluster(RemoteHostsAdapter):
 
     def restart_services(
         self,
-        services: List[str],
-        svc_to_depool: List[str],
+        services: list[str],
+        svc_to_depool: list[str],
         *,
         batch_size: int = 1,
         batch_sleep: Optional[float] = None,
         verbose: bool = True,
-    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> list[tuple[NodeSet, MsgTreeElem]]:
         """Restart services in batches, removing the host from all the affected services first.
 
         Arguments:
@@ -238,13 +238,13 @@ class LBRemoteCluster(RemoteHostsAdapter):
 
     def reload_services(
         self,
-        services: List[str],
-        svc_to_depool: List[str],
+        services: list[str],
+        svc_to_depool: list[str],
         *,
         batch_size: int = 1,
         batch_sleep: Optional[float] = None,
         verbose: bool = True,
-    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> list[tuple[NodeSet, MsgTreeElem]]:
         """Reload services in batches, removing the host from all the affected services first.
 
         Arguments:
@@ -268,13 +268,13 @@ class LBRemoteCluster(RemoteHostsAdapter):
 
     def _act_on_services(  # pylint: disable=too-many-arguments
         self,
-        services: List[str],
-        svc_to_depool: List[str],
+        services: list[str],
+        svc_to_depool: list[str],
         what: str,
         batch_size: int,
         batch_sleep: Optional[float] = None,
         verbose: bool = True,
-    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> list[tuple[NodeSet, MsgTreeElem]]:
         """Act on services in batches, depooling the servers first.
 
         Arguments:
@@ -455,7 +455,7 @@ class RemoteHosts:
         is_safe: bool = False,
         print_output: bool = True,
         print_progress_bars: bool = True,
-    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Execute commands on hosts matching a query via Cumin in async mode.
 
         Arguments:
@@ -496,7 +496,7 @@ class RemoteHosts:
         is_safe: bool = False,
         print_output: bool = True,
         print_progress_bars: bool = True,
-    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Execute commands on hosts matching a query via Cumin in sync mode.
 
         Arguments:
@@ -584,7 +584,7 @@ class RemoteHosts:
 
         logger.info("Found reboot since %s for hosts %s", since, self._hosts)
 
-    def uptime(self, print_progress_bars: bool = True) -> List[Tuple[NodeSet, float]]:
+    def uptime(self, print_progress_bars: bool = True) -> list[tuple[NodeSet, float]]:
         """Get current uptime.
 
         Arguments:
@@ -610,9 +610,9 @@ class RemoteHosts:
 
     @staticmethod
     def results_to_list(
-        results: Iterator[Tuple[NodeSet, MsgTreeElem]],
+        results: Iterator[tuple[NodeSet, MsgTreeElem]],
         callback: Optional[Callable] = None,
-    ) -> List[Tuple[NodeSet, Any]]:
+    ) -> list[tuple[NodeSet, Any]]:
         """Extract execution results into a list converting them with an optional callback.
 
         Todo:
@@ -657,7 +657,7 @@ class RemoteHosts:
         is_safe: bool = False,
         print_output: bool = True,
         print_progress_bars: bool = True,
-    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Lower level Cumin's execution of commands on the target nodes.
 
         Arguments:

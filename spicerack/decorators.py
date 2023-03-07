@@ -1,7 +1,7 @@
 """Decorators module."""
 import inspect
 import logging
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable
 
 from wmflib.decorators import RetryParams, ensure_wrap
 from wmflib.decorators import retry as wmflib_retry
@@ -11,7 +11,7 @@ from spicerack.exceptions import SpicerackError
 logger = logging.getLogger(__name__)
 
 
-def get_effective_tries(params: RetryParams, func: Callable, args: Tuple, kwargs: Dict) -> None:
+def get_effective_tries(params: RetryParams, func: Callable, args: tuple, kwargs: dict) -> None:
     """Reduce the number of tries to use in the @retry decorator to one when the DRY-RUN mode is detected.
 
     This is a callback function for the wmflib.decorators.retry decorator.

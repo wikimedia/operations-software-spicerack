@@ -6,7 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import timedelta
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Dict, Iterator, List, Optional, Sequence, Union
+from typing import Iterator, Optional, Sequence, Union
 
 from spicerack.administrative import Reason
 from spicerack.alertmanager import AlertmanagerHosts, MatchersType
@@ -200,10 +200,10 @@ class ServiceIPs:
 
     """
 
-    data: Dict[str, Dict[str, str]]
+    data: dict[str, dict[str, str]]
 
     @property
-    def all(self) -> List[Union[IPv4Address, IPv6Address]]:
+    def all(self) -> list[Union[IPv4Address, IPv6Address]]:
         """Return all service IPs.
 
         Returns:
@@ -213,7 +213,7 @@ class ServiceIPs:
         return [ip_address(j) for i in self.data.values() for j in i.values()]
 
     @property
-    def sites(self) -> List[str]:
+    def sites(self) -> list[str]:
         """Returns all the datacenters where there is at least one IP for the service.
 
         Returns:
@@ -279,7 +279,7 @@ class ServiceLVS:
     depool_threshold: str
     enabled: bool
     lvs_class: str
-    monitors: Dict[str, Dict]
+    monitors: dict[str, dict]
     bgp: bool = True  # Default value in Puppet.
     protocol: str = "tcp"  # Default value in Puppet.
     scheduler: str = "wrr"  # Default value in Puppet.
@@ -297,10 +297,10 @@ class ServiceMonitoringHostnames:
 
     """
 
-    data: Dict[str, Dict[str, str]]
+    data: dict[str, dict[str, str]]
 
     @property
-    def all(self) -> List[str]:
+    def all(self) -> list[str]:
         """Return all service monitoring Icinga hostnames/FQDNs.
 
         Returns:
@@ -310,7 +310,7 @@ class ServiceMonitoringHostnames:
         return [j for i in self.data.values() for j in i.values()]
 
     @property
-    def sites(self) -> List[str]:
+    def sites(self) -> list[str]:
         """Return all the datacenters in which the monitoring is configured for.
 
         Returns:
@@ -386,16 +386,16 @@ class Service:  # pylint: disable=too-many-instance-attributes
     encryption: bool
     ip: ServiceIPs  # pylint: disable=invalid-name
     port: int
-    sites: List[str]
+    sites: list[str]
     state: str
     _alertmanager: AlertmanagerHosts
-    aliases: List[str] = field(default_factory=list)
+    aliases: list[str] = field(default_factory=list)
     discovery: Optional[ServiceDiscovery] = None
     lvs: Optional[ServiceLVS] = None
     monitoring: Optional[ServiceMonitoring] = None
     page: bool = True  # Default value in Puppet.
-    probes: List[Dict] = field(default_factory=list)
-    public_aliases: List[str] = field(default_factory=list)
+    probes: list[dict] = field(default_factory=list)
+    public_aliases: list[str] = field(default_factory=list)
     public_endpoint: str = ""
     role: str = ""
 
@@ -471,7 +471,7 @@ class Catalog:
     """
 
     def __init__(
-        self, catalog: Dict, *, confctl: ConftoolEntity, authdns_servers: Dict[str, str], dry_run: bool = True
+        self, catalog: dict, *, confctl: ConftoolEntity, authdns_servers: dict[str, str], dry_run: bool = True
     ):
         """Initialize the instance.
 
@@ -507,7 +507,7 @@ class Catalog:
         return len(self._catalog)
 
     @property
-    def service_names(self) -> List[str]:
+    def service_names(self) -> list[str]:
         """All defined service names.
 
         Returns:

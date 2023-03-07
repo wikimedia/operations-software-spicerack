@@ -3,7 +3,7 @@ import logging
 import re
 import shlex
 from datetime import timedelta
-from typing import Sequence, Tuple
+from typing import Sequence
 from unittest import mock
 
 import pytest
@@ -69,7 +69,7 @@ def assert_has_downtime_calls(
 
 def assert_has_service_downtime_calls(
     mocked_icinga_host: mock.MagicMock,
-    host_services: Sequence[Tuple[str, str]],
+    host_services: Sequence[tuple[str, str]],
     reason: Reason,
     start: int = 1514764800,
     duration: int = 14400,

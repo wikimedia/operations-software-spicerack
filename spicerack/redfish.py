@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from io import BufferedReader
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import urllib3
 from packaging import version
@@ -123,9 +123,9 @@ class Redfish:
         self._upload_session.auth = (self._username, self._password)
         self._upload_session.headers.update({"Accept": "application/json"})
 
-        self._oob_info: Dict = {}
-        self._system_info: Dict = {}
-        self._updateservice_info: Dict = {}
+        self._oob_info: dict = {}
+        self._system_info: dict = {}
+        self._updateservice_info: dict = {}
 
     def __str__(self) -> str:
         """String representation of the instance.
@@ -191,21 +191,21 @@ class Redfish:
         return self._interface
 
     @property
-    def system_info(self) -> Dict:
+    def system_info(self) -> dict:
         """Property to return the system info as a dict."""
         if not self._system_info:
             self._update_system_info()
         return self._system_info
 
     @property
-    def oob_info(self) -> Dict:
+    def oob_info(self) -> dict:
         """Property to return the oob info as a dict."""
         if not self._oob_info:
             self._update_oob_info()
         return self._oob_info
 
     @property
-    def updateservice_info(self) -> Dict:
+    def updateservice_info(self) -> dict:
         """Property to return a dict of manager metadata."""
         if not self._updateservice_info:
             result = self.request("get", self.update_service)
@@ -303,7 +303,7 @@ class Redfish:
         return job_id
 
     @staticmethod
-    def most_recent_member(members: List[Dict], key: str) -> Dict:
+    def most_recent_member(members: list[dict], key: str) -> dict:
         """Return the most recent member of members result from dell api.
 
         Members will be sorted on key and the most recent value is returned.
@@ -318,7 +318,7 @@ class Redfish:
 
         """
 
-        def sorter(element: Dict) -> datetime:
+        def sorter(element: dict) -> datetime:
             return datetime.fromisoformat(element[key])
 
         return sorted(members, key=sorter)[-1]
@@ -433,7 +433,7 @@ class Redfish:
 
         return response.headers["Location"]
 
-    def submit_files(self, files: Dict) -> str:
+    def submit_files(self, files: dict) -> str:
         """Submit a upload file request that generates a task, return the URI of the submitted task.
 
         Arguments:
@@ -452,7 +452,7 @@ class Redfish:
         response = self._upload_session.post(f"https://{self.interface.ip}{self.multipushuri}", files=files)
         return self._parse_submit_task(response)
 
-    def submit_task(self, uri: str, data: Optional[Dict] = None, method: str = "post") -> str:
+    def submit_task(self, uri: str, data: Optional[dict] = None, method: str = "post") -> str:
         """Submit a request that generates a task, return the URI of the submitted task.
 
         Arguments:
@@ -487,7 +487,7 @@ class Redfish:
         exceptions=(RedfishTaskNotCompletedError,),
         failure_message="Polling task",
     )
-    def poll_task(self, uri: str) -> Dict:
+    def poll_task(self, uri: str) -> dict:
         """Poll a Redfish task until the results are available.
 
         Arguments:
@@ -534,7 +534,7 @@ class Redfish:
 
         return results  # When a task is polled after returning the data, will return again the metadata
 
-    def find_account(self, username: str) -> Tuple[str, str]:
+    def find_account(self, username: str) -> tuple[str, str]:
         """Find the account for the given username and return its URI.
 
         Arguments:
@@ -636,7 +636,7 @@ class Redfish:
 class DellSCP:
     """Reprenset a Dell System Configuration Profile configuration as returned by Redfish API."""
 
-    def __init__(self, config: Dict, target: DellSCPTargetPolicy, *, allow_new_attributes: bool = False):
+    def __init__(self, config: dict, target: DellSCPTargetPolicy, *, allow_new_attributes: bool = False):
         """Parse the Redfish API response.
 
         Arguments:
@@ -655,7 +655,7 @@ class DellSCP:
         self._emptied_components = False
 
     @property
-    def config(self) -> Dict:
+    def config(self) -> dict:
         """Getter for the whole configuration in Dell's format."""
         return self._config
 
@@ -680,7 +680,7 @@ class DellSCP:
         return datetime.strptime(self._config["SystemConfiguration"]["TimeStamp"], "%c")
 
     @property
-    def comments(self) -> List[str]:
+    def comments(self) -> list[str]:
         """Getter for the comments associated with the configuration."""
         return [
             comment["Comment"]
@@ -689,7 +689,7 @@ class DellSCP:
         ]
 
     @property
-    def components(self) -> Dict[str, Dict[str, str]]:
+    def components(self) -> dict[str, dict[str, str]]:
         """Getter for the components present in the configuration in a simplified view.
 
         The returned dictionary where all the keys are recursively sorted and has the following format::
@@ -702,7 +702,7 @@ class DellSCP:
             }
 
         """
-        components: Dict[str, Dict[str, str]] = {}
+        components: dict[str, dict[str, str]] = {}
         for component in self._config["SystemConfiguration"].get("Components", []):
             components[component["FQDD"]] = {}
             for attribute in component.get("Attributes", []):
@@ -736,7 +736,7 @@ class DellSCP:
 
         """
 
-        def new_attribute() -> Dict[str, str]:
+        def new_attribute() -> dict[str, str]:
             """Local helper that returns a new attribute.
 
             Returns:
@@ -806,7 +806,7 @@ class DellSCP:
 
         raise RedfishError(f"Unable to find component {component_name}")
 
-    def update(self, changes: Dict[str, Dict[str, str]]) -> bool:
+    def update(self, changes: dict[str, dict[str, str]]) -> bool:
         """Bulk update the current configuration with the set of changes provided.
 
         Notes:
@@ -985,7 +985,7 @@ class RedfishDell(Redfish):
         reboot: DellSCPRebootPolicy = DellSCPRebootPolicy.NO_REBOOT,
         power_state: DellSCPPowerStatePolicy = DellSCPPowerStatePolicy.ON,
         preview: bool = True,
-    ) -> Dict:
+    ) -> dict:
         """Push the SCP (Server Configuration Profiles) configuration.
 
         Arguments:

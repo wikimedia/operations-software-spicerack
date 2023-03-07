@@ -3,7 +3,7 @@ from ipaddress import ip_interface
 from logging import Logger, getLogger
 from pathlib import Path
 from socket import gethostname
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
 
 from git import Repo
 from pkg_resources import DistributionNotFound, get_distribution
@@ -123,7 +123,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._service_catalog: Optional[Catalog] = None
         self._management_password: str = ""
         self._actions = ActionsDict()
-        self._authdns_servers: Dict[str, str] = {}
+        self._authdns_servers: dict[str, str] = {}
 
         self._extender = None
         if extender_class is not None:  # If present, instantiate it with the current instance as parameter
@@ -194,7 +194,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return self._http_proxy
 
     @property
-    def requests_proxies(self) -> Optional[Dict[str, str]]:
+    def requests_proxies(self) -> Optional[dict[str, str]]:
         """Getter to return the HTTP proxy configuration for the Requests module.
 
         Returns:
@@ -266,7 +266,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return self._management_password
 
     @property
-    def authdns_servers(self) -> Dict[str, str]:
+    def authdns_servers(self) -> dict[str, str]:
         """Getter for the authoritative DNS nameservers currently active in production.
 
         Returns:

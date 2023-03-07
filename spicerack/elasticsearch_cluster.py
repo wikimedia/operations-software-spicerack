@@ -5,7 +5,7 @@ from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence, Set
+from typing import Iterable, Iterator, Optional, Sequence
 
 import curator
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
@@ -29,7 +29,7 @@ class ElasticsearchClusterCheckError(SpicerackCheckError):
 
 
 def create_elasticsearch_clusters(
-    configuration: Dict[str, Dict[str, Dict[str, str]]],
+    configuration: dict[str, dict[str, dict[str, str]]],
     clustergroup: str,
     write_queue_datacenters: Sequence[str],
     remote: Remote,
@@ -198,7 +198,7 @@ class ElasticsearchClusters:
             cluster.force_allocation_of_all_unassigned_shards()
 
     @contextmanager
-    def frozen_writes(self, reason: Reason) -> Iterator[List[None]]:
+    def frozen_writes(self, reason: Reason) -> Iterator[list[None]]:
         """Freeze all writes to the clusters and then perform operations before unfreezing writes.
 
         Arguments:
@@ -213,7 +213,7 @@ class ElasticsearchClusters:
             yield [stack.enter_context(cluster.frozen_writes(reason)) for cluster in self._clusters]
 
     @contextmanager
-    def stopped_replication(self) -> Iterator[List[None]]:
+    def stopped_replication(self) -> Iterator[list[None]]:
         """Stops replication for all clusters.
 
         Yields:
@@ -314,7 +314,7 @@ class ElasticsearchClusters:
             dict: merged clusters nodes.
 
         """
-        nodes_group: Dict[str, NodesGroup] = {}
+        nodes_group: dict[str, NodesGroup] = {}
         for cluster in self._clusters:
             for json_node in cluster.get_nodes().values():
                 node_name = json_node["attributes"]["hostname"]
@@ -325,7 +325,7 @@ class ElasticsearchClusters:
         return nodes_group.values()
 
     @staticmethod
-    def _to_rows(nodes: Sequence["NodesGroup"]) -> DefaultDict[str, List["NodesGroup"]]:
+    def _to_rows(nodes: Sequence["NodesGroup"]) -> defaultdict[str, list["NodesGroup"]]:
         """Arrange nodes in rows, so each node belongs in their respective row.
 
         Arguments:
@@ -337,7 +337,7 @@ class ElasticsearchClusters:
                 {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
 
         """
-        rows: DefaultDict[str, List[NodesGroup]] = defaultdict(list)
+        rows: defaultdict[str, list[NodesGroup]] = defaultdict(list)
         for node in nodes:
             rows[node.row].append(node)
         return rows
@@ -430,7 +430,7 @@ class ElasticsearchCluster:
         """Class string method."""
         return str(self._elasticsearch)
 
-    def get_nodes(self) -> Dict:
+    def get_nodes(self) -> dict:
         """Get all Elasticsearch Nodes.
 
         Returns:
@@ -633,7 +633,7 @@ class ElasticsearchCluster:
         for unassigned_shard in unassigned_shards:
             self._force_allocation_of_shard(unassigned_shard, cluster_nodes_names)
 
-    def _get_unassigned_shards(self) -> List[Dict]:
+    def _get_unassigned_shards(self) -> list[dict]:
         """Fetch unassigned shards.
 
         Returns:
@@ -643,7 +643,7 @@ class ElasticsearchCluster:
         shards = self._elasticsearch.cat.shards(format="json", h="index,shard,state")
         return [s for s in shards if s["state"] == "UNASSIGNED"]
 
-    def _force_allocation_of_shard(self, shard: Dict, nodes: List[str]) -> None:
+    def _force_allocation_of_shard(self, shard: dict, nodes: list[str]) -> None:
         """Force allocation of shard.
 
         Arguments:
@@ -723,7 +723,7 @@ class NodesGroup:
     instances in a single object.
     """
 
-    def __init__(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
+    def __init__(self, json_node: dict, cluster: ElasticsearchCluster) -> None:
         """Instantiate a new node.
 
         Arguments:
@@ -734,12 +734,12 @@ class NodesGroup:
         self._hostname: str = json_node["attributes"]["hostname"]
         self._fqdn: str = json_node["attributes"]["fqdn"]
         cluster_name = json_node["settings"]["cluster"]["name"]
-        self._clusters_instances: List[ElasticsearchCluster] = [cluster]
+        self._clusters_instances: list[ElasticsearchCluster] = [cluster]
         self._row: str = json_node["attributes"]["row"]
         self._oldest_start_time = datetime.utcfromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000)
-        self._master_capable: Set[str] = {cluster_name} if "master" in json_node["roles"] else set()
+        self._master_capable: set[str] = {cluster_name} if "master" in json_node["roles"] else set()
 
-    def accumulate(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
+    def accumulate(self, json_node: dict, cluster: ElasticsearchCluster) -> None:
         """Accumulate information from other elasticsearch instances running on the same server.
 
         Arguments:
@@ -783,7 +783,7 @@ class NodesGroup:
         return self._clusters_instances
 
     @property
-    def master_capable(self) -> Set[str]:
+    def master_capable(self) -> set[str]:
         """Set of clusters this node is master capable on."""
         return self._master_capable
 
@@ -811,7 +811,7 @@ class NodesGroup:
                 raise ElasticsearchClusterCheckError("Elasticsearch is not up yet")
 
 
-def _restartable_node_groups(nodes: List[NodesGroup]) -> List[NodesGroup]:
+def _restartable_node_groups(nodes: list[NodesGroup]) -> list[NodesGroup]:
     """Returns the subset of nodes that are restartable.
 
     Primarily concerned with restarting nodes within a cluster prior to the

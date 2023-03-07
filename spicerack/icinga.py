@@ -8,7 +8,7 @@ from collections import UserDict
 from contextlib import contextmanager
 from datetime import timedelta
 from enum import Enum
-from typing import Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, cast
+from typing import Iterator, Mapping, Optional, Sequence, cast
 
 from cumin import NodeSet
 from cumin.transports import Command
@@ -36,7 +36,7 @@ class IcingaStatus(Enum):
 class CommandFile(str):
     """String class to represent an Icinga command file path with cache capabilities."""
 
-    _command_files: Dict[Tuple[str, str], str] = {}  # Cache a command file per Icinga hostname and configuration file
+    _command_files: dict[tuple[str, str], str] = {}  # Cache a command file per Icinga hostname and configuration file
 
     def __new__(cls, icinga_host: RemoteHosts, *, config_file: str = "/etc/icinga/icinga.cfg") -> "CommandFile":
         """Get the Icinga host command file where to write the commands and cache it.
@@ -123,7 +123,7 @@ class HostsStatus(dict):
         return all(status.optimal for status in self.values())
 
     @property
-    def non_optimal_hosts(self) -> List[str]:
+    def non_optimal_hosts(self) -> list[str]:
         """Return the list of hostnames that are not in an optimal state.
 
         They can either not being up and running or have at least one failed service.
@@ -135,7 +135,7 @@ class HostsStatus(dict):
         return [hostname for hostname, status in self.items() if not status.optimal]
 
     @property
-    def failed_services(self) -> Dict[str, List[str]]:
+    def failed_services(self) -> dict[str, list[str]]:
         """Return the list of service names that are failing for each host that has at least one.
 
         Returns:
@@ -145,7 +145,7 @@ class HostsStatus(dict):
         return {status.name: status.failed_services for status in self.values() if not status.optimal}
 
     @property
-    def failed_hosts(self) -> List[str]:
+    def failed_hosts(self) -> list[str]:
         """Return the list of hostnames that are not up and running. They can either be down or unreachable.
 
         Returns:
@@ -155,7 +155,7 @@ class HostsStatus(dict):
         return [status.name for status in self.values() if status.state != HostStatus.STATE_UP]
 
     @property
-    def acked_services(self) -> Dict[str, List[str]]:
+    def acked_services(self) -> dict[str, list[str]]:
         """Return a list of services which have failed, but are acknowledged in Icinga.
 
         Returns:
@@ -241,7 +241,7 @@ class HostStatus:
                 self.services.append(service_status)
 
     @property
-    def failed_services(self) -> List[str]:
+    def failed_services(self) -> list[str]:
         """Return the list of service names that are failing.
 
         Returns:
@@ -251,7 +251,7 @@ class HostStatus:
         return [service["name"] for service in self.services if service.failed]
 
     @property
-    def acked_services(self) -> List[str]:
+    def acked_services(self) -> list[str]:
         """Return a list of services which have failed, but are acknowledged in Icinga.
 
         Returns:
@@ -667,7 +667,7 @@ class IcingaHosts:
                 # Find any services which has not been acknowledged,
                 # that is the "diff". If unacknowledge services are
                 # found, add them to the new failed dict.
-                failed: Dict[str, List[str]] = {}
+                failed: dict[str, list[str]] = {}
                 for k, v in status.failed_services.items():
                     diff = set(v) - set(status.acked_services[k])
                     if diff:

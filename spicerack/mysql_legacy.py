@@ -6,7 +6,7 @@ Todo:
 """
 import logging
 from datetime import datetime
-from typing import Dict, Iterator, Optional, Tuple, Union
+from typing import Iterator, Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
@@ -16,9 +16,9 @@ from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import Remote, RemoteHostsAdapter
 
-REPLICATION_ROLES: Tuple[str, ...] = ("master", "slave", "standalone")
+REPLICATION_ROLES: tuple[str, ...] = ("master", "slave", "standalone")
 """tuple: list of valid replication roles."""
-CORE_SECTIONS: Tuple[str, ...] = (
+CORE_SECTIONS: tuple[str, ...] = (
     "s1",
     "s2",
     "s3",
@@ -51,7 +51,7 @@ class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
         batch_size: Optional[Union[int, str]] = None,
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
-    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Execute the query via Remote.
 
         Arguments:
@@ -119,7 +119,7 @@ class MysqlLegacy:
         datacenter: Optional[str] = None,
         section: Optional[str] = None,
         replication_role: Optional[str] = None,
-        excludes: Tuple[str, ...] = (),
+        excludes: tuple[str, ...] = (),
     ) -> MysqlLegacyRemoteHosts:
         """Find the core databases matching the parameters.
 
@@ -130,7 +130,7 @@ class MysqlLegacy:
                 :py:data:`spicerack.mysql_legacy.REPLICATION_ROLES`.
             section (str, optional): a specific section to filter for, accepted values are those specified in
                 :py:data:`spicerack.mysql_legacy.CORE_SECTIONS`.
-            excludes (Tuple[str, ...]): sections to exclude from getting
+            excludes (tuple): sections to exclude from getting.
 
         Raises:
             spicerack.mysql_legacy.MysqlLegacyError: on invalid data or unexpected matching hosts.
@@ -262,7 +262,7 @@ class MysqlLegacy:
         heartbeats = self.get_core_masters_heartbeats(dc_from, dc_from)
         self.check_core_masters_heartbeats(dc_to, dc_from, heartbeats)
 
-    def get_core_masters_heartbeats(self, datacenter: str, heartbeat_dc: str) -> Dict[str, datetime]:
+    def get_core_masters_heartbeats(self, datacenter: str, heartbeat_dc: str) -> dict[str, datetime]:
         """Get the current heartbeat values from core DB masters in DC for a given heartbeat DC.
 
         Arguments:
@@ -287,7 +287,7 @@ class MysqlLegacy:
         return heartbeats
 
     def check_core_masters_heartbeats(
-        self, datacenter: str, heartbeat_dc: str, heartbeats: Dict[str, datetime]
+        self, datacenter: str, heartbeat_dc: str, heartbeats: dict[str, datetime]
     ) -> None:
         """Check the current heartbeat values in the core DB masters in DC are in sync with the provided heartbeats.
 

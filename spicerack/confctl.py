@@ -2,7 +2,7 @@
 import logging
 import re
 from contextlib import contextmanager
-from typing import Dict, Iterable, Iterator, Union
+from typing import Iterable, Iterator, Union
 
 from conftool import configuration, kvobject, loader
 from conftool.drivers import BackendError
@@ -64,7 +64,7 @@ class ConftoolEntity:
         self._entity = entity
         self._dry_run = dry_run
 
-    def _select(self, tags: Dict[str, str]) -> Iterator[kvobject.Entity]:
+    def _select(self, tags: dict[str, str]) -> Iterator[kvobject.Entity]:
         """Generator that yields the selected objects based on the provided tags.
 
         Arguments:
@@ -88,7 +88,7 @@ class ConftoolEntity:
         if obj is None:
             raise ConfctlError("No match found")
 
-    def update(self, changed: Dict[str, Union[bool, str, int, float]], **tags: str) -> None:
+    def update(self, changed: dict[str, Union[bool, str, int, float]], **tags: str) -> None:
         """Updates the value of conftool objects corresponding to the selection done with tags.
 
         Arguments:
@@ -140,7 +140,7 @@ class ConftoolEntity:
                 raise ConfctlError(f"Conftool key {key} has value '{new}', expecting '{value}' for tags: {tags}")
 
     def filter_objects(
-        self, filter_expr: Dict[str, Union[bool, str, int, float]], **tags: str
+        self, filter_expr: dict[str, Union[bool, str, int, float]], **tags: str
     ) -> Iterator[kvobject.Entity]:
         """Filters objects coming from conftool based on values.
 
@@ -171,7 +171,7 @@ class ConftoolEntity:
 
     def update_objects(
         self,
-        changed: Dict[str, Union[bool, str, int, float]],
+        changed: dict[str, Union[bool, str, int, float]],
         objects: Iterable[kvobject.Entity],
     ) -> None:
         """Updates the value of the provided conftool objects.

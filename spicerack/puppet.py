@@ -4,7 +4,7 @@ import logging
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from subprocess import CalledProcessError, check_output
-from typing import Dict, Iterator, List, Optional, Tuple, Union, cast
+from typing import Iterator, Optional, Union, cast
 
 from cumin import NodeSet, nodeset
 from cumin.transports import Command
@@ -76,17 +76,16 @@ class PuppetHosts(RemoteHostsAdapter):
         finally:
             self.enable(reason, verbatim_reason)
 
-    def get_ca_servers(self) -> Dict[str, str]:
+    def get_ca_servers(self) -> dict[str, str]:
         """Retrieve the ca_servers of the nodes.
 
         Returns:
-            Dict[str, str]: The mapping from host fqdn to its configured
-                ca_server
+            dict: The mapping from host fqdn to its configured ca_server.
 
         """
         raw_results = self._remote_hosts.run_sync("puppet config --section agent print ca_server")
 
-        host_to_ca_server: Dict[str, str] = {}
+        host_to_ca_server: dict[str, str] = {}
         for node_set, output in raw_results:
             for hostname in node_set:
                 host_to_ca_server[hostname] = list(output.lines())[-1].decode()
@@ -208,7 +207,7 @@ class PuppetHosts(RemoteHostsAdapter):
         logger.info("Running Puppet with args %s on %d hosts: %s", args_string, len(self), self)
         self._remote_hosts.run_sync(Command(command, timeout=timeout), batch_size=batch_size)
 
-    def first_run(self, has_systemd: bool = True) -> Iterator[Tuple]:
+    def first_run(self, has_systemd: bool = True) -> Iterator[tuple]:
         """Perform the first Puppet run on a clean host without using custom wrappers.
 
         Arguments:
@@ -238,7 +237,7 @@ class PuppetHosts(RemoteHostsAdapter):
         logger.info("First Puppet run completed")
         return results
 
-    def regenerate_certificate(self) -> Dict[str, str]:
+    def regenerate_certificate(self) -> dict[str, str]:
         """Delete the local Puppet certificate and generate a new CSR.
 
         Returns:
@@ -325,7 +324,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
         logger.info("Successful Puppet run found")
 
-    def _get_disabled(self) -> Dict[bool, NodeSet]:
+    def _get_disabled(self) -> dict[bool, NodeSet]:
         """Check if Puppet is disabled on the hosts.
 
         Returns:
@@ -415,7 +414,7 @@ class PuppetMaster:
 
         """
         response = cast(
-            Dict,
+            dict,
             self._run_json_command(f"puppet ca --disable_warnings deprecations --render-as json verify {hostname}"),
         )
 
@@ -481,7 +480,7 @@ class PuppetMaster:
         if state != PuppetMaster.PUPPET_CERT_STATE_REQUESTED:
             raise PuppetMasterError(f"Expected certificate in requested state, got: {state}")
 
-    def get_certificate_metadata(self, hostname: str) -> Dict:
+    def get_certificate_metadata(self, hostname: str) -> dict:
         """Return the metadata of the certificate of the given hostname in the Puppet CA.
 
         Arguments:
@@ -525,7 +524,7 @@ class PuppetMaster:
 
         return metadata
 
-    def _run_json_command(self, command: str) -> Union[Dict, List]:
+    def _run_json_command(self, command: str) -> Union[dict, list]:
         """Execute and parse a Puppet CLI command that output JSON format.
 
         The commands run are assumed to be safe as the JSON format is useful for read-only operations only.

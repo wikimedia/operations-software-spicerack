@@ -2,7 +2,7 @@
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, Tuple, Union
+from typing import Any, Union
 
 from redis import StrictRedis
 from wmflib.config import load_yaml_config
@@ -29,7 +29,7 @@ class RedisCluster:
 
         """
         self._dry_run = dry_run
-        self._shards: DefaultDict[str, Dict] = defaultdict(dict)
+        self._shards: defaultdict[str, dict] = defaultdict(dict)
         config = load_yaml_config(config_dir / f"{cluster}.yaml")
 
         for datacenter, shards in config["shards"].items():
@@ -146,7 +146,7 @@ class RedisInstance:
         return self._client.info("replication")["role"] == "master"
 
     @property
-    def master_info(self) -> Union[Tuple[None, None], Tuple[str, int]]:
+    def master_info(self) -> Union[tuple[None, None], tuple[str, int]]:
         """Getter to know the master of this instance.
 
         Returns:
@@ -161,7 +161,7 @@ class RedisInstance:
             return (None, None)
 
     @property
-    def info(self) -> Tuple[str, int]:
+    def info(self) -> tuple[str, int]:
         """Getter to know the detail of this instance.
 
         Returns:

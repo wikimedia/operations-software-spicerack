@@ -4,7 +4,7 @@ import logging
 import shlex
 import sys
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, cast
+from typing import Any, Callable, Optional, Sequence, cast
 
 from spicerack import Spicerack, _log, _module_api, cookbook
 from spicerack.exceptions import SpicerackError
@@ -78,7 +78,7 @@ class BaseItem:
         self.name = ""
         self.path = ""  # Path of the cookbook in Spicerack terms, relative to the base directory
         self.full_name = ""  # Cookbook full_name in Spicerack terms
-        self.items: Dict[str, BaseItem] = {}
+        self.items: dict[str, BaseItem] = {}
         self._status: str
 
     @abstractmethod
@@ -119,7 +119,7 @@ class BaseItem:
         """
 
     @staticmethod
-    def _get_line_prefix(level: int, cont_levels: List[bool], is_final: bool) -> str:
+    def _get_line_prefix(level: int, cont_levels: list[bool], is_final: bool) -> str:
         """Return the line prefix for the given level in the tree.
 
         Arguments:
@@ -157,7 +157,7 @@ class CookbookItem(BaseItem):
     """Cookbook item class."""
 
     fallback_title: str = "UNKNOWN (unable to detect title)"
-    statuses: Tuple[str, str, str, str] = (
+    statuses: tuple[str, str, str, str] = (
         "NOTRUN",
         "PASS",
         "FAIL",
@@ -167,7 +167,7 @@ class CookbookItem(BaseItem):
 
     def __init__(
         self,
-        class_obj: Type[cookbook.CookbookBase],
+        class_obj: type[cookbook.CookbookBase],
         args: Sequence[str],
         spicerack: Spicerack,
     ) -> None:
@@ -278,7 +278,7 @@ class CookbookItem(BaseItem):
 
         return ret
 
-    def _parse_args(self) -> Tuple[int, argparse.Namespace]:
+    def _parse_args(self) -> tuple[int, argparse.Namespace]:
         """Get the argument parser from the cookbook and parse the arguments.
 
         Returns:
@@ -308,7 +308,7 @@ class CookbookItem(BaseItem):
             cookbook.PARSE_ARGS_FAIL_RETCODE,
         )
 
-    def _safe_call(self, func: Callable, args: List, kwargs: Dict, message: str, err_code: int) -> Tuple[int, Any]:
+    def _safe_call(self, func: Callable, args: list, kwargs: dict, message: str, err_code: int) -> tuple[int, Any]:
         """Run any callable explicitly catching all exceptions including SystemExit, parsing the code of the latter.
 
         Arguments:
@@ -440,7 +440,7 @@ class TreeItem(BaseItem):
 
         print(f"{TreeItem.help_answer} - Help")
 
-    def calculate_status(self) -> Tuple[int, int]:
+    def calculate_status(self) -> tuple[int, int]:
         """Calculate the status of a menu, checking the status of all it's tasks recursively.
 
         Returns:
@@ -477,7 +477,7 @@ class TreeItem(BaseItem):
         lines_str = "\n".join(lines)
         return f"{self.menu_title}\n{lines_str}\n"
 
-    def get_menu_tree(self, level: int, cont_levels: List[bool]) -> List[str]:
+    def get_menu_tree(self, level: int, cont_levels: list[bool]) -> list[str]:
         """Calculate the tree lines for a given menu.
 
         Arguments:
@@ -489,7 +489,7 @@ class TreeItem(BaseItem):
             list: the list of lines that represent the tree.
 
         """
-        lines: List[str] = []
+        lines: list[str] = []
         for i, key in enumerate(sorted(self.items.keys(), key=lambda x: self.items[x].full_name)):
             is_final = i == len(self.items) - 1
             item = self.items[key]

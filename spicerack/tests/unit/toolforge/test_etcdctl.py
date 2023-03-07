@@ -1,5 +1,5 @@
 """Toolforge etcdctl module tests."""
-from typing import List, Optional
+from typing import Optional
 from unittest import TestCase, mock
 
 from ClusterShell.MsgTree import MsgTreeElem
@@ -31,7 +31,7 @@ def _assert_not_called_with_single_param(param: str, mock_obj: mock.MagicMock) -
 
 
 def _get_mock_run_sync(
-    return_value: Optional[bytes] = None, side_effect: Optional[List[bytes]] = None
+    return_value: Optional[bytes] = None, side_effect: Optional[list[bytes]] = None
 ) -> mock.MagicMock:
     if side_effect is not None:
         return mock.MagicMock(

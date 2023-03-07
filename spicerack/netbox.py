@@ -1,7 +1,7 @@
 """Netbox module."""
 import logging
 import warnings
-from typing import Dict, Union
+from typing import Union
 
 import pynetbox
 from wmflib.requests import http_session
@@ -178,7 +178,7 @@ class Netbox:
         except NetboxHostNotFoundError:
             return str(self._fetch_virtual_machine(hostname).status)
 
-    def fetch_host_detail(self, hostname: str) -> Dict:
+    def fetch_host_detail(self, hostname: str) -> dict:
         """Return a dict containing details about the host.
 
         . deprecated:: v0.0.50
@@ -389,7 +389,7 @@ class NetboxServer:
         parts[0] = self._server.asset_tag.lower()
         return ".".join(parts)
 
-    def as_dict(self) -> Dict:
+    def as_dict(self) -> dict:
         """Return a dict containing details about the server.
 
         Returns:

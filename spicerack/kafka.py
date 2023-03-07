@@ -3,7 +3,7 @@ import logging
 import ssl
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Dict, List, Set
+from typing import Any
 
 from kafka import KafkaConsumer, OffsetAndMetadata, TopicPartition
 
@@ -44,7 +44,7 @@ class KafkaClient:
     _consumer: KafkaConsumer
     _site: str
 
-    def __init__(self, consumer_definition: ConsumerDefinition, kafka_config: Dict, dry_run: bool) -> None:
+    def __init__(self, consumer_definition: ConsumerDefinition, kafka_config: dict, dry_run: bool) -> None:
         """Sets up a KafkaConsumer.
 
         Arguments:
@@ -137,7 +137,7 @@ class KafkaClient:
             raise KafkaError(f"Offset not found for topic {localized_tp.topic}, partition {localized_tp.partition}.")
         return msg.timestamp
 
-    def partitions_for_topic(self, topic_name: str) -> Set[int]:
+    def partitions_for_topic(self, topic_name: str) -> set[int]:
         """Get partitions for a localized provided topic.
 
         Arguments:
@@ -206,7 +206,7 @@ class KafkaClient:
 class Kafka:
     """Kafka module, that currently allows for inter and cross cluster consumer group position transfer."""
 
-    def __init__(self, *, kafka_config: Dict[str, Dict[str, Dict]], dry_run: bool = True):
+    def __init__(self, *, kafka_config: dict[str, dict[str, dict]], dry_run: bool = True):
         """Create Kafka module instance.
 
         Kafka config is based on a Puppet generated config.yaml in spicerack configs. At minimum, it requires a
@@ -227,7 +227,7 @@ class Kafka:
         self._kafka_config = kafka_config
 
     @staticmethod
-    def _get_offsets(*, client: KafkaClient, topics: List[str]) -> Dict[TopicPartition, int]:
+    def _get_offsets(*, client: KafkaClient, topics: list[str]) -> dict[TopicPartition, int]:
         """Retrieves offsets for given topics, mutated for given site.
 
         Arguments:
@@ -248,7 +248,7 @@ class Kafka:
         return topic_partitions
 
     @staticmethod
-    def _get_timestamps(client: KafkaClient, topics: List[str]) -> Dict[TopicPartition, int]:
+    def _get_timestamps(client: KafkaClient, topics: list[str]) -> dict[TopicPartition, int]:
         """Retrieves timestamps for given topics, mutated for given site.
 
         Arguments:
@@ -269,7 +269,7 @@ class Kafka:
         return topic_partitions
 
     @staticmethod
-    def _get_topic_partitions(client: KafkaClient, topics: List[str]) -> List[TopicPartition]:
+    def _get_topic_partitions(client: KafkaClient, topics: list[str]) -> list[TopicPartition]:
         """Generates a list of topic partitions for given topic list.
 
         Arguments:
@@ -287,7 +287,7 @@ class Kafka:
         return topic_partitions
 
     @staticmethod
-    def _set_offsets(*, client: KafkaClient, offset_data: Dict[TopicPartition, int]) -> None:
+    def _set_offsets(*, client: KafkaClient, offset_data: dict[TopicPartition, int]) -> None:
         """Sets topic partitions offsets.
 
         Arguments:
@@ -299,7 +299,7 @@ class Kafka:
         for tp, offset in offset_data.items():
             client.seek_offset(tp, offset)
 
-    def _set_timestamps_for_topics(self, *, client: KafkaClient, timestamps: Dict[str, int]) -> None:
+    def _set_timestamps_for_topics(self, *, client: KafkaClient, timestamps: dict[str, int]) -> None:
         """Sets topic partitions offsets, based on timestamps (minus :py:const:`spicerack.kafka.DELTA`) and topic names.
 
         Arguments:
@@ -315,7 +315,7 @@ class Kafka:
         self._set_timestamps(client=client, timestamps=tp_timestamps)
 
     @staticmethod
-    def _set_timestamps(*, client: KafkaClient, timestamps: Dict[TopicPartition, int]) -> None:
+    def _set_timestamps(*, client: KafkaClient, timestamps: dict[TopicPartition, int]) -> None:
         """Sets topic partitions offsets, based on timestamps (minus :py:const:`spicerack.kafka.DELTA`).
 
         Arguments:
@@ -331,7 +331,7 @@ class Kafka:
             client.seek_offset(tp, offset)
 
     def transfer_consumer_position(
-        self, topics: List[str], source_consumer: ConsumerDefinition, target_consumer: ConsumerDefinition
+        self, topics: list[str], source_consumer: ConsumerDefinition, target_consumer: ConsumerDefinition
     ) -> None:
         """Transfers position from one Kafka consumer group to another.
 
@@ -389,7 +389,7 @@ class Kafka:
         logger.info("Done.")
 
     def set_consumer_position_by_timestamp(
-        self, target_consumer: ConsumerDefinition, timestamps: Dict[str, int]
+        self, target_consumer: ConsumerDefinition, timestamps: dict[str, int]
     ) -> None:
         """Set an approximated offsets for given topics (provided without site prefix).
 

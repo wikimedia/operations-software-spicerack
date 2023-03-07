@@ -3,7 +3,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Dict, MutableMapping, Optional, cast
+from typing import MutableMapping, Optional, cast
 
 from wmflib.requests import http_session
 
@@ -65,7 +65,7 @@ class PeeringDB:
             self.cachedir.mkdir(exist_ok=True)
 
     @staticmethod
-    def _get_cache_key(resource: str, *, resource_id: Optional[int] = None, filters: Optional[Dict] = None) -> str:
+    def _get_cache_key(resource: str, *, resource_id: Optional[int] = None, filters: Optional[dict] = None) -> str:
         """Return a cache key based on the resource requested.
 
         Arguments:
@@ -86,7 +86,7 @@ class PeeringDB:
             return f"{resource}/{filter_key}"
         return f"{resource}/{str(resource_id)}/{filter_key}"
 
-    def fetch_asn(self, asn: int) -> Dict:
+    def fetch_asn(self, asn: int) -> dict:
         """Fetch a specific asn.
 
         Arguments:
@@ -98,7 +98,7 @@ class PeeringDB:
         """
         return self.fetch("net", filters={"asn": asn, "depth": 2})
 
-    def fetch(self, resource: str, resource_id: Optional[int] = None, filters: Optional[Dict] = None) -> Dict:
+    def fetch(self, resource: str, resource_id: Optional[int] = None, filters: Optional[dict] = None) -> dict:
         """Get a PeeringDB resource.
 
         Arguments:
@@ -154,7 +154,7 @@ class PeeringDB:
         except OSError as e:
             raise CacheMiss() from e
 
-    def _cache_put(self, content: Dict, cache_key: str) -> None:
+    def _cache_put(self, content: dict, cache_key: str) -> None:
         """Write the resource to the on disk cache if configured to do so.
 
         Arguments:

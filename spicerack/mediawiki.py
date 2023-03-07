@@ -1,6 +1,6 @@
 """MediaWiki module."""
 import logging
-from typing import Any, Dict, Tuple
+from typing import Any
 
 from cumin.transports import Command
 from wmflib.constants import CORE_DATACENTERS
@@ -70,7 +70,7 @@ class MediaWiki:
 
         return found
 
-    def get_siteinfo(self, datacenter: str) -> Dict:
+    def get_siteinfo(self, datacenter: str) -> dict:
         """Get the JSON paylod for siteinfo from a random host in a given datacenter.
 
         Arguments:
@@ -91,7 +91,7 @@ class MediaWiki:
 
         return response.json()
 
-    def check_siteinfo(self, datacenter: str, checks: Dict[Tuple[str, ...], Any], samples: int = 1) -> None:
+    def check_siteinfo(self, datacenter: str, checks: dict[tuple[str, ...], Any], samples: int = 1) -> None:
         """Check that a specific value in siteinfo matches the expected ones, on multiple hosts.
 
         Arguments:
@@ -300,7 +300,7 @@ class MediaWiki:
         backoff_mode="constant",
         exceptions=(MediaWikiError, MediaWikiCheckError),
     )
-    def _check_siteinfo(self, datacenter: str, checks: Dict[Tuple[str], Any]) -> None:
+    def _check_siteinfo(self, datacenter: str, checks: dict[tuple[str], Any]) -> None:
         """Check that a specific value in siteinfo matches the expected ones, retrying if doesn't match.
 
         Arguments:
@@ -333,7 +333,7 @@ class MediaWiki:
                 raise MediaWikiCheckError(f"Expected '{expected}', got '{value}' for path: {path}")
 
     def _check_siteinfo_dry_run_aware(
-        self, datacenter: str, checks: Dict[Tuple[str, ...], Any], samples: int = 1
+        self, datacenter: str, checks: dict[tuple[str, ...], Any], samples: int = 1
     ) -> None:
         """Dry-run mode aware check_siteinfo. See check_siteinfo() documentation for more details.
 

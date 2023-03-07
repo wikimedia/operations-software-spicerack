@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import List, Optional, Sequence, Type, cast
+from typing import Optional, Sequence, cast
 
 from wmflib.config import load_yaml_config
 
@@ -195,7 +195,7 @@ class CookbookCollection:
 
     def _collect_module_cookbooks(
         self, module: _module_api.CookbooksModuleInterface
-    ) -> List[Type[cookbook.CookbookBase]]:
+    ) -> list[type[cookbook.CookbookBase]]:
         """Collect all classes derived from CookbookBase in the given module.
 
         Arguments:
@@ -234,7 +234,7 @@ class CookbookCollection:
 
         return classes
 
-    def _convert_module_in_cookbook(self, module: _module_api.CookbooksModuleInterface) -> Type[cookbook.CookbookBase]:
+    def _convert_module_in_cookbook(self, module: _module_api.CookbooksModuleInterface) -> type[cookbook.CookbookBase]:
         """Convert a module API based cookbook into a class API cookbook.
 
         Arguments:

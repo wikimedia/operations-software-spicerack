@@ -3,7 +3,7 @@ import logging
 import time
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import kubernetes  # mypy: no-type
 from kubernetes import client, config  # mypy: no-type
@@ -93,7 +93,7 @@ class KubernetesApiFactory:
 
         """
         self.cluster = cluster
-        self._configurations: Dict[str, client.Configuration] = {}
+        self._configurations: dict[str, client.Configuration] = {}
 
     def configuration(self, user: str) -> client.Configuration:
         """Provide the configuration for a specific user.
@@ -192,7 +192,7 @@ class KubernetesNode:
         return self._node.metadata.name
 
     @property
-    def taints(self) -> List[V1Taint]:
+    def taints(self) -> list[V1Taint]:
         """The taints of the node.
 
         Returns:
@@ -250,8 +250,8 @@ class KubernetesNode:
             spicerack.k8s.KubernetesCheckError: if we can't evict all pods.
 
         """
-        unevictable: List["KubernetesPod"] = []
-        failed: List[Tuple["KubernetesPod", KubernetesApiError]] = []
+        unevictable: list["KubernetesPod"] = []
+        failed: list[tuple["KubernetesPod", KubernetesApiError]] = []
         self.cordon()
         max_grace_period = 0
         for pod in self.get_pods():
@@ -302,14 +302,14 @@ class KubernetesNode:
         except kubernetes.client.exceptions.ApiException as exc:
             raise KubernetesApiError(f"Failed to list nodes: {exc}") from exc
 
-    def _patch(self, body: Dict[str, Any]) -> kubernetes.client.models.v1_node.V1Node:
+    def _patch(self, body: dict[str, Any]) -> kubernetes.client.models.v1_node.V1Node:
         """Modify the node properties."""
         try:
             return self._api.core().patch_node(self.name, body)
         except kubernetes.client.exceptions.ApiException as exc:
             raise KubernetesApiError(f"Failed to modify node: {exc}") from exc
 
-    def get_pods(self) -> List["KubernetesPod"]:
+    def get_pods(self) -> list["KubernetesPod"]:
         """Get the pods running on this node."""
         pods = []
         try:

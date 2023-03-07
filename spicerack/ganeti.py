@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import RequestException
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 RAPI_URL_FORMAT: str = "https://{cluster}:5080"
 """:py:class:`str`: the template string to construct the Ganeti RAPI URL."""
-INSTANCE_LINKS: Tuple[str, ...] = ("public", "private", "analytics")
+INSTANCE_LINKS: tuple[str, ...] = ("public", "private", "analytics")
 """:py:class:`tuple`: the list of possible instance link types."""
 
 
@@ -76,7 +76,7 @@ class GanetiRAPI:
         self._http_session.auth = HTTPBasicAuth(username, password)
         self._http_session.verify = ca_path
 
-    def _api_get_request(self, *targets: str) -> Dict:
+    def _api_get_request(self, *targets: str) -> dict:
         """Perform a RAPI request.
 
         Arguments:
@@ -101,7 +101,7 @@ class GanetiRAPI:
         return result.json()
 
     @property
-    def info(self) -> Dict:
+    def info(self) -> dict:
         """Return complete cluster information.
 
         Returns:
@@ -126,7 +126,7 @@ class GanetiRAPI:
         """
         return self.info.get("master")
 
-    def fetch_instance(self, fqdn: str) -> Dict:
+    def fetch_instance(self, fqdn: str) -> dict:
         """Return full information about an instance.
 
         Arguments:

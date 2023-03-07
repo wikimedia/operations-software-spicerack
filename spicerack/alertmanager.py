@@ -3,7 +3,7 @@ import logging
 import re
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Iterator, Mapping, Optional, Sequence, Tuple, Union
+from typing import Iterator, Mapping, Optional, Sequence, Union
 
 from cumin import NodeSet, nodeset_fromlist
 from requests import Response
@@ -15,9 +15,9 @@ from spicerack.exceptions import SpicerackError
 from spicerack.typing import TypeHosts
 
 logger = logging.getLogger(__name__)
-MatchersType = Sequence[Dict[str, Union[str, int, float, bool]]]
+MatchersType = Sequence[dict[str, Union[str, int, float, bool]]]
 PORT_REGEX = r"(\..+)?(:[0-9]+)?"
-ALERTMANAGER_URLS: Tuple[str, str] = (
+ALERTMANAGER_URLS: tuple[str, str] = (
     "http://alertmanager-eqiad.wikimedia.org",
     "http://alertmanager-codfw.wikimedia.org",
 )
