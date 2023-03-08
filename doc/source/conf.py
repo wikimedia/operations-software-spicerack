@@ -12,6 +12,7 @@
 # documentation root, use pathlib's resolve() to make it absolute, like shown here.
 #
 import sys
+from datetime import date
 from pathlib import Path
 
 import sphinx_rtd_theme
@@ -55,7 +56,7 @@ master_doc = "index"
 # General information about the project.
 project = "Spicerack"
 title = f"{project} Documentation"
-copyright = "2018-2021, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
+copyright = f"2018-{date.today().year}, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
 author = "Riccardo Coccioli"
 
 # The version info for the project you're documenting, acts as replacement for
