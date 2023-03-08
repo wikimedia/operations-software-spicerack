@@ -146,7 +146,7 @@ class ServiceDiscovery(abc.Iterable):
 
         """
         self.depool(site, name=name)
-        try:
+        try:  # pylint: disable=no-else-raise
             yield
         except Exception:
             if repool_on_error:

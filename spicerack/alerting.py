@@ -47,7 +47,7 @@ class AlertingHosts:
 
         """
         downtime_id = self.downtime(reason, duration=duration)
-        try:
+        try:  # pylint: disable=no-else-raise
             yield
         except BaseException:
             if remove_on_error:

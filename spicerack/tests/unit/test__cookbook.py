@@ -391,7 +391,7 @@ class TestCookbookCollection:
             ),
             (
                 "group3.raise_exception",
-                ["Exception: Something went wrong"],
+                ["RuntimeError: Something went wrong"],
                 [],
                 cookbook.EXCEPTION_RETCODE,
                 [],

@@ -51,8 +51,7 @@ EXTRAS_REQUIRE = {
         "isort",
     ],
     "prospector": [
-        "prospector[with_everything]>=0.12.4,<=1.7.7",  # Temporary upper limit for an upstream regression
-        "pylint<2.15.7",  # Temporary upper limit for a change that breaks prospector that can't be upgraded
+        "prospector[with_everything]>=1.1.7",
         "pytest>=6.0.2",
         "requests-mock>=1.7.0",
     ],

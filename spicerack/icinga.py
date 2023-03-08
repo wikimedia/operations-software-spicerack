@@ -313,7 +313,7 @@ class IcingaHosts:
 
         """
         self.downtime(reason, duration=duration)
-        try:
+        try:  # pylint: disable=no-else-raise
             yield
         except BaseException:
             if remove_on_error:
@@ -416,7 +416,7 @@ class IcingaHosts:
 
         """
         self.downtime_services(service_re, reason, duration=duration)
-        try:
+        try:  # pylint: disable=no-else-raise
             yield
         except BaseException:
             if remove_on_error:

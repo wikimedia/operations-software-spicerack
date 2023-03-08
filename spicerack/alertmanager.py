@@ -111,7 +111,7 @@ class Alertmanager:
 
         """
         downtime_id = self.downtime(reason, matchers=matchers, duration=duration)
-        try:
+        try:  # pylint: disable=no-else-raise
             yield
         except BaseException:
             if remove_on_error:
@@ -251,7 +251,7 @@ class AlertmanagerHosts(Alertmanager):
         # * It needs a different docstring for documenting the different behaviour of the matchers argument.
         # * Calling super() within a contextmanager is not that trival and will de-facto require more code.
         downtime_id = self.downtime(reason, matchers=matchers, duration=duration)
-        try:
+        try:  # pylint: disable=no-else-raise
             yield
         except BaseException:
             if remove_on_error:
