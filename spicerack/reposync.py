@@ -36,18 +36,19 @@ class RepoSync:
     """Class for syncing git repos."""
 
     _data_subdir: str = "data"
+    """Sub directory to create inside the temporary directory where to create the data."""
     _email: str = "noc@wikimedia.org"
+    """Email address to use for the git commit."""
 
     def __init__(self, repo: Repo, username: str, remote_hosts: RemoteHosts, *, dry_run: bool) -> None:
         """Initialise the object.
 
         Arguments:
-            repo (git.repo.base.Repo): the path to the repo
-            username (str): The username making the change
-            remote_hosts (spicerack.remote.RemoteHosts): A remotes hosts object
-                pointing to all git remote servers.  The servers are expected to
-                have a valid KEYHOLDER_SOCK configured
-            dry_run (bool): don't preform any write actions
+            repo: the path to the git repository.
+            username: The username making the changes.
+            remote_hosts: A remotes hosts object pointing to all git remote servers.  The servers are expected to
+                have a valid ``KEYHOLDER_SOCK`` configured.
+            dry_run: don't preform any write actions.
 
         """
         self._hexsha: Optional[str] = None
@@ -66,12 +67,12 @@ class RepoSync:
         """Commit files in working repo.
 
         Arguments:
-            working_repo (git.repo.base.Repo): The working git repo
-            message (str): the commit message
+            working_repo: The working git repository.
+            message: the commit message.
 
         Raises:
-            spicerack.reposync.RepoSyncNoChangeError: if no changes detected
-            spicerack.reposync.RepoSyncError: If no hexsha returned for commit
+            spicerack.reposync.RepoSyncNoChangeError: if no changes are detected.
+            spicerack.reposync.RepoSyncError: If no hexsha was returned for the commit.
 
         """
         # Don't use working_repo.index.add(".") as it adds the .git folder
@@ -89,10 +90,10 @@ class RepoSync:
         """Push the committed changes to the repository's remote.
 
         Arguments:
-            working_repo (git.repo.base.Repo): the repository with the commit to push.
+            working_repo: the repository with the commit to push.
 
         Raises:
-            spicerack.reposync.RepoSyncPushError: if there was an error pushing
+            spicerack.reposync.RepoSyncPushError: if there was an error pushing.
 
         """
         if working_repo is None:
@@ -135,8 +136,8 @@ class RepoSync:
         """Update the repo with data from fetch_data.
 
         Arguments:
-            working_dir (pathlib.Path): The temporary directory used to build diffs
-            message (str): the commit message
+            working_dir: The temporary directory used to build diffs.
+            message: the commit message.
 
         """
         repo_dir = working_dir / "repo"
@@ -163,13 +164,13 @@ class RepoSync:
         this directory with fresh data to be committed to the main repository.
 
         Arguments:
-            message (str): the commit message
+            message: the commit message.
 
         Yields:
-            pathlib.Path: temporary directory to populate with data intended for the git repo
+            pathlib.Path: temporary directory to populate with data intended for the git repo.
 
         Raises:
-            spicerack.reposync.RepoSyncError: if unable to update local repo
+            spicerack.reposync.RepoSyncError: if unable to update local repo.
 
         """
         with TemporaryDirectory() as tmp_dir:

@@ -23,9 +23,9 @@ class RedisCluster:
         """Initialize the instance.
 
         Arguments:
-            cluster (str): the name of the cluster to connect to.
-            config_dir (str): path to the directory containing the configuration files for the Redis clusters.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            cluster: the name of the cluster to connect to.
+            config_dir: path to the directory containing the configuration files for the Redis clusters.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._dry_run = dry_run
@@ -45,11 +45,11 @@ class RedisCluster:
         """Start the cluster replica in a datacenter from a master datacenter.
 
         Arguments:
-            datacenter (str): the datacenter on which to start the replica.
-            master_datacenter (str): the datacenter from which to replicate.
+            datacenter: the datacenter on which to start the replica.
+            master_datacenter: the datacenter from which to replicate.
 
         Raises:
-            RedisClusterError: on error and invalid parameters.
+            spicerack.redis.RedisClusterError: on error and invalid parameters.
 
         """
         if master_datacenter == datacenter:
@@ -64,10 +64,10 @@ class RedisCluster:
         """Stop the cluster replica in a datacenter.
 
         Arguments:
-            datacenter (str): the datacenter on which to stop the replica.
+            datacenter: the datacenter on which to stop the replica.
 
         Raises:
-            RedisClusterError: on error.
+            spicerack.redis.RedisClusterError: on error.
 
         """
         for instance in self._shards[datacenter].values():
@@ -77,11 +77,11 @@ class RedisCluster:
         """Start the replica in a specific instance from a master instance.
 
         Arguments:
-            instance (spicerack.redis_cluster.RedisInstance): the instance where to start the replica.
-            master (spicerack.redis_cluster.RedisInstance): the master instance to replicate from.
+            instance: the instance where to start the replica.
+            master: the master instance to replicate from.
 
         Raises:
-            RedisClusterError: if unable to verify the replica has started.
+            spicerack.redis.RedisClusterError: if unable to verify the replica has started.
 
         """
         if instance.master_info == master.info:
@@ -101,10 +101,10 @@ class RedisCluster:
         """Stop the replica in a specific instance.
 
         Arguments:
-            instance (spicerack.redis_cluster.RedisInstance): the instance where to stop the replica.
+            instance: the instance where to stop the replica.
 
         Raises:
-            RedisClusterError: on error.
+            spicerack.redis.RedisClusterError: on error.
 
         """
         if instance.is_master:
@@ -128,7 +128,7 @@ class RedisInstance:
         """Initialize the instance.
 
         Arguments:
-            **kwargs (mixed): arbitrary keyword arguments, to be passed to the `redis.StrictRedis` constructor.
+            **kwargs: arbitrary keyword arguments, to be passed to the `redis.StrictRedis` constructor.
 
         """
         self.host: str = kwargs.get("host", "")
@@ -137,12 +137,7 @@ class RedisInstance:
 
     @property
     def is_master(self) -> bool:
-        """Getter to check if the current instance is a master.
-
-        Returns:
-            bool: :py:data:`True` if the instance is a master, :py:data:`False` otherwise.
-
-        """
+        """Returns :py:data:`True` if the current instance is a master, :py:data:`False` otherwise."""
         return self._client.info("replication")["role"] == "master"
 
     @property
@@ -150,8 +145,8 @@ class RedisInstance:
         """Getter to know the master of this instance.
 
         Returns:
-            tuple: a 2-element tuple with (host/IP, port) of the master instance. If there is no master configured
-            (None, None) is returned.
+            A 2-element tuple with (host/IP, port) of the master instance. If there is no master configured
+            (:py:data:`None`, :py:data:`None`) is returned.
 
         """
         data = self._client.info("replication")
@@ -165,7 +160,7 @@ class RedisInstance:
         """Getter to know the detail of this instance.
 
         Returns:
-            tuple: a 2-element tuple with (host/IP, port) of the instance.
+            A 2-element tuple with (host/IP, port) of the instance.
 
         """
         return self.host, self.port
@@ -178,7 +173,7 @@ class RedisInstance:
         """Start the replica from the given master instance.
 
         Arguments:
-            master (spicerack.redis_cluster.RedisInstance): the master instance.
+            master: the master instance.
 
         """
         self._client.slaveof(master.host, master.port)

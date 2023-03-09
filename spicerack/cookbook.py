@@ -5,20 +5,20 @@ from typing import Optional
 
 from spicerack import Spicerack
 
-ROLLBACK_FAIL_RETCODE = 93
-"""int: Reserved exit code: the cookbook had failed and raised an exception while executing the rollback() method."""
-CLASS_FAIL_INIT_RETCODE = 94
-"""int: Reserved exit code: failed to initialize the cookbook."""
-GET_ARGS_PARSER_FAIL_RETCODE = 95
-"""int: Reserved exit code: the call to get the argument parser failed."""
-PARSE_ARGS_FAIL_RETCODE = 96
-"""int: Reserved exit code: a cookbook failed to parse arguments."""
-INTERRUPTED_RETCODE = 97
-"""int: Reserved exit code: a cookbook execution was interrupted."""
-NOT_FOUND_RETCODE = 98
-"""int: Reserved exit code: no cookbook was found for the selection."""
-EXCEPTION_RETCODE = 99
-"""int: Reserved exit code: a cookbook raised an exception while executing."""
+ROLLBACK_FAIL_RETCODE: int = 93
+"""Reserved exit code: the cookbook had failed and raised an exception while executing the rollback() method."""
+CLASS_FAIL_INIT_RETCODE: int = 94
+"""Reserved exit code: failed to initialize the cookbook."""
+GET_ARGS_PARSER_FAIL_RETCODE: int = 95
+"""Reserved exit code: the call to get the argument parser failed."""
+PARSE_ARGS_FAIL_RETCODE: int = 96
+"""Reserved exit code: a cookbook failed to parse arguments."""
+INTERRUPTED_RETCODE: int = 97
+"""Reserved exit code: a cookbook execution was interrupted."""
+NOT_FOUND_RETCODE: int = 98
+"""Reserved exit code: no cookbook was found for the selection."""
+EXCEPTION_RETCODE: int = 99
+"""Reserved exit code: a cookbook raised an exception while executing."""
 
 
 class ArgparseFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
@@ -44,8 +44,8 @@ class CookbookBase(metaclass=ABCMeta):
         """Initializee the instance and store the Spicerack instance into ``self.spicerack``.
 
         Arguments:
-            spicerack (spicerack.Spicerack): the Spicerack accessor instance with which the cookbook can access all the
-                Spicerack capabilities.
+            spicerack: the Spicerack accessor instance with which the cookbook can access all the Spicerack
+                capabilities.
 
         """
         self.spicerack = spicerack
@@ -56,10 +56,6 @@ class CookbookBase(metaclass=ABCMeta):
 
         The default implementation returns the first line of the class docstring if there is any, a single
         dash otherwise.
-
-        Returns:
-            str: the cookbook static title.
-
         """
         if self.__doc__ is None:
             return "-"
@@ -70,11 +66,7 @@ class CookbookBase(metaclass=ABCMeta):
         """Optionally define an argument parser for the cookbook, if the cookbook accepts CLI arguments.
 
         The default implementation returns an empty ``ArgumentParser`` instance that doesn't accept any arguments and
-        uses the class docstring as description.
-
-        Returns:
-            argparse.ArgumentParser: the argument parser object, the arguments will be parsed by the framework.
-
+        uses the class docstring as description. The arguments will be parsed by the Spicerack framework.
         """
         return argparse.ArgumentParser(description=self.__doc__, formatter_class=ArgparseFormatter)
 
@@ -88,15 +80,15 @@ class CookbookBase(metaclass=ABCMeta):
         If any exception is raised in this method Spicerack will not execute the cookbook.
 
         Arguments:
-            args (argparse.Namespace): the parsed arguments that were parsed using the defined ``argument_parser()``.
+            args: the parsed arguments that were parsed using the defined ``argument_parser()``.
 
         Raises:
             BaseException: any exception raised in the ``get_runner()`` method will be catched by Spicerack and the
                 Cookbook will not be executed.
 
         Returns:
-            spicerack.cookbook.CookbookRunnerBase: an instance of a custom class derived from
-            :py:class:`spicerack.cookbook.CookbookRunnerBase` that implements the actual execution of the cookbook.
+            Must return an instance of a custom class derived from :py:class:`spicerack.cookbook.CookbookRunnerBase`
+            that implements the actual execution of the cookbook.
 
         """
 
@@ -113,11 +105,8 @@ class CookbookRunnerBase(metaclass=ABCMeta):
         """Optional message to be used as the runtime description of the cookbook.
 
         Cookbooks can override this instance property to define their custom description, also based on the given
-        command line arguments. For example this will be used in the task start/end messages.
-
-        Returns:
-            str: the runtime description. If not overriden an empty string will be used.
-
+        command line arguments. For example this will be used in the task start/end messages. The default
+        implementation returns an empty string.
         """
         return ""
 
@@ -126,7 +115,7 @@ class CookbookRunnerBase(metaclass=ABCMeta):
         """Excute the cookbook.
 
         Returns:
-            int, None: the return code of the cookbook, it should be zero or :py:data:`None` on success, a positive
+            The return code of the cookbook, it should be zero or :py:data:`None` on success, a positive
             integer smaller than ``128`` and not in the range ``90-99``
             (see :ref:`Reserved exit codes<reserved-codes>`) in case of failure.
 

@@ -15,13 +15,13 @@ class Reason:
         """Initialize the instance.
 
         Arguments:
-            reason (str): the reason to use to justify an administrative action. The username and the hostname where the
+            reason: the reason to use to justify an administrative action. The username and the hostname where the
                 action was originated will be added to the reason automatically. The reason is meant to be passed to
                 remote execution in double quotes, allowing to use Bash variables, if needed. Therefore the reason
                 cannot contain double quotes.
-            username (str): the username to mention in the reason as the author of the action.
-            hostname (str): the hostname to mention in the reason as the host originating the action.
-            task_id (str, optional): the task ID to mention in the reason.
+            username: the username to mention in the reason as the author of the action.
+            hostname: the hostname to mention in the reason as the host originating the action.
+            task_id: the task ID to mention in the reason.
 
         Raises:
             spicerack.administrative.ReasonError: if any parameter contains double quotes.
@@ -49,7 +49,7 @@ class Reason:
     def __str__(self) -> str:
         """String representation of the instance, including all attributes.
 
-        Example:
+        Examples:
             * Example return value when the task ID is not set::
 
                 Given reason - username@hostname
@@ -57,9 +57,6 @@ class Reason:
             * Example return value when the task ID is set::
 
                 Given reason - username@hostname - T12345
-
-        Returns:
-            str: the generated string representation of all the instance attributes.
 
         """
         parts = [self._reason, self.owner]
@@ -70,53 +67,35 @@ class Reason:
 
     @property
     def reason(self) -> str:
-        """Getter for the reason property.
-
-        Returns:
-            str: the reason given to justify the administrative action.
-
-        """
+        """Get the reason given to justify the administrative action."""
         return self._reason
 
     @property
     def owner(self) -> str:
-        """Getter for the owner property.
+        """Get the owner of the currently running code.
 
-        Example:
+        Examples:
             Example return value::
 
                 username@hostname
-
-        Returns:
-            str: the owner of the currently running code.
 
         """
         return f"{self._username}@{self._hostname}"
 
     @property
     def hostname(self) -> str:
-        """Getter for the hostname property.
-
-        Returns:
-            str: the hostname on which the code is running.
-
-        """
+        """Get  the hostname on which the code is running."""
         return self._hostname
 
     @property
     def task_id(self) -> Optional[str]:
-        """Getter for the task ID property.
-
-        Returns:
-            Optional[Str]: the task ID to mention in the reason, or None if none was given.
-
-        """
+        """Get the task ID to mention in the reason, or :py:data:`None` if none was given."""
         return self._task_id
 
     def quoted(self) -> str:
-        """Double quoted string representation of the instance, including all attributes.
+        """Get a double quoted string representation of the instance, including all attributes.
 
-        Example:
+        Examples:
             * Example return value when the task ID is not set::
 
                 "Given reason - username@hostname"
@@ -124,9 +103,6 @@ class Reason:
             * Example return value when the task ID is set::
 
                 "Given reason - username@hostname - T12345"
-
-        Returns:
-            str: the generated string representation of all the instance attributes, double quoted.
 
         """
         return f'"{self}"'

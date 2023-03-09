@@ -12,12 +12,15 @@ from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
 IPMI_PASSWORD_MAX_LEN: int = 20
+"""The maximum length of the IPMI password."""
 IPMI_PASSWORD_MIN_LEN: int = 16
+"""The minimum length of the IPMI password."""
 IPMI_SAFE_BOOT_PARAMS: tuple[str, ...] = (
     "0000000000",  # No overrides
     "8000000000",  # Boot Flag Valid
     "8000020000",  # Boot Flag Valid and Screen blank
 )
+"""The boot params returned by IPMI to consider valid for normal operations."""
 logger = logging.getLogger(__name__)
 
 
@@ -36,9 +39,9 @@ class Ipmi:
         """Initialize the instance.
 
         Arguments:
-            target (str): the management console FQDN or IP to target.
-            password (str): the password to use to connect via IPMI.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            target: the management console FQDN or IP to target.
+            password: the password to use to connect via IPMI.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self.env: dict[str, str] = {"IPMITOOL_PASSWORD": password}
@@ -46,17 +49,14 @@ class Ipmi:
         self._dry_run = dry_run
 
     def command(self, command_parts: list[str], is_safe: bool = False, hide_parts: tuple = ()) -> str:
-        """Run an ipmitool command for a remote management console.
+        """Run an ipmitool command for a remote management console and return its output.
 
         Arguments:
-            command_parts (list): a list of :py:class:`str` with the IPMI command components to execute.
-            is_safe (bool, optional): if this is a safe command to run also in DRY RUN mode.
-            hide_parts (tuple, optional): tuple with indexes of the command_parts list that should be redacted in logs
-                and outputs because contain sensitive data. For example setting it to (2, 4) would replace in logs and
-                outputs the 3rd and 5th element of the command_parts list.
-
-        Returns:
-            str: the output of the ipmitool command.
+            command_parts: a list of :py:class:`str` with the IPMI command components to execute.
+            is_safe: if this is a safe command to run also in DRY RUN mode.
+            hide_parts: tuple with indexes of the command_parts list that should be redacted in logs and outputs
+                because contain sensitive data. For example setting it to (2, 4) would replace in logs and outputs the
+                3rd and 5th element of the command_parts list.
 
         Raises:
             spicerack.ipmi.IpmiError: on failure.
@@ -176,13 +176,10 @@ class Ipmi:
         """Get a specific boot parameter of the host.
 
         Arguments:
-            param_label (str): the label of the boot parameter to lookout for.
+            param_label: the label of the boot parameter to lookout for.
 
         Raises:
             spicerack.ipmi.IpmiError: if unable to find the given label or to extract its value.
-
-        Returns:
-            str: the value of the parameter.
 
         """
         bootparams = self.command(["chassis", "bootparam", "get", "5"], is_safe=True)
@@ -199,19 +196,16 @@ class Ipmi:
 
     @staticmethod
     def _get_password_store_size(password: str) -> int:
-        """Parse the password to determine the correct storage size.
+        """Parse the password to determine the correct storage size and return it.
 
         Ipmitool stores passwords in either 16 or 20 byte strings depending
         on the password length.
 
         Arguments:
-            password(str): the password string to parse
+            password: the password string to parse.
 
         Raises:
-            spicerack.ipmi.IpmiError: if unable password is too big or too small
-
-        Returns:
-            int: A number representing the storage size
+            spicerack.ipmi.IpmiError: if the password is too long or too short.
 
         """
         if len(password) > IPMI_PASSWORD_MAX_LEN:
@@ -226,12 +220,12 @@ class Ipmi:
         """Reset the given usernames password to the one provided.
 
         Arguments:
-            username (str): The username who's password will be reset must not be empty
-            password (str): The new password, length between :py:const:`spicerack.ipmi.IPMI_PASSWORD_MIN_LEN` and
-             :py:const:`spicerack.ipmi.IPMI_PASSWORD_MAX_LEN` bytes
+            username: The username who's password will be reset must not be empty.
+            password: The new password, length between :py:const:`spicerack.ipmi.IPMI_PASSWORD_MIN_LEN` and
+             :py:const:`spicerack.ipmi.IPMI_PASSWORD_MAX_LEN` bytes.
 
         Raises:
-            spicerack.ipmi.IpmiError: if unable reset password or arguments invalid
+            spicerack.ipmi.IpmiError: if unable reset password or arguments invalid.
 
         """
         if not username:
@@ -268,14 +262,11 @@ class Ipmi:
         """Get the user ID associated with a given username.
 
         Arguments:
-            username (str): The username to search for
-            channel (int): The channel number for the user list; Default: 1
+            username: The username to search for
+            channel: The channel number for the user list; Default: 1
 
         Raises:
             spicerack.ipmi.IpmiError: if unable to find the given username.
-
-        Returns:
-            str: the user ID associated with the username
 
         """
         userlist = self.command(["user", "list", str(channel)], is_safe=True)

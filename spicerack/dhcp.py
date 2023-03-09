@@ -15,12 +15,11 @@ from wmflib.constants import ALL_DATACENTERS
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteExecutionError, RemoteHosts
 
-DHCP_TARGET_PATH = "/etc/dhcp/automation"
-"""str: The path to the top of the DHCPd automation directory."""
+DHCP_TARGET_PATH: str = "/etc/dhcp/automation"
+"""The path to the top of the DHCPd automation directory."""
 
-
-MGMT_HOSTNAME_RE = r"\.mgmt\.{dc}\.wmnet"
-"""str: A regular expression when formatted with a `dc` parameter will match a management hostname."""
+MGMT_HOSTNAME_RE: str = r"\.mgmt\.{dc}\.wmnet"
+"""A regular expression when formatted with a `dc` parameter will match a management hostname."""
 
 
 class DHCPError(SpicerackError):
@@ -47,7 +46,6 @@ class DHCPConfiguration(ABC):
 
         The default implementation of the string representation of the instance will format this template string with
         ``s=self``.
-
         """
 
     @property
@@ -61,14 +59,14 @@ class DHCPConfOpt82(DHCPConfiguration):
     """A configuration generator for host installation DHCP entries via DHCP Option 82.
 
     Arguments:
-        hostname (str): the hostname to generate the DHCP matching block for.
-        ipv4 (ipaddress.IPv4Address): the IPv4 to be assigned to the host.
-        switch_hostname (str): the hostname of the switch the host is connected to.
-        switch_iface (str): the name of the switch interface the host is connected to.
-        vlan (str): the name of the VLAN the host is configured for.
-        ttys (int): which ttyS to use for this host, accepted values are 0 and 1.
-        distro (str): the codename of the Debian distribution to use for the PXE installer.
-        media_type (str): The media type to use e.g. installer, installer-11.0, rescue
+        hostname: the hostname to generate the DHCP matching block for.
+        ipv4: the IPv4 to be assigned to the host.
+        switch_hostname: the hostname of the switch the host is connected to.
+        switch_iface: the name of the switch interface the host is connected to.
+        vlan: the name of the VLAN the host is configured for.
+        ttys: which ttyS to use for this host, accepted values are 0 and 1.
+        distro: the codename of the Debian distribution to use for the PXE installer.
+        media_type: The media type to use e.g. ``installer``, ``installer-11.0``, ``rescue``.
 
     """
 
@@ -81,7 +79,7 @@ class DHCPConfOpt82(DHCPConfiguration):
     distro: str
     media_type: str = "installer"
 
-    _template = """
+    _template: str = """
     host {s.hostname} {{
         host-identifier option agent.circuit-id "{s.switch_hostname}:{s.switch_iface}:{s.vlan}";
         fixed-address {s.ipv4};
@@ -100,12 +98,12 @@ class DHCPConfMac(DHCPConfiguration):
     """A configuration generator for host installation DHCP entries via MAC address.
 
     Arguments:
-        hostname (str): the hostname to generate the DHCP matching block for.
-        ipv4 (ipaddress.IPv4Address): the IPv4 to be assigned to the host.
-        mac (str): the MAC address of the host's interface.
-        ttys (int): which ttyS to use for this host, accepted values are 0 and 1.
-        distro (str): the codename of the Debian distribution to use for the PXE installer.
-        media_type (str): The media type to use e.g. installer, installer-11.0, rescue
+        hostname: the hostname to generate the DHCP matching block for.
+        ipv4: the IPv4 to be assigned to the host.
+        mac: the MAC address of the host's interface.
+        ttys: which ttyS to use for this host, accepted values are 0 and 1.
+        distro: the codename of the Debian distribution to use for the PXE installer.
+        media_type: The media type to use e.g. installer, installer-11.0, rescue
 
     """
 
@@ -116,7 +114,7 @@ class DHCPConfMac(DHCPConfiguration):
     distro: str
     media_type: str = "installer"
 
-    _template = """
+    _template: str = """
     host {s.hostname} {{
         hardware ethernet {s.mac};
         fixed-address {s.ipv4};
@@ -146,10 +144,10 @@ class DHCPConfMgmt(DHCPConfiguration):
     """A configuration for management network DHCP entries.
 
     Arguments:
-        datacenter (str): the name of the Datacenter the host is.
-        serial (str): the vendor serial of the host.
-        fqdn (str): the management console FQDN to use for this host.
-        ipv4 (ipaddress.IPv4Address): the IP address to give the management interface.
+        datacenter: the name of the Datacenter the host is.
+        serial: the vendor serial of the host.
+        fqdn: the management console FQDN to use for this host.
+        ipv4: the IP address to give the management interface.
 
     """
 
@@ -158,7 +156,7 @@ class DHCPConfMgmt(DHCPConfiguration):
     fqdn: str
     ipv4: IPv4Address
 
-    _template = """
+    _template: str = """
     class "{s.fqdn}" {{
         match if (lcase(option host-name) = "idrac-{s.lserial}");
     }}
@@ -177,22 +175,12 @@ class DHCPConfMgmt(DHCPConfiguration):
 
     @property
     def filename(self) -> str:
-        """Return the filename that corresponds to this configuration.
-
-        Returns:
-            str: the filename.
-
-        """
+        """Return the filename that corresponds to this configuration."""
         return f"""mgmt-{self.datacenter}/{self.fqdn}.conf"""
 
     @property
     def lserial(self) -> str:
-        """Return the serial as lowercase.
-
-        Returns:
-            str: the serial.
-
-        """
+        """Return the serial as lowercase."""
         return self.serial.lower()
 
 
@@ -203,8 +191,8 @@ class DHCP:
         """Create a DHCP instance.
 
         Arguments:
-            hosts (spicerack.remote.RemoteHosts): The target datacenter's install servers.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            hosts: The target datacenter's install servers.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._dry_run = dry_run
@@ -223,8 +211,7 @@ class DHCP:
         """Push a specified file with specified content to DHCP server and call refresh_dhcp.
 
         Arguments:
-            configuration (spicerack.dhcp.DHCPConfiguration): An instance which provides content and filename for a
-                configuration.
+            configuration: An instance which provides content and filename for a configuration.
 
         """
         filename = configuration.filename
@@ -255,9 +242,8 @@ class DHCP:
         This will fail if contents do not match unless force is True.
 
         Arguments:
-            configuration (spicerack.dhcp.DHCPConfiguration): An instance which provides content and filename for a
-                                                              configuration.
-            force (bool, default False): If set to True, will remove filename regardless.
+            configuration: An instance which provides content and filename for a configuration.
+            force: If set to True, will remove filename regardless.
 
         """
         if not force:
@@ -293,7 +279,7 @@ class DHCP:
         """A context manager to perform actions while the given DHCP config is valid.
 
         Arguments:
-             dhcp_config (spicerack.dhcp.DHCPConfiguration): The DHCP configuration to use.
+             dhcp_config: The DHCP configuration to use.
 
         """
         self.push_configuration(dhcp_config)

@@ -19,10 +19,10 @@ def get_effective_tries(params: RetryParams, func: Callable, args: tuple, kwargs
     The arguments are according to :py:func:`wmflib.decorators.retry` for the ``dynamic_params_callbacks`` argument.
 
     Arguments:
-        params (wmflib.decorators.RetryParams): the decorator original parameters.
-        func (Callable): the decorated callable.
-        args (tuple): the decorated callable positional arguments as tuple.
-        kwargs (dict): the decorated callable keyword arguments as dictionary.
+        params: the decorator original parameters.
+        func: the decorated callable.
+        args: the decorated callable positional arguments as tuple.
+        kwargs: the decorated callable keyword arguments as dictionary.
 
     """
     reduce_tries = False
@@ -58,10 +58,10 @@ def set_tries(params: RetryParams, _func: Callable, _params: tuple, kwargs: dict
     """Simple function to allow adapting the number of retries.
 
     Arguments:
-        params (wmflib.decorators.RetryParams): the decorator original parameters.
-        _func (Callable): the decorated callable. Unused.
-        _args (tuple): the decorated callable positional arguments as tuple. Unused.
-        kwargs (dict): the decorated callable keyword arguments as dictionary.
+        params: the decorator original parameters.
+        _func: the decorated callable. Unused.
+        _args: the decorated callable positional arguments as tuple. Unused.
+        kwargs: the decorated callable keyword arguments as dictionary.
 
     """
     override_default_retries = kwargs.get("tries", 0)
@@ -84,7 +84,7 @@ def retry(*args: Any, **kwargs: Any) -> Callable:
     For the arguments see :py:func:`wmflib.decorators.retry`.
 
     Returns:
-        function: the decorated function.
+        The decorated function.
 
     """
     kwargs["dynamic_params_callbacks"] = tuple(list(kwargs.get("dynamic_params_callbacks", [])) + [get_effective_tries])

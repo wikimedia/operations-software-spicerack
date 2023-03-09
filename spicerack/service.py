@@ -47,9 +47,9 @@ class ServiceDiscoveryRecord:
         Puppet's ``modules/wmflib/types/service/discovery.pp``.
 
     Arguments:
-        active_active (bool): :py:data:`True` if the service is active/active in DNS Discovery.
-        dnsdisc (str): the name used in conftool for the discovery record.
-        instance (spicerack.dnsdisc.Discovery): the DNS Discovery intance to operate on the service.
+        active_active: :py:data:`True` if the service is active/active in DNS Discovery.
+        dnsdisc: the name used in conftool for the discovery record.
+        instance: the DNS Discovery intance to operate on the service.
 
     """
 
@@ -89,11 +89,11 @@ class ServiceDiscoveryRecord:
         propagated before we cleare the dns recursor caches.
 
         Arguments:
-            service_ips (spicerack.service.ServiceIPs): An instance of service IPs related to this record
-            ip_per_dc_map (dict): map of client IPs from the different datacenters
+            service_ips: An instance of service IPs related to this record.
+            ip_per_dc_map: map of client IPs from the different datacenters.
 
         Raises:
-            spicerack.serviceDiscoveryStateError on failure
+            spicerack.serviceDiscoveryStateError: on failure.
 
         """
         for datacenter in service_ips.sites:
@@ -130,36 +130,26 @@ class ServiceDiscovery(abc.Iterable):
         """Initialize the instance with the records.
 
         Arguments:
-            records (iterable, optional): the DNS Discovery records.
+            records: the DNS Discovery records.
 
         """
         self.records = records
 
     def __iter__(self) -> Iterator[ServiceDiscoveryRecord]:
-        """Iterate over the DNS Discovery records in the instance.
-
-        Returns:
-            iterator: iterator over the records.
-
-        """
+        """Iterate over the DNS Discovery records in the instance."""
         return iter(self.records)
 
     def __len__(self) -> int:
-        """Return the length of the instance.
-
-        Returns:
-            int: the number of DNS Discovery records.
-
-        """
+        """Return the number of DNS Discovery records."""
         return len(self.records)
 
     def depool(self, site: str, *, name: str = "") -> None:
         """Depool the service from the given site in DNS Discovery.
 
         Args:
-            site (str): the datacenter to depool the service from.
-            name (str, optional): the dnsdisc name of the DNS Discovery record to depool. If empty, and there is only
-                one record, it will depool that one.
+            site: the datacenter to depool the service from.
+            name: the dnsdisc name of the DNS Discovery record to depool. If empty, and there is only one record, it
+                will depool that one.
 
         Raises:
             spicerack.service.DiscoveryRecordNotFoundError: if there are no records at all or the record with the given
@@ -174,9 +164,9 @@ class ServiceDiscovery(abc.Iterable):
         """Pool the service to the given site in DNS Discovery.
 
         Args:
-            site (str): the datacenter to pool the service to.
-            name (str, optional): the dnsdisc name of the DNS Discovery record to pool. If empty, and there is only
-                one record, it will pool that one.
+            site: the datacenter to pool the service to.
+            name: the dnsdisc name of the DNS Discovery record to pool. If empty, and there is only one record, it
+                will pool that one.
 
         Raises:
             spicerack.service.DiscoveryRecordNotFoundError: if there are no records at all or the record with the given
@@ -195,13 +185,13 @@ class ServiceDiscovery(abc.Iterable):
         unless ``repool_on_error`` is set to :py:data:`True`.
 
         Args:
-            site (str): the datacenter to depool the service from.
-            name (str, optional): the dnsdisc name of the DNS Discovery record to depool. If empty, and there is only
-                one record, it will depool that one.
-            repool_on_error (bool, optional): whether to repool the site on error or not.
+            site: the datacenter to depool the service from.
+            name: the dnsdisc name of the DNS Discovery record to depool. If empty, and there is only one record, it
+                will depool that one.
+            repool_on_error: whether to repool the site on error or not.
 
         Yields:
-            None
+            None: it just gives back control to the caller.
 
         Raises:
             spicerack.service.DiscoveryRecordNotFoundError: if there are no records at all or the record with the given
@@ -224,8 +214,8 @@ class ServiceDiscovery(abc.Iterable):
         """Return the DNS Discovery record for the given name, raise an exception if not found.
 
         Arguments:
-            name (str, optional): the dnsdic name of the DNS Discovery record. If set to an empty string, and the
-                service has only one service, it will return that one.
+            name: the dnsdic name of the DNS Discovery record. If set to an empty string, and the service has only one
+                service, it will return that one.
 
         Raises:
             spicerack.service.DiscoveryRecordNotFoundError: if there are no records at all or the record with the given
@@ -262,7 +252,7 @@ class ServiceIPs:
         Puppet's ``modules/wmflib/types/service/ipblock.pp``.
 
     Arguments:
-        data (dict): a dictionary representing the service IPs data as defined in ``service::catalog``.
+        data: a dictionary representing the service IPs data as defined in ``service::catalog``.
 
     """
 
@@ -270,30 +260,20 @@ class ServiceIPs:
 
     @property
     def all(self) -> list[Union[IPv4Address, IPv6Address]]:
-        """Return all service IPs.
-
-        Returns:
-            list: a list of IP addresses.
-
-        """
+        """Return all the service IPs."""
         return [ip_address(j) for i in self.data.values() for j in i.values()]
 
     @property
     def sites(self) -> list[str]:
-        """Returns all the datacenters where there is at least one IP for the service.
-
-        Returns:
-            list: a list of strings.
-
-        """
+        """Returns all the datacenters where there is at least one IP for the service."""
         return list(self.data.keys())
 
     def get(self, site: str, label: str = "default") -> Union[IPv4Address, IPv6Address, None]:
         """Get the IP for a given datacenter and optional label.
 
         Arguments:
-            site (str): the datacenter to filter for.
-            label (str, optional): the label of the IP.
+            site: the datacenter to filter for.
+            label: the label of the IP.
 
         Returns:
             ipaddress.IPv4Address: if the matched IP is an IPv4.
@@ -313,8 +293,8 @@ class ServiceLVSConftool:
     """Represent the conftool configuration for the service for the load balancers.
 
     Arguments:
-        cluster (str): name of the cluster tag in conftool.
-        service (str): name of the service tag in conftool.
+        cluster: name of the cluster tag in conftool.
+        service: name of the service tag in conftool.
 
     """
 
@@ -330,14 +310,14 @@ class ServiceLVS:
         Puppet's ``modules/wmflib/types/service/lvs.pp``.
 
     Arguments:
-        conftool (spicerack.service.ServiceLVSConftool): the conftool configuration for the service.
-        depool_threshold (str): the percentage of the cluster that Pybal will keep pooled anyway on failure.
-        enabled (bool): whether the service is enabled on the load balancers.
-        lvs_class (str): the traffic class of the service (e.g. ``low-traffic``).
-        monitors (dict): a dictionary of Pybal monitors configured for the service.
-        bgp (bool, optional): whether Pybal advertise the service via BGP or not.
-        protocol (str, optional): the Internet protocol of the service.
-        scheduler (str, optional): the IPVS scheduler used for the service.
+        conftool: the conftool configuration for the service.
+        depool_threshold: the percentage of the cluster that Pybal will keep pooled anyway on failure.
+        enabled: whether the service is enabled on the load balancers.
+        lvs_class: the traffic class of the service (e.g. ``low-traffic``).
+        monitors: a dictionary of Pybal monitors configured for the service.
+        bgp: whether Pybal advertise the service via BGP or not.
+        protocol: the Internet protocol of the service.
+        scheduler: the IPVS scheduler used for the service.
 
     """
 
@@ -359,7 +339,7 @@ class ServiceMonitoringHostnames:
         Puppet's ``modules/wmflib/types/service/monitoring.pp``.
 
     Arguments:
-        data (dict): the service monitoring dictionary.
+        data: the service monitoring dictionary.
 
     """
 
@@ -367,31 +347,16 @@ class ServiceMonitoringHostnames:
 
     @property
     def all(self) -> list[str]:
-        """Return all service monitoring Icinga hostnames/FQDNs.
-
-        Returns:
-            list: the list of Icinga hostnames/FQDNs.
-
-        """
+        """Return all service monitoring Icinga hostnames/FQDNs."""
         return [j for i in self.data.values() for j in i.values()]
 
     @property
     def sites(self) -> list[str]:
-        """Return all the datacenters in which the monitoring is configured for.
-
-        Returns:
-            list: the list of datacenters.
-
-        """
+        """Return all the datacenters in which the monitoring is configured for."""
         return list(self.data.keys())
 
     def get(self, site: str) -> str:
-        """Get the monitoring hostname/FQDN for the service in the given datacenter.
-
-        Returns:
-            str: the hostname/FQDN for the given datacenter if configured, empty string otherwise.
-
-        """
+        """Get the monitoring hostname/FQDN for the service in the given datacenter, empty string if not configured."""
         return self.data.get(site, {}).get("hostname", "")
 
 
@@ -403,10 +368,10 @@ class ServiceMonitoring:
         Puppet's ``modules/wmflib/types/service/monitoring.pp``.
 
     Arguments:
-        check_command (str): the Icinga check command used to monitor the service.
-        sites (spicerack.service.ServiceMonitoringHostnames): the FQDNs used to monitor the service in each datacenter.
-        contact_group (str, optional): the name of the Icinga contact group used for the service.
-        notes_url (str, optional): the Icinga notes URL pointing to the service runbook.
+        check_command: the Icinga check command used to monitor the service.
+        sites: the FQDNs used to monitor the service in each datacenter.
+        contact_group: the name of the Icinga contact group used for the service.
+        notes_url: the Icinga notes URL pointing to the service runbook.
 
     """
 
@@ -424,26 +389,24 @@ class Service:  # pylint: disable=too-many-instance-attributes
         Puppet's ``modules/wmflib/types/service.pp``.
 
     Arguments:
-        name (str): the service name.
-        description (str): the service description.
-        encryption (bool): whether TLS encryption is enabled or not on the service.
-        ip (spicerack.service.ServiceIPs): the instance that represents all the service IPs.
-        port (int): the port the service listen on.
-        sites (list): the list of datacenters where the service is configured.
-        state (str): the production state of the service (e.g. ``lvs_setup``).
-        _alertmanager (spicerack.alertmanager:AlertmanagerHosts): the AlertmanagerHosts instance to perform downtime.
-        aliases (list, optional): a list of aliases names for the service.
-        discovery (spicerack.service.ServiceDiscovery, optional): the collection of
-            :py:class:`spicerack.service.ServiceDiscoveryRecord` instances reprensenting the DNS Discovery capabilities
-            of the service.
-        lvs (spicerack.service.ServiceLVS, optional): the load balancer configuration.
-        monitoring (spicerack.service.ServiceMonitoring, optional): the service monitoring configuration.
-        page (bool, optional): whether the monitoring for this service does page or not.
-        probes (list, optional): a list of probe dictionaries with all the parameters necessary to define the probes
-            for this service.
-        public_aliases (list, optional): the list of public aliases set for this service.
-        public_endpoint (str, optional): the name of the public endpoint if present, empty string otherwise.
-        role (str, optional): the service role name in Puppet if present, empty string otherwise.
+        name: the service name.
+        description: the service description.
+        encryption: whether TLS encryption is enabled or not on the service.
+        ip: the instance that represents all the service IPs.
+        port: the port the service listen on.
+        sites: the list of datacenters where the service is configured.
+        state: the production state of the service (e.g. ``lvs_setup``).
+        _alertmanager: the AlertmanagerHosts instance to perform downtime.
+        aliases: a list of aliases names for the service.
+        discovery: the collection of :py:class:`spicerack.service.ServiceDiscoveryRecord` instances reprensenting the
+            DNS Discovery capabilities of the service.
+        lvs: the load balancer configuration.
+        monitoring: the service monitoring configuration.
+        page: whether the monitoring for this service does page or not.
+        probes: a list of probe dictionaries with all the parameters necessary to define the probes for this service.
+        public_aliases: the list of public aliases set for this service.
+        public_endpoint: the name of the public endpoint if present, empty string otherwise.
+        role: the service role name in Puppet if present, empty string otherwise.
 
     """
 
@@ -466,18 +429,15 @@ class Service:  # pylint: disable=too-many-instance-attributes
     role: str = ""
 
     def downtime(self, site: str, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> str:
-        """Downtime the service on the given site in Alertmanager.
+        """Downtime the service on the given site in Alertmanager and return its ID.
 
         Args:
-            site (str): the datacenter where to silence the service.
-            reason (spicerack.administrative.Reason): the silence reason.
-            duration (datetime.timedelta, optional): how long to silence for.
+            site: the datacenter where to silence the service.
+            reason: the silence reason.
+            duration: how long to silence for.
 
         Raises:
             spicerack.service.ServiceError: if the service is not present in the given datacenter.
-
-        Returns:
-            str: the downtime ID.
 
         """
         return self._alertmanager.downtime(reason, matchers=self._get_downtime_matchers(site), duration=duration)
@@ -489,10 +449,10 @@ class Service:  # pylint: disable=too-many-instance-attributes
         """Context manager to perform actions while the service is downtimed in the given site in Alertmanager.
 
         Args:
-            site (str): the datacenter where to silence the service.
-            reason (spicerack.administrative.Reason): the silence reason.
-            duration (datetime.timedelta, optional): how long to silence for.
-            remove_on_error (bool, optional): should the downtime be removed even if an exception was raised.
+            site: the datacenter where to silence the service.
+            reason: the silence reason.
+            duration: how long to silence for.
+            remove_on_error: should the downtime be removed even if an exception was raised.
 
         Raises:
             spicerack.service.ServiceError: if the service is not present in the given datacenter.
@@ -507,7 +467,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
         """Get the downtime matchers to use to downtime the service in Alertmanager.
 
         Args:
-            site (str): the datacenter where to silence the service.
+            site: the datacenter where to silence the service.
 
         """
         if site not in self.sites:
@@ -528,13 +488,13 @@ class Service:  # pylint: disable=too-many-instance-attributes
         backend.
 
         Arguments:
-            ip_per_dc_map (Dict[str, Union[IPv4Address, IPv6Address]]): mapping of datacenter -> client ip to use.
-            record_name (str): the discovery record name to inspect. If left empty,
-                it will pick up the only discovery record.
-            tries (int): the number of retries to attempt before failing. 15 by default.
+            ip_per_dc_map: mapping of datacenter -> client IP to use.
+            record_name: the discovery record name to inspect. If left empty, it will pick up the only discovery
+                record.
+            tries: the number of retries to attempt before failing.
 
         Raises:
-            spicerack.service.DiscoveryStateError: if the two states don't correspond
+            spicerack.service.DiscoveryStateError: if the two states don't correspond.
             spicerack.service.DiscoveryRecordNotFoundError: if there are no records at all or the record with the given
             name can't be found.
             spicerack.service.TooManyDiscoveryRecordsError: if the name is an empty string and there is more than one
@@ -572,11 +532,11 @@ class Catalog:
         """Initialize the instance.
 
         Args:
-            catalog (dict): the content of Puppet's ``hieradata/common/service.yaml``.
-            confctl (spicerack.confctl.ConftoolEntity): the instance to interact with confctl.
-            authdns_servers (dict): a dictionary where keys are the hostnames and values are the IPs of the
-                authoritative nameservers to be used.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            catalog: the content of Puppet's ``hieradata/common/service.yaml``.
+            confctl: the instance to interact with confctl.
+            authdns_servers: a dictionary where keys are the hostnames and values are the IPs of the authoritative
+                nameservers to be used.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._catalog = catalog
@@ -585,31 +545,16 @@ class Catalog:
         self._dry_run = dry_run
 
     def __iter__(self) -> Iterator[Service]:
-        """Iterate over the catalog services.
-
-        Returns:
-            iterator: iterator over the services.
-
-        """
+        """Iterate over the catalog services."""
         return (self.get(name) for name in self._catalog)
 
     def __len__(self) -> int:
-        """Return the length of the instance.
-
-        Returns:
-            int: the number of services in the catalog.
-
-        """
+        """Return the number of services in the catalog."""
         return len(self._catalog)
 
     @property
     def service_names(self) -> list[str]:
-        """All defined service names.
-
-        Returns:
-            list: the list of service names.
-
-        """
+        """Get all defined service names."""
         return list(self._catalog.keys())
 
     def get(self, name: str) -> Service:
@@ -621,13 +566,10 @@ class Catalog:
                 >>> service = catalog.get("service_name")
 
         Arguments:
-            name (str): the service name.
+            name: the service name.
 
         Raises:
             spicerack.service.ServiceNotFoundError: if the service is not found.
-
-        Returns:
-            spicerack.service.Service: the instance of the matched service.
 
         """
         if name not in self._catalog:

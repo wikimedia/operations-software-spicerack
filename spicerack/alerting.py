@@ -22,8 +22,8 @@ class AlertingHosts:
         """Initialize the instance.
 
         Arguments:
-            alertmanager_hosts (spicerack.alertmanager.AlertmanagerHosts): the Alertmanager hosts to talk to.
-            icinga_hosts (spicerack.icinga.IcingaHosts): the Icinga hosts to talk to.
+            alertmanager_hosts: the Alertmanager hosts to talk to.
+            icinga_hosts: the Icinga hosts to talk to.
 
         """
         self._am = alertmanager_hosts
@@ -36,8 +36,8 @@ class AlertingHosts:
         """Context manager to perform actions while the hosts are downtimed on Alertmanager and Icinga.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to set for the downtime.
-            duration (datetime.timedelta, optional): the length of the downtime period.
+            reason: the reason to set for the downtime.
+            duration: the length of the downtime period.
             remove_on_error: should the downtime be removed even if an exception was raised.
 
         Yields:
@@ -60,15 +60,15 @@ class AlertingHosts:
         """Issue a new downtime.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the downtime reason.
-            duration (datetime.timedelta): how long to downtime for.
+            reason: the downtime reason.
+            duration: how long to downtime for.
 
         Returns:
-            str: the downtime ID.
+            The alertmanager downtime ID.
 
         Raises:
-            AlertmanagerError: if none of the `alertmanager_urls` API returned a success.
-            IcingaError: if there is a problem downtiming the hosts in Icinga.
+            spicerack.alertmanager.AlertmanagerError: if none of the ``alertmanager_urls`` API returned a success.
+            spicerack.icinga.IcingaError: if there is a problem downtiming the hosts on Icinga.
 
         """
         self._icinga.downtime(reason, duration=duration)
@@ -78,7 +78,7 @@ class AlertingHosts:
         """Remove a downtime.
 
         Arguments:
-            downtime_id (str): the downtime ID to remove.
+            downtime_id: the alertmanager downtime ID to remove.
 
         """
         self._icinga.remove_downtime()

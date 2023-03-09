@@ -17,11 +17,13 @@ from spicerack.typing import TypeHosts
 
 logger = logging.getLogger(__name__)
 MatchersType = Sequence[dict[str, Union[str, int, float, bool]]]
-PORT_REGEX = r"(\..+)?(:[0-9]+)?"
+PORT_REGEX: str = r"(\..+)?(:[0-9]+)?"
+"""The regular expression used to match FQDNs and port numbers in the instance labels."""
 ALERTMANAGER_URLS: tuple[str, str] = (
     "http://alertmanager-eqiad.wikimedia.org",
     "http://alertmanager-codfw.wikimedia.org",
 )
+"""All the alertmanager instances to contact."""
 
 
 class Alertmanager:
@@ -38,7 +40,7 @@ class Alertmanager:
         `alertmanager_urls`.
 
         Arguments:
-            dry_run (bool, optional): set to False to cause writes to Alertmanager occur.
+            dry_run: whether this is a DRY-RUN.
 
         """
         # Alertmanager API returns HTTP 500 (Internal Server Error) on some requests with a valid JSON response
@@ -58,12 +60,9 @@ class Alertmanager:
         The request is performed on all configured alertmanager endpoints and returns at the first successful response.
 
         Arguments:
-            method (str): the HTTP method to use for the request.
-            path (str): the final API path to call, the base path is prefixed automatically.
-            json (typing.Mapping, optional): if present, the JSON payload to send in the request.
-
-        Returns:
-            requests.Response: the requests response object.
+            method: the HTTP method to use for the request.
+            path: the final API path to call, the base path is prefixed automatically.
+            json: if present, the JSON payload to send in the request.
 
         Raises:
             spicerack.alertmanager.AlertmanagerError: if unable to perform the request on any alertmanager endpoint.
@@ -99,10 +98,10 @@ class Alertmanager:
         """Context manager to perform actions while the matching alerts are downtimed on Alertmanager.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to set for the downtime on Alertmanager.
-            matchers (list): the list of matchers to be applied to the downtime. The downtime will match alerts that
-                match **all** the matchers provided, as they are ANDed by AlertManager.
-            duration (datetime.timedelta, optional): the length of the downtime period.
+            reason: the reason to set for the downtime on Alertmanager.
+            matchers: the list of matchers to be applied to the downtime. The downtime will match alerts that match
+                **all** the matchers provided, as they are ANDed by AlertManager.
+            duration: the length of the downtime period.
             remove_on_error: should the downtime be removed even if an exception was raised.
 
         Yields:
@@ -124,13 +123,13 @@ class Alertmanager:
         """Issue a new downtime.
 
         Arguments:
-            reason (Reason): the downtime reason.
-            matchers (list): the list of matchers to be applied to the downtime. The downtime will match alerts that
-                match **all** the matchers provided, as they are ANDed by AlertManager.
-            duration (datetime.timedelta, optional): the length of the downtime period.
+            reason: the downtime reason.
+            matchers: the list of matchers to be applied to the downtime. The downtime will match alerts that match
+                **all** the matchers provided, as they are ANDed by AlertManager.
+            duration: the length of the downtime period.
 
         Returns:
-            str: the downtime ID.
+            The downtime ID.
 
         Raises:
             spicerack.alertmanager.AlertmanagerError: if none of the `alertmanager_urls` API returned a success or the
@@ -162,7 +161,7 @@ class Alertmanager:
         """Remove a downtime.
 
         Arguments:
-            downtime_id (str): the downtime ID to remove.
+            downtime_id: the downtime ID to remove.
 
         Raises:
             spicerack.alertmanager.AlertmanagerError: if none of the `alertmanager_urls` API returned a success.
@@ -196,12 +195,11 @@ class AlertmanagerHosts(Alertmanager):
         """Initialize the instance.
 
         Arguments:
-            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence of
-                strings.
-            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
+            target_hosts: the target hosts either as a NodeSet instance or a sequence of strings.
+            verbatim_hosts: if :py:data:`True` use the hosts passed verbatim as is, if instead
                 :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
                 be used in Alertmanager.
-            dry_run (bool, optional): set to False to cause writes to Alertmanager occur.
+            dry_run: whether this is a DRY-RUN.
 
         Raises:
             spicerack.alertmanager.AlertmanagerError: if no target hosts are provided.
@@ -233,12 +231,12 @@ class AlertmanagerHosts(Alertmanager):
         """Context manager to perform actions while the hosts are downtimed on Alertmanager.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to set for the downtime on Alertmanager.
-            matchers (list, optional): an optional list of matchers to be applied to the downtime. They will be added
-                to the matcher automatically generated to match the current instance ``target_hosts`` hosts. For this
-                reason the provided matchers cannot be for the ``instance`` property. The downtime will match alerts
-                that match **all** the matchers provided, as they are ANDed by AlertManager.
-            duration (datetime.timedelta, optional): the length of the downtime period.
+            reason: the reason to set for the downtime on Alertmanager.
+            matchers: an optional list of matchers to be applied to the downtime. They will be added to the matcher
+                automatically generated to match the current instance ``target_hosts`` hosts. For this reason the
+                provided matchers cannot be for the ``instance`` property. The downtime will match alerts that match
+                **all** the matchers provided, as they are ANDed by AlertManager.
+            duration: the length of the downtime period.
             remove_on_error: should the downtime be removed even if an exception was raised.
 
         Yields:
@@ -264,12 +262,12 @@ class AlertmanagerHosts(Alertmanager):
         """Issue a new downtime for the given hosts.
 
         Arguments:
-            reason (Reason): the downtime reason.
-            matchers (list, optional): an optional list of matchers to be applied to the downtime. They will be added
-                to the matcher automatically generated to match the current instance ``target_hosts`` hosts. For this
-                reason the provided matchers cannot be for the ``instance`` property. The downtime will match alerts
-                that match **all** the matchers provided, as they are ANDed by AlertManager.
-            duration (datetime.timedelta, optional): the length of the downtime period.
+            reason: the downtime reason.
+            matchers: an optional list of matchers to be applied to the downtime. They will be added to the matcher
+                automatically generated to match the current instance ``target_hosts`` hosts. For this reason the
+                provided matchers cannot be for the ``instance`` property. The downtime will match alerts that match
+                **all** the matchers provided, as they are ANDed by AlertManager.
+            duration: the length of the downtime period.
 
         Returns:
             str: the downtime ID.
@@ -305,8 +303,8 @@ class AlertmanagerError(SpicerackError):
         """Initializes an AlertmanagerError instance with the API response instance.
 
         Arguments:
-            message (str): the actual exception message.
-            response (requests.Response, optional): the requests response object, if present.
+            message: the actual exception message.
+            response: the requests response object, if present.
 
         """
         super().__init__(message)

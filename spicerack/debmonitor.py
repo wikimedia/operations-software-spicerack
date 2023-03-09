@@ -20,10 +20,10 @@ class Debmonitor:
         """Initialize the instance.
 
         Arguments:
-            host (str): the hostname of the Debmonitor server (without protocol).
-            cert (str): the path to the TLS certificate to use to authenticate on Debmonitor.
-            key (str): the path to the TLS key to use to authenticate on Debmonitor.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            host: the hostname of the Debmonitor server (without protocol).
+            cert: the path to the TLS certificate to use to authenticate on Debmonitor.
+            key: the path to the TLS key to use to authenticate on Debmonitor.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._base_url: str = f"https://{host}"
@@ -36,7 +36,7 @@ class Debmonitor:
         """Remove a host and all its packages from Debmonitor.
 
         Arguments:
-            host (str): the FQDN of the host to remove from Debmonitor.
+            host: the FQDN of the host to remove from Debmonitor.
 
         Raises:
             spicerack.debmonitor.DebmonitorError: on failure to delete. It doesn't raise if the host is already absent

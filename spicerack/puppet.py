@@ -16,6 +16,7 @@ from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import RemoteExecutionError, RemoteHosts, RemoteHostsAdapter
 
 PUPPET_COMMON_SCRIPT: str = "/usr/local/share/bash/puppet-common.sh"
+"""The absolute path of the puppet-common script shipped by Puppet with useful functions."""
 logger = logging.getLogger(__name__)
 
 
@@ -24,9 +25,6 @@ def get_puppet_ca_hostname() -> str:
 
     Raises:
         spicerack.puppet.PuppetMasterError: if unable to get the configured Puppet CA server.
-
-    Returns:
-        str: the hostname of the Puppet Certification Authority server.
 
     """
     try:
@@ -66,9 +64,8 @@ class PuppetHosts(RemoteHostsAdapter):
         """Context manager to perform actions while puppet is disabled.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to set for the Puppet disable and to use for the
-                Puppet enable.
-            verbatim_reason: (bool): if true use the reason value verbatim
+            reason: the reason to set for the Puppet disable and to use for the Puppet enable.
+            verbatim_reason: if true use the reason value verbatim.
 
         """
         self.disable(reason, verbatim_reason)
@@ -78,12 +75,7 @@ class PuppetHosts(RemoteHostsAdapter):
             self.enable(reason, verbatim_reason)
 
     def get_ca_servers(self) -> dict[str, str]:
-        """Retrieve the ca_servers of the nodes.
-
-        Returns:
-            dict: The mapping from host fqdn to its configured ca_server.
-
-        """
+        """Retrieve the ca_servers for each node."""
         raw_results = self._remote_hosts.run_sync("puppet config --section agent print ca_server")
 
         host_to_ca_server: dict[str, str] = {}
@@ -98,8 +90,8 @@ class PuppetHosts(RemoteHostsAdapter):
         """Return a correctly quoted puppet message.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to set for the Puppet disable.
-            verbatim_reason: (bool): if true use the reason value verbatim
+            reason: the reason to set for the Puppet disable.
+            verbatim_reason: if true use the reason value verbatim.
 
         """
         if verbatim_reason:
@@ -113,8 +105,8 @@ class PuppetHosts(RemoteHostsAdapter):
         leave Puppet disabled when re-enabling it if it was already disabled.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to set for the Puppet disable.
-            verbatim_reason: (bool): if true use the reason value verbatim
+            reason: the reason to set for the Puppet disable.
+            verbatim_reason: if true use the reason value verbatim.
 
         """
         logger.info(
@@ -132,8 +124,8 @@ class PuppetHosts(RemoteHostsAdapter):
         it will keep being disabled.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to use for the Puppet enable.
-            verbatim_reason: (bool): if true use the reason value verbatim
+            reason: the reason to use for the Puppet enable.
+            verbatim_reason: if true use the reason value verbatim.
 
         """
         logger.info(
@@ -179,16 +171,15 @@ class PuppetHosts(RemoteHostsAdapter):
         """Run Puppet.
 
         Arguments:
-            timeout (int, optional): the timeout in seconds to set in Cumin for the execution of the command.
-            enable_reason (spicerack.administrative.Reason, optional): the reason to use to contextually re-enable
-                Puppet if it was disabled.
-            quiet (bool, optional): suppress Puppet output if True.
-            failed_only (bool, optional): run Puppet only if the last run failed.
-            force (bool, optional): forcely re-enable Puppet if it was disabled with ANY message.
-            attempts (int, optional): override the default number of attempts waiting that an in-flight Puppet run
-                completes before timing out as set in run-puppet-agent.
-            batch_size (int, optional): how many concurrent Puppet runs to perform. The default value is tailored to
-                not overload the Puppet masters.
+            timeout: the timeout in seconds to set in Cumin for the execution of the command.
+            enable_reason: the reason to use to contextually re-enable Puppet if it was disabled.
+            quiet: suppress Puppet output if True.
+            failed_only: run Puppet only if the last run failed.
+            force: forcely re-enable Puppet if it was disabled with ANY message.
+            attempts: override the default number of attempts waiting that an in-flight Puppet run completes before
+                timing out as set in run-puppet-agent.
+            batch_size: how many concurrent Puppet runs to perform. The default value is tailored to not overload the
+                Puppet masters.
 
         """
         args = []
@@ -212,7 +203,7 @@ class PuppetHosts(RemoteHostsAdapter):
         """Perform the first Puppet run on a clean host without using custom wrappers.
 
         Arguments:
-            has_systemd (bool, optional): if the host has systemd as init system.
+            has_systemd: if the host has systemd as init system.
 
         """
         commands = []
@@ -242,7 +233,7 @@ class PuppetHosts(RemoteHostsAdapter):
         """Delete the local Puppet certificate and generate a new CSR.
 
         Returns:
-            dict: a dictionary with hostnames as keys and CSR fingerprint as values.
+            A dictionary with hostnames as keys and CSR fingerprint as values.
 
         """
         logger.info("Deleting local Puppet certificate on %d hosts: %s", len(self), self)
@@ -294,7 +285,7 @@ class PuppetHosts(RemoteHostsAdapter):
         """Wait until a successful Puppet run is completed after the start time.
 
         Arguments:
-            start (datetime.datetime): wait until a Puppet run is completed after this time.
+            start: wait until a Puppet run is completed after this time.
 
         Raises:
             spicerack.puppet.PuppetHostsCheckError: if unable to get a successful Puppet run within the timeout.
@@ -329,7 +320,7 @@ class PuppetHosts(RemoteHostsAdapter):
         """Check if Puppet is disabled on the hosts.
 
         Returns:
-            dict: a dict with :py:class:`bool` keys for Puppet disabled or not and hosts
+            A dict with :py:class:`bool` keys for Puppet disabled or not and hosts
             :py:class:`ClusterShell.NodeSet.NodeSet` as values.
 
         """
@@ -352,14 +343,16 @@ class PuppetMaster:
     """Class to manage nodes and certificates on a Puppet master and Puppet CA server."""
 
     PUPPET_CERT_STATE_REQUESTED: str = "requested"
+    """Puppet CA certificate status when requested."""
     PUPPET_CERT_STATE_SIGNED: str = "signed"
+    """Puppet CA certificate status when signed."""
 
     def __init__(self, master_host: RemoteHosts) -> None:
         """Initialize the instance.
 
         Arguments:
-            master_host (spicerack.remote.RemoteHosts): the remote hosts instance for the Puppetmaster and Puppet CA
-                server. It must have only one target host.
+            master_host: the remote hosts instance for the Puppetmaster and Puppet CA server. It must have only one
+                target host.
 
         Raises:
             spicerack.puppet.PuppetMasterError: if the master_host doesn't have only one target host.
@@ -384,7 +377,7 @@ class PuppetMaster:
         Doesn't raise exception if the host was already removed.
 
         Arguments:
-            hostname (str): the FQDN of the host for which to remove the certificate.
+            hostname: the FQDN of the host for which to remove the certificate.
 
         """
         commands = [f"puppet node {action} {hostname}" for action in ("clean", "deactivate")]
@@ -397,7 +390,7 @@ class PuppetMaster:
         'Nothing was deleted'.
 
         Arguments:
-            hostname (str): the FQDN of the host for which to remove the certificate.
+            hostname: the FQDN of the host for which to remove the certificate.
 
         """
         self._master_host.run_sync(
@@ -408,7 +401,7 @@ class PuppetMaster:
         """Verify that there is a valid certificate signed by the Puppet CA for the given hostname.
 
         Arguments:
-            hostname (str): the FQDN of the host for which to verify the certificate.
+            hostname: the FQDN of the host for which to verify the certificate.
 
         Raises:
             spicerack.puppet.PuppetMasterError: if the certificate is not valid.
@@ -426,9 +419,9 @@ class PuppetMaster:
         """Sign a CSR on the Puppet CA for the given host checking its fingerprint.
 
         Arguments:
-            hostname (str): the FQDN of the host for which to sign the certificate.
-            fingerprint (str): the fingerprint of the CSR generated on the client to verify it.
-            allow_alt_names (bool, optional): whether to allow DNS alternative names in the certificate.
+            hostname: the FQDN of the host for which to sign the certificate.
+            fingerprint: the fingerprint of the CSR generated on the client to verify it.
+            allow_alt_names: whether to allow DNS alternative names in the certificate.
 
         Raises:
             spicerack.puppet.PuppetMasterError: if the certificate is in an unexpected state.
@@ -470,7 +463,7 @@ class PuppetMaster:
         """Poll until a CSR appears for the given hostname or the timeout is reached.
 
         Arguments:
-            hostname (str): the FQDN of the host for which to check a CSR.
+            hostname: the FQDN of the host for which to check a CSR.
 
         Raises:
             spicerack.puppet.PuppetMasterError: if the certificate is in an unexpected state.
@@ -485,10 +478,10 @@ class PuppetMaster:
         """Return the metadata of the certificate of the given hostname in the Puppet CA.
 
         Arguments:
-            hostname (str): the FQDN of the host for which to verify the certificate.
+            hostname: the FQDN of the host for which to verify the certificate.
 
         Returns:
-            dict: as returned by the Puppet CA CLI with the render as JSON option set. As example::
+            As returned by the Puppet CA CLI with the render as JSON option set. As example::
 
                 {
                     'dns_alt_names': ['DNS:service.example.com'],
@@ -531,10 +524,7 @@ class PuppetMaster:
         The commands run are assumed to be safe as the JSON format is useful for read-only operations only.
 
         Arguments:
-            command (str): the command to execute on the Puppet master that returns JSON output.
-
-        Returns:
-            dict, list: the parsed JSON object.
+            command: the command to execute on the Puppet master that returns JSON output.
 
         Raises:
             spicerack.puppet.PuppetMasterError: if unable to get or parse the command output.

@@ -16,10 +16,10 @@ class FilterOutCumin(logging.Filter):
         """Filter out Cumin's log messages.
 
         Arguments:
-            record (logging.LogRecord):
+            record: the logging record.
 
         Returns:
-            int: :py:data:`False` if the record should be filtered out, :py:data:`True` if it should be included.
+            :py:data:`False` if the record should be filtered out, :py:data:`True` if it should be included.
             According to Python's logging interface, see: https://docs.python.org/3/library/logging.html#filter-objects
 
         """
@@ -40,12 +40,12 @@ def setup_logging(
     """Setup the root logger instance.
 
     Arguments:
-        base_path (str, pathlib.Path): the base path where to save the logs.
-        name (str): the name of log file to use without extension.
-        user (str): the username for the IRC logging.
-        dry_run (bool, optional): whether this is a dry-run.
-        host (str, optional): the tcpircbot hostname for the IRC logging.
-        port (int, optional): the tcpircbot port for the IRC logging.
+        base_path: the base path where to save the logs.
+        name: the name of log file to use without extension.
+        user: the username for the IRC logging.
+        dry_run: whether this is a dry-run.
+        host: the tcpircbot hostname for the IRC logging.
+        port: the tcpircbot port for the IRC logging.
 
     """
     base_path.mkdir(mode=0o755, parents=True, exist_ok=True)
@@ -105,7 +105,7 @@ def log_task_start(message: str) -> None:
     """Log the start of a task both on the logs and IRC.
 
     Arguments:
-        message (str): the message to be logged.
+        message: the message to be logged.
 
     """
     irc_logger.info("START - %s", message)
@@ -115,8 +115,8 @@ def log_task_end(status: str, message: str) -> None:
     """Log the start of a task both on the logs and IRC.
 
     Arguments:
-        status (str): the final status of the task.
-        message (str): the message to be logged.
+        status: the final status of the task.
+        message: the message to be logged.
 
     """
     irc_logger.info("END (%s) - %s", status, message)

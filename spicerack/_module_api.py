@@ -26,10 +26,10 @@ class CookbooksModuleInterface:
     """Module interface to be used as type hint for the imported cookbooks that use the module API."""
 
     __name__ = ""
-    """str: the module name."""
+    """The module name."""
 
     __title__: str = ""
-    """str: the cookbook static title."""
+    """The cookbook static title."""
 
     @staticmethod
     def argument_parser() -> argparse.ArgumentParser:  # type: ignore[empty-body]

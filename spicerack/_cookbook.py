@@ -36,11 +36,11 @@ class CookbookCollection:
         """Initialize the class and collect all the cookbook menu items.
 
         Arguments:
-            base_dirs (list): the list of base directories from where to start looking for cookbooks.
-            args (list): the list of arguments to pass to the collected items.
-            spicerack (spicerack.Spicerack): the initialized instance of the library.
-            path_filter (str, optional): an optional relative module path to filter for. If set, only cookbooks that
-                are part of this subtree will be collected.
+            base_dirs: the list of base directories from where to start looking for cookbooks.
+            args: the list of arguments to pass to the collected items.
+            spicerack: the initialized instance of the library.
+            path_filter: an optional relative module path to filter for. If set, only cookbooks that are part of this
+                subtree will be collected.
 
         """
         self.base_dirs = [base_dir / self.cookbooks_module_prefix for base_dir in base_dirs]
@@ -57,7 +57,7 @@ class CookbookCollection:
         """Retrieve the item for a given path.
 
         Arguments:
-            path (str): the path of the item to look for.
+            path: the path of the item to look for.
 
         Returns:
             None: when no item is found.
@@ -91,10 +91,7 @@ class CookbookCollection:
         """Create the menu for a given path, including intermediate levels, if missing. Return the existing one if any.
 
         Arguments:
-            path (str): the path of the item to look for.
-
-        Returns:
-            spicerack._menu.TreeItem: the existing or created menu.
+            path: the path of the item to look for.
 
         """
         item: TreeItem = self.menu
@@ -124,7 +121,12 @@ class CookbookCollection:
         return item
 
     def _collect(self, base_dir: Path) -> None:
-        """Collect available cookbooks starting from a base path."""
+        """Collect available cookbooks starting from a base path.
+
+        Arguments:
+            base_dir: the directory where to start collecting the cookbooks.
+
+        """
         for dirpath in base_dir.rglob(""):  # Selects only directories
             if dirpath.name == "__pycache__":
                 continue
@@ -154,8 +156,8 @@ class CookbookCollection:
         """Collect all the available cookbooks in the given module and add them to the menu.
 
         Arguments:
-            module_name (str): the Python module to load.
-            menu (spicerack._menu.TreeItem): the menu to append the collected cookbook to.
+            module_name: the Python module to load.
+            menu: the menu to append the collected cookbook to.
 
         """
         try:
@@ -180,10 +182,10 @@ class CookbookCollection:
         """Check if a given path or full name should be skipped because not matching the current filter.
 
         Arguments:
-            name (str): the name to check, can be either a CookbookItem full name or a TreeItem path.
+            name: the name to check, can be either a CookbookItem full name or a TreeItem path.
 
         Returns:
-            bool: :py:data:`True` if the item should be skipped, :py:data:`False` otherwise.
+            :py:data:`True` if the item should be skipped, :py:data:`False` otherwise.
 
         """
         if not self.path_filter:
@@ -200,7 +202,7 @@ class CookbookCollection:
         """Collect all classes derived from CookbookBase in the given module.
 
         Arguments:
-            module (spicerack._module_api.CookbooksModuleInterface): the module to check for cookbook classes.
+            module: the module to check for cookbook classes.
 
         Returns:
             list: a list of CookbookBase derived class objects.
@@ -239,7 +241,7 @@ class CookbookCollection:
         """Convert a module API based cookbook into a class API cookbook.
 
         Arguments:
-            module (spicerack._module_api.CookbooksModuleInterface): the module to convert.
+            module: the module to convert.
 
         Returns:
             type: a dynamically generated class derived from :py:class:`spicerack.cookbook.CookbookBase`.
@@ -291,9 +293,6 @@ def argument_parser() -> argparse.ArgumentParser:
     """Get the CLI argument parser.
 
     If the COOKBOOK is passed as a path, it will be converted to a Python module syntax.
-
-    Returns:
-        argparse.ArgumentParser: the argument parser instance.
 
     """
     parser = argparse.ArgumentParser(
@@ -356,10 +355,7 @@ def cookbook_path_type(path: str) -> str:
     """Convert a COOKBOOK path to module syntax, if it's in path syntax.
 
     Arguments:
-        path (str): the path to be converted.
-
-    Returns:
-        str: the converted path in module syntax.
+        path: the path to be converted.
 
     """
     if path.endswith(".py"):
@@ -369,14 +365,10 @@ def cookbook_path_type(path: str) -> str:
 
 
 def import_module(module_name: str) -> _module_api.CookbooksModuleInterface:
-    """Import a Python module.
+    """Import a Python module and return it.
 
     Arguments:
-        module_name (str): the name of the module to load.
-
-    Returns:
-        list: a list of :py:class:`spicerack.cookbook.CookbookBase` objects, one for each collected cookbook. In case
-        of module API cookbooks it converts them automatically to a class API one.
+        module_name: the name of the module to load.
 
     Raises:
         spicerack._cookbook.CookbookError: on failure to load the module.
@@ -391,13 +383,10 @@ def import_module(module_name: str) -> _module_api.CookbooksModuleInterface:
 
 
 def _import_extender_class(extender_class_param: str) -> SpicerackExtenderBase:
-    """Import the extender class and ensure it's a subclass of SpicerackExtenderBase.
+    """Import the extender class, ensure it's a subclass of SpicerackExtenderBase and return it.
 
     Arguments:
-        extender_class_param (str): the configuration file parameter with the fully qualified class name.
-
-    Returns:
-        type: the class object that is a subclass of :py:class:`spicerack.SpicerackExtenderBase`.
+        extender_class_param: the configuration file parameter with the fully qualified class name.
 
     """
     extender_module_name, extender_class_name = extender_class_param.rsplit(".", 1)
@@ -413,10 +402,10 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
     """Entry point, run the tool.
 
     Arguments:
-        argv (list, optional): the list of command line arguments to parse.
+        argv: the list of command line arguments to parse.
 
     Returns:
-        int: the return code, zero on success, non-zero on failure.
+        The return code, zero on success, non-zero on failure.
 
     """
     args = argument_parser().parse_args(argv)
@@ -444,11 +433,10 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
         """Run a single cookbook.
 
         Arguments:
-            argv (sequence, optional): a sequence of strings of command line arguments to parse.
+            argv: a sequence of strings of command line arguments to parse.
 
         Returns:
-            None: on success.
-            int: the return code, zero on success, non-zero on failure.
+            :py:data:`None` on success, the return code otherwise, zero on success, non-zero on failure.
 
         """
         cookbooks = CookbookCollection(cookbooks_base_dirs, cookbook_args, spicerack, path_filter=cookbook_path)

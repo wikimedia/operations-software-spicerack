@@ -26,15 +26,16 @@ class MediaWiki:
     """Class to manage MediaWiki-specific resources."""
 
     _siteinfo_url: str = "https://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
+    """The URL of the siteinfo API to be formatted with a specific ``dc``."""
 
     def __init__(self, conftool: ConftoolEntity, remote: Remote, user: str, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
-            conftool (spicerack.confctl.ConftoolEntity): the conftool instance for the mwconfig type objects.
-            remote (spicerack.remote.Remote): the Remote instance.
-            user (str): the name of the effective running user.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            conftool: the conftool instance for the mwconfig type objects.
+            remote: the Remote instance.
+            user: the name of the effective running user.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._conftool = conftool
@@ -47,11 +48,11 @@ class MediaWiki:
         """Check that a MediaWiki configuration file contains some value.
 
         Arguments:
-            filename (str): filename without extension in wmf-config.
-            expected (str): string expected to be found in the configuration file.
+            filename: filename without extension in wmf-config.
+            expected: string expected to be found in the configuration file.
 
         Returns:
-            bool: True if the expected string is found in the configuration file, False otherwise.
+            :py:data:`True` if the expected string is found in the configuration file, :py:data:`False` otherwise.
 
         Raises:
             requests.exceptions.RequestException: on error.
@@ -74,10 +75,7 @@ class MediaWiki:
         """Get the JSON paylod for siteinfo from a random host in a given datacenter.
 
         Arguments:
-            datacenter (str): the DC where to query for siteinfo.
-
-        Returns:
-            dict: the parsed JSON from siteinfo.
+            datacenter: the DC where to query for siteinfo.
 
         Raises:
             requests.exceptions.RequestException: on failure.
@@ -95,18 +93,19 @@ class MediaWiki:
         """Check that a specific value in siteinfo matches the expected ones, on multiple hosts.
 
         Arguments:
-            datacenter (str): the DC where to query for siteinfo.
-            checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
+            datacenter: the DC where to query for siteinfo.
+            checks: dictionary of items to check, in which the keys are tuples with the path of keys to traverse
                 the siteinfo dictionary to get the value and the values are the expected values to check. To check
                 ``siteinfo[key1][key2]`` for a value ``value``, use::
 
                     {('key1', 'key2'): 'value'}
 
-            samples (int, optional): the number of different calls to siteinfo to perform.
+            samples: the number of different calls to siteinfo to perform.
 
         Raises:
-            MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary after all tries.
-            MediaWikiCheckError: if the value doesn't match after all tries.
+            spicerack.mediawiki.MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo
+                dictionary after all tries.
+            spicerack.mediawiki.MediaWikiCheckError: if the value doesn't match after all tries.
 
         """
         for i in range(1, samples + 1):  # Randomly check different hosts from the load balancer
@@ -117,8 +116,8 @@ class MediaWiki:
         """Execute scap sync-file to deploy a specific configuration file of wmf-config.
 
         Arguments:
-            filename (str): the filename without extension of wmf-config.
-            message (str): the message to use for the scap sync-file execution.
+            filename: the filename without extension of wmf-config.
+            message: the message to use for the scap sync-file execution.
 
         Raises:
             spicerack.remote.RemoteExecutionError: on error.
@@ -133,8 +132,8 @@ class MediaWiki:
         """Set the Conftool readonly variable for MediaWiki config in a specific datacenter.
 
         Arguments:
-            datacenter (str): the DC for which the configuration must be changed.
-            message (str): the readonly message string to set in MediaWiki.
+            datacenter: the DC for which the configuration must be changed.
+            message: the readonly message string to set in MediaWiki.
 
         Raises:
             spicerack.confctl.ConfctlError: on Conftool errors and failed validation.
@@ -155,7 +154,7 @@ class MediaWiki:
         """Set the Conftool readonly variable for MediaWiki config to False to make it read-write.
 
         Arguments:
-            datacenter (str): the DC for which the configuration must be changed.
+            datacenter: the DC for which the configuration must be changed.
 
         Raises:
             spicerack.confctl.ConfctlError: on Conftool errors and failed validation.
@@ -166,19 +165,14 @@ class MediaWiki:
         self._check_siteinfo_dry_run_aware(datacenter, {("query", "general", "readonly"): False}, samples=10)
 
     def get_master_datacenter(self) -> str:
-        """Return a string representing the primary DC.
-
-        Returns:
-            str: the primary DC
-
-        """
+        """Return a string representing the primary DC."""
         return next(self._conftool.get(scope="common", name="WMFMasterDatacenter")).val
 
     def set_master_datacenter(self, datacenter: str) -> None:
         """Set the MediaWiki config master datacenter variable in Conftool.
 
         Arguments:
-            datacenter (str): the new master datacenter.
+            datacenter: the new master datacenter.
 
         Raises:
             spicerack.confctl.ConfctlError: on error.
@@ -196,10 +190,7 @@ class MediaWiki:
         """Get an instance to execute commands on the maintenance hosts in a given datacenter.
 
         Arguments:
-            datacenter (str): the datacenter to filter for.
-
-        Returns:
-            spicerack.remote.RemoteHosts: the instance for the target host.
+            datacenter: the datacenter to filter for.
 
         """
         return self._remote.query("A:mw-maintenance and A:" + datacenter)
@@ -208,7 +199,7 @@ class MediaWiki:
         """Check that MediaWiki periodic jobs are enabled in the given DC.
 
         Arguments:
-            datacenter (str): the name of the datacenter to work on.
+            datacenter: the name of the datacenter to work on.
 
         Raises:
             spicerack.remote.RemoteExecutionError: on failure.
@@ -230,7 +221,7 @@ class MediaWiki:
         """Check that MediaWiki periodic jobs are not enabled in the given DC.
 
         Arguments:
-            datacenter (str): the name of the datacenter to work on.
+            datacenter: the name of the datacenter to work on.
 
         Raises:
             spicerack.remote.RemoteExecutionError: on failure.
@@ -255,7 +246,7 @@ class MediaWiki:
         """Remove and ensure MediaWiki periodic jobs are disabled in the given DC.
 
         Arguments:
-            datacenter (str): the name of the datacenter to work on.
+            datacenter: the name of the datacenter to work on.
 
         Raises:
             spicerack.remote.RemoteExecutionError: on failure.
@@ -304,16 +295,17 @@ class MediaWiki:
         """Check that a specific value in siteinfo matches the expected ones, retrying if doesn't match.
 
         Arguments:
-            datacenter (str): the DC where to query for siteinfo.
-            checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
+            datacenter: the DC where to query for siteinfo.
+            checks: dictionary of items to check, in which the keys are tuples with the path of keys to traverse
                 the siteinfo dictionary to get the value and the values are the expected values to check. To check
                 ``siteinfo[key1][key2]`` for a value ``value``, use::
 
                     {('key1', 'key2'): 'value'}
 
         Raises:
-            MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary after all tries.
-            MediaWikiCheckError: if the value doesn't match after all tries.
+            spicerack.mediawiki.MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary
+                after all tries.
+            spicerack.mediawiki.MediaWikiCheckError: if the value doesn't match after all tries.
 
         """
         try:
@@ -338,18 +330,19 @@ class MediaWiki:
         """Dry-run mode aware check_siteinfo. See check_siteinfo() documentation for more details.
 
         Arguments:
-            datacenter (str): the DC where to query for siteinfo.
-            checks (dict): dictionary of items to check, in which the keys are tuples with the path of keys to traverse
+            datacenter: the DC where to query for siteinfo.
+            checks: dictionary of items to check, in which the keys are tuples with the path of keys to traverse
                 the siteinfo dictionary to get the value and the values are the expected values to check. To check
                 ``siteinfo[key1][key2]`` for a value ``value``, use::
 
                     {('key1', 'key2'): 'value'}
 
-            samples (int, optional): the number of different calls to siteinfo to perform.
+            samples: the number of different calls to siteinfo to perform.
 
         Raises:
-            MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary after all tries.
-            MediaWikiCheckError: if the value doesn't match after all tries.
+            spicerack.mediawiki.MediaWikiError: if unable to get siteinfo or unable to traverse the siteinfo dictionary
+                after all tries.
+            spicerack.mediawiki.MediaWikiCheckError: if the value doesn't match after all tries.
 
         """
         if self._dry_run:

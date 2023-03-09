@@ -29,9 +29,9 @@ class Confctl:
         """Initialize the instance.
 
         Arguments:
-            config (str, optional): the path to the configuration file to load.
-            schema (str, optional): the path to the Conftool schema to load.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            config: the path to the configuration file to load.
+            schema: the path to the Conftool schema to load.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._dry_run = dry_run
@@ -42,10 +42,7 @@ class Confctl:
         """Get the Conftool specific entity class.
 
         Arguments:
-            entity_name (str): the name of the entiryself.
-
-        Returns:
-            spicerack.confctl.ConftoolEntity: and entity-specific class to perform Conftool operations.
+            entity_name: the name of the entity..
 
         """
         return ConftoolEntity(self._schema.entities[entity_name], dry_run=self._dry_run)
@@ -58,8 +55,8 @@ class ConftoolEntity:
         """Initialize the instance.
 
         Arguments:
-            entity (conftool.kvobject.Entity): an instance of Conftool entity.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            entity: an instance of Conftool entity.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._entity = entity
@@ -69,13 +66,13 @@ class ConftoolEntity:
         """Generator that yields the selected objects based on the provided tags.
 
         Arguments:
-            tags (dict): dictionary with tag: expression pairs of Conftool selectors.
+            tags: dictionary with tag: expression pairs of Conftool selectors.
 
         Yields:
             conftool.kvobject.Entity: the selected object.
 
         Raises:
-            spicerack.confctl.ConfctlError: if not match is found.
+            spicerack.confctl.ConfctlError: if no match is found.
 
         """
         selectors = {}
@@ -93,7 +90,7 @@ class ConftoolEntity:
         """Updates the value of conftool objects corresponding to the selection done with tags.
 
         Arguments:
-            changed (dict): the new values to set for the selected objects.
+            changed: the new values to set for the selected objects.
             **tags: arbitrary Conftool tags as keyword arguments.
 
         Raises:
@@ -124,8 +121,8 @@ class ConftoolEntity:
         """Set and verify a single Conftool value.
 
         Arguments:
-            key (str): the key in Conftool to modify.
-            value (mixed): the value to set.
+            key: the key in Conftool to modify.
+            value: the value to set.
             **tags: arbitrary Conftool tags as keyword arguments.
 
         Raises:
@@ -148,14 +145,14 @@ class ConftoolEntity:
         A generator will be returned which will contain only objects that match all filters.
 
         Arguments:
-           filter_expr (dict): a set of desired field names and values.
+           filter_expr: a set of desired field names and values.
            **tags: arbitrary Conftool tags as keyword arguments.
 
         Yields:
             conftool.kvobject.Entity: the selected object.
 
         Raises:
-            spicerack.confctl.ConfctlError: if no object corresponds to the tags
+            spicerack.confctl.ConfctlError: if no object corresponds to the tags.
 
         """
         for obj in self._select(tags):
@@ -177,16 +174,16 @@ class ConftoolEntity:
     ) -> None:
         """Updates the value of the provided conftool objects.
 
-        Arguments:
-            changed (dict): the new values to set for the selected objects.
-            query (iterator(kvobject.Entity)): an iterator of conftool objects
-
-        Raises:
-            spicerack.confctl.ConfctlError: on etcd or Conftool errors.
-
         Examples:
             >>> inactive = confctl.filter_objects({'pooled': 'inactive'}, service='appservers-.*', name='eqiad')
             >>> confctl.update_objects({'pooled': 'no'}, inactive)
+
+        Arguments:
+            changed: the new values to set for the selected objects.
+            query: an iterator of conftool objects.
+
+        Raises:
+            spicerack.confctl.ConfctlError: on etcd or Conftool errors.
 
         """
         # TODO: make the api nicer by returning an EntitiesCollection from filter_objects so we can allow to write
@@ -221,13 +218,13 @@ class ConftoolEntity:
             exception, the original state of the objects will NOT be restored.
 
         Arguments:
-            field (str): The field to change the value of
-            original (bool, str, int, float): original value
-            changed (bool, str, int, float): changed value
-            tags: Appropriate conftool tags for the chosen entity to select objects
+            field: The field to change the value of.
+            original: the original value.
+            changed: changed value.
+            tags: Appropriate conftool tags for the chosen entity to select objects.
 
         Yields:
-            generator: conftool.kvObject.Entity the objects that were acted upon
+            generator: conftool.kvObject.Entity the objects that were acted upon.
 
         """
         objects = list(self.filter_objects({field: original}, **tags))

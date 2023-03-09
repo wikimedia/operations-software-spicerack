@@ -40,6 +40,7 @@ EXTRAS_REQUIRE = {
         "setuptools>=53.0",
         "sphinx_rtd_theme>=1.0",
         "sphinx-argparse>=0.2.5",
+        "sphinx-autodoc-typehints>=1.9.0",
         "Sphinx>=3.4.3",
         "types-PyMySQL",
         "types-redis",

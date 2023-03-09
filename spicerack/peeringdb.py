@@ -31,7 +31,8 @@ class PeeringDB:
 
     """
 
-    baseurl = "https://www.peeringdb.com/api/"
+    baseurl: str = "https://www.peeringdb.com/api/"
+    """The PeeringDB base API URL."""
 
     def __init__(
         self,
@@ -44,10 +45,10 @@ class PeeringDB:
         """Initiliaze the module.
 
         Arguments:
-            ttl (int): TTL for cached objects.
-            cachedir (Path, optional): Root path for objects caching.
-            proxies (MutableMapping, optional): Proxies for Internet access.
-            token (str, optional): PeeringDB read-only token.
+            ttl: TTL for cached objects.
+            cachedir: Root path for objects caching.
+            proxies: Proxies for Internet access.
+            token: PeeringDB read-only token.
 
         """
         self.session = http_session(".".join((self.__module__, self.__class__.__name__)))
@@ -70,12 +71,9 @@ class PeeringDB:
         """Return a cache key based on the resource requested.
 
         Arguments:
-            resource (str): The PeeringDB resource requested
-            resource_id (int): Optional resource number
-            filters (dict): A dictionary of addtional filter parameters
-
-        Returns:
-            str: a path like string encoding all the arguments
+            resource: The PeeringDB resource requested.
+            resource_id: Optional resource number.
+            filters: A dictionary of addtional filter parameters.
 
         """
         if resource_id is None and filters is None:
@@ -88,13 +86,10 @@ class PeeringDB:
         return f"{resource}/{str(resource_id)}/{filter_key}"
 
     def fetch_asn(self, asn: int) -> dict:
-        """Fetch a specific asn.
+        """Fetch a specific asn data.
 
         Arguments:
-            asn (int): The Autonomous system number
-
-        Returns
-            dict: A dictionary representing the data
+            asn: The Autonomous system number.
 
         """
         return self.fetch("net", filters={"asn": asn, "depth": 2})
@@ -103,12 +98,9 @@ class PeeringDB:
         """Get a PeeringDB resource.
 
         Arguments:
-            resource (str): The PeeringDB resource requested
-            resource_id (int): Optional resource number
-            filters (dict): A dictionary of addtional filter parameters
-
-        Returns
-            dict: A dictionary representing the data
+            resource: The PeeringDB resource requested.
+            resource_id: Optional resource number.
+            filters: A dictionary of addtional filter parameters.
 
         """
         if resource_id is None:
@@ -135,10 +127,7 @@ class PeeringDB:
         """Get the resource from the on disk cache if present.
 
         Arguments:
-            cache_key (str): The on-disk path of the resource
-
-        Returns
-            dict: A dictionary representing the data
+            cache_key: The on-disk path of the resource.
 
         """
         if not self.use_cache:
@@ -159,8 +148,8 @@ class PeeringDB:
         """Write the resource to the on disk cache if configured to do so.
 
         Arguments:
-            content (dict): Dictionary of data to cache
-            cache_key (str): The on-disk path of the resource
+            content: Dictionary of data to cache.
+            cache_key: The on-disk path of the resource.
 
         """
         if not self.use_cache:

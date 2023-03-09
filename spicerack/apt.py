@@ -10,14 +10,17 @@ from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteHostsAdapter
 
 logger = logging.getLogger(__name__)
-APT_GET_ENVS = ("DEBIAN_FRONTEND=noninteractive",)
-APT_GET_INSTALL_OPTIONS = (
+APT_GET_ENVS: tuple[str, ...] = ("DEBIAN_FRONTEND=noninteractive",)
+"""The environment variables used for all ``apt-get`` commands."""
+APT_GET_INSTALL_OPTIONS: tuple[str, ...] = (
     "--quiet",
     "--yes",
     '--option Dpkg::Options::="--force-confdef"',
     '--option Dpkg::Options::="--force-confold"',
 )
-APT_GET_BASE_COMMAND = " ".join((*APT_GET_ENVS, "/usr/bin/apt-get", *APT_GET_INSTALL_OPTIONS))
+"""The CLI arguments passed to all ``apt-get`` commands."""
+APT_GET_BASE_COMMAND: str = " ".join((*APT_GET_ENVS, "/usr/bin/apt-get", *APT_GET_INSTALL_OPTIONS))
+"""The base ``apt-get`` command to execute."""
 
 
 class AptGetError(SpicerackError):
@@ -57,7 +60,7 @@ class AptGetHosts(RemoteHostsAdapter):
                 method.
 
         Returns:
-            iterator: the result of the update operations, see :py:meth:`spicerack.remote.RemoteHosts.run_sync`.
+            The result of the update operations, see :py:meth:`spicerack.remote.RemoteHosts.run_sync`.
 
         """
         logger.info("Running apt-get update")
@@ -89,12 +92,12 @@ class AptGetHosts(RemoteHostsAdapter):
                 >>> apt_get.install('package1', 'package2', batch_size=2, print_progress_bars=False)
 
         Arguments:
-            *packages (str): packages to install as positional parameters.
+            *packages: packages to install as positional arguments.
             **kwargs: optional keyword arguments to be passed to the :py:meth:`spicerack.remote.RemoteHosts.run_sync`
                 method.
 
         Returns:
-            iterator: the result of the installation operations, see :py:meth:`spicerack.remote.RemoteHosts.run_sync`.
+            The result of the installation operations, see :py:meth:`spicerack.remote.RemoteHosts.run_sync`.
 
         """
         if not packages:
@@ -121,12 +124,12 @@ class AptGetHosts(RemoteHostsAdapter):
                 >>> apt_get.run('purge package1', batch_size=2, print_progress_bars=False)
 
         Arguments:
-            apt_get_command (str): the command part after apt-get to be executed (e.g. ``update``).
+            apt_get_command: the command part after apt-get to be executed (e.g. ``update``).
             **kwargs: optional keyword arguments to be passed to the :py:meth:`spicerack.remote.RemoteHosts.run_sync`
                 method.
 
         Returns:
-            iterator: the result of the update operations, see :py:meth:`spicerack.remote.RemoteHosts.run_sync`.
+            The result of the update operations, see :py:meth:`spicerack.remote.RemoteHosts.run_sync`.
 
         """
         command = f"{APT_GET_BASE_COMMAND} {apt_get_command}"

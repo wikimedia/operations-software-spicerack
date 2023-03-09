@@ -9,11 +9,11 @@ from kafka import KafkaConsumer, OffsetAndMetadata, TopicPartition
 
 from spicerack.exceptions import SpicerackError
 
-TIMEOUT_MS = 20000
-"""int: Timeout set for any kafka operations used in this module."""
+TIMEOUT_MS: int = 20000
+"""Timeout set for any kafka operations used in this module in milliseconds."""
 
-DELTA = timedelta(minutes=2).seconds * 1000
-"""int: For offset approximation, timestamp that will be used will be earlier by this amount of ms."""
+DELTA: int = timedelta(minutes=2).seconds * 1000
+"""For offset approximation, timestamp that will be used will be earlier by this amount of ms."""
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +23,9 @@ class ConsumerDefinition:
     """Data needed to identify a Kafka Consumer.
 
     Arguments:
-        site (str): Kafka site/DC.
-        cluster (str): Kafka cluster.
-        consumer_group (str): Kafka consumer group.
+        site: Kafka site/DC.
+        cluster: Kafka cluster.
+        consumer_group: Kafka consumer group.
 
     """
 
@@ -48,9 +48,9 @@ class KafkaClient:
         """Sets up a KafkaConsumer.
 
         Arguments:
-            consumer_definition (spicerack.kafka.ConsumerDefinition): Definition of the Kafka data for the consumer.
-            kafka_config (dict): Complete, available in Puppet, kafka definition.
-            dry_run (bool): Enable dry run mode.
+            consumer_definition: definition of the Kafka data for the consumer.
+            kafka_config: complete, available in Puppet, kafka definition.
+            dry_run: enable dry run mode.
 
         """
         self._dry_run = dry_run
@@ -83,22 +83,16 @@ class KafkaClient:
         """Construct site specific full topic name.
 
         Arguments:
-            topic (str): Topic name without site prefix.
-
-        Returns:
-            str: Topic name with site prefix.
+            topic: topic name without site prefix.
 
         """
         return f"{self._site}.{topic}"
 
     def get_committed_offset(self, topic_partition: TopicPartition) -> int:
-        """Retrieve a committed offset for given TopicPartition.
+        """Retrieve the last committed offset for given TopicPartition.
 
         Arguments:
-            topic_partition (kafka.structs.TopicPartition): Non-localized topic partition.
-
-        Returns:
-            int: Last committed offset.
+            topic_partition: non-localized topic partition.
 
         """
         localized_tp = self._get_localized_tp(topic_partition)
@@ -112,22 +106,16 @@ class KafkaClient:
         """Translate provided TopicPartition into the one local to the cluster.
 
         Arguments:
-            topic_partition (kafka.structs.TopicPartition): Non-localized topic partition.
-
-        Returns:
-            kafka.structs.TopicPartition: topic and partition localized for current site.
+            topic_partition: non-localized topic partition.
 
         """
         return TopicPartition(self._get_full_topic_name(topic_partition.topic), topic_partition.partition)
 
     def get_next_timestamp(self, topic_partition: TopicPartition) -> int:
-        """Retrieve a timestamp for given TopicPartition.
+        """Retrieve a timestamp for given TopicPartition about to be processed.
 
         Arguments:
-            topic_partition (kafka.structs.TopicPartition): Non-localized topic partition.
-
-        Returns:
-            int: Currently about to be processed timestamp.
+            topic_partition: non-localized topic partition.
 
         """
         localized_tp = self._get_localized_tp(topic_partition)
@@ -141,10 +129,7 @@ class KafkaClient:
         """Get partitions for a localized provided topic.
 
         Arguments:
-            topic_name (str): Topic name without site prefix.
-
-        Returns:
-            set[int]: Set of partitions available for given topic.
+            topic_name: topic name without site prefix.
 
         """
         full_topic_name = self._get_full_topic_name(topic_name)
@@ -157,8 +142,8 @@ class KafkaClient:
         """Seek the provided partition for a configured consumer group to a specific offset.
 
         Arguments:
-            topic_partition (kafka.structs.TopicPartition): Non-localized topic partition.
-            offset (int): Desired offset.
+            topic_partition: non-localized topic partition.
+            offset: desired offset.
 
         """
         local_tp = self._get_localized_tp(topic_partition)
@@ -177,11 +162,8 @@ class KafkaClient:
         """Find offset by approximating it with the provided timestamp.
 
         Arguments:
-            topic_partition (kafka.structs.TopicPartition): Non-localized topic partition.
-            timestamp (int): Timestamp for offset approximation.
-
-        Returns:
-            int: Approximated offset.
+            topic_partition: non-localized topic partition.
+            timestamp: timestamp for offset approximation.
 
         """
         local_tp = self._get_localized_tp(topic_partition)
@@ -212,15 +194,15 @@ class Kafka:
         Kafka config is based on a Puppet generated config.yaml in spicerack configs. At minimum, it requires a
         ssl_string defined for each participating cluster, e.g.::
 
-          main:
-            eqiad:
-               brokers:
-                  ssl_string: "address:port,address:port"
-                  ...
+            main:
+              eqiad:
+                 brokers:
+                    ssl_string: "address:port,address:port"
+                    ...
 
         Arguments:
-              kafka_config (dict): Complete, available in Puppet, kafka definition.
-              dry_run (bool, optional): Enable dry run mode.
+              kafka_config: complete, available in Puppet, kafka definition.
+              dry_run: enable dry run mode.
 
         """
         self._dry_run = dry_run
@@ -231,11 +213,8 @@ class Kafka:
         """Retrieves offsets for given topics, mutated for given site.
 
         Arguments:
-            client (spicerack.kafka.KafkaClient): Kafka consumer and site prefix for a given cluster.
-            topics (list[str]): List of topics (without site prefixes) to get offsets for.
-
-        Returns:
-            dict[kafka.structs.TopicPartition, int]: Mapping of topic partitions to their offsets for a given consumer.
+            client: Kafka consumer and site prefix for a given cluster.
+            topics: list of topics (without site prefixes) to get offsets for.
 
         Raises:
             spicerack.kafka.KafkaError: When local offset couldn't be located (e.g. because of no messages).
@@ -252,12 +231,8 @@ class Kafka:
         """Retrieves timestamps for given topics, mutated for given site.
 
         Arguments:
-            client (spicerack.kafka.KafkaClient): Kafka consumer and site prefix for a given cluster.
-            topics (list[str]): List of topics (without site prefixes) to get timestamps for.
-
-        Returns:
-            dict[kafka.structs.TopicPartition, int]: Mapping of topic partitions to their timestamps for a given
-            consumer.
+            client: Kafka consumer and site prefix for a given cluster.
+            topics: list of topics (without site prefixes) to get timestamps for.
 
         Raises:
             spicerack.kafka.KafkaError: When there was no message to get timestamp from.
@@ -270,14 +245,11 @@ class Kafka:
 
     @staticmethod
     def _get_topic_partitions(client: KafkaClient, topics: list[str]) -> list[TopicPartition]:
-        """Generates a list of topic partitions for given topic list.
+        """Get a list of topic partitions for given topic list.
 
         Arguments:
-            client (spicerack.kafka.KafkaClient): Kafka consumer and site prefix for a given cluster.
-            topics (list[str]): List of topics (without site prefixes) to get partitions for.
-
-        Returns:
-            list[kafka.structs.TopicPartition]: List of topic partitions.
+            client: Kafka consumer and site prefix for a given cluster.
+            topics: list of topics (without site prefixes) to get partitions for.
 
         """
         topic_partitions = []
@@ -291,9 +263,8 @@ class Kafka:
         """Sets topic partitions offsets.
 
         Arguments:
-            client (spicerack.kafka.KafkaClient): Kafka consumer for a given cluster.
-            offset_data (dict[kafka.structs.TopicPartition, int]): Mapping of topic partitions to their timestamps
-            for a given consumer.
+            client: Kafka consumer for a given cluster.
+            offset_data: mapping of topic partitions to their timestamps for a given consumer.
 
         """
         for tp, offset in offset_data.items():
@@ -303,8 +274,8 @@ class Kafka:
         """Sets topic partitions offsets, based on timestamps (minus :py:const:`spicerack.kafka.DELTA`) and topic names.
 
         Arguments:
-            client (spicerack.kafka.KafkaClient): Kafka consumer and site prefix for a given cluster.
-            timestamps (dict[str, int]): Mapping of topics to their timestamps.
+            client: Kafka consumer and site prefix for a given cluster.
+            timestamps: mapping of topics to their timestamps.
 
         """
         tp_timestamps = {}
@@ -319,8 +290,8 @@ class Kafka:
         """Sets topic partitions offsets, based on timestamps (minus :py:const:`spicerack.kafka.DELTA`).
 
         Arguments:
-            client (spicerack.kafka.KafkaClient): Kafka consumer and site prefix for a given cluster.
-            timestamps (dict[kafka.structs.TopicPartition, int]): Mapping of topic partitions to their timestamps.
+            client: Kafka consumer and site prefix for a given cluster.
+            timestamps: mapping of topic partitions to their timestamps.
 
         Raises:
             spicerack.kafka.KafkaError: When local offset couldn't be located (e.g. because of no messages).
@@ -341,9 +312,9 @@ class Kafka:
         All topics for which the transfer will happen are assumed to use site prefixes (e.g. eqiad.mutation).
 
         Arguments:
-            topics (list[str]): List of topics to transfer from and to, without site prefixes.
-            source_consumer (spicerack.kafka.ConsumerDefinition): Consumer definition for the source consumer group.
-            target_consumer (spicerack.kafka.ConsumerDefinition): Consumer definition for the target consumer group.
+            topics: list of topics to transfer from and to, without site prefixes.
+            source_consumer: consumer definition for the source consumer group.
+            target_consumer: consumer definition for the target consumer group.
 
         """
         with KafkaClient(
@@ -396,8 +367,8 @@ class Kafka:
         Module uses timestamps earlier by :py:const:`spicerack.kafka.DELTA` ms.
 
         Arguments:
-            target_consumer (spicerack.kafka.ConsumerDefinition): Consumer definition for the target consumer group.
-            timestamps (dict[str, int): List of topics with timestamps to use.
+            target_consumer: consumer definition for the target consumer group.
+            timestamps: list of topics with timestamps to use.
 
         """
         with KafkaClient(

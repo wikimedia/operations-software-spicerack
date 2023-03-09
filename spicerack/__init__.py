@@ -55,7 +55,7 @@ logger = getLogger(__name__)
 
 try:
     __version__: str = get_distribution("wikimedia-spicerack").version  # Must be the same used as 'name' in setup.py
-    """:py:class:`str`: the version of the current Spicerack module."""
+    """The version of the current Spicerack module."""
 except DistributionNotFound:  # pragma: no cover - this should never happen during tests
     pass  # package is not installed
 
@@ -81,28 +81,28 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Initialize the service locator for the Spicerack library.
 
         Arguments:
-            verbose (bool, optional): whether to set the verbose mode.
-            dry_run (bool, optional): whether this is a DRY-RUN.
-            cumin_config (str, optional): the path to Cumin's configuration file.
-            cumin_installer_config (str, optional): the path to Cumin's configuration file for the Debian installer.
-            conftool_config (str, optional): the path to Conftool's configuration file.
-            conftool_schema (str, optional): the path to Conftool's schema file.
-            debmonitor_config (str, optional): the path to Debmonitor's INI configuration file. It must have at least
-                the following schema::
+            verbose: whether to set the verbose mode.
+            dry_run: whether this is a DRY-RUN.
+            cumin_config: the path to Cumin's configuration file.
+            cumin_installer_config: the path to Cumin's configuration file for the Debian installer.
+            conftool_config: the path to Conftool's configuration file.
+            conftool_schema: the path to Conftool's schema file.
+            debmonitor_config: the path to Debmonitor's INI configuration file. It must have at least the following
+                schema::
 
                     [DEFAULT]
                     server=debmonitor.example.com
                     cert=/etc/debmonitor/ssl/cert.pem
                     key=/etc/debmonitor/ssl/server.key
 
-            spicerack_config_dir (str, optional): the path for the root configuration directory for Spicerack.
-                Module-specific configuration will be loaded from `config_dir/module_name/`.
-            http_proxy (str, optional): the scheme://url:port of the HTTP proxy to use for external calls.
-            get_cookbook_callback (callable, optional): a callable to retrieve a CookbookItem to execute a cookbook
-                from inside another cookbook.
-            extender_class (type, optional): an optional class object that inherits from
-                :py:class:`spicerack.SpicerackExtenderBase` to dynamically add accessors to Spicerack. If not set no
-                extenders will be registered, even if ``external_modules_dir`` is specified in the configuration.
+            spicerack_config_dir: the path for the root configuration directory for Spicerack. Module-specific
+                configuration will be loaded from ``config_dir/module_name/``.
+            http_proxy: the ``scheme://url:port`` of the HTTP proxy to use for external calls.
+            get_cookbook_callback: a callable to retrieve a CookbookItem to execute a cookbook from inside another
+                cookbook.
+            extender_class: an optional class object that inherits from :py:class:`spicerack.SpicerackExtenderBase` to
+                dynamically add accessors to Spicerack. If not set no extenders will be registered, even if
+                ``external_modules_dir`` is specified in the configuration.
 
         """
         # Attributes
@@ -146,61 +146,38 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
     @property
     def dry_run(self) -> bool:
-        """Getter for the ``dry_run`` property.
-
-        Returns:
-            bool: True if the DRY-RUN mode is set, False otherwise.
-
-        """
+        """Returns :py:data:`True` if the ``DRY-RUN`` mode is set, :py:data:`False` otherwise."""
         return self._dry_run
 
     @property
     def verbose(self) -> bool:
-        """Getter for the ``verbose`` property.
-
-        Returns:
-            bool: True if the verbose mode is set, False otherwise.
-
-        """
+        """Returns :py:data:`True` if the verbose mode is set, :py:data:`False` otherwise."""
         return self._verbose
 
     @property
     def username(self) -> str:
-        """Getter for the current username.
-
-        Returns:
-            str: the name of the effective running user.
-
-        """
+        """Returns the name of the effective running user."""
         return self._username
 
     @property
     def config_dir(self) -> Path:
-        """Getter for Spicerack's configuration file directory.
+        """Getter for Spicerack's configuration file directory where the module-specific configs are available.
 
-        Returns:
-            str: a filesystem location of configuration files.
+        They can be accessed with::
+
+            self.config_dir / module_name / config_file
 
         """
         return self._spicerack_config_dir
 
     @property
     def http_proxy(self) -> str:
-        """Getter for the HTTP PROXY to use for external calls.
-
-        Returns:
-            str: the scheme://url:port of the proxy.
-
-        """
+        """Returns the ``scheme://url:port`` of the HTTP PROXY proxy."""
         return self._http_proxy
 
     @property
     def requests_proxies(self) -> Optional[dict[str, str]]:
-        """Getter to return the HTTP proxy configuration for the Requests module.
-
-        Returns:
-            dict: with the proxies as required by Requests documentation.
-            :py:data:`None`: if no HTTP proxy is set.
+        """Returns the HTTP proxy configuration for the Requests module or :py:data:`None` if no HTTP proxy is set.
 
         See Also:
             https://requests.readthedocs.io/en/master/user/advanced/#proxies
@@ -213,52 +190,31 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
     @property
     def irc_logger(self) -> Logger:
-        """Getter for the ``irc_logger`` property.
-
-        Returns:
-            logging.Logger: the logger instance to write to IRC.
-
-        """
+        """Returns the logger instance to write to IRC logging to SAL."""
         return self._irc_logger
 
     @property
     def actions(self) -> ActionsDict:
-        """Getter for the ``actions`` property.
-
-        Returns:
-            wmflib.actions.ActionsDict: a dictionary to log and record cookbook actions.
-
-        """
+        """Returns a dictionary to log and record cookbook actions."""
         return self._actions
 
     @property
     def icinga_master_host(self) -> RemoteHosts:
-        """Getter for the ``icinga_master_host`` property.
-
-        Returns:
-            spicerack.remote.RemoteHosts: the instance to execute commands on the Icinga master host.
-
-        """
+        """Returns the instance to execute commands on the Icinga master host."""
         return self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
 
     @property
     def netbox_master_host(self) -> RemoteHosts:
-        """Getter for the ``netbox_master_host`` property.
-
-        Returns:
-            spicerack.remote.RemoteHosts: the instance to execute commands on the Netbox master host.
-
-        """
+        """Returns the instance to execute commands on the Netbox master host."""
         dns = self.dns()
         netbox_hostname = dns.resolve_ptr(dns.resolve_ips("netbox.discovery.wmnet")[0])[0]
         return self.remote().query(netbox_hostname)
 
     @property
     def management_password(self) -> str:
-        """Getter for the ``management_password`` property.
+        """Returns the management password.
 
-        Returns:
-            str: the management password. It will be asked to the user if not already cached by the current instance.
+        It will be asked to the user if not already cached by the current instance.
 
         """
         if not self._management_password:
@@ -270,10 +226,8 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
     def authdns_servers(self) -> dict[str, str]:
         """Getter for the authoritative DNS nameservers currently active in production.
 
-        Returns:
-            dict: a dictionary where keys are the hostnames and values are the IPs of the active authoritative
-            nameservers.
-
+        Returns a dictionary where keys are the hostnames and values are the IPs of the active authoritative
+        nameservers.
         """
         if not self._authdns_servers:
             self._authdns_servers = load_yaml_config(self._spicerack_config_dir / "discovery" / "authdns.yaml")
@@ -301,17 +255,17 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         Cookbook that is running.
 
         Arguments:
-            cookbook (str): the path to the cookbook to execute, either in Spicerack's dot notation or the relative
-                path to the Python file to execute.
-            args (sequence, optional): an iterable sequence of strings with the Cookbook's argument. The Cookbook will
-                be executed with the same global arguments used for the current run.
+            cookbook: the path to the cookbook to execute, either in Spicerack's dot notation or the relative path to
+                the Python file to execute.
+            args: an iterable sequence of strings with the Cookbook's argument. The Cookbook will be executed with the
+                same global arguments used for the current run.
 
         Returns:
-            int: the exit code of the Cookbook, 0 if successful, non-zero if not.
+            The exit code of the Cookbook, 0 if successful, non-zero if not.
 
         Raises:
-            spicerack.exceptions.SpicerackError: if the get_cookbook_callback callback is not set or unable to find the
-                cookbook with the given name.
+            spicerack.exceptions.SpicerackError: if the ``get_cookbook_callback`` callback is not set or unable to find
+            the cookbook with the given name.
 
         """
         if self._get_cookbook_callback is None:
@@ -328,24 +282,18 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a Remote instance.
 
         Arguments:
-            installer (bool, optional): whether to use the special configuration to connect to a Debian installer
-                or freshly re-imaged host prior to its first Puppet run.
-
-        Returns:
-            spicerack.remote.Remote: the Remote instance.
+            installer: whether to use the special configuration to connect to a Debian installer or freshly re-imaged
+                host prior to its first Puppet run.
 
         """
         return Remote(self._cumin_installer_config if installer else self._cumin_config, dry_run=self._dry_run)
 
     def confctl(self, entity_name: str) -> ConftoolEntity:
-        """Access a Conftool specific entity instance.
+        """Get a Conftool specific entity instance.
 
         Arguments:
-            entity_name (str): the name of a Conftool entity. Possible values: ``node``, ``service``, ``discovery``,
+            entity_name: the name of a Conftool entity. Possible values: ``node``, ``service``, ``discovery``,
                 ``mwconfig``.
-
-        Returns:
-            spicerack.confctl.ConftoolEntity: the confctl entity instance.
 
         """
         if self._confctl is None:
@@ -358,34 +306,23 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return self._confctl.entity(entity_name)
 
     def dhcp(self, remote_hosts: RemoteHosts) -> DHCP:
-        """Return a DHCP configuration manager for specified site.
+        """Return a DHCP configuration manager for the specified site.
 
         Arguments:
-            remote_hosts (RemoteHosts instance): Hosts to operate on, which are normally install servers with dhcp.
-
-        Returns:
-            spicerack.dhcp.DHCP : A DHCP configuration instance
+            remote_hosts: Hosts to operate on, which are normally install servers with dhcp.
 
         """
         return DHCP(remote_hosts, dry_run=self._dry_run)
 
     def dns(self) -> Dns:
-        """Get a Dns instance.
-
-        Returns:
-            wmflib.dns.Dns: a Dns instance that will use the operating system default namserver(s).
-
-        """
+        """Get a Dns instance that will use the operating system default namserver(s)."""
         return Dns()
 
     def discovery(self, *records: str) -> Discovery:
-        """Get a Discovery instance.
+        """Get a Discovery instance for the given records.
 
         Arguments:
-            *records (str): arbitrary positional arguments, each one must be a Discovery DNS record name.
-
-        Returns:
-            spicerack.dnsdisc.Discovery: the pre-configured Discovery instance for the given records.
+            *records: arbitrary positional arguments, each one must be a Discovery DNS record name.
 
         """
         return Discovery(
@@ -399,22 +336,14 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a kubernetes client for the specified cluster.
 
         Arguments:
-            group (str): the cluster group
-            cluster (str): the kubernetes cluster
-
-        Returns:
-            spicerack.k8s.Kubernetes: a pre-configured kubernetes client
+            group: the cluster group.
+            cluster: the kubernetes cluster.
 
         """
         return Kubernetes(group, cluster, dry_run=self._dry_run)
 
     def mediawiki(self) -> MediaWiki:
-        """Get a MediaWiki instance.
-
-        Returns:
-            spicerack.mediawiki.MediaWiki: the MediaWiki instance.
-
-        """
+        """Get a MediaWiki instance."""
         return MediaWiki(
             self.confctl("mwconfig"),
             self.remote(),
@@ -423,31 +352,18 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         )
 
     def mysql(self) -> Mysql:
-        """Get a Mysql instance.
-
-        Returns:
-            spicerack.mysql.Mysql: the Mysql instance.
-
-        """
+        """Get a Mysql instance."""
         return Mysql(dry_run=self._dry_run)
 
     def mysql_legacy(self) -> MysqlLegacy:
-        """Get a MysqlLegacy instance.
-
-        Returns:
-            spicerack.mysql_legacy.MysqlLegacy: the MysqlLegacy instance.
-
-        """
+        """Get a MysqlLegacy instance."""
         return MysqlLegacy(self.remote(), dry_run=self._dry_run)
 
     def redis_cluster(self, cluster: str) -> RedisCluster:
         """Get a RedisCluster instance.
 
         Arguments:
-            cluster (str): the name of the cluster.
-
-        Returns:
-            spicerack.redis_cluster.RedisCluster: the cluster instance.
+            cluster: the name of the cluster.
 
         """
         return RedisCluster(
@@ -460,10 +376,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a Reposync instance.
 
         Arguments:
-            name (str): the name of the repo to sync.
-
-        Returns:
-            spicerack.reposync.RepoSync: the reposync instance.
+            name: the name of the repo to sync.
 
         """
         config = load_yaml_config(self._spicerack_config_dir / "reposync" / "config.yaml")
@@ -488,11 +401,8 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get an ElasticsearchClusters instance.
 
         Arguments:
-            clustergroup (str): name of cluster group e.g ``search_eqiad``.
-            write_queue_datacenters (Sequence[str]): Sequence of which core DCs to query write queues for.
-
-        Returns:
-            spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
+            clustergroup: name of cluster group e.g ``search_eqiad``.
+            write_queue_datacenters: Sequence of which core DCs to query write queues for.
 
         """
         configuration = load_yaml_config(self._spicerack_config_dir / "elasticsearch" / "config.yaml")
@@ -510,12 +420,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get an administrative Reason instance.
 
         Arguments:
-            reason (str): the reason to use to justify an administrative action. See `spicerack.administrative.Reason`
-                for all the details.
-            task_id (str, optional): the task ID to mention in the reason.
-
-        Returns:
-            spicerack.administrative.Reason: the administrative Reason instance.
+            reason: the reason to use to justify an administrative action. See
+                :py:class:`spicerack.administrative.Reason` for all the details.
+            task_id: the task ID to mention in the reason.
 
         """
         return Reason(reason, self._username, self._current_hostname, task_id=task_id)
@@ -528,14 +435,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             :py:meth:`spicerack.Spicerack.alerting_hosts` instead.
 
         Arguments:
-            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
-                of strings.
-            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
-                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
-                be used in Icinga.
-
-        Returns:
-            spicerack.icinga.IcingaHosts: IcingaHosts instance.
+            target_hosts: the target hosts either as a NodeSet instance or a sequence of strings.
+            verbatim_hosts: if :py:data:`True` use the hosts passed verbatim as is, if instead :py:data:`False`, the
+                default, consider the given target hosts as FQDNs and extract their hostnames to be used in Icinga.
 
         """
         return IcingaHosts(self.icinga_master_host, target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run)
@@ -544,31 +446,20 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a PuppetHosts instance for the given remote hosts.
 
         Arguments:
-            remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
-
-        Returns:
-            spicerack.puppet.PuppetHosts: the instance to manage Puppet on the target hosts.
+            remote_hosts: the instance with the target hosts.
 
         """
         return PuppetHosts(remote_hosts)
 
     def puppet_master(self) -> PuppetMaster:
-        """Get a PuppetMaster instance to manage hosts and certificates from a Puppet master.
-
-        Returns:
-            spicerack.puppet.PuppetMaster: the instance to manage Puppet hosts and certificates.
-
-        """
+        """Get a PuppetMaster instance to manage hosts and certificates from a Puppet master."""
         return PuppetMaster(self.remote().query(get_puppet_ca_hostname()))
 
     def ipmi(self, target: str) -> Ipmi:
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
 
         Arguments:
-            target (str): the management console FQDN or IP to target.
-
-        Returns:
-            spicerack.ipmi.Ipmi: the instance to run ipmitool commands.
+            target: the management console FQDN or IP to target.
 
         """
         return Ipmi(target, self.management_password, dry_run=self._dry_run)
@@ -577,19 +468,14 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a Phabricator instance to interact with a Phabricator website.
 
         Arguments:
-            bot_config_file (str): the path to the configuration file for the Phabricator bot, with the following
-                structure::
+            bot_config_file: the path to the configuration file for the Phabricator bot, with the following structure::
 
                     [section_name]
                     host = https://phabricator.example.com/api/
                     username = phab-bot
                     token = api-12345
 
-            section (str, optional): the name of the section of the configuration file where to find the required
-                parameters.
-
-        Returns:
-            wmflib.phabricator.Phabricator: the instance.
+            section: the name of the section of the configuration file where to find the required parameters.
 
         """
         # Allow to specify the configuration file as opposed to other methods so that different clients can use
@@ -597,28 +483,15 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)
 
     def prometheus(self) -> Prometheus:
-        """Get a Prometheus instance.
-
-        Returns:
-            wmflib.prometheus.Prometheus: Prometheus instance.
-
-        """
+        """Get a Prometheus instance."""
         return Prometheus()
 
     def thanos(self) -> Thanos:
-        """Get a Thanos instance.
-
-        Returns:
-            wmflib.prometheus.Thanos: Thanos instance.
-
-        """
+        """Get a Thanos instance."""
         return Thanos()
 
     def debmonitor(self) -> Debmonitor:
         """Get a Debmonitor instance to interact with a Debmonitor website.
-
-        Returns:
-            spicerack.debmonitor.Debmonitor: the instance.
 
         Raises:
             KeyError: if any configuration option is missing.
@@ -629,9 +502,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
     def ganeti(self) -> Ganeti:
         """Get an instance to interact with Ganeti.
-
-        Returns:
-            spicerack.ganeti.Ganeti: the instance
 
         Raises:
             KeyError: If the configuration file does not contain the correct keys.
@@ -651,10 +521,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a Netbox instance to interact with Netbox's API.
 
         Arguments:
-            read_write (bool, optional): whether to use a read-write token.
-
-        Returns:
-            spicerack.netbox.Netbox: the instance
+            read_write: whether to use a read-write token.
 
         """
         config = load_yaml_config(self._spicerack_config_dir / "netbox" / "config.yaml")
@@ -669,14 +536,11 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a NetboxServer instance to interact with a server in Netbox, both physical and virtual.
 
         Arguments:
-            hostname (str): the hostname (not FQDN) of the server to manage.
-            read_write (bool, optional): whether to use a read-write token.
+            hostname: the hostname (not FQDN) of the server to manage.
+            read_write: whether to use a read-write token.
 
         Raises:
             spicerack.netbox.NetboxError: if unable to find or load the server.
-
-        Returns:
-            spicerack.netbox.NetboxServer: the NetboxServer instance.
 
         """
         return self.netbox(read_write=read_write).get_server(hostname)
@@ -686,9 +550,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         Params:
             according to :py:func:`wmflib.requests.http_session`.
-
-        Returns:
-            requests.Session: the pre-configured session.
 
         """
         name = f"Spicerack/{__version__} {name}"
@@ -710,9 +571,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
     def kafka(self) -> Kafka:
         """Get an instance to interact with Kafka.
 
-        Returns:
-            spicerack.kafka.Kafka: the instance
-
         Raises:
             KeyError: If the configuration file does not contain the correct keys.
 
@@ -728,16 +586,13 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             At the moment only Dell hardware is supported.
 
         Arguments:
-            hostname (str): the hostname (not FQDN) of the physical server to manage.
-            username (str, optional): the username for the management console.
-            password (str, optional): the password for the management console for the given user. If empty or not
-                provided would use the production management password and ask the user for it if not already in memory.
+            hostname: the hostname (not FQDN) of the physical server to manage.
+            username: the username for the management console.
+            password: the password for the management console for the given user. If empty or not provided would use
+                the production management password and ask the user for it if not already in memory.
 
         Raises:
             spicerack.exceptions.SpicerackError: if not a physical server or unable to find the management IP.
-
-        Returns:
-            spicerack.redfish.Redfish: the instance.
 
         """
         if not password:
@@ -760,14 +615,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             :py:meth:`spicerack.Spicerack.alerting_hosts` instead.
 
         Arguments:
-            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
-                of strings.
-            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
-                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
-                be used in Icinga.
-
-        Returns:
-            spicerack.alertmanager.AlertmanagerHosts: the AlertmanagerHosts instance.
+            target_hosts: the target hosts either as a NodeSet instance or a sequence of strings.
+            verbatim_hosts: if :py:data:`True` use the hosts passed verbatim as is, if instead :py:data:`False`, the
+                default, consider the given target hosts as FQDNs and extract their hostnames to be used in Icinga.
 
         """
         return AlertmanagerHosts(target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run)
@@ -779,9 +629,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             To interact with Alertmanager alerts attached to an ``instance`` use
             :py:meth:`spicerack.Spicerack.alertmanager_hosts` instead.
 
-        Returns:
-            spicerack.alertmanager.Alertmanager: the Alertmanager instance.
-
         """
         return Alertmanager(dry_run=self._dry_run)
 
@@ -789,14 +636,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get an AlertingHosts instance.
 
         Arguments:
-            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence
-                of strings.
-            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
-                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
-                be used in Icinga.
-
-        Returns:
-            spicerack.alerting.AlertingHosts: AlertingHosts instance.
+            target_hosts: the target hosts either as a NodeSet instance or a sequence of strings.
+            verbatim_hosts: if :py:data:`True` use the hosts passed verbatim as is, if instead :py:data:`False`, the
+                default, consider the given target hosts as FQDNs and extract their hostnames to be used in Icinga.
 
         """
         return AlertingHosts(
@@ -805,12 +647,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         )
 
     def service_catalog(self) -> Catalog:
-        """Get a Catalog instance that reflects Puppet's service::catalog hieradata variable.
-
-        Returns:
-            spicerack.service.Catalog: the service catalog instance.
-
-        """
+        """Get a Catalog instance that reflects Puppet's service::catalog hieradata variable."""
         if self._service_catalog is None:
             config = load_yaml_config(self._spicerack_config_dir / "service" / "service.yaml")
             self._service_catalog = Catalog(
@@ -823,11 +660,8 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Get a PeeringDB instance to interact with the PeeringDB API.
 
         Arguments:
-            ttl (int): the cache timeout in seconds. If cached items are older than the given TTL they will be ignored
-                and fetched again.
-
-        Returns:
-            spicerack.peringdb.PeeringDB: the instance.
+            ttl: the cache timeout in seconds. If cached items are older than the given TTL they will be ignored and
+                fetched again.
 
         """
         config = load_yaml_config(self._spicerack_config_dir / "peeringdb" / "config.yaml")
@@ -848,10 +682,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
                 >>> apt_get = spicerack.apt_get(hosts)
 
         Arguments:
-            remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
-
-        Returns:
-            spicerack.apt.AptGetHosts: the instance to manage apt-get on the target hosts.
+            remote_hosts: the instance with the target hosts.
 
         """
         return AptGetHosts(remote_hosts)
@@ -864,7 +695,7 @@ class SpicerackExtenderBase:
         """Initialize the instance.
 
         Arguments:
-            spicerack (spicerack.Spicerack): the Spicerack instance.
+            spicerack: the Spicerack instance.
 
         """
         self._spicerack = spicerack

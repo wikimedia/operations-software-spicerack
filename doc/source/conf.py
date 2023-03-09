@@ -38,6 +38,7 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
+    "sphinx_autodoc_typehints",
     "sphinxarg.ext",
 ]
 
@@ -138,8 +139,19 @@ napoleon_use_admonition_for_notes = False
 napoleon_use_admonition_for_references = False
 napoleon_use_ivar = False
 napoleon_use_param = True
-napoleon_use_rtype = True
 napoleon_use_keyword = True
+napoleon_use_rtype = True
+napoleon_type_aliases = None
+napoleon_attr_annotations = True
+
+# Type hints settings
+typehints_fully_qualified = True
+always_document_param_types = False
+typehints_document_rtype = True
+typehints_use_rtype = True
+typehints_defaults = "comma"
+typehints_use_signature = True
+typehints_use_signature_return = True
 
 # Autodoc settings
 autodoc_default_options = {
