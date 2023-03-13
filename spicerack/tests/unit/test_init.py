@@ -58,6 +58,8 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert spicerack.config_dir == get_fixture_path()
     assert spicerack.http_proxy == proxy
     assert spicerack.requests_proxies == {"http": proxy, "https": proxy}
+    assert spicerack.authdns_servers == {"authdns1001.example.org": "10.0.0.1", "authdns2001.example.org": "10.0.0.2"}
+    assert list(spicerack.authdns_active_hosts.hosts) == ["authdns1001.example.org", "authdns2001.example.org"]
     assert isinstance(spicerack.irc_logger, logging.Logger)
     assert isinstance(spicerack.actions, ActionsDict)
     assert isinstance(spicerack.remote(), Remote)

@@ -280,6 +280,20 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         return self._authdns_servers
 
+    @property
+    def authdns_active_hosts(self) -> RemoteHosts:
+        """Get a RemoteHosts instance to target the active authoritative nameservers.
+
+        Examples:
+            ::
+
+                >>> authdns_hosts = spicerack.authdns_active_hosts
+                >>> authdns_hosts.run_sync('some command')
+
+        """
+        hosts = ",".join(self.authdns_servers.keys())
+        return self.remote().query(f"D{{{hosts}}}")
+
     def run_cookbook(self, cookbook: str, args: Sequence[str] = ()) -> int:
         """Run another Cookbook within the current run.
 
