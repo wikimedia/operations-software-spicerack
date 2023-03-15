@@ -3,7 +3,7 @@ import logging
 import time
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import kubernetes  # mypy: no-type
 from kubernetes import client, config  # mypy: no-type
@@ -38,9 +38,9 @@ class Kubernetes:
         """Initialize the instance.
 
         Arguments:
-          group (string): the cluster group we want to operate on
-          cluster (string): the cluster we're operating on
-          dry_run (bool): if true, no write operations will happen.
+            group: the cluster group we want to operate on.
+            cluster: the cluster we're operating on.
+            dry_run: if true, no write operations will happen.
 
         """
         self.group = group
@@ -48,32 +48,26 @@ class Kubernetes:
         self.dry_run = dry_run
 
     def get_node(self, name: str) -> "KubernetesNode":
-        """Get an object for a kubernetes node.
+        """Get a kubernetes node.
 
         Arguments:
-          name (string): the name of the node
-
-        Returns:
-          spicerack.kubernetes.KubernetesNode
+            name: the name of the node.
 
         Raises:
-          spicerack.kubernetes.KubernetesApiError if the node is not found on the cluster.
+            spicerack.k8s.KubernetesApiError: if the node is not found on the cluster.
 
         """
         return KubernetesNode(name, self.api, self.dry_run)
 
     def get_pod(self, namespace: str, name: str) -> "KubernetesPod":
-        """Get an object for a kubernetes pod.
+        """Get a kubernetes pod.
 
         Arguments:
-            name (string): the name of the pod
-            namespace (string): the namespace the pod is in
-
-        Returns:
-            spicerack.kubernetes.KubernetesPod
+            name: the name of the pod.
+            namespace: the namespace the pod is in.
 
         Raises:
-            spicerack.kubernetes.KubernetesApiError if the pod is not found on the cluster
+            spicerack.k8s.KubernetesApiError: if the pod is not found on the cluster.
 
         """
         return KubernetesPod(namespace, name, self.api, self.dry_run)
@@ -82,30 +76,29 @@ class Kubernetes:
 class KubernetesApiFactory:
     """Provides kubernetes object classes easy access to the API."""
 
-    API_CLASSES = {"core": client.CoreV1Api}
-    CONFIG_BASE = "/etc/kubernetes"
+    API_CLASSES: dict[str, Any] = {"core": client.CoreV1Api}
+    """The different kubernetes APIs supported."""
+    CONFIG_BASE: str = "/etc/kubernetes"
+    """The base path for the kubernetes clusters configurations files."""
 
     def __init__(self, cluster: str):
-        """Initialize the instace.
+        """Initialize the instance.
 
         Arguments:
-          cluster (string): the cluster we're operating on
+            cluster: the cluster we're operating on.
 
         """
         self.cluster = cluster
-        self._configurations: Dict[str, client.Configuration] = {}
+        self._configurations: dict[str, client.Configuration] = {}
 
     def configuration(self, user: str) -> client.Configuration:
-        """Provide the configuration for a specific user.
+        """Get the configuration for a specific user.
 
         Arguments:
-          user (string): the user to fetch the configuration for.
-
-        Returns:
-          kubernetes.client.Configuration: the configuration for the specified user.
+            user: the user to fetch the configuration for.
 
         Raises:
-          KubernetesError if the user or the configuration are invalid
+            spicerack.k8s.KubernetesError: if the user or the configuration are invalid.
 
         """
         # Check the user doesn't contain path separators
@@ -125,19 +118,14 @@ class KubernetesApiFactory:
         """Return an instance of the core api correctly configured.
 
         Arguments:
-          user (string): the user to use for authentication
+            user: the user to use for authentication.
 
         """
         conf = self.configuration(user)
         return self.API_CLASSES["core"](client.ApiClient(configuration=conf))
 
     def _config_file_path(self, user: str) -> Path:
-        """Returns the path on the configuration file.
-
-        Returns:
-          pathlib.Path the path of the configuration file
-
-        """
+        """Returns the path on the configuration file for the given cluster and user."""
         return Path(self.CONFIG_BASE) / f"{user}-{self.cluster}.config"
 
 
@@ -154,11 +142,10 @@ class KubernetesNode:
         """Initialize the instance.
 
         Arguments:
-          fqdn (string): the fqdn of the node.
-          api (KubernetesApiFactory): the api factory we're going to use.
-          dry_run (bool): if true, no write operations will happen.
-          init_obj (kubernetes.client.models.v1_node.V1Node): if not None, this api object will be used, instead of
-              fetching it from the api.
+            fqdn: the fqdn of the node.
+            api: the api factory we're going to use.
+            dry_run: if true, no write operations will happen.
+            init_obj: if not :py:data:`None`, this api object will be used, instead of fetching it from the api.
 
         """
         self._api = api
@@ -176,37 +163,27 @@ class KubernetesNode:
         """Checks if a node is schedulable or not.
 
         Returns:
-          bool true if payloads can be scheduled on the node, false otherwise.
+            :py:data:`True` if payloads can be scheduled on the node, :py:data:`False` otherwise.
 
         """
         return not (self._node.spec and self._node.spec.unschedulable)
 
     @property
     def name(self) -> str:
-        """The name of the node.
-
-        Returns:
-          string: the name of the node.
-
-        """
+        """The name of the node."""
         return self._node.metadata.name
 
     @property
-    def taints(self) -> List[V1Taint]:
-        """The taints of the node.
-
-        Returns:
-          List[V1Taints]: the taints of the node.
-
-        """
+    def taints(self) -> list[V1Taint]:
+        """The  taints of the node."""
         return self._node.spec.taints if self._node.spec.taints is not None else []
 
     def cordon(self) -> None:
         """Makes the node unschedulable.
 
         Raises:
-          KubernetesApiError if the call to the api failed
-          KubernetesCheckError if the node wasn't set to unschedulable
+            spicerack.k8s.KubernetesApiError: if the call to the api failed.
+            spicerack.k8s.KubernetesCheckError: if the node wasn't set to unschedulable.
 
         """
         if not self.is_schedulable():
@@ -226,8 +203,8 @@ class KubernetesNode:
         """Makes a node schedulable.
 
         Raises:
-          KubernetesApiError if the call to the api failed
-          KubernetesCheckError if the node wasn't set to unschedulable
+            spicerack.k8s.KubernetesApiError: if the call to the api failed.
+            spicerack.k8s.KubernetesCheckError: if the node wasn't set to unschedulable.
 
         """
         if self.is_schedulable():
@@ -247,11 +224,11 @@ class KubernetesNode:
         """Drains the node, analogous to `kubectl drain`.
 
         Raises:
-          KubernetesCheckError if we can't evict all pods
+            spicerack.k8s.KubernetesCheckError: if we can't evict all pods.
 
         """
-        unevictable: List["KubernetesPod"] = []
-        failed: List[Tuple["KubernetesPod", KubernetesApiError]] = []
+        unevictable: list["KubernetesPod"] = []
+        failed: list[tuple["KubernetesPod", KubernetesApiError]] = []
         self.cordon()
         max_grace_period = 0
         for pod in self.get_pods():
@@ -283,10 +260,7 @@ class KubernetesNode:
         """Get a node api object.
 
         Arguments:
-          name (string): the name of the node
-
-        Returns:
-          kubernetes.client.models.v1_node.V1Node the api object for the node.
+            name: the name of the node.
 
         """
         try:
@@ -302,14 +276,19 @@ class KubernetesNode:
         except kubernetes.client.exceptions.ApiException as exc:
             raise KubernetesApiError(f"Failed to list nodes: {exc}") from exc
 
-    def _patch(self, body: Dict[str, Any]) -> kubernetes.client.models.v1_node.V1Node:
-        """Modify the node properties."""
+    def _patch(self, body: dict[str, Any]) -> kubernetes.client.models.v1_node.V1Node:
+        """Modify the node properties.
+
+        Arguments:
+            body: the modifications to the current node to send to the API.
+
+        """
         try:
             return self._api.core().patch_node(self.name, body)
         except kubernetes.client.exceptions.ApiException as exc:
             raise KubernetesApiError(f"Failed to modify node: {exc}") from exc
 
-    def get_pods(self) -> List["KubernetesPod"]:
+    def get_pods(self) -> list["KubernetesPod"]:
         """Get the pods running on this node."""
         pods = []
         try:
@@ -327,7 +306,13 @@ class KubernetesNode:
         return f"Node({self._fqdn})"
 
     def _wait_for_empty(self, expected: int, max_grace_period: int) -> None:
-        """Wait for all pods to be evicted."""
+        """Wait for all pods to be evicted.
+
+        Arguments:
+            expected: the number of expected pods.
+            max_grace_period: how many seconds to sleep before starting to check.
+
+        """
         if self._dry_run:
             logger.info("Would have waited for node %s to be empty", self.name)
             return
@@ -342,6 +327,7 @@ class KubernetesNode:
             failure_message="Waiting for pods to be evicted",
         )
         def wait() -> None:
+            """Poll the number of pods to check if they match the expected ones."""
             npods = num_pods()
             if npods > expected:
                 raise KubernetesCheckError(f"Node {self.name} still has {npods} pods, expected {expected}")
@@ -372,12 +358,11 @@ class KubernetesPod:
         """Initialize the pod isntance.
 
         Arguments:
-            namespace (string): the namespace where the pod is located.
-            name (string): the name of the pod
-            api (KubernetesApiFactory): the api factory we're going to use.
-            dry_run (bool): if true, no write operations will happen.
-            init_obj (kubernetes.client.models.v1_pod.V1Pod): if not None, this api object will be used, instead of
-                fetching it from the api.
+            namespace: the namespace where the pod is located.
+            name: the name of the pod.
+            api: the api factory we're going to use.
+            dry_run: if true, no write operations will happen.
+            init_obj: if not None, this api object will be used, instead of fetching it from the api.
 
         """
         self._api = api
@@ -397,12 +382,7 @@ class KubernetesPod:
 
     @property
     def controller(self) -> Optional[kubernetes.client.models.v1_owner_reference.V1OwnerReference]:
-        """Get the reference to the controlling object, if any.
-
-        Returns:
-          kubernetes.client.models.v1_owner_reference.V1OwnerReference: the reference.
-
-        """
+        """Get the reference to the controlling object, if any."""
         ref = self._pod.metadata.owner_references
         if ref is None or len(ref) == 0:
             return None
@@ -410,51 +390,26 @@ class KubernetesPod:
         return ref[0]
 
     def is_daemonset(self) -> bool:
-        """Checks if the pod is part of a daemonset.
-
-        Returns:
-          bool true if it is a daemonset, false otherwise.
-
-        """
+        """Checks if the pod is part of a daemonset."""
         if self.controller is None:
             return False
         return self.controller.kind == "DaemonSet"
 
     def is_terminated(self) -> bool:
-        """Checks if the pod is terminated.
-
-        Returns:
-          bool true if the pod is not running, false otherwise.
-
-        """
+        """Checks if the pod is terminated."""
         return self._pod.status.phase in ["Succeeded", "Failed"]
 
     def is_mirror(self) -> bool:
-        """Check if the pod is a mirror pod.
-
-        Returns:
-          bool true if this is a mirror pod, false otherwise.
-
-        """
+        """Check if the pod is a mirror pod."""
         return "kubernetes.io/config.mirror" in self._pod.metadata.annotations
 
     @property
     def spec(self) -> kubernetes.client.models.v1_pod_spec.V1PodSpec:
-        """Acess the pod's spec.
-
-        Returns:
-          kubernetes.client.models.v1_pod_spec.V1PodSpec the pod spec
-
-        """
+        """Get the pod's spec."""
         return self._pod.spec
 
     def is_evictable(self) -> bool:
-        """Check if the pod can be evicted.
-
-        Returns:
-          bool  true if this pod can be evicted, false otherwise.
-
-        """
+        """Check if the pod can be evicted."""
         # We apply the logic found in kubectl:
         # https://github.com/kubernetes/kubernetes/blob/release-1.16/staging/src/k8s.io/kubectl/pkg/drain/filters.go
         # Check zero: a terminated pod is always evictable.
@@ -478,9 +433,9 @@ class KubernetesPod:
         """Submit an eviction request to the kubernetes api for this pod.
 
         Raises:
-          KubernetesApiTooManyRequests in case of a persistent HTTP 429 from the server.
-          KubernetesApiError in case of a bad response from the server.
-          KubernetesError if the pod is not evictable.
+            spicerack.k8s.KubernetesApiTooManyRequests: in case of a persistent HTTP 429 from the server.
+            spicerack.k8s.KubernetesApiError: in case of a bad response from the server.
+            spicerack.k8s.KubernetesError: if the pod is not evictable.
 
         """
         if not self.is_evictable():
@@ -499,6 +454,7 @@ class KubernetesPod:
             failure_message=f"Retrying eviction of {self}. API error was",
         )
         def retry_evict() -> None:
+            """Evict the pod."""
             try:
                 self._api.core().create_namespaced_pod_eviction(self.name, self.namespace, body)
             except kubernetes.client.exceptions.ApiException as e:

@@ -1,6 +1,7 @@
 """Dnsdisc module tests."""
 import logging
 from collections import namedtuple
+from ipaddress import ip_address
 from unittest import mock
 
 import pytest
@@ -41,6 +42,38 @@ class MockedQuery:
     def __getitem__(self, _):
         """Allow indexing access."""
         return self.record
+
+    def __iter__(self):
+        """Allow iterating on results."""
+        return iter([self.record])
+
+
+class MockedDnsQueryMessage:
+    """Class to mock a return object from a call to dns.query.udp()."""
+
+    def __init__(self, return_ip: str):
+        """Initialize the object."""
+        self.return_ip = return_ip
+
+    def resolve_chaining(self, *_args, **_kwargs):
+        """Mocks the same method from dns.message.Message."""
+        if self.return_ip == "raise":
+            raise DNSException("invalid")
+        return MockDnsResult(self.return_ip)
+
+
+class MockDnsResult:
+    """Mocks dns.message.ChainingResult."""
+
+    def __init__(self, ipaddr: str):
+        """Creates the chaining result."""
+        # Mocks a rrset
+        a_record = mock.MagicMock()
+        a_record.address = ipaddr
+        # Where dns.resolver.Answer gets the data from
+        self.answer = [a_record]
+        self.canonical_name = "a_name"
+        self.minimum_ttl = 10
 
 
 class TestDiscovery:
@@ -213,3 +246,29 @@ class TestDiscovery:
         with caplog.at_level(logging.DEBUG):
             self.discovery_dry_run.check_if_depoolable("dcB")
         assert "cannot be depooled as they are only active in" in caplog.text
+
+    def test_resolve_with_client_ip(self):
+        """Correctly returns the ip address for the query."""
+        with mock.patch("dns.query.udp_with_fallback") as mock_query:
+            retval = {name: ip_address("10.10.10.10") for name in self.authdns_servers}
+            mock_query.return_value = MockedDnsQueryMessage("10.10.10.10")
+            assert self.discovery_single.resolve_with_client_ip("record1", ip_address("10.24.1.0")) == retval
+
+    def test_resolve_bad_record(self):
+        """Requesting a record that is not present will raise a DiscoveryError."""
+        with pytest.raises(DiscoveryError, match="Record 'nope' not found"):
+            self.discovery_single.resolve_with_client_ip("nope", ip_address("10.24.1.0"))
+
+    def test_resolve_bad_query(self):
+        """Any exception thrown by dns.query.udp will result in a DiscoveryError."""
+        with mock.patch("dns.query.udp_with_fallback") as mock_query:
+            mock_query.side_effect = ValueError("test this")
+            with pytest.raises(DiscoveryError, match="Unable to resolve record1.discovery.wmnet"):
+                self.discovery_single.resolve_with_client_ip("record1", ip_address("10.24.1.0"))
+
+    def test_resolve_bad_answer(self):
+        """When the query response is empty or contains an invalid IP, a DiscoveryError is raised."""
+        with mock.patch("dns.query.udp_with_fallback") as mock_query:
+            mock_query.return_value = MockedDnsQueryMessage("raise")
+            with pytest.raises(DiscoveryError, match="invalid"):
+                self.discovery_single.resolve_with_client_ip("record1", ip_address("10.24.1.0"))

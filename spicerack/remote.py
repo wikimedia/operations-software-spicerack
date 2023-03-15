@@ -2,8 +2,9 @@
 import logging
 import math
 import time
+from collections.abc import Callable, Iterator, Sequence
 from datetime import datetime, timedelta
-from typing import Any, Callable, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, CuminError, NodeSet, query, transport, transports
@@ -30,7 +31,13 @@ class RemoteExecutionError(RemoteError):
     """Custom exception class for remote execution errors."""
 
     def __init__(self, retcode: int, message: str) -> None:
-        """Override parent constructor to add the return code attribute."""
+        """Override parent constructor to add the return code attribute.
+
+        Arguments:
+            retcode: the return code of the remote execution.
+            message: the exception message.
+
+        """
         super().__init__(f"{message} (exit_code={retcode})")
         self.retcode = retcode
 
@@ -40,10 +47,16 @@ class RemoteClusterExecutionError(RemoteError):
 
     def __init__(
         self,
-        results: List[Tuple[NodeSet, MsgTreeElem]],
-        failures: List[RemoteExecutionError],
+        results: list[tuple[NodeSet, MsgTreeElem]],
+        failures: list[RemoteExecutionError],
     ):
-        """Override the parent constructor to add failures and results as attributes."""
+        """Override the parent constructor to add failures and results as attributes.
+
+        Arguments:
+            results: the remote results.
+            failures: the list of exceptions raised in the cluster execution.
+
+        """
         super().__init__(f"{len(failures)} hosts have failed execution")
         self.failures = failures
         self.results = results
@@ -62,27 +75,17 @@ class RemoteHostsAdapter:
         """Initialize the instance.
 
         Arguments:
-            remote_hosts (spicerack.remote.RemoteHosts): the instance to act on the remote hosts.
+            remote_hosts: the instance to act on the remote hosts.
 
         """
         self._remote_hosts = remote_hosts
 
     def __str__(self) -> str:
-        """String representation of the instance.
-
-        Returns:
-            str: the string representation of the target hosts.
-
-        """
+        """String representation of the instance."""
         return str(self._remote_hosts)
 
     def __len__(self) -> int:
-        """Length of the instance.
-
-        Returns:
-            int: the number of target hosts.
-
-        """
+        """Get the number of target hosts in this instance."""
         return len(self._remote_hosts)
 
 
@@ -93,9 +96,9 @@ class LBRemoteCluster(RemoteHostsAdapter):
         """Initialize the instance.
 
         Arguments:
-            config (cumin.Config): cumin configuration.
-            remote_hosts (spicerack.remote.RemoteHosts): the instance to act on the remote hosts.
-            conftool (spicerack.confctl.ConftoolEntity): the conftool entity to operate on.
+            config: cumin configuration.
+            remote_hosts: the instance to act on the remote hosts.
+            conftool: the conftool entity to operate on.
 
         """
         self._config = config
@@ -105,14 +108,14 @@ class LBRemoteCluster(RemoteHostsAdapter):
     def run(
         self,
         *commands: Union[str, Command],
-        svc_to_depool: Optional[List[str]] = None,
+        svc_to_depool: Optional[list[str]] = None,
         batch_size: int = 1,
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
         max_failed_batches: int = 0,
         print_output: bool = True,
         print_progress_bars: bool = True,
-    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> list[tuple[NodeSet, MsgTreeElem]]:
         """Run commands while depooling servers in groups of batch_size.
 
         For clusters behind a load balancer, we typically want to be able to
@@ -128,17 +131,17 @@ class LBRemoteCluster(RemoteHostsAdapter):
         before moving on to the next.
 
         Arguments:
-            *commands (str, cumin.transports.Command): Arbitrary number of commands to execute.
-            svc_to_depool (list): A list of services (in conftool) to depool.
-            batch_size (int, optional): the batch size for cumin, as an integer. Defaults to 1.
-            batch_sleep (float, optional): the batch sleep in seconds to use before scheduling the next batch of hosts.
-            is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
-            max_failed_batches (int, optional): Maximum number of batches that can fail. Defaults to 0.
-            print_output (bool, optional): whether to print Cumin's output to stdout.
-            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
+            *commands: Arbitrary number of commands to execute.
+            svc_to_depool: A list of services (in conftool) to depool.
+            batch_size: the batch size for cumin, as an integer. Defaults to 1.
+            batch_sleep: the batch sleep in seconds to use before scheduling the next batch of hosts.
+            is_safe: whether the command is safe to run also in dry-run mode because it's a read-only
+            max_failed_batches: Maximum number of batches that can fail. Defaults to 0.
+            print_output: whether to print Cumin's output to stdout.
+            print_progress_bars: whether to print Cumin's progress bars to stderr.
 
         Returns:
-            list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+            What :py:meth:`cumin.transports.BaseWorker.get_results` returns to allow to iterate over the results.
 
         Raises:
             spicerack.remote.RemoteExecutionError, spicerack.remote.RemoteClusterExecutionError: if the Cumin execution
@@ -208,24 +211,24 @@ class LBRemoteCluster(RemoteHostsAdapter):
 
     def restart_services(
         self,
-        services: List[str],
-        svc_to_depool: List[str],
+        services: list[str],
+        svc_to_depool: list[str],
         *,
         batch_size: int = 1,
         batch_sleep: Optional[float] = None,
         verbose: bool = True,
-    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> list[tuple[NodeSet, MsgTreeElem]]:
         """Restart services in batches, removing the host from all the affected services first.
 
         Arguments:
-            services (list): A list of services to act upon
-            svc_to_depool (list): A list of services (in conftool) to depool.
-            batch_size (int): the batch size for cumin, as an integer. Defaults to 1
-            batch_sleep (float, optional): the batch sleep between groups of runs.
-            verbose (bool, optional): whether to print Cumin's output and progress bars to stdout/stderr.
+            services: A list of services to act upon.
+            svc_to_depool: A list of services (in conftool) to depool.
+            batch_size: the batch size for cumin, as an integer. Defaults to 1.
+            batch_sleep: the batch sleep between groups of runs.
+            verbose: whether to print Cumin's output and progress bars to stdout/stderr.
 
         Returns:
-            list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+            What :py:meth:`cumin.transports.BaseWorker.get_results` returns to allow to iterate over the results.
 
         Raises:
             spicerack.remote.RemoteExecutionError, spicerack.remote.RemoteClusterExecutionError: if the Cumin execution
@@ -238,24 +241,24 @@ class LBRemoteCluster(RemoteHostsAdapter):
 
     def reload_services(
         self,
-        services: List[str],
-        svc_to_depool: List[str],
+        services: list[str],
+        svc_to_depool: list[str],
         *,
         batch_size: int = 1,
         batch_sleep: Optional[float] = None,
         verbose: bool = True,
-    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> list[tuple[NodeSet, MsgTreeElem]]:
         """Reload services in batches, removing the host from all the affected services first.
 
         Arguments:
-            services (list): A list of services to act upon
-            svc_to_depool (list): A list of services (in conftool) to depool.
-            batch_size (int): the batch size for cumin, as an integer.Defaults to 1
-            batch_sleep (float, optional): the batch sleep between groups of runs.
-            verbose (bool, optional): whether to print Cumin's output and progress bars to stdout/stderr.
+            services: A list of services to act upon.
+            svc_to_depool: A list of services (in conftool) to depool.
+            batch_size: the batch size for cumin, as an integer.Defaults to 1
+            batch_sleep: the batch sleep between groups of runs.
+            verbose: whether to print Cumin's output and progress bars to stdout/stderr.
 
         Returns:
-            list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+            What :py:meth:`cumin.transports.BaseWorker.get_results` returns to allow to iterate over the results.
 
         Raises:
             spicerack.remote.RemoteExecutionError, spicerack.remote.RemoteClusterExecutionError: if the Cumin execution
@@ -268,25 +271,25 @@ class LBRemoteCluster(RemoteHostsAdapter):
 
     def _act_on_services(  # pylint: disable=too-many-arguments
         self,
-        services: List[str],
-        svc_to_depool: List[str],
+        services: list[str],
+        svc_to_depool: list[str],
         what: str,
         batch_size: int,
         batch_sleep: Optional[float] = None,
         verbose: bool = True,
-    ) -> List[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> list[tuple[NodeSet, MsgTreeElem]]:
         """Act on services in batches, depooling the servers first.
 
         Arguments:
-            services (list): A list of services to act upon
-            svc_to_depool (list): A list of services (in conftool) to depool.
-            what (string): Action to perform. restart by default.
-            batch_size (int): the batch size for cumin, as an integer.
-            batch_sleep (float, optional): the batch sleep between groups of runs.
-            verbose (bool, optional): whether to print Cumin's output and progress bars to stdout/stderr.
+            services: A list of services to act upon.
+            svc_to_depool: A list of services (in conftool) to depool.
+            what: Action to perform. restart by default.
+            batch_size: the batch size for cumin, as an integer.
+            batch_sleep: the batch sleep between groups of runs.
+            verbose: whether to print Cumin's output and progress bars to stdout/stderr.
 
         Returns:
-            list: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+            What :py:meth:`cumin.transports.BaseWorker.get_results` returns to allow to iterate over the results.
 
         Raises:
             spicerack.remote.RemoteExecutionError, spicerack.remote.RemoteClusterExecutionError: if the Cumin execution
@@ -312,8 +315,8 @@ class Remote:
         """Initialize the instance.
 
         Arguments:
-            config (str): the path of Cumin's configuration file.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            config: the path of Cumin's configuration file.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._config = Config(config)
@@ -323,11 +326,8 @@ class Remote:
         """Execute a Cumin query and return the matching hosts.
 
         Arguments:
-            query_string (str): the Cumin query string to execute.
-            use_sudo (bool): If True will prepend 'sudo -i' to every command.
-
-        Returns:
-            spicerack.remote.RemoteHosts: RemoteHosts instance matching the given query.
+            query_string: the Cumin query string to execute.
+            use_sudo: If True will prepend 'sudo -i' to every command.
 
         """
         # TODO: Revisit the current implementation of sudo once Cumin has native support for it.
@@ -342,14 +342,11 @@ class Remote:
         """Execute a conftool node query and return the matching hosts.
 
         Arguments:
-            conftool (spicerack.confctl.ConftoolEntity): the conftool instance for the node type objects.
+            conftool: the conftool instance for the node type objects.
             tags: Conftool tags for node type objects as keyword arguments.
 
-        Returns:
-            spicerack.remote.LBRemoteCluster: LBRemoteCluster instance matching the given query
-
         Raises:
-           spicerack.remote.RemoteError
+            spicerack.remote.RemoteError: if unable to query the hosts.
 
         """
         # get the list of hosts from confctl
@@ -377,10 +374,10 @@ class RemoteHosts:
         """Initialize the instance.
 
         Arguments:
-            config (cumin.Config): the configuration for Cumin.
-            hosts (ClusterShell.NodeSet.NodeSet): the hosts to target for the remote execution.
-            dry_run (bool, optional): whether this is a DRY-RUN.
-            use_sudo (bool, optional): if True will prepend 'sudo -i' to every command
+            config: the configuration for Cumin.
+            hosts: the hosts to target for the remote execution.
+            dry_run: whether this is a DRY-RUN.
+            use_sudo: if True will prepend ``sudo -i`` to every command.
 
         Raises:
             spicerack.remote.RemoteError: if no hosts were provided.
@@ -396,40 +393,25 @@ class RemoteHosts:
 
     @property
     def hosts(self) -> NodeSet:
-        """Getter for the hosts property.
-
-        Returns:
-            ClusterShell.NodeSet.NodeSet: a copy of the targeted hosts.
-
-        """
+        """Returns a copy of the current hosts targeted."""
         return self._hosts.copy()
 
     def __str__(self) -> str:
-        """String representation of the instance.
-
-        Returns:
-            str: the string representation of the target hosts.
-
-        """
+        """String representation of the instance."""
         return str(self._hosts)
 
     def __len__(self) -> int:
-        """Length of the instance.
-
-        Returns:
-            int: the number of target hosts.
-
-        """
+        """Returns the number of hosts targeted."""
         return len(self._hosts)
 
     def split(self, n_slices: int) -> Iterator["RemoteHosts"]:
         """Split the current remote in n_slices RemoteHosts instances.
 
         Arguments:
-            n_slices (int): the number of slices to slice the remote in.
+            n_slices: the number of slices to slice the remote in.
 
         Yields:
-            The RemoteHosts instances for the subset of nodes.
+            spicerack.remote.RemoteHosts: the instances for the subset of nodes.
 
         """
         for nodeset in self._hosts.split(n_slices):
@@ -455,25 +437,21 @@ class RemoteHosts:
         is_safe: bool = False,
         print_output: bool = True,
         print_progress_bars: bool = True,
-    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
-        """Execute commands on hosts matching a query via Cumin in async mode.
+    ) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Execute commands on hosts matching a query via Cumin in async mode and return its results.
 
         Arguments:
-            *commands (str, cumin.transports.Command): arbitrary number of commands to execute on the target hosts.
-            success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
-            batch_size (int, str, optional): the batch size for cumin, either as percentage (e.g. ``25%``)
-                or absolute number (e.g. ``5``).
-            batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
-            is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
-                command that doesn't modify the state.
-            print_output (bool, optional): whether to print Cumin's output to stdout.
-            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
-
-        Returns:
-            generator: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+            *commands: arbitrary number of commands to execute on the target hosts.
+            success_threshold: to consider the execution successful, must be between 0.0 and 1.0.
+            batch_size: the batch size for cumin, either as percentage (e.g. ``25%``) or absolute number (e.g. ``5``).
+            batch_sleep: the batch sleep in seconds to use in Cumin before scheduling the next host.
+            is_safe: whether the command is safe to run also in dry-run mode because it's a read-only command that
+                doesn't modify the state.
+            print_output: whether to print Cumin's output to stdout.
+            print_progress_bars: whether to print Cumin's progress bars to stderr.
 
         Raises:
-            RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
+            spicerack.remote.RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
         return self._execute(
@@ -496,25 +474,21 @@ class RemoteHosts:
         is_safe: bool = False,
         print_output: bool = True,
         print_progress_bars: bool = True,
-    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
-        """Execute commands on hosts matching a query via Cumin in sync mode.
+    ) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Execute commands on hosts matching a query via Cumin in sync mode and returns its results.
 
         Arguments:
-            *commands (str, cumin.transports.Command): arbitrary number of commands to execute on the target hosts.
-            success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
-            batch_size (int, str, optional): the batch size for cumin, either as percentage (e.g. ``25%``)
-                or absolute number (e.g. ``5``).
-            batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
-            is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
-                command that doesn't modify the state.
-            print_output (bool, optional): whether to print Cumin's output to stdout.
-            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
-
-        Returns:
-            generator: cumin.transports.BaseWorker.get_results to allow to iterate over the results.
+            *commands: arbitrary number of commands to execute on the target hosts.
+            success_threshold: to consider the execution successful, must be between 0.0 and 1.0.
+            batch_size: the batch size for cumin, either as percentage (e.g. ``25%``) or absolute number (e.g. ``5``).
+            batch_sleep: the batch sleep in seconds to use in Cumin before scheduling the next host.
+            is_safe: whether the command is safe to run also in dry-run mode because it's a read-only command that
+                doesn't modify the state.
+            print_output: whether to print Cumin's output to stdout.
+            print_progress_bars: whether to print Cumin's progress bars to stderr.
 
         Raises:
-            RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
+            spicerack.remote.RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
         return self._execute(
@@ -532,8 +506,8 @@ class RemoteHosts:
         """Reboot hosts.
 
         Arguments:
-            batch_size (int, optional): how many hosts to reboot in parallel.
-            batch_sleep (float, optional): how long to sleep between one reboot and the next.
+            batch_size: how many hosts to reboot in parallel.
+            batch_sleep: how long to sleep between one reboot and the next.
 
         """
         if len(self._hosts) == 1:  # Temporary workaround until T213296 is fixed.
@@ -563,8 +537,8 @@ class RemoteHosts:
         """Poll the host until is reachable and has an uptime lower than the provided datetime.
 
         Arguments:
-            since (datetime.datetime): the time after which the host should have booted.
-            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
+            since: the time after which the host should have booted.
+            print_progress_bars: whether to print Cumin's progress bars to stderr.
 
         Raises:
             spicerack.remote.RemoteCheckError: if unable to connect to the host or the uptime is higher than expected.
@@ -584,14 +558,14 @@ class RemoteHosts:
 
         logger.info("Found reboot since %s for hosts %s", since, self._hosts)
 
-    def uptime(self, print_progress_bars: bool = True) -> List[Tuple[NodeSet, float]]:
+    def uptime(self, print_progress_bars: bool = True) -> list[tuple[NodeSet, float]]:
         """Get current uptime.
 
         Arguments:
-            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
+            print_progress_bars: whether to print Cumin's progress bars to stderr.
 
         Returns:
-            list: a list of 2-element :py:class:`tuple` instances with hosts :py:class:`ClusterShell.NodeSet.NodeSet`
+            A list of 2-element :py:class:`tuple` instances with hosts :py:class:`ClusterShell.NodeSet.NodeSet`
             as first item and :py:class:`float` uptime as second item.
 
         Raises:
@@ -610,22 +584,22 @@ class RemoteHosts:
 
     @staticmethod
     def results_to_list(
-        results: Iterator[Tuple[NodeSet, MsgTreeElem]],
+        results: Iterator[tuple[NodeSet, MsgTreeElem]],
         callback: Optional[Callable] = None,
-    ) -> List[Tuple[NodeSet, Any]]:
+    ) -> list[tuple[NodeSet, Any]]:
         """Extract execution results into a list converting them with an optional callback.
 
         Todo:
             move it directly into Cumin.
 
         Arguments:
-            results (generator): generator returned by run_sync() and run_async() to iterate over the results.
-            callback (callable, optional): an optional callable to apply to each result output (it can be multiline).
+            results: generator returned by run_sync() and run_async() to iterate over the results.
+            callback: an optional callable to apply to each result output (it can be multiline).
                 The callback will be called with a the string output as the only parameter and must return the
                 extracted value. The return type can be chosen freely.
 
         Returns:
-            list: a list of 2-element tuples with hosts :py:class:`ClusterShell.NodeSet.NodeSet` as first item and the
+            A list of 2-element tuples with hosts :py:class:`ClusterShell.NodeSet.NodeSet` as first item and the
             extracted outputs :py:class:`str` as second. This is because NodeSet are not hashable.
 
         Raises:
@@ -657,27 +631,23 @@ class RemoteHosts:
         is_safe: bool = False,
         print_output: bool = True,
         print_progress_bars: bool = True,
-    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
-        """Lower level Cumin's execution of commands on the target nodes.
+    ) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Lower level Cumin's execution of commands on the target nodes and return its results.
 
         Arguments:
-            commands (list): the list of commands to execute on the target hosts, either a list of commands or a list
+            commands: the list of commands to execute on the target hosts, either a list of commands or a list
                 of cumin.transports.Command instances.
-            mode (str, optional): the Cumin's mode of execution. Accepted values: sync, async.
-            success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
-            batch_size (int, str, optional): the batch size for cumin, either as percentage (e.g. ``25%``) or absolute
-                number (e.g. ``5``).
-            batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
-            is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
-                command that doesn't modify the state.
-            print_output (bool, optional): whether to print Cumin's output to stdout.
-            print_progress_bars (bool, optional): whether to print Cumin's progress bars to stderr.
-
-        Returns:
-            generator: as returned by :py:meth:`cumin.transports.BaseWorker.get_results` to iterate over the results.
+            mode: the Cumin's mode of execution. Accepted values: sync, async.
+            success_threshold: to consider the execution successful, must be between 0.0 and 1.0.
+            batch_size: the batch size for cumin, either as percentage (e.g. ``25%``) or absolute number (e.g. ``5``).
+            batch_sleep: the batch sleep in seconds to use in Cumin before scheduling the next host.
+            is_safe: whether the command is safe to run also in dry-run mode because it's a read-only command that
+                doesn't modify the state.
+            print_output: whether to print Cumin's output to stdout.
+            print_progress_bars: whether to print Cumin's progress bars to stderr.
 
         Raises:
-            RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
+            spicerack.remote.RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
         if batch_size is None:

@@ -1,8 +1,13 @@
 """DNS Discovery module."""
 import logging
 from collections import defaultdict
-from typing import Dict, Iterator, List, Optional
+from collections.abc import Iterator
+from ipaddress import IPv4Address, IPv6Address, ip_address
+from typing import Optional, Union
 
+import dns
+
+# you might be tempted to remove this import. Don't, or dnspython won't work.
 from dns import resolver
 from dns.exception import DNSException
 
@@ -28,18 +33,18 @@ class Discovery:
         self,
         *,
         conftool: ConftoolEntity,
-        authdns_servers: Dict[str, str],
-        records: List[str],
+        authdns_servers: dict[str, str],
+        records: list[str],
         dry_run: bool = True,
     ) -> None:
         """Initialize the instance.
 
         Arguments:
-            conftool (spicerack.confctl.ConftoolEntity): the conftool instance for the discovery type objects.
-            authdns_servers (dict): a dictionary where keys are the hostnames and values are the IPs of the
-                authoritative nameservers to be used.
-            records (list): list of strings, each one must be a Discovery DNS record name.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            conftool: the conftool instance for the discovery type objects.
+            authdns_servers: a dictionary where keys are the hostnames and values are the IPs of the authoritative
+                nameservers to be used.
+            records: list of strings, each one must be a Discovery DNS record name.
+            dry_run: whether this is a DRY-RUN.
 
         Raises:
             spicerack.dnsdisc.DiscoveryError: if unable to initialize the resolvers.
@@ -49,7 +54,7 @@ class Discovery:
         self._records = records
         self._dry_run = dry_run
 
-        self._resolvers: Dict[str, resolver.Resolver] = {}
+        self._resolvers: dict[str, resolver.Resolver] = {}
         for nameserver, nameserver_ip in authdns_servers.items():
             self._resolvers[nameserver] = resolver.Resolver(configure=False)
             self._resolvers[nameserver].port = 5353
@@ -57,12 +62,7 @@ class Discovery:
 
     @property
     def _conftool_selector(self) -> str:
-        """Generate the Conftool selector for the records.
-
-        Returns:
-            str: the Conftool selector.
-
-        """
+        """Returns the Conftool selector for the records."""
         regexp = "|".join(self._records)
         return f"({regexp})"
 
@@ -71,7 +71,7 @@ class Discovery:
         """Information about pooled state of services.
 
         Returns:
-            dict: a map of services, with values given by a list of datacenters where the service is pooled, i.e.::
+            A map of services, with values given by a list of datacenters where the service is pooled, i.e.::
 
                 {
                     'svc_foo': ['dc1', 'dc2'],
@@ -94,13 +94,10 @@ class Discovery:
             move a more generalized version of this into a DNS resolver module.
 
         Arguments:
-            name (str): the DNS record to resolve.
-
-        Returns:
-            str: the resolved IP address.
+            name: the DNS record to resolve.
 
         Raises:
-            spicerack.discovery.DiscoveryError: if unable to resolve the address.
+            spicerack.dnsdisc.DiscoveryError: if unable to resolve the address.
 
         """
         try:  # Querying the first resolver
@@ -112,10 +109,10 @@ class Discovery:
         """Update the TTL for all registered records.
 
         Arguments:
-            ttl (int): the new TTL value to set.
+            ttl: the new TTL value to set.
 
         Raises:
-            spicerack.discovery.DiscoveryError: if the check of the modified TTL fail and not in DRY-RUN mode.
+            spicerack.dnsdisc.DiscoveryError: if the check of the modified TTL fail and not in DRY-RUN mode.
 
         """
         # DRY-RUN handled by confctl
@@ -137,10 +134,10 @@ class Discovery:
         """Check the TTL for all records.
 
         Arguments:
-            ttl (int): the expected TTL value.
+            ttl: the expected TTL value.
 
         Raises:
-            DiscoveryError: if the expected TTL is not found.
+            spicerack.dnsdisc.DiscoveryError: if the expected TTL is not found.
 
         """
         logger.debug("Checking that TTL=%d for %s discovery.wmnet records", ttl, self._records)
@@ -172,11 +169,11 @@ class Discovery:
             https://wikitech.wikimedia.org/wiki/DNS/Discovery
 
         Arguments:
-            name (str): the record to check the resolution for.
-            expected_name (str): the name of a record to be resolved and used as the expected address.
+            name: the record to check the resolution for.
+            expected_name: the name of a record to be resolved and used as the expected address.
 
         Raises:
-            DiscoveryError: if the record doesn't match the IP of the expected_name.
+            spicerack.dnsdisc.DiscoveryError: if the record doesn't match the IP of the expected_name.
 
         """
         expected_address = self.resolve_address(expected_name)
@@ -210,13 +207,13 @@ class Discovery:
             move a more generalized version of this into a DNS resolver module.
 
         Arguments:
-            name (str, optional): record name to use for the resolution instead of self.records.
+            name: record name to use for the resolution instead of self.records.
 
         Yields:
             dns.resolver.Answer: the DNS response.
 
         Raises:
-            spicerack.discovery.DiscoveryError: if unable to resolve the address.
+            spicerack.dnsdic.DiscoveryError: if unable to resolve the address.
 
         """
         if name is not None:
@@ -245,7 +242,7 @@ class Discovery:
         """Set the records as pooled in the given datacenter.
 
         Arguments:
-            datacenter (str): the DC in which to pool the discovery records.
+            datacenter: the DC in which to pool the discovery records.
 
         """
         # DRY-RUN handled by confctl
@@ -255,7 +252,7 @@ class Discovery:
         """Set the records as depooled in the given datacenter.
 
         Arguments:
-            datacenter (str): the DC from which to depool the discovery records.
+            datacenter: the DC from which to depool the discovery records.
 
         """
         self.check_if_depoolable(datacenter)
@@ -266,10 +263,10 @@ class Discovery:
         """Determine if a datacenter can be depooled for all records.
 
         Arguments:
-            datacenter (str): the datacenter to depool
+            datacenter: the datacenter to depool.
 
         Raises:
-            spicerack.discovery.DiscoveryError: if any service cannot be depooled.
+            spicerack.dnsdisc.DiscoveryError: if any service cannot be depooled.
 
         """
         # NB: we only discard services that would become inactive removing the current DC
@@ -282,3 +279,45 @@ class Discovery:
                 logger.debug(message)
             else:
                 raise DiscoveryError(message)
+
+    def resolve_with_client_ip(
+        self, record: str, client_ip: Union[IPv4Address, IPv6Address]
+    ) -> dict[str, Union[IPv4Address, IPv6Address]]:
+        """Resolves a discovery record with a specific client IP and returns the resolved address grouped by nameserver.
+
+        Arguments:
+            record: record name to use for the resolution.
+            client_ip: IP address to be used in EDNS client subnet.
+
+        Raises:
+            spicerack.discovery.DiscoveryError: if unable to resolve the address.
+
+        """
+        ips_by_ns: dict[str, Union[IPv4Address, IPv6Address]] = {}
+        if record not in self._records:
+            raise DiscoveryError(f"Record '{record}' not found")
+        # Craft a query message
+        record_name = dns.name.from_text(f"{record}.discovery.wmnet")
+        rdtype = dns.rdatatype.from_text("A")
+        ecs_option_client_ip = dns.edns.ECSOption(str(client_ip))
+        query_msg = dns.message.make_query(record_name, rdtype)
+        query_msg.use_edns(options=[ecs_option_client_ip])
+
+        for nameserver, dns_resolver in self._resolvers.items():
+            # Make the query. We catch generic exceptions as
+            # dns.query.udp can raise many exceptions.
+            try:
+                query_response = dns.query.udp_with_fallback(
+                    query_msg, dns_resolver.nameservers[0], port=dns_resolver.port
+                )
+            except Exception as exc:
+                raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}") from exc
+            # Build an Answer instance as a Stub Resolver would
+            try:
+                response = resolver.Answer(record_name, rdtype, dns.rdataclass.IN, query_response)
+                # If no IN record was present in the response, the constructor raises an exception
+                # so we don't need to check for the presence of at least one RRset in the Answer object.
+                ips_by_ns[nameserver] = ip_address(response[0].address)
+            except DNSException as exc:
+                raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}: {exc}") from exc
+        return ips_by_ns

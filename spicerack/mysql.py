@@ -1,8 +1,8 @@
 """MySQL module (native)."""
-
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Optional
 
 from pymysql.connections import Connection
 
@@ -26,7 +26,7 @@ class Mysql:
         """Initialize the instance.
 
         Arguments:
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._dry_run = dry_run
@@ -39,7 +39,7 @@ class Mysql:
         charset: str = "utf8mb4",
         read_default_file: Optional[str] = "",
         read_default_group: Optional[str] = None,
-        ssl: Optional[Dict] = None,
+        ssl: Optional[dict] = None,
         **kwargs: Any
     ) -> Generator:
         """Context-manager for a mysql connection to a remote host.
@@ -53,15 +53,14 @@ class Mysql:
               as appropriate.
 
         Arguments:
-            read_only (bool, optional): True if this connection should use read-only
-                transactions. **Note**: This parameter has no effect if DRY-RUN is set.
-            charset (str, optional): Query charset to use.
-            read_default_file (str, optional): ``my.cnf``-format file to read from. Defaults
-                to ``~/.my.cnf``. Set to :py:data:`None` to disable.
-            read_default_group: Section of read_default_file to use. If not specified, it
-                will be set based on the target hostname.
-            ssl (dict, optional): SSL configuration to use. Defaults to using the
-                puppet CA. Set to ``{}`` to disable.
+            read_only: True if this connection should use read-only transactions. **Note**: This parameter has no
+                effect if DRY-RUN is set.
+            charset: Query charset to use.
+            read_default_file: ``my.cnf``-format file to read from. Defaults to ``~/.my.cnf``. Set to :py:data:`None`
+                to disable.
+            read_default_group: Section of read_default_file to use. If not specified, it will be set based on the
+                target hostname.
+            ssl: SSL configuration to use. Defaults to using the puppet CA. Set to ``{}`` to disable.
             **kwargs: Options passed directly to :py:class:`pymysql.connections.Connection`.
 
         Yields:

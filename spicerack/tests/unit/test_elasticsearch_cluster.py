@@ -1,7 +1,6 @@
 """ElasticsearchCluster module test."""
 import itertools
 from datetime import datetime, timedelta
-from typing import Dict
 from unittest import mock
 
 import pytest
@@ -879,7 +878,7 @@ def json_node(
     row: str = "row1",
     start_time: int = 10,
     master_capable: bool = False,
-) -> Dict:
+) -> dict:
     """Used to mock the elasticsearch node API."""
     hostname = fqdn.split(".", 1)[0]
     node_name = f"{hostname}-{cluster_name}"

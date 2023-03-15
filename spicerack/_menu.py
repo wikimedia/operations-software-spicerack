@@ -4,7 +4,8 @@ import logging
 import shlex
 import sys
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, cast
+from collections.abc import Callable, Sequence
+from typing import Any, Optional, cast
 
 from spicerack import Spicerack, _log, _module_api, cookbook
 from spicerack.exceptions import SpicerackError
@@ -53,7 +54,7 @@ Interrupting execution:
   current menu, marking the cookbook status as ERROR.
   Pressing Ctrl+c/d while in a menu is equivalent to select 'b' or 'q'.
 """
-"""str: The generic TreeItem help message, unformatted."""
+"""The generic TreeItem help message, unformatted."""
 
 
 class MenuError(SpicerackError):
@@ -69,8 +70,8 @@ class BaseItem:
         """Base cookbooks's item constructor.
 
         Arguments:
-            args (list): any sequence with the command line arguments to pass to the item.
-            spicerack (spicerack.Spicerack): the initialized instance of the library.
+            args: any sequence with the command line arguments to pass to the item.
+            spicerack: the initialized instance of the library.
 
         """
         self.args = args
@@ -78,7 +79,7 @@ class BaseItem:
         self.name = ""
         self.path = ""  # Path of the cookbook in Spicerack terms, relative to the base directory
         self.full_name = ""  # Cookbook full_name in Spicerack terms
-        self.items: Dict[str, BaseItem] = {}
+        self.items: dict[str, BaseItem] = {}
         self._status: str
 
     @abstractmethod
@@ -87,22 +88,12 @@ class BaseItem:
 
     @property
     def status(self) -> str:
-        """Return the current status.
-
-        Returns:
-            str: the string representation of the execution status.
-
-        """
+        """Return the current execution status string representation."""
         return self._status
 
     @property
     def verbose_title(self) -> str:
-        """Getter for the verbose_title property, uses the module name if there is no title.
-
-        Returns:
-            str: the verbose title of the item.
-
-        """
+        """Getter for the verbose_title property, uses the module name if there is no title set."""
         if self.title != self.fallback_title:
             return self.title
 
@@ -111,25 +102,17 @@ class BaseItem:
     @property
     @abstractmethod
     def title(self) -> str:
-        """Calculate the title of the instance item.
-
-        Returns:
-            str: the title of the item.
-
-        """
+        """Return the title of the instance item."""
 
     @staticmethod
-    def _get_line_prefix(level: int, cont_levels: List[bool], is_final: bool) -> str:
+    def _get_line_prefix(level: int, cont_levels: list[bool], is_final: bool) -> str:
         """Return the line prefix for the given level in the tree.
 
         Arguments:
-            level (int): how many levels the item is nested in the tree.
-            cont_levels (list): a list of size levels with booleans that indicate for each level if the
-                continuation prefix (True) or an empty prefix (False) should be used.
-            is_final (bool): whether the line is the final in its own group.
-
-        Returns:
-            str: the line prefix to use.
+            level: how many levels the item is nested in the tree.
+            cont_levels: a list of size levels with booleans that indicate for each level if the continuation prefix
+                (:py:data:`True`) or an empty prefix (:py:data:`False`) should be used.
+            is_final: whether the line is the final in its own group.
 
         """
         empty_sep = "    "
@@ -157,7 +140,7 @@ class CookbookItem(BaseItem):
     """Cookbook item class."""
 
     fallback_title: str = "UNKNOWN (unable to detect title)"
-    statuses: Tuple[str, str, str, str] = (
+    statuses: tuple[str, str, str, str] = (
         "NOTRUN",
         "PASS",
         "FAIL",
@@ -167,16 +150,16 @@ class CookbookItem(BaseItem):
 
     def __init__(
         self,
-        class_obj: Type[cookbook.CookbookBase],
+        class_obj: type[cookbook.CookbookBase],
         args: Sequence[str],
         spicerack: Spicerack,
     ) -> None:
         """Override parent constructor to add cookbook-specific initialization.
 
         Arguments:
-            class_obj (type): a class derived from :py:class:`spicerack.cookbook.CookbookBase`.
-            args (list): any sequence with the command line arguments to pass to the item.
-            spicerack (spicerack.Spicerack): the initialized instance of the library.
+            class_obj: a class derived from :py:class:`spicerack.cookbook.CookbookBase`.
+            args: any sequence with the command line arguments to pass to the item.
+            spicerack: the initialized instance of the library.
 
         """
         super().__init__(args, spicerack)
@@ -195,19 +178,14 @@ class CookbookItem(BaseItem):
 
     @property
     def title(self) -> str:
-        """Calculate the title of the instance item.
-
-        Returns:
-            str: the title of the item.
-
-        """
+        """Returns the title of the instance item."""
         return self.instance.title
 
     def run(self) -> int:  # noqa: MC0001
         """Run the cookbook.
 
         Returns:
-            int: the return code to use for this cookbook, it should be zero on success, a positive integer smaller than
+            The return code to use for this cookbook, it should be zero on success, a positive integer smaller than
             ``128`` and not in the range ``90-99`` (see :ref:`Reserved exit codes<reserved-codes>`) in case of failure.
 
         """
@@ -278,14 +256,13 @@ class CookbookItem(BaseItem):
 
         return ret
 
-    def _parse_args(self) -> Tuple[int, argparse.Namespace]:
+    def _parse_args(self) -> tuple[int, argparse.Namespace]:
         """Get the argument parser from the cookbook and parse the arguments.
 
         Returns:
-            tuple: (int, argparse.Namespace) with the return code to use and the parsed arguments. If the return code is
-            different from -1 it means that the cookbook should not be executed either because the help message was
-            requested or the parse of the arguments failed or arguments were passed but the cookbook doesn't accept
-            arguments.
+            A 2-elements tuple with the return code to use and the parsed arguments. If the return code is different
+            from ``-1`` it means that the cookbook should not be executed either because the help message was requested
+            or the parse of the arguments failed or arguments were passed but the cookbook doesn't accept arguments.
 
         """
         args = argparse.Namespace()
@@ -308,19 +285,19 @@ class CookbookItem(BaseItem):
             cookbook.PARSE_ARGS_FAIL_RETCODE,
         )
 
-    def _safe_call(self, func: Callable, args: List, kwargs: Dict, message: str, err_code: int) -> Tuple[int, Any]:
+    def _safe_call(self, func: Callable, args: list, kwargs: dict, message: str, err_code: int) -> tuple[int, Any]:
         """Run any callable explicitly catching all exceptions including SystemExit, parsing the code of the latter.
 
         Arguments:
-            func (callable): the callable to call.
-            args (list): positional arguments list to pass to the callable.
-            kwargs (dict): keyword arguments dictionary to pass to the callable.
-            message (str): the message to log in case of exception.
-            err_code (int): the error code to return in case of failure.
+            func: the callable to call.
+            args: positional arguments list to pass to the callable.
+            kwargs: keyword arguments dictionary to pass to the callable.
+            message: the message to log in case of exception.
+            err_code: the error code to return in case of failure.
 
         Returns:
-            tuple: a 2-element tuple with an integer for the return code as the first item and what the callable
-            returned in the second item.
+            A 2-element tuple with an integer for the return code as the first item and what the callable returned in
+            the second item.
 
         """
         ret_code = -1
@@ -344,13 +321,13 @@ class TreeItem(BaseItem):
     """Tree of cookbook items class."""
 
     back_answer: str = "b"
-    """str: interactive menu answer to go back to the parent menu."""
+    """Interactive menu answer to go back to the parent menu."""
     help_answer: str = "h"
-    """str: interactive menu answer to print the generic TreeItem help message."""
+    """Interactive menu answer to print the generic TreeItem help message."""
     quit_answer: str = "q"
-    """str: answer to quit the interactive menu."""
+    """Answer to quit the interactive menu."""
     help_message: str = HELP_MESSAGE.format(statuses=CookbookItem.statuses)
-    """str: the generic TreeItem help message."""
+    """The generic TreeItem help message."""
 
     def __init__(
         self,
@@ -362,10 +339,10 @@ class TreeItem(BaseItem):
         """Override parent constructor to add menu-specific initialization.
 
         Arguments:
-            module (spicerack._module_api.CookbooksModuleInterface): a cookbook Python module.
-            args (list): any sequence with the command line arguments to pass to the item.
-            spicerack (spicerack.Spicerack): the initialized instance of the library.
-            menu_title (str): the title to use for the menu.
+            module: a cookbook Python module.
+            args: any sequence with the command line arguments to pass to the item.
+            spicerack: the initialized instance of the library.
+            menu_title: the title to use for the menu.
 
         """
         super().__init__(args, spicerack)
@@ -385,12 +362,7 @@ class TreeItem(BaseItem):
 
     @property
     def status(self) -> str:
-        """Getter for the menu status, returns a string representation of the status of its tasks.
-
-        Returns:
-            str: the menu status message.
-
-        """
+        """Getter for the menu status, returns a string representation of the status of its tasks."""
         completed, total = self.calculate_status()
         if completed == total:
             message = "DONE"
@@ -403,8 +375,8 @@ class TreeItem(BaseItem):
         """Append an item to this menu.
 
         Arguments:
-            item (spicerack._menu.BaseItem): the item to append.
-            add_parent (bool, optional): wheter to set the parent of the new item to the current instance.
+            item: the item to append.
+            add_parent: wheter to set the parent of the new item to the current instance.
 
         """
         if add_parent and isinstance(item, TreeItem):
@@ -416,7 +388,7 @@ class TreeItem(BaseItem):
         """Execute the menu in an interactive way (infinite loop).
 
         Returns:
-            int: being an interactive menu it always returns 0.
+            Being an interactive menu it always returns 0.
 
         """
         try:
@@ -440,11 +412,11 @@ class TreeItem(BaseItem):
 
         print(f"{TreeItem.help_answer} - Help")
 
-    def calculate_status(self) -> Tuple[int, int]:
+    def calculate_status(self) -> tuple[int, int]:
         """Calculate the status of a menu, checking the status of all it's tasks recursively.
 
         Returns:
-            tuple: (int, int) with the number of completed and total items.
+            A 2-elements tuple with the number of completed and total items.
 
         """
         completed: int = 0
@@ -464,12 +436,7 @@ class TreeItem(BaseItem):
         return completed, total
 
     def get_tree(self) -> str:
-        """Return the tree representation of the menu as string.
-
-        Returns:
-            str: the tree representation of all the collected items.
-
-        """
+        """Return the tree representation of the menu as string."""
         lines = self.get_menu_tree(0, [])
         if not lines:
             return ""
@@ -477,19 +444,16 @@ class TreeItem(BaseItem):
         lines_str = "\n".join(lines)
         return f"{self.menu_title}\n{lines_str}\n"
 
-    def get_menu_tree(self, level: int, cont_levels: List[bool]) -> List[str]:
-        """Calculate the tree lines for a given menu.
+    def get_menu_tree(self, level: int, cont_levels: list[bool]) -> list[str]:
+        """Return the tree lines for a given menu.
 
         Arguments:
-            level (int): how many levels the item is nested in the tree.
-            cont_levels (list): a list of size levels with booleans that indicate for each level if the
-                continuation prefix (True) or an empty prefix (False) should be used.
-
-        Returns:
-            list: the list of lines that represent the tree.
+            level: how many levels the item is nested in the tree.
+            cont_levels: a list of size levels with booleans that indicate for each level if the continuation prefix
+                (:py:data:`True`) or an empty prefix (:py:data:`False`) should be used.
 
         """
-        lines: List[str] = []
+        lines: list[str] = []
         for i, key in enumerate(sorted(self.items.keys(), key=lambda x: self.items[x].full_name)):
             is_final = i == len(self.items) - 1
             item = self.items[key]
@@ -510,12 +474,7 @@ class TreeItem(BaseItem):
         return lines
 
     def run_once(self) -> None:
-        """Run the menu in an interactive way.
-
-        Returns:
-            spicerack._menu.TreeItem: the current menu instance.
-
-        """
+        """Run the menu in an interactive way."""
         print(f"#--- {self.verbose_title} args={self.args} ---#")
         self.show()
 
@@ -555,11 +514,8 @@ class TreeItem(BaseItem):
         """Get the arguments to pass to the given item.
 
         Arguments:
-            item (spicerack._menu.BaseItem): the item to pass the arguments to.
-            args (list): any sequence with the arguments passed via interactive menu to this item.
-
-        Returns:
-            list: the arguments to pass to the item.
+            item: the item to pass the arguments to.
+            args: any sequence with the arguments passed via interactive menu to this item.
 
         """
         if args:  # Override the item arguments with the ones passed interactively, if any.
@@ -572,12 +528,7 @@ class TreeItem(BaseItem):
 
     @property
     def title(self) -> str:
-        """Calculate the title of the instance item.
-
-        Returns:
-            str: the title of the item.
-
-        """
+        """Returns the title of the instance item."""
         try:
             title = self.module.__title__.splitlines()[0]
         except AttributeError as e:

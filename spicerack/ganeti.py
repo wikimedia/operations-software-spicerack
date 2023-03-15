@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import RequestException
@@ -16,9 +16,9 @@ from spicerack.remote import Remote, RemoteHosts
 logger = logging.getLogger(__name__)
 
 RAPI_URL_FORMAT: str = "https://{cluster}:5080"
-""":py:class:`str`: the template string to construct the Ganeti RAPI URL."""
-INSTANCE_LINKS: Tuple[str, ...] = ("public", "private", "analytics")
-""":py:class:`tuple`: the list of possible instance link types."""
+"""The template string to construct the Ganeti RAPI URL."""
+INSTANCE_LINKS: tuple[str, ...] = ("public", "private", "analytics")
+"""The list of possible instance link types."""
 
 
 class GanetiError(SpicerackError):
@@ -30,9 +30,9 @@ class GanetiCluster:
     """Represents a Ganeti cluster with all the related attributes.
 
     Arguments:
-        name (str): the Ganeti cluster short name, equivalent to the Netbox cluster group name.
-        fqdn (str): the FQDN of the Ganeti cluster VIP.
-        rapi (str): the Ganeti RAPI endpoint URL to connect to.
+        name: the Ganeti cluster short name, equivalent to the Netbox cluster group name.
+        fqdn: the FQDN of the Ganeti cluster VIP.
+        rapi: the Ganeti RAPI endpoint URL to connect to.
 
     """
 
@@ -46,9 +46,9 @@ class GanetiGroup:
     """Represents a Ganeti group with all the related attributes.
 
     Arguments:
-        name (str): the Ganeti group name, equivalent to the Netbox cluster name.
-        site (str): the Datacenter of the Ganeti group short name, equivalent of the Netbox site slug.
-        cluster (spicerack.ganeti.GanetiCluster): the Ganeti cluster the group belongs to.
+        name: the Ganeti group name, equivalent to the Netbox cluster name.
+        site: the Datacenter of the Ganeti group short name, equivalent of the Netbox site slug.
+        cluster: the Ganeti cluster the group belongs to.
 
     """
 
@@ -64,11 +64,11 @@ class GanetiRAPI:
         """Initialize the instance.
 
         Arguments:
-            cluster_url (str): the URL of the RAPI endpoint.
-            username (str): the RAPI user name
-            password (str): the RAPI user's password
-            timeout (int): the timeout in seconds for each request
-            ca_path (str): the path to the signing certificate authority
+            cluster_url: the URL of the RAPI endpoint.
+            username: the RAPI user name
+            password: the RAPI user's password
+            timeout: the timeout in seconds for each request
+            ca_path: the path to the signing certificate authority
 
         """
         self._url = cluster_url
@@ -76,17 +76,14 @@ class GanetiRAPI:
         self._http_session.auth = HTTPBasicAuth(username, password)
         self._http_session.verify = ca_path
 
-    def _api_get_request(self, *targets: str) -> Dict:
-        """Perform a RAPI request.
+    def _api_get_request(self, *targets: str) -> dict:
+        """Perform a RAPI request and return its JSON decoded response.
 
         Arguments:
-           *targets: The path components of the request (minus the /2/ part of the path)
-
-        Returns:
-           dict: The decoded JSON response
+           *targets: The path components of the request (minus the /2/ part of the path).
 
         Raises:
-           spicerack.ganeti.GanetiError: on non-200 responses
+           spicerack.ganeti.GanetiError: on non-200 responses.
 
         """
         full_url = "/".join([self._url, "2"] + list(targets))
@@ -101,42 +98,33 @@ class GanetiRAPI:
         return result.json()
 
     @property
-    def info(self) -> Dict:
-        """Return complete cluster information.
-
-        Returns:
-            dict: Cluster information dictionary
+    def info(self) -> dict:
+        """Return the complete cluster information.
 
         Raises:
-            spicerack.ganeti.GanetiError: API errors
+            spicerack.ganeti.GanetiError: on API errors.
 
         """
         return self._api_get_request("info")
 
     @property
     def master(self) -> Optional[str]:
-        """Return the internal name for the current ganeti master node.
-
-        Returns:
-            str: The hostname of the master node (or None if the data is missing).
+        """Return the internal name for the current ganeti master node or none if the data is missing.
 
         Raises:
-            spicerack.ganeti.GanetiError: API errors
+            spicerack.ganeti.GanetiError: on API errors.
 
         """
         return self.info.get("master")
 
-    def fetch_instance(self, fqdn: str) -> Dict:
+    def fetch_instance(self, fqdn: str) -> dict:
         """Return full information about an instance.
 
         Arguments:
-           fqdn: the FQDN of the instance in question
-
-        Returns:
-           dict: host information
+           fqdn: the FQDN of the instance in question.
 
         Raises:
-           spicerack.ganeti.GanetiError: API errors
+           spicerack.ganeti.GanetiError: on API errors.
 
         """
         return self._api_get_request("instances", fqdn)
@@ -147,13 +135,10 @@ class GanetiRAPI:
         Note that we don't allow the creation of instances with more than one MAC address at this time.
 
         Arguments:
-           fqdn: the FQDN of the instance in question
-
-        Returns:
-           str: MAC address
+           fqdn: the FQDN of the instance in question.
 
         Raises:
-           GanetiError: API errors
+            spicerack.ganeti.GanetiError: on API errors.
 
         """
         instance_info = self.fetch_instance(fqdn)
@@ -170,9 +155,9 @@ class GntInstance:
         """Initialize the instance.
 
         Arguments:
-            master (spicerack.remote.RemoteHosts): the Ganeti cluster master remote instance.
-            cluster (str): the Ganeti cluster name.
-            instance (str): the FQDN of the Ganeti VM instance to act upon.
+            master: the Ganeti cluster master remote instance.
+            cluster: the Ganeti cluster name.
+            instance: the FQDN of the Ganeti VM instance to act upon.
 
         """
         self._master = master
@@ -181,19 +166,14 @@ class GntInstance:
 
     @property
     def cluster(self) -> str:
-        """Getter for the Ganeti cluster property.
-
-        Returns:
-            str: the Ganeti cluster name the instance belongs to.
-
-        """
+        """Getter for the Ganeti cluster name the instance belongs to."""
         return self._cluster
 
     def shutdown(self, *, timeout: int = 2) -> None:
         """Shutdown the Ganeti VM instance.
 
         Arguments:
-            timeout (int): time in minutes to wait for a clean shutdown before pulling the plug.
+            timeout: time in minutes to wait for a clean shutdown before pulling the plug.
 
         """
         logger.info("Shutting down VM %s in cluster %s", self._instance, self._cluster)
@@ -208,7 +188,7 @@ class GntInstance:
         """Set the boot media of the Ganeti VM to the given media.
 
         Arguments:
-            boot (str): the boot media to use. Use `disk` to boot from disk and `network` to boot from PXE.
+            boot: the boot media to use. Use `disk` to boot from disk and `network` to boot from PXE.
 
         """
         self._master.run_sync(f"gnt-instance modify --hypervisor-parameters=boot_order={boot} {self._instance}")
@@ -218,7 +198,7 @@ class GntInstance:
         """Shutdown and remove the VM instance from the Ganeti cluster, including its disks.
 
         Arguments:
-            shutdown_timeout (int): time in minutes to wait for a clean shutdown before pulling the plug.
+            shutdown_timeout: time in minutes to wait for a clean shutdown before pulling the plug.
 
         Note:
             This action requires few minutes, inform the user about the waiting time when using this method.
@@ -235,12 +215,11 @@ class GntInstance:
         """Create the VM for the instance in the Ganeti cluster with the specified characteristic.
 
         Arguments:
-            group (str): the Ganeti group that matches the Datacenter physical row or rack where to allocate the
-                instance.
-            vcpus (int): the number of virtual CPUs to assign to the instance.
-            memory (int): the amount of RAM to assign to the instance in gigabytes.
-            disk (int): the amount of disk to assign to the instance in gigabytes.
-            link (str): the type of network link to use, one of :py:const:`spicerack.ganeti.INSTANCE_LINKS`.
+            group: the Ganeti group that matches the Datacenter physical row or rack where to allocate the instance.
+            vcpus: the number of virtual CPUs to assign to the instance.
+            memory: the amount of RAM to assign to the instance in gigabytes.
+            disk: the amount of disk to assign to the instance in gigabytes.
+            link: the type of network link to use, one of :py:const:`spicerack.ganeti.INSTANCE_LINKS`.
 
         Raises:
             spicerack.ganeti.GanetiError: on parameter validation error.
@@ -299,11 +278,11 @@ class Ganeti:
         """Initialize the instance.
 
         Arguments:
-            username (str): The RAPI username to use.
-            password (str): The RAPI password to use.
-            timeout (int): The timeout in seconds for each request to the API.
-            remote (spicerack.remote.Remote): the remote instance to connect to Ganeti hosts.
-            netbox (spicerack.netbox.Netbox): the Netbox instance to gather data from the source of truth.
+            username: The RAPI username to use.
+            password: The RAPI password to use.
+            timeout: The timeout in seconds for each request to the API.
+            remote: the remote instance to connect to Ganeti hosts.
+            netbox: the Netbox instance to gather data from the source of truth.
 
         """
         self._username = username
@@ -316,10 +295,7 @@ class Ganeti:
         """Get a GanetiCluster instance for the given cluster name.
 
         Arguments:
-            name (str): the name of the Ganeti cluster, equivalent to the cluster group in Netbox.
-
-        Returns:
-            spicerack.ganeti.GanetiCluster: the cluster instance
+            name: the name of the Ganeti cluster, equivalent to the cluster group in Netbox.
 
         Raises:
             spicerack.ganeti.GanetiError: if unable to find the cluster endpoint.
@@ -352,12 +328,9 @@ class Ganeti:
         """Get a GanetiGroup instance for the given group name.
 
         Arguments:
-            name (str): the name of the Ganeti group, equivalent to the cluster in Netbox.
-            cluster (str): the name of the Ganeti cluster where to look for the group, equivalent to the cluster group
-                in Netbox.
-
-        Returns:
-            spicerack.ganeti.GanetiGroup: the group instance.
+            name: the name of the Ganeti group, equivalent to the cluster in Netbox.
+            cluster: the name of the Ganeti cluster where to look for the group, equivalent to the cluster group in
+                Netbox.
 
         Raises:
             spicerack.ganeti.GanetiError: if unable to find the group.
@@ -374,10 +347,7 @@ class Ganeti:
         """Return a RAPI object for a particular cluster.
 
         Arguments:
-            cluster (str): the name of the cluster group in Netbox for this Ganeti cluster.
-
-        Returns:
-            spicerack.ganeti.GanetiRAPI: the RAPI interface object
+            cluster: the name of the cluster group in Netbox for this Ganeti cluster.
 
         Raises:
             spicerack.ganeti.GanetiError: if unable to find the cluster endpoint.
@@ -389,13 +359,9 @@ class Ganeti:
         """Return an instance of GntInstance to perform RW operation on the given Ganeti VM instance.
 
         Arguments:
-            instance (str): the FQDN of the Ganeti VM instance to act upon.
-            cluster (str, optional): the name of the Ganeti cluster to which the instance belongs, or will belong
-                in case of a new instance to be created. If not provided it will be auto-detected for existing
-                instances.
-
-        Returns:
-            spicerack.ganeti.GntInstance: ready to perform RW actions.
+            instance: the FQDN of the Ganeti VM instance to act upon.
+            cluster: the name of the Ganeti cluster to which the instance belongs, or will belong in case of a new
+                instance to be created. If not provided it will be auto-detected for existing instances.
 
         """
         if not cluster:

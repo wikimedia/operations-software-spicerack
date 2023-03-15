@@ -14,6 +14,7 @@ Spicerack Python API autodoc.
    spicerack.administrative
    spicerack.alerting
    spicerack.alertmanager
+   spicerack.apt
    spicerack.confctl
    spicerack.constants
    spicerack.cookbook

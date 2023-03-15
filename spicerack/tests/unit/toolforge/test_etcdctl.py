@@ -1,5 +1,5 @@
 """Toolforge etcdctl module tests."""
-from typing import List, Optional
+from typing import Optional
 from unittest import TestCase, mock
 
 from ClusterShell.MsgTree import MsgTreeElem
@@ -31,7 +31,7 @@ def _assert_not_called_with_single_param(param: str, mock_obj: mock.MagicMock) -
 
 
 def _get_mock_run_sync(
-    return_value: Optional[bytes] = None, side_effect: Optional[List[bytes]] = None
+    return_value: Optional[bytes] = None, side_effect: Optional[list[bytes]] = None
 ) -> mock.MagicMock:
     if side_effect is not None:
         return mock.MagicMock(
@@ -484,15 +484,20 @@ class TestEnsureNodeExists(TestCase):
         expected_member_id = "1234556789012345"
         mock_run_sync = _get_mock_run_sync(
             side_effect=[
-                f"""
-                    415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
-                    {expected_member_id}: name={existing_member_fqdn} peerURLs={existing_member_peer_url}_but_different
-                """.encode(),  # noqa: E501
+                (
+                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true\n"
+                    f"{expected_member_id}: name={existing_member_fqdn} "
+                    f"peerURLs={existing_member_peer_url}_but_different"
+                ).encode(),
                 b"""Updated :)""",
-                f"""
-                    415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false
-                    {expected_member_id}: name={existing_member_fqdn} peerURLs={existing_member_peer_url}
-                """.encode(),  # noqa: E501
+                (
+                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false\n"
+                    f"{expected_member_id}: name={existing_member_fqdn} peerURLs={existing_member_peer_url}"
+                ).encode(),
             ]
         )
         controller = EtcdctlController(
@@ -515,14 +520,18 @@ class TestEnsureNodeExists(TestCase):
         expected_member_id = "1234556789012345"
         mock_run_sync = _get_mock_run_sync(
             side_effect=[
-                b"""
-                    415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
-                """,  # noqa: E501
+                (
+                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true"
+                ).encode(),
                 b"""Added :)""",
-                f"""
-                    415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false
-                    {expected_member_id}: name={new_member_fqdn} peerURLs={new_member_peer_url}
-                """.encode(),  # noqa: E501
+                (
+                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false\n"
+                    f"{expected_member_id}: name={new_member_fqdn} peerURLs={new_member_peer_url}"
+                ).encode(),
             ]
         )
         controller = EtcdctlController(
@@ -569,9 +578,11 @@ class TestEnsureNodeDoesNotExist(TestCase):
         non_existing_member_fqdn = "i.dont.exist"
         expected_result = None
         mock_run_sync = _get_mock_run_sync(
-            return_value="""
-                415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
-            """.encode()  # noqa: E501
+            return_value=(
+                "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
+                "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
+                "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true"
+            ).encode()
         )
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
@@ -592,10 +603,12 @@ class TestEnsureNodeDoesNotExist(TestCase):
         expected_member_id = "1234556789012345"
         mock_run_sync = _get_mock_run_sync(
             side_effect=[
-                f"""
-                    415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false
-                    {expected_member_id}: name={member_fqdn} peerURLs=http://some.url
-                """.encode(),  # noqa: E501
+                (
+                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
+                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false\n"
+                    f"{expected_member_id}: name={member_fqdn} peerURLs=http://some.url"
+                ).encode(),
                 "Removed :)",
             ]
         )

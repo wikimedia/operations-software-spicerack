@@ -5,10 +5,11 @@ import re
 import shlex
 import time
 from collections import UserDict
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import timedelta
 from enum import Enum
-from typing import Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, cast
+from typing import Optional, cast
 
 from cumin import NodeSet
 from cumin.transports import Command
@@ -20,33 +21,37 @@ from spicerack.remote import RemoteHosts
 from spicerack.typing import TypeHosts
 
 ICINGA_DOMAIN: str = "icinga.wikimedia.org"
-MIN_DOWNTIME_SECONDS: int = 60  # Minimum time in seconds the downtime can be set
+"""The Icinga website FQDN."""
+MIN_DOWNTIME_SECONDS: int = 60
+"""Minimum time in seconds the downtime can be set to."""
 logger = logging.getLogger(__name__)
 
 
 class IcingaStatus(Enum):
     """String class to represent an Icinga status."""
 
-    OK = 0
-    WARNING = 1
-    CRITICAL = 2
-    UNKNOWN = 3
+    OK: int = 0
+    """Ok status."""
+    WARNING: int = 1
+    """Warning status."""
+    CRITICAL: int = 2
+    """Critical status."""
+    UNKNOWN: int = 3
+    """Unknown status."""
 
 
 class CommandFile(str):
     """String class to represent an Icinga command file path with cache capabilities."""
 
-    _command_files: Dict[Tuple[str, str], str] = {}  # Cache a command file per Icinga hostname and configuration file
+    _command_files: dict[tuple[str, str], str] = {}
+    """Cache a command file per Icinga hostname and configuration file."""
 
     def __new__(cls, icinga_host: RemoteHosts, *, config_file: str = "/etc/icinga/icinga.cfg") -> "CommandFile":
-        """Get the Icinga host command file where to write the commands and cache it.
+        """Get the Icinga host command file path where to write the commands and cache it.
 
         Arguments:
-            icinga_host (spicerack.remote.RemoteHosts): the Icinga host instance.
-            config_file (str, optional): the Icinga configuration file to check for the command file directive.
-
-        Returns:
-            str: the Icinga command file path on the Icinga host.
+            icinga_host: the Icinga host instance.
+            config_file: the Icinga configuration file to check for the command file directive.
 
         Raises:
             spicerack.icinga.IcingaError: if unable to get the command file path.
@@ -99,7 +104,7 @@ class IcingaStatusNotFoundError(IcingaError):
         """Initializes an IcingaStatusNotFoundError instance.
 
         Arguments:
-            hostnames (sequence): The hostnames not found in the Icinga status.
+            hostnames: the hostnames not found in the Icinga status.
 
         """
         if len(hostnames) == 1:
@@ -114,61 +119,31 @@ class HostsStatus(dict):
 
     @property
     def optimal(self) -> bool:
-        """Returns :py:data:`True` if all the hosts are optimal, :py:data:`False` otherwise.
-
-        Returns:
-            bool: whether all hosts are optimal.
-
-        """
+        """Returns :py:data:`True` if all the hosts are optimal, :py:data:`False` otherwise."""
         return all(status.optimal for status in self.values())
 
     @property
-    def non_optimal_hosts(self) -> List[str]:
+    def non_optimal_hosts(self) -> list[str]:
         """Return the list of hostnames that are not in an optimal state.
 
         They can either not being up and running or have at least one failed service.
-
-        Returns:
-            list: a list of strings with the hostnames.
-
         """
         return [hostname for hostname, status in self.items() if not status.optimal]
 
     @property
-    def failed_services(self) -> Dict[str, List[str]]:
-        """Return the list of service names that are failing for each host that has at least one.
-
-        Returns:
-            dict: a dict with hostnames as keys and list of failing service name strings as values.
-
-        """
+    def failed_services(self) -> dict[str, list[str]]:
+        """Return the list of service names that are failing for each host that has at least one failing service."""
         return {status.name: status.failed_services for status in self.values() if not status.optimal}
 
     @property
-    def failed_hosts(self) -> List[str]:
-        """Return the list of hostnames that are not up and running. They can either be down or unreachable.
-
-        Returns:
-            list: the list of strings with the hostnames.
-
-        """
+    def failed_hosts(self) -> list[str]:
+        """Return the list of hostnames that are not up and running. They can either be down or unreachable."""
         return [status.name for status in self.values() if status.state != HostStatus.STATE_UP]
 
     @property
-    def acked_services(self) -> Dict[str, List[str]]:
-        """Return a list of services which have failed, but are acknowledged in Icinga.
-
-        Returns:
-            Dict[str, List[str]]: a dict with hostnames as keys and list of failing service name strings as values.
-
-        """
-        acked: Dict[str, List[str]] = {}
-        for status in self.values():
-            acked_services = [service["name"] for service in status.services if service.acked]
-
-            if acked_services:
-                acked[status.name] = acked_services
-        return acked
+    def acked_services(self) -> dict[str, list[str]]:
+        """Return a list of services which have failed, but are acknowledged in Icinga for each host."""
+        return {status.name: status.acked_services for status in self.values() if not status.optimal}
 
 
 class ServiceStatus(UserDict):
@@ -176,10 +151,10 @@ class ServiceStatus(UserDict):
 
     @property
     def failed(self) -> bool:
-        """Icinga has indicated that the service is in a critcal state.
+        """Check if the service is not in optimal state.
 
         Returns:
-            bool: True is service is not in state 0 (OK), else False
+            :py:data:`True` if the service is not in a :py:data:`IcingaStatus.OK` status, :py:data:`False` otherwise.
 
         """
         current_state = IcingaStatus(self.get("status", {}).get("current_state", 3))
@@ -187,14 +162,7 @@ class ServiceStatus(UserDict):
 
     @property
     def acked(self) -> bool:
-        """Failure has been acknowledged.
-
-        The services has failed,and an operator have acknowledged the error.
-
-        Returns:
-            bool: True is alert is acknowledged, else False.
-
-        """
+        """Returns :py:data:`True` if the service acknowledged, :py:data:`False` otherwise."""
         is_acked = self.get("status", {}).get("problem_has_been_acknowledged", "0")
         return is_acked == "1"
 
@@ -202,8 +170,8 @@ class ServiceStatus(UserDict):
 class HostStatus:
     """Represent the status of all Icinga checks for a single host."""
 
-    STATE_UP = "UP"
-    """:py:class:`str`: the Icinga value for a host that is up and running. The other values for the Icinga host state
+    STATE_UP: str = "UP"
+    """The Icinga value for a host that is up and running. The other values for the Icinga host state
     are ``DOWN`` and ``UNREACHABLE``."""
 
     def __init__(
@@ -222,13 +190,13 @@ class HostStatus:
         Either `services` or `failed_services` may be present, depending on the flags passed to icinga-status.
 
         Arguments:
-            name (str): the hostname.
-            state (str): the Icinga state for the host, one of ``UP``, ``DOWN``, UNREACHABLE``.
-            optimal (bool): whether the host is in optimal state (all green).
-            downtimed (bool): whether the host is currently downtimed.
-            notifications_enabled: (bool): whether the host has notifications enabled.
-            failed_services (list, optional): a list of dictionaries representing the failed services.
-            services (list, optional): a list of dictionaries giving detailed service status.
+            name: the hostname.
+            state: the Icinga state for the host, one of ``UP``, ``DOWN``, UNREACHABLE``.
+            optimal: whether the host is in optimal state (all green).
+            downtimed: whether the host is currently downtimed.
+            notifications_enabled: whether the host has notifications enabled.
+            failed_services: a list of dictionaries representing the failed services.
+            services: a list of dictionaries giving detailed service status.
 
         """
         self.name = name
@@ -247,14 +215,14 @@ class HostStatus:
                 self.services.append(service_status)
 
     @property
-    def failed_services(self) -> List[str]:
-        """Return the list of service names that are failing.
-
-        Returns:
-            list: a list of strings with the check names.
-
-        """
+    def failed_services(self) -> list[str]:
+        """Return the list of service names that are failing."""
         return [service["name"] for service in self.services if service.failed]
+
+    @property
+    def acked_services(self) -> list[str]:
+        """Return a list of services which have failed, but are acknowledged in Icinga."""
+        return [service["name"] for service in self.services if service.acked]
 
 
 class IcingaHosts:
@@ -266,13 +234,11 @@ class IcingaHosts:
         """Initialize the instance.
 
         Arguments:
-            icinga_host (spicerack.remote.RemoteHosts): the RemoteHosts instance for the Icinga server.
-            target_hosts (spicerack.typing.TypeHosts): the target hosts either as a NodeSet instance or a sequence of
-                strings.
-            verbatim_hosts (bool, optional): if :py:data:`True` use the hosts passed verbatim as is, if instead
-                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
-                be used in Icinga.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            icinga_host: the RemoteHosts instance for the Icinga server.
+            target_hosts: the target hosts either as a NodeSet instance or a sequence of strings.
+            verbatim_hosts: if :py:data:`True` use the hosts passed verbatim as is, if instead :py:data:`False`, the
+                default, consider the given target hosts as FQDNs and extract their hostnames to be used in Icinga.
+            dry_run: whether this is a DRY-RUN.
 
         """
         if not verbatim_hosts:
@@ -298,8 +264,8 @@ class IcingaHosts:
         """Context manager to perform actions while the hosts are downtimed on Icinga.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
-            duration (datetime.timedelta, optional): the length of the downtime period.
+            reason: the reason to set for the downtime on the Icinga server.
+            duration: the length of the downtime period.
             remove_on_error: should the downtime be removed even if an exception was raised.
 
         Yields:
@@ -308,7 +274,7 @@ class IcingaHosts:
 
         """
         self.downtime(reason, duration=duration)
-        try:
+        try:  # pylint: disable=no-else-raise
             yield
         except BaseException:
             if remove_on_error:
@@ -321,8 +287,8 @@ class IcingaHosts:
         """Downtime hosts on the Icinga server for the given time with a message.
 
         Arguments:
-            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
-            duration (datetime.timedelta, optional): the length of the downtime period.
+            reason: the reason to set for the downtime on the Icinga server.
+            duration: the length of the downtime period.
 
         """
         duration_seconds = int(duration.total_seconds())
@@ -400,10 +366,10 @@ class IcingaHosts:
         """Context manager to perform actions while services are downtimed on Icinga.
 
         Arguments:
-            service_re (str): the regular expression matching service names to downtime.
-            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
-            duration (datetime.timedelta, optional): the length of the downtime period.
-            remove_on_error (bool, optional): should the downtime be removed even if an exception was raised.
+            service_re: the regular expression matching service names to downtime.
+            reason: the reason to set for the downtime on the Icinga server.
+            duration: the length of the downtime period.
+            remove_on_error: should the downtime be removed even if an exception was raised.
 
         Yields:
             None: it just yields control to the caller once Icinga has been downtimed and deletes the downtime once
@@ -411,7 +377,7 @@ class IcingaHosts:
 
         """
         self.downtime_services(service_re, reason, duration=duration)
-        try:
+        try:  # pylint: disable=no-else-raise
             yield
         except BaseException:
             if remove_on_error:
@@ -429,13 +395,13 @@ class IcingaHosts:
         skipped. But if *no* hosts have matching services, IcingaError is raised (because the regex is probably wrong).
 
         Arguments:
-            service_re (str): the regular expression matching service names to downtime.
-            reason (spicerack.administrative.Reason): the reason to set for the downtime on the Icinga server.
-            duration (datetime.timedelta, optional): the length of the downtime period.
+            service_re: the regular expression matching service names to downtime.
+            reason: the reason to set for the downtime on the Icinga server.
+            duration: the length of the downtime period.
 
         Raises:
-            re.error: if service_re is an invalid regular expression.
-            IcingaError: if no services on any target host match the regular expression.
+            re.error: if ``service_re`` is an invalid regular expression.
+            spicerack.icinga.IcingaError: if no services on any target host match the regular expression.
 
         """
         duration_seconds = int(duration.total_seconds())
@@ -497,17 +463,29 @@ class IcingaHosts:
     def recheck_all_services(self) -> None:
         """Force recheck of all services associated with a set of hosts."""
         self.run_icinga_command("SCHEDULE_FORCED_HOST_SVC_CHECKS", str(int(time.time())))
+        self.run_icinga_command("SCHEDULE_FORCED_HOST_CHECK", str(int(time.time())))
 
     def recheck_failed_services(self) -> None:
         """Force recheck of all failed associated with a set of hosts."""
         status = self.get_status()
+
         if status.optimal:
             return
+
+        self.run_icinga_command("SCHEDULE_FORCED_HOST_CHECK", str(int(time.time())))
+
         commands = [
             self._get_command_string("SCHEDULE_FORCED_SVC_CHECK", hostname, service_name, str(int(time.time())))
             for hostname, failed in status.failed_services.items()
             for service_name in failed
         ]
+
+        if not commands:
+            logger.debug(
+                "Status not optimal, with no failed service, for hosts: %s, status: %s", self._target_hosts, status
+            )
+            return
+
         self._icinga_host.run_sync(*commands, print_output=False, print_progress_bars=False)
 
     def remove_downtime(self) -> None:
@@ -522,11 +500,11 @@ class IcingaHosts:
         them is downtimed, this method does nothing.)
 
         Arguments:
-            service_re (str): the regular expression matching service names to un-downtime.
+            service_re: the regular expression matching service names to un-downtime.
 
         Raises:
-            re.error: if service_re is an invalid regular expression.
-            IcingaError: if no services on any target host match the regular expression.
+            re.error: if ``service_re`` is an invalid regular expression.
+            spicerack.icinga.IcingaError: if no services on any target host match the regular expression.
 
         """
         status = self.get_status(service_re)  # This also validates the regular expression syntax.
@@ -562,8 +540,8 @@ class IcingaHosts:
         See the link below for more details on the available Icinga commands and their arguments.
 
         Arguments:
-            command (str): the Icinga command to execute.
-            *args (str): optional positional arguments to pass to the command.
+            command: the Icinga command to execute.
+            *args: optional positional arguments to pass to the command.
 
         See Also:
             https://icinga.com/docs/icinga1/latest/en/extcommands2.html
@@ -576,15 +554,12 @@ class IcingaHosts:
         """Get the current status of the given hosts from Icinga.
 
         Arguments:
-            service_re (str): if non-empty, the regular expression matching service names
-
-        Returns:
-            spicerack.icinga.HostsStatus: the instance that represents the status for the given hosts.
+            service_re: if non-empty, the regular expression matching service names
 
         Raises:
-            IcingaError: if unable to get the status.
-            IcingaStatusParseError: when failing to parse the status.
-            IcingaStatusNotFoundError: if a host is not found in the Icinga status.
+            spicerack.icinga.IcingaError: if unable to get the status.
+            spicerack.icinga.IcingaStatusParseError: when failing to parse the status.
+            spicerack.icinga.IcingaStatusNotFoundError: if a host is not found in the Icinga status.
             re.error: if service_re is an invalid regular expression.
 
         """
@@ -621,13 +596,11 @@ class IcingaHosts:
     def wait_for_optimal(self, *, skip_acked: bool = False) -> None:
         """Waits for an icinga optimal status, else raises an exception.
 
-        This function will first instruct icinga to recheck all failed services
-        and then wait until all services are in an optimal status.  If an
-        optimal status is not reached in 6 minutes then we raise IcingaError
+        This function will first instruct icinga to recheck all failed services and then wait until all services are
+        in an optimal status.  If an optimal status is not reached in 6 minutes then we raise IcingaError.
 
         Arguments:
-            skip_acked: Ignore any acknowledge alerts when determining if a device is in
-            optimal state.
+            skip_acked: ignore any acknowledge alerts when determining if a device is in optimal state.
 
         Raises:
             IcingaError: if the status is not optimal.
@@ -641,6 +614,7 @@ class IcingaHosts:
             exceptions=(IcingaError,),
         )
         def check() -> None:
+            """Check the status in Icinga."""
             status = self.get_status()
 
             if status.optimal:
@@ -651,10 +625,9 @@ class IcingaHosts:
                 # Find any services which has not been acknowledged,
                 # that is the "diff". If unacknowledge services are
                 # found, add them to the new failed dict.
-                failed: Dict[str, List[str]] = {}
-                acked = status.acked_services
+                failed: dict[str, list[str]] = {}
                 for k, v in status.failed_services.items():
-                    diff = set(v) - set(acked[k])
+                    diff = set(v) - set(status.acked_services[k])
                     if diff:
                         failed[k] = list(diff)
             else:
@@ -671,10 +644,7 @@ class IcingaHosts:
         """Get the Icinga command to execute given the current arguments.
 
         Arguments:
-            *args (str): positional arguments to use to compose the Icinga command string.
-
-        Returns:
-            str: the command line to execute on the Icinga host.
+            *args: positional arguments to use to compose the Icinga command string.
 
         """
         args_str = ";".join(args)

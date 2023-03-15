@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from io import BufferedReader
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import urllib3
 from packaging import version
@@ -97,12 +97,11 @@ class Redfish:
         """Initialize the instance.
 
         Arguments:
-            hostname (str): the hostname (not FQDN) the management console belongs to.
-            interface (ipaddress.IPv4Interface, ipaddress.IPv6Interface): the interface of the management console to
-                connect to.
-            username (str): the API username.
-            password (str): the API password.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            hostname: the hostname (not FQDN) the management console belongs to.
+            interface: the interface of the management console to connect to.
+            username: the API username.
+            password: the API password.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._dry_run = dry_run
@@ -122,17 +121,12 @@ class Redfish:
         self._upload_session.auth = (self._username, self._password)
         self._upload_session.headers.update({"Accept": "application/json"})
 
-        self._oob_info: Dict = {}
-        self._system_info: Dict = {}
-        self._updateservice_info: Dict = {}
+        self._oob_info: dict = {}
+        self._system_info: dict = {}
+        self._updateservice_info: dict = {}
 
     def __str__(self) -> str:
-        """String representation of the instance.
-
-        Returns:
-            str: the string representation of the target hosts.
-
-        """
+        """String representation of the instance."""
         return f"{self._username}@{self._hostname} ({self._interface.ip})"
 
     @property
@@ -160,41 +154,41 @@ class Redfish:
         return "/redfish/v1/UpdateService"
 
     @property
+    @abstractmethod
+    def log_entries(self) -> str:
+        """Property to return the uri for the log entries."""
+
+    @property
+    @abstractmethod
+    def reboot_message_id(self) -> str:
+        """Property to return the Message Id for reboot log entries."""
+
+    @property
     def hostname(self) -> str:
-        """Getter for the device hostname.
-
-        Returns
-            str: the hostname
-
-        """
+        """Getter for the device hostname."""
         return self._hostname
 
     @property
     def interface(self) -> Union[ipaddress.IPv4Interface, ipaddress.IPv6Interface]:
-        """Getter for the management interface address with netmask.
-
-        Returns
-            ipaddress.IPv4Interface, ipaddress.IPv6Interface: the interface.
-
-        """
+        """Getter for the management interface address with netmask."""
         return self._interface
 
     @property
-    def system_info(self) -> Dict:
+    def system_info(self) -> dict:
         """Property to return the system info as a dict."""
         if not self._system_info:
             self._update_system_info()
         return self._system_info
 
     @property
-    def oob_info(self) -> Dict:
+    def oob_info(self) -> dict:
         """Property to return the oob info as a dict."""
         if not self._oob_info:
             self._update_oob_info()
         return self._oob_info
 
     @property
-    def updateservice_info(self) -> Dict:
+    def updateservice_info(self) -> dict:
         """Property to return a dict of manager metadata."""
         if not self._updateservice_info:
             result = self.request("get", self.update_service)
@@ -230,14 +224,7 @@ class Redfish:
 
     @property
     def pushuri(self) -> str:
-        """Property representing the HttpPushUri of the idrac.
-
-        This property is used for uploading firmwares to the idrac
-
-        Returns:
-            str: representing the HttpPushUri
-
-        """
+        """Property representing the HttpPushUri of the idrac for uploading firmwares to it."""
         try:
             return self.updateservice_info["HttpPushUri"]
         except KeyError:
@@ -245,40 +232,27 @@ class Redfish:
 
     @property
     def multipushuri(self) -> str:
-        """Property representing the HttpPushUri of the idrac.
-
-        This property is used for uploading firmwares to the idrac
-
-        Returns:
-            str: representing the MultipartHttpPushUri
-
-        """
+        """Property representing the MultipartHttpPushUri of the idrac for uploading firmwares to it."""
         return self.updateservice_info["MultipartHttpPushUri"]
 
     def upload_file(self, file_path: Path, reboot: bool = False) -> str:
-        """Upload a file to the firmware directory via redfish.
+        """Upload a file to the firmware directory via redfish and return the job_id URI.
 
         Arguments:
-            file_path: The file path to upload
-            reboot: if true immediately reboot the server
-
-        Returns:
-            str: string of the job_id uri
+            file_path: The file path to upload.
+            reboot: if true immediately reboot the server.
 
         """
         with file_path.open("rb") as file_handle:
             return self.multipush_upload(file_handle, file_path.name, reboot)
 
     def multipush_upload(self, file_handle: BufferedReader, filename: str, reboot: bool = False) -> str:
-        """Upload a file to via redfish.
+        """Upload a file via redfish and return its job_id URI.
 
         Arguments:
-            file_handle: On open file handle to the object to upload
-            fiename: filename name to use for upload
-            reboot: if true immediately reboot the server
-
-        Returns:
-            str: string of the job_id uri
+            file_handle: On open file handle to the object to upload.
+            filename: filename name to use for upload.
+            reboot: if true immediately reboot the server.
 
         """
         operation = "Immediate" if reboot else "OnReset"
@@ -292,7 +266,7 @@ class Redfish:
         return job_id
 
     @staticmethod
-    def most_recent_member(members: List[Dict], key: str) -> Dict:
+    def most_recent_member(members: list[dict], key: str) -> dict:
         """Return the most recent member of members result from dell api.
 
         Members will be sorted on key and the most recent value is returned.
@@ -302,24 +276,28 @@ class Redfish:
             members: A list of dicts returned from the dell api.
             key: The key to search on.
 
-        Returns:
-            dict: the most recent member
-
         """
 
-        def sorter(element: Dict) -> datetime:
+        def sorter(element: dict) -> datetime:
+            """Sort by datetime."""
             return datetime.fromisoformat(element[key])
 
         return sorted(members, key=sorter)[-1]
 
-    @abstractmethod
     def last_reboot(self) -> datetime:
-        """Ask redfish for the last reboot time.
-
-        Returns:
-            datetime: the datetime of the last reboot event
-
-        """
+        """Get the the last reboot time."""
+        # TODO: we can possibly use filter once all OOB's are updated.  e.g.
+        # Lclog/Entries?$filter=MessageId eq 'reboot_code'
+        # currently we get the following on some older models
+        # Message=Querying is not supported by the implementation, MessageArgs=$filter"
+        last_reboot = datetime.fromisoformat("1970-01-01T00:00:00-00:00")
+        results = self.request("get", self.log_entries).json()
+        # use ends with as sometimes there is an additional string prefix to the code e.g. IDRAC.2.7.RAC0182
+        members = [m for m in results["Members"] if m["MessageId"].endswith(self.reboot_message_id)]
+        if members:
+            last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
+        logger.debug("%s: last reboot %s", self._hostname, last_reboot)
+        return last_reboot
 
     @retry(
         tries=240,
@@ -331,7 +309,7 @@ class Redfish:
         """Wait for idrac/redfish to become responsive.
 
         Arguments:
-            since: The datetime of the last reboot
+            since: The datetime of the last reboot.
 
         """
         self.check_connection()
@@ -344,16 +322,13 @@ class Redfish:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
 
         Arguments:
-            uri (str): the relative URI to request.
-            method (str): the HTTP method to use (e.g. "post").
-            **kwargs (mixed): arbitrary keyword arguments, to be passed requests
-
-        Returns:
-            requests.models.Response: the response.
+            uri: the relative URI to request.
+            method: the HTTP method to use (e.g. "post").
+            **kwargs: arbitrary keyword arguments, to be passed requests.
 
         Raises:
-            RedfishError: if the response status code is between 400 and 600 or if the given uri does not start with
-            a slash (/) or if the request couldn't be performed.
+            spicerack.redfish.RedfishError: if the response status code is between 400 and 600 or if the given uri
+            does not start with a slash (/) or if the request couldn't be performed.
 
         """
         if uri[0] != "/":
@@ -386,10 +361,7 @@ class Redfish:
         """Submit a request that generates a task, return the URI of the submitted task.
 
         Arguments:
-            response (Response): the response to parse
-
-        Returns:
-            str: the URI of the task ID to poll the results.
+            response: the response to parse.
 
         Raises:
             spicerack.redfish.RedfishError: if the response status code is not 202 or there is no Location header.
@@ -411,15 +383,12 @@ class Redfish:
 
         return response.headers["Location"]
 
-    def submit_files(self, files: Dict) -> str:
+    def submit_files(self, files: dict) -> str:
         """Submit a upload file request that generates a task, return the URI of the submitted task.
 
         Arguments:
-            uri (str): the relative URI to request.
-            files (dict): the files to upload to send in the request.
-
-        Returns:
-            str: the URI of the task ID to poll the results.
+            uri: the relative URI to request.
+            files: the files to upload to send in the request.
 
         """
         if self._dry_run:
@@ -430,16 +399,13 @@ class Redfish:
         response = self._upload_session.post(f"https://{self.interface.ip}{self.multipushuri}", files=files)
         return self._parse_submit_task(response)
 
-    def submit_task(self, uri: str, data: Optional[Dict] = None, method: str = "post") -> str:
+    def submit_task(self, uri: str, data: Optional[dict] = None, method: str = "post") -> str:
         """Submit a request that generates a task, return the URI of the submitted task.
 
         Arguments:
-            uri (str): the relative URI to request.
-            data (dict, optional): the data to send in the request.
-            method (str, optional): the HTTP method to use, if not the default one.
-
-        Returns:
-            str: the URI of the task ID to poll the results.
+            uri: the relative URI to request.
+            data: the data to send in the request.
+            method: the HTTP method to use, if not the default one.
 
         """
         if self._dry_run:
@@ -465,18 +431,16 @@ class Redfish:
         exceptions=(RedfishTaskNotCompletedError,),
         failure_message="Polling task",
     )
-    def poll_task(self, uri: str) -> Dict:
-        """Poll a Redfish task until the results are available.
+    def poll_task(self, uri: str) -> dict:
+        """Poll a Redfish task until the results are available and return them.
 
         Arguments:
-           uri (str): the URI of the task, usually returned as Location header by the originating API call.
-
-        Returns:
-            dict: the task results.
+           uri: the URI of the task, usually returned as Location header by the originating API call.
 
         Raises:
-            RedfishError: if the response from the server is outside the expected values of HTTP 200 or 202.
-            RedfishTaskNotCompletedError: if the task is not yet completed.
+            spicerack.redfish.RedfishError: if the response from the server is outside the expected values of HTTP
+            200 or 202.
+            spicearck.redfish.RedfishTaskNotCompletedError: if the task is not yet completed.
 
         """
         if self._dry_run:
@@ -512,14 +476,14 @@ class Redfish:
 
         return results  # When a task is polled after returning the data, will return again the metadata
 
-    def find_account(self, username: str) -> Tuple[str, str]:
+    def find_account(self, username: str) -> tuple[str, str]:
         """Find the account for the given username and return its URI.
 
         Arguments:
-            username (str): the username to search for.
+            username: the username to search for.
 
         Returns:
-            tuple: a 2-element tuple with the URI for the account and the ETag header value of the GET response.
+            A 2-element tuple with the URI for the account and the ETag header value of the GET response.
 
         Raises:
             spicerack.redfish.RedfishError: if unable to find the account.
@@ -541,8 +505,8 @@ class Redfish:
         value so that the instance will keep working.
 
         Arguments:
-            username (str): the username to search for.
-            password (str): the new password to set.
+            username: the username to search for.
+            password: the new password to set.
 
         Raises:
             spicerack.redfish.RedfishError: if unable to find the user or update its password.
@@ -568,12 +532,7 @@ class Redfish:
             )
 
     def get_power_state(self) -> str:
-        """Return the current power state of the device.
-
-        Returns:
-            str: the power state.
-
-        """
+        """Return the current power state of the device."""
         response = self.request("get", "/redfish/v1/Chassis/System.Embedded.1").json()
         return response["PowerState"]
 
@@ -581,7 +540,7 @@ class Redfish:
         """Perform a reset of the chassis power status.
 
         Arguments:
-            action (spicerack.redfish.ChassisResetPolicy): the reset policy to use.
+            action: the reset policy to use.
 
         Raises:
             spicerack.redfish.RedfishError: if unable to perform the reset.
@@ -600,12 +559,7 @@ class Redfish:
 
     @staticmethod
     def _get_dummy_response() -> Response:
-        """Return a dummy requests's Response to be used in dry-run mode.
-
-        Returns:
-            requests.Response: the dummy response.
-
-        """
+        """Return a dummy requests's Response to be used in dry-run mode."""
         response = Response()
         response.status_code = 200
         return response
@@ -614,14 +568,13 @@ class Redfish:
 class DellSCP:
     """Reprenset a Dell System Configuration Profile configuration as returned by Redfish API."""
 
-    def __init__(self, config: Dict, target: DellSCPTargetPolicy, *, allow_new_attributes: bool = False):
+    def __init__(self, config: dict, target: DellSCPTargetPolicy, *, allow_new_attributes: bool = False):
         """Parse the Redfish API response.
 
         Arguments:
-            config (dict): the configuration as returned by Redfish API.
-            target (spicerack.redfish.DellSCPTargetPolicy): describe which sections of the configuration are
-                represented in the loaded configuration.
-            allow_new_attributes (bool): when set to :py:data:`True` it allows the creation of new attributes not
+            config: the configuration as returned by Redfish API.
+            target: describe which sections of the configuration are represented in the loaded configuration.
+            allow_new_attributes: when set to :py:data:`True` it allows the creation of new attributes not
                 already present in the provided configuration that otherwise would raise an exception. This is
                 useful for example when changing the boot mode between Uefi and Bios that changes the keys present.
 
@@ -633,7 +586,7 @@ class DellSCP:
         self._emptied_components = False
 
     @property
-    def config(self) -> Dict:
+    def config(self) -> dict:
         """Getter for the whole configuration in Dell's format."""
         return self._config
 
@@ -658,7 +611,7 @@ class DellSCP:
         return datetime.strptime(self._config["SystemConfiguration"]["TimeStamp"], "%c")
 
     @property
-    def comments(self) -> List[str]:
+    def comments(self) -> list[str]:
         """Getter for the comments associated with the configuration."""
         return [
             comment["Comment"]
@@ -667,7 +620,7 @@ class DellSCP:
         ]
 
     @property
-    def components(self) -> Dict[str, Dict[str, str]]:
+    def components(self) -> dict[str, dict[str, str]]:
         """Getter for the components present in the configuration in a simplified view.
 
         The returned dictionary where all the keys are recursively sorted and has the following format::
@@ -680,7 +633,7 @@ class DellSCP:
             }
 
         """
-        components: Dict[str, Dict[str, str]] = {}
+        components: dict[str, dict[str, str]] = {}
         for component in self._config["SystemConfiguration"].get("Components", []):
             components[component["FQDD"]] = {}
             for attribute in component.get("Attributes", []):
@@ -700,13 +653,12 @@ class DellSCP:
             allows to automatically create any missing component while setting attributes.
 
         Arguments:
-            component_name (str): the name of the component the settings belongs to.
-            attribute_name (str): the attribute name whose value needs to be updated.
-            attribute_value (str): the new value for the attribute to set.
+            component_name: the name of the component the settings belongs to.
+            attribute_name: the attribute name whose value needs to be updated.
+            attribute_value: the new value for the attribute to set.
 
         Returns:
-            bool: :py:data:`True` if the value was added or changed, :py:data:`False` if it had already the correct
-            value.
+            :py:data:`True` if the value was added or changed, :py:data:`False` if it had already the correct value.
 
         Raises:
             spicerack.redfish.RedfishError: if unable to find the given component or attribute and the creation of new
@@ -714,13 +666,8 @@ class DellSCP:
 
         """
 
-        def new_attribute() -> Dict[str, str]:
-            """Local helper that returns a new attribute.
-
-            Returns:
-                dict: the attribute to append to the component.
-
-            """
+        def new_attribute() -> dict[str, str]:
+            """Local helper that returns a new attribute to append to the component."""
             attribute = {
                 "Name": attribute_name,
                 "Value": attribute_value,
@@ -784,7 +731,7 @@ class DellSCP:
 
         raise RedfishError(f"Unable to find component {component_name}")
 
-    def update(self, changes: Dict[str, Dict[str, str]]) -> bool:
+    def update(self, changes: dict[str, dict[str, str]]) -> bool:
         """Bulk update the current configuration with the set of changes provided.
 
         Notes:
@@ -792,11 +739,11 @@ class DellSCP:
             see :py:meth:`spicerack.redfish.RedfishDell.scp_push`.
 
         Arguments:
-            changes (dict): a dictionary of changes to apply in the same format of the one returned by
+            changes: a dictionary of changes to apply in the same format of the one returned by
                 :py:meth:`spicerack.redfish.DellSCP.components`.
 
         Returns:
-            bool: :py:data:`True` if any of the values produced a change, :py:data:`False` if no change was made.
+            :py:data:`True` if any of the values produced a change, :py:data:`False` if no change was made.
 
         Raises:
             spicerack.redfish.RedfishError: if unable to apply all the changes.
@@ -820,10 +767,35 @@ class DellSCP:
         self._emptied_components = True
 
 
+class RedfishSupermicro(Redfish):
+    """Redfish class for SuperMicro servers."""
+
+    @property
+    def system_manager(self) -> str:
+        """Property to return the System manager."""
+        return "/redfish/v1/Systems/1"
+
+    @property
+    def oob_manager(self) -> str:
+        """String representing the Out of Band manager key."""
+        return "/redfish/v1/Managers/1"
+
+    @property
+    def log_entries(self) -> str:
+        """String representing the log entries uri."""
+        return "/redfish/v1/Managers/1/LogServices/Log1/Entries"
+
+    @property
+    def reboot_message_id(self) -> str:
+        """String representing the message Id of the reboot."""
+        return "Event.1.0.SystemPowerAction"
+
+
 class RedfishDell(Redfish):
     """Dell specific Redfish support."""
 
-    scp_base_uri = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
+    scp_base_uri: str = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
+    """The Dell's SCP push base URI."""
 
     def __init__(
         self,
@@ -849,15 +821,21 @@ class RedfishDell(Redfish):
         return "/redfish/v1/Managers/iDRAC.Embedded.1"
 
     @property
+    def log_entries(self) -> str:
+        """String representing the log entries uri."""
+        return "/redfish/v1/Managers/Logs/Lclog"
+
+    @property
+    def reboot_message_id(self) -> str:
+        """String representing the message Id of the reboot."""
+        return "RAC0182"
+
+    @property
     def generation(self) -> int:
         """Property representing the generation of the idrac.
 
         This is often 13 for idrac8 and 14 for idrac9.  This property allows us to add workarounds
         for older idrac models
-
-        Returns:
-            int: representing the generation
-
         """
         if self._generation == 0:
             match = re.search(r"\d+", self.oob_model)
@@ -870,29 +848,6 @@ class RedfishDell(Redfish):
         logger.debug("%s: iDRAC generation %s", self._hostname, self._generation)
         return self._generation
 
-    def last_reboot(self) -> datetime:
-        """Ask redfish for the last reboot time.
-
-        Returns:
-            datetime: the datetime of the last reboot event
-
-        """
-        # TODO: we can possibly use filter once all idrac are updated.  e.g.
-        # iDRAC.Embedded.1/LogServices/Lclog/Entries?$filter=MessageId eq 'RAC0182'
-        # currently we get the following on some older models
-        # Message=Querying is not supported by the implementation, MessageArgs=$filter"
-        last_reboot = datetime.fromisoformat("1970-01-01T00:00:00-00:00")
-        results = self.request(
-            "get",
-            f"{self.oob_manager}/Logs/Lclog",
-        ).json()
-        # use ends with as sometimes there is an additional string prefix to the code e.g. IDRAC.2.7.RAC0182
-        members = [m for m in results["Members"] if m["MessageId"].endswith("RAC0182")]
-        if members:
-            last_reboot = datetime.fromisoformat(self.most_recent_member(members, "Created")["Created"])
-        logger.debug("%s: iDRAC last reboot %s", self._hostname, last_reboot)
-        return last_reboot
-
     @retry(
         tries=240,
         delay=timedelta(seconds=10),
@@ -903,7 +858,7 @@ class RedfishDell(Redfish):
         """Wait for idrac/redfish to become responsive.
 
         Arguments:
-            since: The datetime of the last reboot
+            since: the datetime of the last reboot.
 
         """
         self.check_connection()
@@ -927,13 +882,10 @@ class RedfishDell(Redfish):
         """Dump and return the SCP (Server Configuration Profiles) configuration.
 
         Arguments:
-            target (spicerack.redfish.DellSCPTargetPolicy, optional): choose which sections to dump.
-            allow_new_attributes (bool): when set to :py:data:`True` it allows the creation of new attributes not
+            target: choose which sections to dump.
+            allow_new_attributes: when set to :py:data:`True` it allows the creation of new attributes not
                 already present in the retrieved configuration that otherwise would raise an exception. This is
                 useful for example when changing the boot mode between Uefi and Bios that changes the keys present.
-
-        Returns:
-            spicerack.redfish.DellSCP: the server's configuration.
 
         Raises:
             spicerack.redfish.RedfishError: if the API call fail.
@@ -952,21 +904,21 @@ class RedfishDell(Redfish):
         reboot: DellSCPRebootPolicy = DellSCPRebootPolicy.NO_REBOOT,
         power_state: DellSCPPowerStatePolicy = DellSCPPowerStatePolicy.ON,
         preview: bool = True,
-    ) -> Dict:
+    ) -> dict:
         """Push the SCP (Server Configuration Profiles) configuration.
 
         Arguments:
-            scp (spicerack.redfish.DellSCP): the configuration that will pushed to the server.
-            reboot (spicerack.redfish.DellSCPRebootPolicy, optional): which reboot policy to use to apply the changes.
-            power_state (spicerack.redfish.DellSCPPowerStatePolicy, optional): which final power state policy to use to
-                apply to the host after the changes have been applied.
-            preview (bool, optional): if :py:data:`True` perform a test push of the SCP data. This will tell if the file
+            scp: the configuration that will pushed to the server.
+            reboot: which reboot policy to use to apply the changes.
+            power_state: which final power state policy to use to apply to the host after the changes have been
+                applied.
+            preview: if :py:data:`True` perform a test push of the SCP data. This will tell if the file
                 parses correctly and would not result in any writes. The comments will tell if the new configuration
                 would not produce any changes. Forces the reboot parameter to be
                 :py:const:`spicerack.redfish.DellSCPRebootPolicy.NO_REBOOT`.
 
         Returns:
-            dict: the results of the push operation.
+            The results of the push operation.
 
         Raises:
             spicerack.redfish.RedfishError: if the API call fail.

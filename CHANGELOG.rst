@@ -1,6 +1,54 @@
 Spicerack Changelog
 -------------------
 
+`v6.3.0`_ (2023-03-15)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* apt: add new module with new ``AptGetHosts`` class that inherits from ``RemoteHostsAdapter`` to handle simple
+  ``apt-get`` use cases but setting all the proper options for non-interactive runs of ``apt-get``.
+* spicerack: add new ``spicerack.apt_get()`` accessor to run ``apt-get`` commands on target hosts.
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: add simple supermicro class.
+* alertmanager: match also FQDN, not only hostnames in the label.
+* decorators: add ``set_tries()`` function to be used for the ``dynamic_params_callbacks`` argument of the ``@retry``
+  decorator to dynamically modify the number of tries to retry from the client.
+* dnsdisc: add a ``resolve_with_client_ip()`` method to resolve with EDNS Client Subnet (ECS) support.
+* service: extend the discovery capabilities of the service catalog to check the DNS records with ECS support adding
+  a ``check_service_ips()`` method and a ``check_dns_state()`` one.
+* spicerack: add ``authdns_active_hosts`` property to get a ``RemoteHosts`` instance for the authoritative DNS servers
+  currently active. As it uses the Cumin's direct backend it works also if PuppetDB is not available.
+
+Bug fixes
+"""""""""
+
+* icinga: handle edge case where status is not optimal but there are no failed services (`T330318`_).
+* icinga: uniform code for acked services like failed services to offer the same API in all involved classes.
+* k8s: fix existing docstrings.
+
+Miscellanea
+"""""""""""
+
+* tox: disable bandit's ``request_without_timeout`` in tests.
+* setup.py: bump dependencies minimum version to match those in Debian bullseye.
+* setup.py: remove temporary upper limit for prospector as the upstream issue has been fixed.
+* doc: dynamically set copyright year to current year.
+* Use ``GenericAlias`` objects for type hints in the whole code base given that the lowest supported Python is 3.9:
+
+  * Use directly ``GenericAlias`` builtin objects for type hints (e.g. ``dict[]`` instead of ``Dict[]``).
+  * Use directly ``GenericAlias`` objects from the ``collections.abc`` module instead of the ones from the ``typing``
+    module (i.e. ``collections.abc.Sequence`` instead of ``typing.Sequence``).
+  * See also `PEP 585`_.
+
+* docstrings: automatically document type hints using ``sphinx_autodoc_typehints``. Now it's not necessary to repeat
+  in the docstrings the type of the variables and return types as those are automatically added reading the type hints
+  present in the signature. The whole code base has been updated accordingly.
+
 `v6.2.2`_ (2023-02-23)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2306,6 +2354,7 @@ New features
 .. _`service module example usage`: https://phabricator.wikimedia.org/P24020
 .. _`Server Lifecycle Diagram`: https://upload.wikimedia.org/wikipedia/labs/5/56/Server_Lifecycle_Statuses.png
 .. _`PEP 420`: https://peps.python.org/pep-0420/
+.. _`PEP 585`: https://peps.python.org/pep-0585/
 
 .. _`T147074`: https://phabricator.wikimedia.org/T147074
 .. _`T211750`: https://phabricator.wikimedia.org/T211750
@@ -2446,3 +2495,4 @@ New features
 .. _`v6.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.0
 .. _`v6.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.1
 .. _`v6.2.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.2
+.. _`v6.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.3.0

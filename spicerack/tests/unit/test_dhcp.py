@@ -483,8 +483,8 @@ class TestDHCP:
         with mock.patch("spicerack.dhcp.RemoteHosts") as mock_remotehosts:
             configsha256 = sha256(str(config).encode()).hexdigest()
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError):
                 with self.dhcp.config(config):
-                    raise Exception()
+                    raise RuntimeError()
 
         hosts.run_sync.assert_has_calls([call_test, call_write, call_refresh, call_sha256, call_rm, call_refresh])

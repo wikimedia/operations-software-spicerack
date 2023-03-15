@@ -146,9 +146,10 @@ class TestAlertmanagerHosts:
     @pytest.mark.parametrize(
         "hosts, regex",
         (
-            (["host1", "host2"], r"^(host1|host2)(:[0-9]+)?$"),
-            (["host1:1234", "host2"], r"^(host1:1234|host2(:[0-9]+)?)$"),
-            (["host1:1234", "host2:5678"], r"^(host1:1234|host2:5678)$"),
+            (["host1", "host2"], r"^(host1|host2)(\..+)?(:[0-9]+)?$"),
+            (["host1:1234", "host2"], r"^(host1:1234|host2(\..+)?(:[0-9]+)?)$"),
+            (["host1.example.com:1234", "host2"], r"^(host1|host2)(\..+)?(:[0-9]+)?$"),
+            (["host1:1234", "host2.example.com:5678"], r"^(host1:1234|host2(\..+)?(:[0-9]+)?)$"),
         ),
     )
     def test_add_silence_basic(self, hosts, regex):
@@ -172,7 +173,7 @@ class TestAlertmanagerHosts:
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
             {"name": "severity", "value": "critical", "isRegex": False},
-            {"name": "instance", "value": r"^(host1|host2)(:[0-9]+)?$", "isRegex": True},
+            {"name": "instance", "value": r"^(host1|host2)(\..+)?(:[0-9]+)?$", "isRegex": True},
         ]
 
     def test_add_silence_additional_matchers_invalid(self):
@@ -211,12 +212,16 @@ class TestAlertmanagerHosts:
         """It should issue silences for verbatim hosts."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
         am_hosts = alertmanager.AlertmanagerHosts(
-            ["host1.foo.bar", "host2.bar.baz"], verbatim_hosts=True, dry_run=False
+            ["host1.foo.bar", "host2.bar.baz:1234"], verbatim_hosts=True, dry_run=False
         )
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
-            {"name": "instance", "value": r"^(host1\.foo\.bar|host2\.bar\.baz)(:[0-9]+)?$", "isRegex": True},
+            {
+                "name": "instance",
+                "value": r"^(host1\.foo\.bar(\..+)?(:[0-9]+)?|host2\.bar\.baz:1234)$",
+                "isRegex": True,
+            },
         ]
 
     def test_nodeset_hosts(self):
@@ -226,7 +231,7 @@ class TestAlertmanagerHosts:
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
-            {"name": "instance", "value": r"^(host1|host2)(:[0-9]+)?$", "isRegex": True},
+            {"name": "instance", "value": r"^(host1|host2)(\..+)?(:[0-9]+)?$", "isRegex": True},
         ]
 
     def test_empty_target_hosts(self):

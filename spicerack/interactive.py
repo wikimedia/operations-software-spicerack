@@ -12,9 +12,6 @@ logger = logging.getLogger(__name__)
 def get_management_password() -> str:
     """Get the management password either from the environment or asking for it.
 
-    Returns:
-        str: the password.
-
     Raises:
         spicerack.exceptions.SpicerackError: if the password is empty.
 

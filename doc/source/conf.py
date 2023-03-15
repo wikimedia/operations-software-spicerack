@@ -12,6 +12,7 @@
 # documentation root, use pathlib's resolve() to make it absolute, like shown here.
 #
 import sys
+from datetime import date
 from pathlib import Path
 
 import sphinx_rtd_theme
@@ -37,6 +38,7 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
+    "sphinx_autodoc_typehints",
     "sphinxarg.ext",
 ]
 
@@ -55,7 +57,7 @@ master_doc = "index"
 # General information about the project.
 project = "Spicerack"
 title = f"{project} Documentation"
-copyright = "2018-2021, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
+copyright = f"2018-{date.today().year}, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
 author = "Riccardo Coccioli"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -137,8 +139,19 @@ napoleon_use_admonition_for_notes = False
 napoleon_use_admonition_for_references = False
 napoleon_use_ivar = False
 napoleon_use_param = True
-napoleon_use_rtype = True
 napoleon_use_keyword = True
+napoleon_use_rtype = True
+napoleon_type_aliases = None
+napoleon_attr_annotations = True
+
+# Type hints settings
+typehints_fully_qualified = True
+always_document_param_types = False
+typehints_document_rtype = True
+typehints_use_rtype = True
+typehints_defaults = "comma"
+typehints_use_signature = True
+typehints_use_signature_return = True
 
 # Autodoc settings
 autodoc_default_options = {

@@ -2,7 +2,7 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Dict, Optional, Tuple, Union, cast
+from typing import Optional, Union, cast
 
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteHosts, RemoteHostsAdapter
@@ -24,7 +24,7 @@ class EtcdClusterHealthStatus:
     """Etcd cluster health status."""
 
     global_status: HealthStatus
-    members_status: Dict[str, HealthStatus]
+    members_status: dict[str, HealthStatus]
 
 
 class TooManyHosts(SpicerackError):
@@ -92,7 +92,7 @@ class EtcdctlController(RemoteHostsAdapter):
 
         return EtcdClusterHealthStatus(global_status=cast(HealthStatus, global_status), members_status=members_status)
 
-    def get_cluster_info(self) -> Dict[str, Dict[str, SimpleType]]:
+    def get_cluster_info(self) -> dict[str, dict[str, SimpleType]]:
         """Gets the current etcd cluster information."""
         args = self._base_args + ["member", "list"]
         raw_results = self._remote_hosts.run_sync(" ".join(args))
@@ -111,7 +111,7 @@ class EtcdctlController(RemoteHostsAdapter):
             # and the '[<status>]' bit might not be there
             # peerURLs and memberid are the only key that seems to be there always
             split_info = [self._to_simple_tuple(elem) for elem in line.split(":", 1)[-1].split()]
-            struct_elem: Dict[str, SimpleType] = dict(split_info)
+            struct_elem: dict[str, SimpleType] = dict(split_info)
 
             first_part = line.split(":", 1)[0].strip()
             if "[" in first_part:
@@ -236,7 +236,7 @@ class EtcdctlController(RemoteHostsAdapter):
         return maybe_not_string
 
     @classmethod
-    def _to_simple_tuple(cls, elem: str) -> Tuple[str, SimpleType]:
+    def _to_simple_tuple(cls, elem: str) -> tuple[str, SimpleType]:
         elems = elem.split("=", 1)
         if len(elems) != 2:
             raise UnableToParseOutput(f"Malformed element '{elem}', has no '='.")
@@ -245,8 +245,8 @@ class EtcdctlController(RemoteHostsAdapter):
 
     @staticmethod
     def _get_member_or_none(
-        members: Dict[str, Dict[str, SimpleType]], member_name: str, member_peer_url: Optional[str] = None
-    ) -> Dict[str, SimpleType]:
+        members: dict[str, dict[str, SimpleType]], member_name: str, member_peer_url: Optional[str] = None
+    ) -> dict[str, SimpleType]:
         return next(
             (
                 member

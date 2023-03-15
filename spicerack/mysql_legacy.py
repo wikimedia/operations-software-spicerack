@@ -5,8 +5,9 @@ Todo:
 
 """
 import logging
+from collections.abc import Iterator
 from datetime import datetime
-from typing import Dict, Iterator, Optional, Tuple, Union
+from typing import Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
@@ -16,9 +17,9 @@ from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import Remote, RemoteHostsAdapter
 
-REPLICATION_ROLES: Tuple[str, ...] = ("master", "slave", "standalone")
-"""tuple: list of valid replication roles."""
-CORE_SECTIONS: Tuple[str, ...] = (
+REPLICATION_ROLES: tuple[str, ...] = ("master", "slave", "standalone")
+"""Valid replication roles."""
+CORE_SECTIONS: tuple[str, ...] = (
     "s1",
     "s2",
     "s3",
@@ -31,7 +32,7 @@ CORE_SECTIONS: Tuple[str, ...] = (
     "es4",
     "es5",
 )
-"""tuple: list of valid MySQL RW section names (external storage RO sections are not included here)."""
+"""Valid MySQL RW section names (external storage RO sections are not included here)."""
 
 logger = logging.getLogger(__name__)
 
@@ -51,24 +52,20 @@ class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
         batch_size: Optional[Union[int, str]] = None,
         batch_sleep: Optional[float] = None,
         is_safe: bool = False,
-    ) -> Iterator[Tuple[NodeSet, MsgTreeElem]]:
+    ) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Execute the query via Remote.
 
         Arguments:
-            query (str): the mysql query to be executed. Double quotes must be already escaped.
-            database (str, optional): an optional MySQL database to connect to before executing the query.
-            success_threshold (float, optional): to consider the execution successful, must be between 0.0 and 1.0.
-            batch_size (int, str, optional): the batch size for cumin, either as percentage (e.g. ``25%``) or absolute
-                number (e.g. ``5``).
-            batch_sleep (float, optional): the batch sleep in seconds to use in Cumin before scheduling the next host.
-            is_safe (bool, optional): whether the command is safe to run also in dry-run mode because it's a read-only
-                command that doesn't modify the state.
-
-        Returns:
-            generator: as returned by :py:meth:`cumin.transports.BaseWorker.get_results`.
+            query: the mysql query to be executed. Double quotes must be already escaped.
+            database: an optional MySQL database to connect to before executing the query.
+            success_threshold: to consider the execution successful, must be between 0.0 and 1.0.
+            batch_size: the batch size for cumin, either as percentage (e.g. ``25%``) or absolute number (e.g. ``5``).
+            batch_sleep: the batch sleep in seconds to use in Cumin before scheduling the next host.
+            is_safe: whether the command is safe to run also in dry-run mode because it's a read-only command that
+                doesn't modify the state.
 
         Raises:
-            RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
+            spicerack.remote.RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
 
         """
         command = f'mysql --skip-ssl --skip-column-names --batch -e "{query}" {database}'.strip()
@@ -84,18 +81,18 @@ class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
 class MysqlLegacy:
     """Class to manage MySQL servers."""
 
-    heartbeat_query = (
+    heartbeat_query: str = (
         "SELECT ts FROM heartbeat.heartbeat WHERE datacenter = '{dc}' and shard = '{section}' "
         "ORDER BY ts DESC LIMIT 1"
     )
-    """str: Query pattern to check the heartbeat for a given datacenter and section."""
+    """Query pattern to check the heartbeat for a given datacenter and section."""
 
     def __init__(self, remote: Remote, dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
-            remote (spicerack.remote.Remote): the Remote instance.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            remote: the Remote instance.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._remote = remote
@@ -105,10 +102,7 @@ class MysqlLegacy:
         """Get a MysqlLegacyRemoteHosts instance for the matching hosts.
 
         Arguments:
-            query (str): the Remote query to use to fetch the DB hosts.
-
-        Returns:
-            spicerack.mysql_legacy.MysqlLegacyRemoteHosts: an instance with the remote targets.
+            query: the Remote query to use to fetch the DB hosts.
 
         """
         return MysqlLegacyRemoteHosts(self._remote.query(query))
@@ -119,24 +113,21 @@ class MysqlLegacy:
         datacenter: Optional[str] = None,
         section: Optional[str] = None,
         replication_role: Optional[str] = None,
-        excludes: Tuple[str, ...] = (),
+        excludes: tuple[str, ...] = (),
     ) -> MysqlLegacyRemoteHosts:
-        """Find the core databases matching the parameters.
+        """Get an instance to operated on the core databases matching the parameters.
 
         Arguments:
-            datacenter (str, optional): the name of the datacenter to filter for, accepted values are those specified in
+            datacenter: the name of the datacenter to filter for, accepted values are those specified in
                 :py:data:`spicerack.constants.CORE_DATACENTERS`.
-            replication_role (str, optional): the repication role to filter for, accepted values are those specified in
+            replication_role: the repication role to filter for, accepted values are those specified in
                 :py:data:`spicerack.mysql_legacy.REPLICATION_ROLES`.
-            section (str, optional): a specific section to filter for, accepted values are those specified in
+            section: a specific section to filter for, accepted values are those specified in
                 :py:data:`spicerack.mysql_legacy.CORE_SECTIONS`.
-            excludes (Tuple[str, ...]): sections to exclude from getting
+            excludes: sections to exclude from getting.
 
         Raises:
             spicerack.mysql_legacy.MysqlLegacyError: on invalid data or unexpected matching hosts.
-
-        Returns:
-            spicerack.mysql_legacy.MysqlLegacyRemoteHosts: an instance with the remote targets.
 
         """
         query_parts = ["A:db-core"]
@@ -183,7 +174,7 @@ class MysqlLegacy:
         """Set the core masters in read-only.
 
         Arguments:
-            datacenter (str): the name of the datacenter to filter for.
+            datacenter: the name of the datacenter to filter for.
 
         Raises:
             spicerack.remote.RemoteExecutionError: on Remote failures.
@@ -199,7 +190,7 @@ class MysqlLegacy:
         """Set the core masters in read-write.
 
         Arguments:
-            datacenter (str): the name of the datacenter to filter for.
+            datacenter: the name of the datacenter to filter for.
 
         Raises:
             spicerack.remote.RemoteExecutionError: on Remote failures.
@@ -215,8 +206,8 @@ class MysqlLegacy:
         """Verify that the core masters are in read-only or read-write mode.
 
         Arguments:
-            datacenter (str): the name of the datacenter to filter for.
-            is_read_only (bool): whether the read-only mode should be set or not.
+            datacenter: the name of the datacenter to filter for.
+            is_read_only: whether the read-only mode should be set or not.
 
         Raises:
             spicerack.mysql_legacy.MysqlLegacyError: on failure.
@@ -251,8 +242,8 @@ class MysqlLegacy:
         """Check that all core masters in dc_to are in sync with the core masters in dc_from.
 
         Arguments:
-            dc_from (str): the name of the datacenter from where to get the master positions.
-            dc_to (str): the name of the datacenter where to check that they are in sync.
+            dc_from: the name of the datacenter from where to get the master positions.
+            dc_to: the name of the datacenter where to check that they are in sync.
 
         Raises:
             spicerack.remote.RemoteExecutionError: on failure.
@@ -262,15 +253,15 @@ class MysqlLegacy:
         heartbeats = self.get_core_masters_heartbeats(dc_from, dc_from)
         self.check_core_masters_heartbeats(dc_to, dc_from, heartbeats)
 
-    def get_core_masters_heartbeats(self, datacenter: str, heartbeat_dc: str) -> Dict[str, datetime]:
+    def get_core_masters_heartbeats(self, datacenter: str, heartbeat_dc: str) -> dict[str, datetime]:
         """Get the current heartbeat values from core DB masters in DC for a given heartbeat DC.
 
         Arguments:
-            datacenter (str): the name of the datacenter from where to get the heartbeat values.
-            heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
+            datacenter: the name of the datacenter from where to get the heartbeat values.
+            heartbeat_dc: the name of the datacenter for which to filter the heartbeat query.
 
         Returns:
-            dict: a dictionary with the section name :py:class:`str` as keys and their heartbeat
+            A dictionary with the section name :py:class:`str` as keys and their heartbeat
             :py:class:`datetime.datetime` as values. For example::
 
                 {'s1': datetime.datetime(2018, 1, 2, 11, 22, 33, 123456)}
@@ -287,14 +278,14 @@ class MysqlLegacy:
         return heartbeats
 
     def check_core_masters_heartbeats(
-        self, datacenter: str, heartbeat_dc: str, heartbeats: Dict[str, datetime]
+        self, datacenter: str, heartbeat_dc: str, heartbeats: dict[str, datetime]
     ) -> None:
         """Check the current heartbeat values in the core DB masters in DC are in sync with the provided heartbeats.
 
         Arguments:
-            datacenter (str): the name of the datacenter from where to get the heartbeat values.
-            heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
-            heartbeats (dict): a dictionary with the section name :py:class:`str` as keys and heartbeat
+            datacenter: the name of the datacenter from where to get the heartbeat values.
+            heartbeat_dc: the name of the datacenter for which to filter the heartbeat query.
+            heartbeats: a dictionary with the section name :py:class:`str` as keys and heartbeat
                 :py:class:`datetime.datetime` for each core section as values.
 
         Raises:
@@ -315,11 +306,11 @@ class MysqlLegacy:
         """Check and retry that the heartbeat value in a core DB master in DC is in sync with the provided heartbeat.
 
         Arguments:
-            datacenter (str): the name of the datacenter from where to get the heartbeat value.
-            heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
-            section (str): the section name from where to get the heartbeat value and filter the heartbeat query.
-            master_heartbeat (datetime.datetime): the reference heartbeat from the parent master to use to verify this
-                master is in sync with it.
+            datacenter: the name of the datacenter from where to get the heartbeat value.
+            heartbeat_dc: the name of the datacenter for which to filter the heartbeat query.
+            section: the section name from where to get the heartbeat value and filter the heartbeat query.
+            master_heartbeat: the reference heartbeat from the parent master to use to verify this master is in sync
+                with it.
 
         Raises:
             spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime
@@ -345,12 +336,9 @@ class MysqlLegacy:
         """Get the heartbeat from the remote host for a given DC.
 
         Arguments:
-            mysql_hosts (spicerack.mysql_legacy.MysqlLegacyRemoteHosts): the instance for the target DB to query.
-            section (str): the DB section for which to get the heartbeat.
-            heartbeat_dc (str): the name of the datacenter for which to filter the heartbeat query.
-
-        Returns:
-            datetime.datetime: the converted heartbeat.
+            mysql_hosts: the instance for the target DB to query.
+            section: the DB section for which to get the heartbeat.
+            heartbeat_dc: the name of the datacenter for which to filter the heartbeat query.
 
         Raises:
             spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime.

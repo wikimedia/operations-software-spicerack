@@ -11,7 +11,7 @@ class SpicerackExtender(SpicerackExtenderBase):
         """Get a CoolFeature instance.
 
         Arguments:
-            feature (str): the feature to make cool.
+            feature: the feature to make cool.
 
         Returns:
             spicerack_ext.cool_feature.CoolFeature: the cool feature instance.

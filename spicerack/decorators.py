@@ -1,7 +1,8 @@
 """Decorators module."""
 import inspect
 import logging
-from typing import Any, Callable, Dict, Tuple
+from collections.abc import Callable
+from typing import Any
 
 from wmflib.decorators import RetryParams, ensure_wrap
 from wmflib.decorators import retry as wmflib_retry
@@ -11,17 +12,17 @@ from spicerack.exceptions import SpicerackError
 logger = logging.getLogger(__name__)
 
 
-def get_effective_tries(params: RetryParams, func: Callable, args: Tuple, kwargs: Dict) -> None:
+def get_effective_tries(params: RetryParams, func: Callable, args: tuple, kwargs: dict) -> None:
     """Reduce the number of tries to use in the @retry decorator to one when the DRY-RUN mode is detected.
 
     This is a callback function for the wmflib.decorators.retry decorator.
     The arguments are according to :py:func:`wmflib.decorators.retry` for the ``dynamic_params_callbacks`` argument.
 
     Arguments:
-        params (wmflib.decorators.RetryParams): the decorator original parameters.
-        func (Callable): the decorated callable.
-        args (tuple): the decorated callable positional arguments as tuple.
-        kwargs (dict): the decorated callable keyword arguments as dictionary.
+        params: the decorator original parameters.
+        func: the decorated callable.
+        args: the decorated callable positional arguments as tuple.
+        kwargs: the decorated callable keyword arguments as dictionary.
 
     """
     reduce_tries = False
@@ -53,6 +54,21 @@ def get_effective_tries(params: RetryParams, func: Callable, args: Tuple, kwargs
         params.tries = 1
 
 
+def set_tries(params: RetryParams, _func: Callable, _params: tuple, kwargs: dict) -> None:
+    """Simple function to allow adapting the number of retries.
+
+    Arguments:
+        params: the decorator original parameters.
+        _func: the decorated callable. Unused.
+        _args: the decorated callable positional arguments as tuple. Unused.
+        kwargs: the decorated callable keyword arguments as dictionary.
+
+    """
+    override_default_retries = kwargs.get("tries", 0)
+    if override_default_retries:
+        params.tries = override_default_retries
+
+
 @ensure_wrap
 def retry(*args: Any, **kwargs: Any) -> Callable:
     """Decorator to retry a function or method if it raises certain exceptions with customizable backoff.
@@ -68,7 +84,7 @@ def retry(*args: Any, **kwargs: Any) -> Callable:
     For the arguments see :py:func:`wmflib.decorators.retry`.
 
     Returns:
-        function: the decorated function.
+        The decorated function.
 
     """
     kwargs["dynamic_params_callbacks"] = tuple(list(kwargs.get("dynamic_params_callbacks", [])) + [get_effective_tries])

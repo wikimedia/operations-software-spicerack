@@ -1,11 +1,12 @@
 """ElasticsearchCluster module."""
 import logging
 from collections import defaultdict
+from collections.abc import Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta
 from math import floor
 from random import shuffle
-from typing import DefaultDict, Dict, Iterable, Iterator, List, Optional, Sequence, Set
+from typing import Optional
 
 import curator
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
@@ -29,28 +30,25 @@ class ElasticsearchClusterCheckError(SpicerackCheckError):
 
 
 def create_elasticsearch_clusters(
-    configuration: Dict[str, Dict[str, Dict[str, str]]],
+    configuration: dict[str, dict[str, dict[str, str]]],
     clustergroup: str,
     write_queue_datacenters: Sequence[str],
     remote: Remote,
     prometheus: Prometheus,
     dry_run: bool = True,
 ) -> "ElasticsearchClusters":
-    """Create ElasticsearchClusters instance.
+    """Get an ElasticsearchClusters instance.
 
     Arguments:
-        clustergroup (str): name of cluster group.
-        write_queue_datacenters (Sequence[str]): Sequence of which core DCs to query write queues for.
-        remote (spicerack.remote.Remote): the Remote instance.
-        prometheus (wmflib.prometheus.Prometheus): the prometheus instance.
-        dry_run (bool, optional):  whether this is a DRY-RUN.
+        clustergroup: name of cluster group.
+        write_queue_datacenters: Sequence of which core DCs to query write queues for.
+        remote: the Remote instance.
+        prometheus: the prometheus instance.
+        dry_run:  whether this is a DRY-RUN.
 
     Raises:
         spicerack.elasticsearch_cluster.ElasticsearchClusterError: Thrown when the requested cluster configuration is
             not found.
-
-    Returns:
-        spicerack.elasticsearch_cluster.ElasticsearchClusters: ElasticsearchClusters instance.
 
     """
     try:
@@ -81,9 +79,9 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         """After calling the super's constructor, initialize other instance variables.
 
         Arguments:
-            remote_hosts (spicerack.remote.RemoteHosts): the instance with the target hosts.
-            nodes (list): list of dicts containing clusters hosts belong to.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            remote_hosts: the instance with the target hosts.
+            nodes: list of dicts containing clusters hosts belong to.
+            dry_run: whether this is a DRY-RUN.
 
         """
         super().__init__(remote_hosts)
@@ -91,12 +89,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         self._dry_run = dry_run
 
     def get_remote_hosts(self) -> RemoteHosts:
-        """Returns elasticsearch remote hosts.
-
-        Returns:
-            spicerack.remote.RemoteHosts: RemoteHosts instance for this adapter.
-
-        """
+        """Returns the elasticsearch remote hosts instance."""
         return self._remote_hosts
 
     def start_elasticsearch(self) -> None:
@@ -112,6 +105,12 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         self._systemctl_for_each_instance("restart")
 
     def _systemctl_for_each_instance(self, action: str) -> None:
+        """Perform a systemctl action on all elasticsearch instances.
+
+        Arguments:
+            action: the systemctl action to perform.
+
+        """
         logger.info("%s all elasticsearch instances on %s", action, self)
         self._remote_hosts.run_sync(f"cat /etc/elasticsearch/instances | xargs systemctl {action}")
 
@@ -129,7 +128,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         """Check if elasticsearch instances on each node are up.
 
         Arguments:
-            timeout (datetime.timedelta, optional): represent how long to wait for all instances to be up.
+            timeout: represent how long to wait for all instances to be up.
 
         """
         delay = timedelta(seconds=5)
@@ -144,6 +143,7 @@ class ElasticsearchHosts(RemoteHostsAdapter):
             exceptions=(ElasticsearchClusterError, ElasticsearchClusterCheckError),
         )
         def inner_wait() -> None:
+            """Check all nodes."""
             for node in self._nodes:
                 node.check_all_nodes_up()
 
@@ -165,11 +165,11 @@ class ElasticsearchClusters:
         """Initialize ElasticsearchClusters.
 
         Arguments:
-            clusters (list): list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
-            remote (spicerack.remote.Remote): the Remote instance.
-            prometheus (wmflib.prometheus.Prometheus): the prometheus instance.
-            write_queue_datacenters (Sequence[str]): Sequence of which core DCs to query write queues for.
-            dry_run (bool, optional): whether this is a DRY-RUN.
+            clusters: list of :py:class:`spicerack.elasticsearch_cluster.ElasticsearchCluster` instances.
+            remote: the Remote instance.
+            prometheus: the prometheus instance.
+            write_queue_datacenters: Sequence of which core DCs to query write queues for.
+            dry_run: whether this is a DRY-RUN.
 
         """
         self._clusters = clusters
@@ -186,7 +186,7 @@ class ElasticsearchClusters:
         """Flush markers on all clusters.
 
         Arguments:
-            timeout (datetime.timedelta, optional): timedelta object for elasticsearch request timeout.
+            timeout: timedelta object for elasticsearch request timeout.
 
         """
         for cluster in self._clusters:
@@ -198,11 +198,11 @@ class ElasticsearchClusters:
             cluster.force_allocation_of_all_unassigned_shards()
 
     @contextmanager
-    def frozen_writes(self, reason: Reason) -> Iterator[List[None]]:
+    def frozen_writes(self, reason: Reason) -> Iterator[list[None]]:
         """Freeze all writes to the clusters and then perform operations before unfreezing writes.
 
         Arguments:
-            reason (spicerack.administrative.Reason): Reason for freezing writes.
+            reason: Reason for freezing writes.
 
         Yields:
             list: a side-effect list of :py:data:`None`, as a result of the stack of context managers.
@@ -213,7 +213,7 @@ class ElasticsearchClusters:
             yield [stack.enter_context(cluster.frozen_writes(reason)) for cluster in self._clusters]
 
     @contextmanager
-    def stopped_replication(self) -> Iterator[List[None]]:
+    def stopped_replication(self) -> Iterator[list[None]]:
         """Stops replication for all clusters.
 
         Yields:
@@ -228,8 +228,7 @@ class ElasticsearchClusters:
         """Wait for green on all clusters.
 
         Arguments:
-            timeout (datetime.timedelta, optional): timedelta object to represent how long to wait for green status
-                on all clusters.
+            timeout: timedelta object to represent how long to wait for green status on all clusters.
 
         """
         delay = timedelta(seconds=10)
@@ -252,8 +251,8 @@ class ElasticsearchClusters:
         """Wait for a yellow cluster status with no relocating or initializing shards.
 
         Arguments:
-            timeout (datetime.timedelta, optional): timedelta object to represent how long to wait
-                 for no yellow status with no initializing or relocating shards on all clusters.
+            timeout: timedelta object to represent how long to wait for no yellow status with no initializing or
+                relocating shards on all clusters.
 
         """
         delay = timedelta(seconds=10)
@@ -283,12 +282,11 @@ class ElasticsearchClusters:
         strongly suggest the masters are upgraded last.
 
         Arguments:
-            started_before (datetime.datetime): the time against after which we check if the node has been restarted.
-            size (int, optional): size of nodes not restarted in a row.
+            started_before: the time against after which we check if the node has been restarted.
+            size: size of nodes not restarted in a row.
 
         Returns:
-            spicerack.elasticsearch_cluster.ElasticsearchHosts: next eligible nodes for ElasticsearchHosts or
-                :py:data:`None` when all nodes have been processed.
+            Next eligible nodes for ElasticsearchHosts or :py:data:`None` when all nodes have been processed.
 
         """
         if size < 1:
@@ -308,13 +306,8 @@ class ElasticsearchClusters:
         return ElasticsearchHosts(self._remote.query(node_names), next_nodes, dry_run=self._dry_run)
 
     def _get_nodes_group(self) -> Iterable["NodesGroup"]:
-        """Create nodes_group for each nodes.
-
-        Returns:
-            dict: merged clusters nodes.
-
-        """
-        nodes_group: Dict[str, NodesGroup] = {}
+        """Get merged nodes_group for each nodes."""
+        nodes_group: dict[str, NodesGroup] = {}
         for cluster in self._clusters:
             for json_node in cluster.get_nodes().values():
                 node_name = json_node["attributes"]["hostname"]
@@ -325,19 +318,19 @@ class ElasticsearchClusters:
         return nodes_group.values()
 
     @staticmethod
-    def _to_rows(nodes: Sequence["NodesGroup"]) -> DefaultDict[str, List["NodesGroup"]]:
+    def _to_rows(nodes: Sequence["NodesGroup"]) -> defaultdict[str, list["NodesGroup"]]:
         """Arrange nodes in rows, so each node belongs in their respective row.
 
         Arguments:
-            nodes (list): list containing dicts of elasticsearch nodes.
+            nodes: list containing dicts of elasticsearch nodes.
 
         Returns:
-            defaultdict: defaultdict object containing a normalized rows of elasticsearch nodes. For example::
+            A defaultdict object containing a normalized rows of elasticsearch nodes. For example::
 
                 {'row1': [{'name': 'el1'}, {'name': 'el2'}], 'row2': [{'name': 'el6'}]}
 
         """
-        rows: DefaultDict[str, List[NodesGroup]] = defaultdict(list)
+        rows: defaultdict[str, list[NodesGroup]] = defaultdict(list)
         for node in nodes:
             rows[node.row].append(node)
         return rows
@@ -360,10 +353,8 @@ class ElasticsearchClusters:
     def wait_for_all_write_queues_empty(self) -> None:
         """Wait for all relevant CirrusSearch write queues to be empty.
 
-        Checks the Prometheus server in each of the CORE_DATACENTERS
-
+        Checks the Prometheus server in each of the :py:data:`wmflib.constants.CORE_DATACENTERS`.
         At most waits for 60*60 seconds = 1 hour.
-
         Does not retry if prometheus returns empty results for all datacenters.
         """
         # We expect all DCs except one to return empty results, but we have a problem if all return empty
@@ -415,9 +406,9 @@ class ElasticsearchCluster:
         """Initialize ElasticsearchCluster.
 
         Arguments:
-            elasticsearch (elasticsearch.Elasticsearch): elasticsearch instance.
-            remote (spicerack.remote.Remote): the Remote instance.
-            dry_run (bool, optional):  whether this is a DRY-RUN.
+            elasticsearch: elasticsearch instance.
+            remote: the Remote instance.
+            dry_run:  whether this is a DRY-RUN.
 
         """
         self._elasticsearch = elasticsearch
@@ -430,13 +421,8 @@ class ElasticsearchCluster:
         """Class string method."""
         return str(self._elasticsearch)
 
-    def get_nodes(self) -> Dict:
-        """Get all Elasticsearch Nodes.
-
-        Returns:
-            dict: dictionary of elasticsearch nodes in the cluster.
-
-        """
+    def get_nodes(self) -> dict:
+        """Get all Elasticsearch Nodes in the cluster."""
         try:
             return self._elasticsearch.nodes.info()["nodes"]
         except (TransportError, HTTPError) as e:
@@ -446,10 +432,10 @@ class ElasticsearchCluster:
         """Checks if node is in a list of elasticsearch cluster nodes.
 
         Arguments:
-            node (str): the elasticsearch host.
+            node: the elasticsearch host.
 
         Returns:
-            bool: :py:data:`True` if node is present and :py:data:`False` if not.
+            :py:data:`True` if node is present and :py:data:`False` if not.
 
         """
         nodes_names = [node["attributes"]["hostname"] for node in self.get_nodes().values()]
@@ -497,7 +483,7 @@ class ElasticsearchCluster:
         """Performs cluster routing of shards.
 
         Arguments:
-            cluster_routing (curator.ClusterRouting): Curator's cluster routing object.
+            cluster_routing: Curator's cluster routing object.
 
         """
         if self._dry_run:
@@ -509,8 +495,8 @@ class ElasticsearchCluster:
         """Cluster health status.
 
         Raises:
-            spicerack.elasticsearch_cluster.ElasticsearchClusterCheckError:
-                This is raised when request times and cluster is not green.
+            spicerack.elasticsearch_cluster.ElasticsearchClusterCheckError: This is raised when request times and
+            cluster is not green.
 
         """
         try:
@@ -522,8 +508,8 @@ class ElasticsearchCluster:
         """Cluster health status.
 
         Raises:
-            spicerack.elasticsearch_cluster.ElasticsearchClusterCheckError:
-                This is raised when request times and cluster is not yellow with no initializing or relocating shards.
+            spicerack.elasticsearch_cluster.ElasticsearchClusterCheckError: This is raised when request times and
+            cluster is not yellow with no initializing or relocating shards.
 
         """
         try:
@@ -543,7 +529,7 @@ class ElasticsearchCluster:
         """Stop writes to all elasticsearch indices and enable them on exit.
 
         Arguments:
-            reason (spicerack.administrative.Reason): Reason for freezing writes.
+            reason: the reason for freezing writes.
 
         """
         self._freeze_writes(reason)
@@ -567,7 +553,7 @@ class ElasticsearchCluster:
         """Stop writes to all elasticsearch indices.
 
         Arguments:
-            reason (spicerack.administrative.Reason): Reason for freezing writes.
+            reason: the reason for freezing writes.
 
         """
         doc = {
@@ -612,7 +598,7 @@ class ElasticsearchCluster:
             syncing. This also makes the recovery faster.
 
         Arguments:
-            timeout (datetime.timedelta): timedelta object for elasticsearch request timeout.
+            timeout: elasticsearch request timeout.
 
         """
         logger.info("flush markers on %s", self)
@@ -633,22 +619,17 @@ class ElasticsearchCluster:
         for unassigned_shard in unassigned_shards:
             self._force_allocation_of_shard(unassigned_shard, cluster_nodes_names)
 
-    def _get_unassigned_shards(self) -> List[Dict]:
-        """Fetch unassigned shards.
-
-        Returns:
-            list: list of unassigned shards from the cluster.
-
-        """
+    def _get_unassigned_shards(self) -> list[dict]:
+        """Fetch unassigned shards from the cluster."""
         shards = self._elasticsearch.cat.shards(format="json", h="index,shard,state")
         return [s for s in shards if s["state"] == "UNASSIGNED"]
 
-    def _force_allocation_of_shard(self, shard: Dict, nodes: List[str]) -> None:
+    def _force_allocation_of_shard(self, shard: dict, nodes: list[str]) -> None:
         """Force allocation of shard.
 
         Arguments:
-            shard (dict): shard of an index to be relocated.
-            nodes (list): list of nodes to allocate shards to.
+            shard: shard of an index to be relocated.
+            nodes: list of nodes to allocate shards to.
 
         Todo:
             It was found that forcing allocation of shards may perform better in terms of speed than
@@ -723,28 +704,28 @@ class NodesGroup:
     instances in a single object.
     """
 
-    def __init__(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
+    def __init__(self, json_node: dict, cluster: ElasticsearchCluster) -> None:
         """Instantiate a new node.
 
         Arguments:
-            json_node (dict): a single node, as returned from the elasticsearch API.
-            cluster (spicerack.elasticsearch_cluster.ElasticsearchCluster): an elasticsearch instance
+            json_node: a single node, as returned from the elasticsearch API.
+            cluster: an elasticsearch instance.
 
         """
         self._hostname: str = json_node["attributes"]["hostname"]
         self._fqdn: str = json_node["attributes"]["fqdn"]
         cluster_name = json_node["settings"]["cluster"]["name"]
-        self._clusters_instances: List[ElasticsearchCluster] = [cluster]
+        self._clusters_instances: list[ElasticsearchCluster] = [cluster]
         self._row: str = json_node["attributes"]["row"]
         self._oldest_start_time = datetime.utcfromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000)
-        self._master_capable: Set[str] = {cluster_name} if "master" in json_node["roles"] else set()
+        self._master_capable: set[str] = {cluster_name} if "master" in json_node["roles"] else set()
 
-    def accumulate(self, json_node: Dict, cluster: ElasticsearchCluster) -> None:
+    def accumulate(self, json_node: dict, cluster: ElasticsearchCluster) -> None:
         """Accumulate information from other elasticsearch instances running on the same server.
 
         Arguments:
-            json_node (dict): a single node, as returned from the elasticsearch API.
-            cluster (elasticsearch.Elasticsearch): an elasticsearch instance
+            json_node: a single node, as returned from the elasticsearch API.
+            cluster: an elasticsearch instance
 
         """
         if self._fqdn != json_node["attributes"]["fqdn"]:
@@ -769,32 +750,32 @@ class NodesGroup:
 
     @property
     def row(self) -> str:
-        """Datacenter row."""
+        """Get the datacenter row."""
         return self._row
 
     @property
     def fqdn(self) -> str:
-        """Fully Qualified Domain Name."""
+        """Get the Fully Qualified Domain Name."""
         return self._fqdn
 
     @property
     def clusters_instances(self) -> Sequence[ElasticsearchCluster]:
-        """Cluster instances running on this node group."""
+        """Get the cluster instances running on this node group."""
         return self._clusters_instances
 
     @property
-    def master_capable(self) -> Set[str]:
-        """Set of clusters this node is master capable on."""
+    def master_capable(self) -> set[str]:
+        """Get the set of clusters this node is master capable on."""
         return self._master_capable
 
     def restarted_since(self, since: datetime) -> bool:
         """Check if node has been restarted.
 
         Arguments:
-            since (datetime.datetime): the time against after which we check if the node has been restarted.
+            since: the time against after which we check if the node has been restarted.
 
         Returns:
-            bool: True if the node has been restarted after since, false otherwise.
+            :py:data:`True` if the node has been restarted after since, :py:data:`False` otherwise.
 
         """
         return self._oldest_start_time > since
@@ -811,7 +792,7 @@ class NodesGroup:
                 raise ElasticsearchClusterCheckError("Elasticsearch is not up yet")
 
 
-def _restartable_node_groups(nodes: List[NodesGroup]) -> List[NodesGroup]:
+def _restartable_node_groups(nodes: list[NodesGroup]) -> list[NodesGroup]:
     """Returns the subset of nodes that are restartable.
 
     Primarily concerned with restarting nodes within a cluster prior to the

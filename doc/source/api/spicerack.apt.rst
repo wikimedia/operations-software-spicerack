@@ -1,0 +1,4 @@
+apt
+===
+
+.. automodule:: spicerack.apt
