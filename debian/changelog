@@ -1,3 +1,10 @@
+spicerack (6.3.0-1) unstable; urgency=medium
+
+  * v6.3.0 upstream release.
+  * Add python3-sphinx-autodoc-typehints as dependency
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Wed, 15 Mar 2023 15:44:47 -0000
+
 spicerack (6.2.2-1) unstable; urgency=medium
 
   * v6.2.2 upstream release.
