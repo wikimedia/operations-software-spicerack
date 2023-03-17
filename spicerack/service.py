@@ -494,6 +494,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
             tries: the number of retries to attempt before failing.
 
         Raises:
+            ValueError: on invalid tries value.
             spicerack.service.DiscoveryStateError: if the two states don't correspond.
             spicerack.service.DiscoveryRecordNotFoundError: if there are no records at all or the record with the given
             name can't be found.
@@ -501,8 +502,8 @@ class Service:  # pylint: disable=too-many-instance-attributes
             record.
 
         """
-        if tries < 0:
-            raise ValueError("Cannot work with negative retries.")
+        if tries <= 0:
+            raise ValueError("The tries argument must be a positive integer.")
         # No discovery records, nothing to check.
         if self.discovery is None:
             return
