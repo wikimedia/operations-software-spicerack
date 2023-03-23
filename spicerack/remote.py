@@ -30,16 +30,18 @@ class RemoteCheckError(SpicerackCheckError):
 class RemoteExecutionError(RemoteError):
     """Custom exception class for remote execution errors."""
 
-    def __init__(self, retcode: int, message: str) -> None:
+    def __init__(self, retcode: int, message: str, results: Iterator[tuple[NodeSet, MsgTreeElem]]) -> None:
         """Override parent constructor to add the return code attribute.
 
         Arguments:
             retcode: the return code of the remote execution.
             message: the exception message.
+            results: the cumin results.
 
         """
         super().__init__(f"{message} (exit_code={retcode})")
         self.retcode = retcode
+        self.results = results
 
 
 class RemoteClusterExecutionError(RemoteError):
@@ -687,6 +689,6 @@ class RemoteHosts:
         ret = worker.execute()
 
         if ret != 0 and not self._dry_run:
-            raise RemoteExecutionError(ret, "Cumin execution failed")
+            raise RemoteExecutionError(ret, "Cumin execution failed", worker.get_results())
 
         return worker.get_results()

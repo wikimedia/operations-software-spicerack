@@ -139,8 +139,8 @@ class TestLBRemoteCluster:
         # Case 1: run_async fails, no max_failed_batches
         run_async.side_effect = [
             [(nodeset("host1"), None)],
-            remote.RemoteExecutionError(message="foobar!", retcode=10),
-            remote.RemoteExecutionError(message="barbaz!", retcode=10),
+            remote.RemoteExecutionError(message="foobar!", retcode=10, results=iter(())),
+            remote.RemoteExecutionError(message="barbaz!", retcode=10, results=iter(())),
         ]
         with pytest.raises(remote.RemoteClusterExecutionError, match="1 hosts have failed execution") as err:
             self.lbcluster.run(
@@ -155,8 +155,8 @@ class TestLBRemoteCluster:
 
         run_async.side_effect = [
             [(nodeset("host1"), None)],
-            remote.RemoteExecutionError(message="foobar!", retcode=10),
-            remote.RemoteExecutionError(message="barbaz!", retcode=10),
+            remote.RemoteExecutionError(message="foobar!", retcode=10, results=iter(())),
+            remote.RemoteExecutionError(message="barbaz!", retcode=10, results=iter(())),
         ]
         run_async.reset_mock()
         with pytest.raises(remote.RemoteClusterExecutionError, match="2 hosts have failed execution") as err:
@@ -369,7 +369,7 @@ class TestRemoteHosts:
     @pytest.mark.parametrize(
         "side_effect",
         (
-            remote.RemoteExecutionError(message="unable to connect", retcode=1),
+            remote.RemoteExecutionError(message="unable to connect", retcode=1, results=iter(())),
             remote.RemoteError("Unable to extract data"),
         ),
     )

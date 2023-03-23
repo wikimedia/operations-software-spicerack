@@ -223,6 +223,6 @@ class TestMediaWiki:
     def test_stop_periodic_jobs_stray_procs(self):
         """It should not fail is there are leftover php stray processes."""
         self.mocked_remote.query.return_value.run_sync.side_effect = [
-            RemoteExecutionError(10, "failed"),
+            RemoteExecutionError(10, "failed", iter(())),
         ]
         self.mediawiki.stop_periodic_jobs("dc1")
