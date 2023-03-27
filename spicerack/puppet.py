@@ -339,7 +339,7 @@ class PuppetHosts(RemoteHostsAdapter):
         return disabled
 
 
-class PuppetMaster:
+class PuppetMaster(RemoteHostsAdapter):
     """Class to manage nodes and certificates on a Puppet master and Puppet CA server."""
 
     PUPPET_CERT_STATE_REQUESTED: str = "requested"
@@ -362,13 +362,12 @@ class PuppetMaster:
             raise PuppetMasterError(
                 f"The master_host instance must target only one host, got {len(master_host)}: {master_host}"
             )
-
-        self._master_host = master_host
+        super().__init__(master_host)
 
     @property
     def master_host(self) -> RemoteHosts:
         """Accessor for the master_host property."""
-        return self._master_host
+        return self._remote_hosts
 
     def delete(self, hostname: str) -> None:
         """Remove the host from the Puppet master and PuppetDB.
@@ -381,7 +380,7 @@ class PuppetMaster:
 
         """
         commands = [f"puppet node {action} {hostname}" for action in ("clean", "deactivate")]
-        self._master_host.run_sync(*commands, print_progress_bars=False)
+        self.master_host.run_sync(*commands, print_progress_bars=False)
 
     def destroy(self, hostname: str) -> None:
         """Remove the certificate for the given hostname.
@@ -393,7 +392,7 @@ class PuppetMaster:
             hostname: the FQDN of the host for which to remove the certificate.
 
         """
-        self._master_host.run_sync(
+        self.master_host.run_sync(
             f"puppet ca --disable_warnings deprecations destroy {hostname}", print_progress_bars=False
         )
 
@@ -444,7 +443,7 @@ class PuppetMaster:
 
         command = f"puppet cert --disable_warnings deprecations sign {dns_option} {hostname}"
         logger.info("Signing CSR for %s with fingerprint %s", hostname, fingerprint)
-        executed = self._master_host.run_sync(command, print_output=False, print_progress_bars=False)
+        executed = self.master_host.run_sync(command, print_output=False, print_progress_bars=False)
 
         cert = self.get_certificate_metadata(hostname)
         if cert["state"] != PuppetMaster.PUPPET_CERT_STATE_SIGNED:
@@ -530,7 +529,7 @@ class PuppetMaster:
             spicerack.puppet.PuppetMasterError: if unable to get or parse the command output.
 
         """
-        for _, output in self._master_host.run_sync(
+        for _, output in self.master_host.run_sync(
             command, is_safe=True, print_output=False, print_progress_bars=False
         ):
             lines = output.message().decode()
