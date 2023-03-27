@@ -417,6 +417,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
     port: int
     sites: list[str]
     state: str
+    _dry_run: bool
     _alertmanager: AlertmanagerHosts
     aliases: list[str] = field(default_factory=list)
     discovery: Optional[ServiceDiscovery] = None
@@ -582,6 +583,7 @@ class Catalog:
         params["_alertmanager"] = AlertmanagerHosts(
             [f"{name}:{params['port']}"], verbatim_hosts=True, dry_run=self._dry_run
         )
+        params["_dry_run"] = self._dry_run
         if "discovery" in params:
             discovery = []
             for disc in params["discovery"]:
