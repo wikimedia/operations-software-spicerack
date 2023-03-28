@@ -332,7 +332,7 @@ class TestPuppetHosts:
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_failed_execution(self, mocked_sleep):
         """It should raise PuppetHostsCheckError if fails to get the successful Puppet run within the timeout."""
-        self.mocked_remote_hosts.run_sync.side_effect = RemoteExecutionError(1, "fail")
+        self.mocked_remote_hosts.run_sync.side_effect = RemoteExecutionError(1, "fail", iter(()))
         self.mocked_remote_hosts.hosts = nodeset("test.example.com")
 
         with pytest.raises(puppet.PuppetHostsCheckError, match="Unable to find a successful Puppet run"):

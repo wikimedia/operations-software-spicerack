@@ -4,6 +4,7 @@ from collections import namedtuple
 from ipaddress import ip_address
 from unittest import mock
 
+import dns
 import pytest
 from dns.exception import DNSException
 from wmflib.config import load_yaml_config
@@ -12,6 +13,28 @@ from spicerack.dnsdisc import Discovery, DiscoveryCheckError, DiscoveryError
 from spicerack.tests import get_fixture_path
 
 MockedRecord = namedtuple("Record", ["address"])
+DISCOVERY_RESPONSE_OK = """id 57640
+opcode QUERY
+rcode NOERROR
+flags QR RD RA
+;QUESTION
+record1.discovery.wmnet. IN A
+;ANSWER
+record1.discovery.wmnet. 300 IN A 10.10.10.10
+;AUTHORITY
+;ADDITIONAL
+"""
+DISCOVERY_RESPONSE_ERROR = """id 6890
+opcode QUERY
+rcode NXDOMAIN
+flags QR RD RA
+;QUESTION
+record1.discovery.wmnet. IN A
+;ANSWER
+;AUTHORITY
+wmnet. 2434 IN SOA ns0.wikimedia.org. hostmaster.wikimedia.org. 2023031514 43200 7200 1209600 3600
+;ADDITIONAL
+"""
 
 
 def mock_obj(datacenter, svc, pooled):
@@ -21,6 +44,20 @@ def mock_obj(datacenter, svc, pooled):
     obj.name = datacenter
     obj.pooled = pooled
     return obj
+
+
+def get_mocked_dns_query_message(fail: bool) -> dns.message.Message:
+    """Get a mocked low level response to be used with udp_with_fallback() mocks."""
+    response = DISCOVERY_RESPONSE_ERROR if fail else DISCOVERY_RESPONSE_OK
+    message = dns.message.from_text(response)
+    message.find_rrset(
+        message.answer,
+        dns.name.from_text("record1.discovery.wmnet"),
+        dns.rdataclass.from_text("IN"),
+        dns.rdatatype.from_text("A"),
+        create=True,
+    )
+    return message
 
 
 class MockedQuery:
@@ -46,20 +83,6 @@ class MockedQuery:
     def __iter__(self):
         """Allow iterating on results."""
         return iter([self.record])
-
-
-class MockedDnsQueryMessage:
-    """Class to mock a return object from a call to dns.query.udp()."""
-
-    def __init__(self, return_ip: str):
-        """Initialize the object."""
-        self.return_ip = return_ip
-
-    def resolve_chaining(self, *_args, **_kwargs):
-        """Mocks the same method from dns.message.Message."""
-        if self.return_ip == "raise":
-            raise DNSException("invalid")
-        return MockDnsResult(self.return_ip)
 
 
 class MockDnsResult:
@@ -251,7 +274,7 @@ class TestDiscovery:
         """Correctly returns the ip address for the query."""
         with mock.patch("dns.query.udp_with_fallback") as mock_query:
             retval = {name: ip_address("10.10.10.10") for name in self.authdns_servers}
-            mock_query.return_value = MockedDnsQueryMessage("10.10.10.10")
+            mock_query.return_value = (get_mocked_dns_query_message(fail=False), False)
             assert self.discovery_single.resolve_with_client_ip("record1", ip_address("10.24.1.0")) == retval
 
     def test_resolve_bad_record(self):
@@ -260,7 +283,7 @@ class TestDiscovery:
             self.discovery_single.resolve_with_client_ip("nope", ip_address("10.24.1.0"))
 
     def test_resolve_bad_query(self):
-        """Any exception thrown by dns.query.udp will result in a DiscoveryError."""
+        """Any exception thrown by dns.query.udp_with_fallback will result in a DiscoveryError."""
         with mock.patch("dns.query.udp_with_fallback") as mock_query:
             mock_query.side_effect = ValueError("test this")
             with pytest.raises(DiscoveryError, match="Unable to resolve record1.discovery.wmnet"):
@@ -269,6 +292,6 @@ class TestDiscovery:
     def test_resolve_bad_answer(self):
         """When the query response is empty or contains an invalid IP, a DiscoveryError is raised."""
         with mock.patch("dns.query.udp_with_fallback") as mock_query:
-            mock_query.return_value = MockedDnsQueryMessage("raise")
-            with pytest.raises(DiscoveryError, match="invalid"):
+            mock_query.return_value = (get_mocked_dns_query_message(fail=True), False)
+            with pytest.raises(DiscoveryError, match="Unable to resolve record1.discovery.wmnet"):
                 self.discovery_single.resolve_with_client_ip("record1", ip_address("10.24.1.0"))

@@ -265,7 +265,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         Raises:
             spicerack.exceptions.SpicerackError: if the ``get_cookbook_callback`` callback is not set or unable to find
-            the cookbook with the given name.
+                the cookbook with the given name.
 
         """
         if self._get_cookbook_callback is None:

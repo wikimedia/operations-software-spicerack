@@ -357,6 +357,11 @@ class TestService:
         ):
             self.service1.check_dns_state(self.subnets, "nonexistent", tries=1)
 
+    def test_check_dns_state_wrong_tries(self):
+        """It should raise a ValueError if a wrong tries value is passed."""
+        with pytest.raises(ValueError, match="The tries argument must be a positive integer"):
+            self.service1.check_dns_state(self.subnets, tries=0)
+
     def test_check_dns_state_too_many_records(self):
         """It should raise a TooManyDiscoveryRecordsError if more than one record can be selected."""
         with pytest.raises(

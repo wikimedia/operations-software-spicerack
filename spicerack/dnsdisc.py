@@ -307,17 +307,17 @@ class Discovery:
             # Make the query. We catch generic exceptions as
             # dns.query.udp can raise many exceptions.
             try:
-                query_response = dns.query.udp_with_fallback(
+                query_response, _ = dns.query.udp_with_fallback(
                     query_msg, dns_resolver.nameservers[0], port=dns_resolver.port
                 )
             except Exception as exc:
                 raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}") from exc
             # Build an Answer instance as a Stub Resolver would
             try:
-                response = resolver.Answer(record_name, rdtype, dns.rdataclass.IN, query_response)
+                response = resolver.Answer(record_name, rdtype, dns.rdataclass.from_text("IN"), query_response)
                 # If no IN record was present in the response, the constructor raises an exception
                 # so we don't need to check for the presence of at least one RRset in the Answer object.
                 ips_by_ns[nameserver] = ip_address(response[0].address)
-            except DNSException as exc:
+            except (DNSException, IndexError, StopIteration) as exc:
                 raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}: {exc}") from exc
         return ips_by_ns

@@ -417,6 +417,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
     port: int
     sites: list[str]
     state: str
+    _dry_run: bool
     _alertmanager: AlertmanagerHosts
     aliases: list[str] = field(default_factory=list)
     discovery: Optional[ServiceDiscovery] = None
@@ -494,6 +495,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
             tries: the number of retries to attempt before failing.
 
         Raises:
+            ValueError: on invalid tries value.
             spicerack.service.DiscoveryStateError: if the two states don't correspond.
             spicerack.service.DiscoveryRecordNotFoundError: if there are no records at all or the record with the given
             name can't be found.
@@ -501,8 +503,8 @@ class Service:  # pylint: disable=too-many-instance-attributes
             record.
 
         """
-        if tries < 0:
-            raise ValueError("Cannot work with negative retries.")
+        if tries <= 0:
+            raise ValueError("The tries argument must be a positive integer.")
         # No discovery records, nothing to check.
         if self.discovery is None:
             return
@@ -581,6 +583,7 @@ class Catalog:
         params["_alertmanager"] = AlertmanagerHosts(
             [f"{name}:{params['port']}"], verbatim_hosts=True, dry_run=self._dry_run
         )
+        params["_dry_run"] = self._dry_run
         if "discovery" in params:
             discovery = []
             for disc in params["discovery"]:

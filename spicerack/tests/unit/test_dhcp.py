@@ -22,14 +22,14 @@ def get_mock_hosts():
 def get_mock_fail_hosts():
     """Return a `spicerack.remote.Hosts` mock where execution fails."""
     hosts = get_mock_hosts()
-    hosts.run_sync.side_effect = RemoteExecutionError("mock error", 1)
+    hosts.run_sync.side_effect = RemoteExecutionError("mock error", 1, iter(()))
     return hosts
 
 
 def get_mock_suc_fail_hosts():
     """Return a `spicerack.remote.Hosts` mock where execution succeeds and then fails."""
     hosts = get_mock_hosts()
-    hosts.run_sync.side_effect = ["some value", RemoteExecutionError("mock error", 1)]
+    hosts.run_sync.side_effect = ["some value", RemoteExecutionError("mock error", 1, iter(()))]
     return hosts
 
 
