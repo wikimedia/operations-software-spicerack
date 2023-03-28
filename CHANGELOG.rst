@@ -1,6 +1,39 @@
 Spicerack Changelog
 -------------------
 
+`v6.4.0`_ (2023-03-28)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* tox: make config compatible with tox ``4.x``.
+* remote: add results to ``RemoteExecutionError``. While waiting for Cumin to support a more robust result reporting,
+  pass the results also in the case of a failed execution to the ``RemoteExecutionError`` excepion so that potentially
+  client code could access the partial results on failure using a pattern like::
+
+      try:
+          results = remote_hosts.run_sync('some command')
+      except RemoteExecutionError as e:
+          results = e.results
+
+Bug fixes
+"""""""""
+
+* setup.py: force ``dnspython`` from Bullseye pinning the dependency to the same version of Debian Bullseye as
+  upstream has breaking changes also between minor versions.
+* dnsdisc: adapt code and tests to work with ``dnspython 2.0.0``.
+* service: improve ``check_dns_state`` validation check.
+* puppet: make the ``PuppetMaster`` class inherit from ``RemoteHostsAdapter`` to fix a bug in dry-run mode with
+  a method decorated with ``@retry``.
+* service: ensure that ``dry_run`` is passed to the ``Service`` class to be detected in dry-run mode for methods
+  decorated with ``@retry``.
+
+Miscellanea
+"""""""""""
+
+* tox: use ``sphinx-build`` to generate the documentation, this prevents a deprecation warning for using ``setup.py``.
+
 `v6.3.0`_ (2023-03-15)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -200,7 +233,7 @@ Miscellanea
 """""""""""
 
 setup.py: remove support from Python 3.7 and 3.8.
-tox.ini: remove support from Python 3.7 and 3.8.
+tox: remove support from Python 3.7 and 3.8.
 
 `v5.0.0`_ (2022-11-10)
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -2496,3 +2529,4 @@ New features
 .. _`v6.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.1
 .. _`v6.2.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.2
 .. _`v6.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.3.0
+.. _`v6.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.0
