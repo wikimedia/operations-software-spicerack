@@ -823,7 +823,9 @@ class RedfishDell(Redfish):
     @property
     def log_entries(self) -> str:
         """String representing the log entries uri."""
-        return "/redfish/v1/Managers/Logs/Lclog"
+        if self.firmware_version < version.Version("4.10"):
+            return "/redfish/v1/Managers/Logs/Lclog"
+        return "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries"
 
     @property
     def reboot_message_id(self) -> str:

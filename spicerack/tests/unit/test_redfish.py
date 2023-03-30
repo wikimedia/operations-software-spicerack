@@ -179,6 +179,8 @@ MANAGER_RESPONSE = {
     "SerialInterfaces": {"@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/SerialInterfaces"},
     "Status": {"Health": "OK", "State": "Enabled"},
 }
+MANAGER_RESPONSE_V3 = deepcopy(MANAGER_RESPONSE)
+MANAGER_RESPONSE_V3["FirmwareVersion"] = "3.0.0.0"
 MANAGER_RESPONSE_BAD = deepcopy(MANAGER_RESPONSE)
 MANAGER_RESPONSE_BAD["Model"] = "Foobar"
 LCLOG_RESPONSE = {
@@ -823,9 +825,17 @@ class TestRedfishDell:
         """It should return the oob_manager."""
         assert self.redfish.oob_manager == "/redfish/v1/Managers/iDRAC.Embedded.1"
 
-    def test_property_log_entries(self) -> str:
+    @pytest.mark.parametrize(
+        "response, endpoint",
+        (
+            (MANAGER_RESPONSE, "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries"),
+            (MANAGER_RESPONSE_V3, "/redfish/v1/Managers/Logs/Lclog"),
+        ),
+    )
+    def test_property_log_entries(self, response, endpoint) -> str:
         """String representing the uri for the log entries."""
-        assert self.redfish.log_entries == "/redfish/v1/Managers/Logs/Lclog"
+        self.requests_mock.get(self.redfish.oob_manager, json=response)
+        assert self.redfish.log_entries == endpoint
 
     def test_property_reboot_message_id(self) -> str:
         """Property to return the Message Id for reboot log entries."""
