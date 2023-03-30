@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v6.4.1`_ (2023-03-30)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* redfish: update log entries location for Dell and make it compatible with different iDRAC versions.
+
 `v6.4.0`_ (2023-03-28)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2530,3 +2538,4 @@ New features
 .. _`v6.2.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.2.2
 .. _`v6.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.3.0
 .. _`v6.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.0
+.. _`v6.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.1
