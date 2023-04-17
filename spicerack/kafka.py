@@ -56,7 +56,6 @@ class KafkaClient:
         self._dry_run = dry_run
         self._site = consumer_definition.site
         context = ssl.create_default_context()
-        context.check_hostname = False  # TODO can be changed after https://phabricator.wikimedia.org/T291905
         crt_location = "/etc/ssl/certs/ca-certificates.crt"
         context.load_verify_locations(crt_location)
 
