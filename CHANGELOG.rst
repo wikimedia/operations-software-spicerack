@@ -1,6 +1,20 @@
 Spicerack Changelog
 -------------------
 
+`v6.4.2`_ (2023-04-17)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* kafka: remove setting to avoid checking the hostname in TLS certs as all clusters in production are now running
+  with PKI TLS certs that have the hostname in their CN.
+
+Bug fixes
+"""""""""
+
+* service: add ``httpbb_dir`` field that was added to the Puppet service catalog.
+
 `v6.4.1`_ (2023-03-30)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2539,3 +2553,4 @@ New features
 .. _`v6.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.3.0
 .. _`v6.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.0
 .. _`v6.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.1
+.. _`v6.4.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.2
