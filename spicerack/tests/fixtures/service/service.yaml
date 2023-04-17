@@ -78,6 +78,7 @@ service2:
   public_aliases:
     - "service2-alias"
   port: 443
+  httpbb_dir: service2
   description: service2 description
   probes:
     - type: http

@@ -421,6 +421,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
     _alertmanager: AlertmanagerHosts
     aliases: list[str] = field(default_factory=list)
     discovery: Optional[ServiceDiscovery] = None
+    httpbb_dir: str = ""
     lvs: Optional[ServiceLVS] = None
     monitoring: Optional[ServiceMonitoring] = None
     page: bool = True  # Default value in Puppet.

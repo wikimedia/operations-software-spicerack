@@ -75,6 +75,7 @@ whitelist_service.Service.aliases
 whitelist_service.Service.bgp
 whitelist_service.Service.depool_threshold
 whitelist_service.Service.encryption
+whitelist_service.Service.httpbb_dir
 whitelist_service.Service.lvs
 whitelist_service.Service.lvs_class
 whitelist_service.Service.monitors
