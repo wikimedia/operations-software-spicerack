@@ -146,6 +146,7 @@ class DHCPConfMgmt(DHCPConfiguration):
     Arguments:
         datacenter: the name of the Datacenter the host is.
         serial: the vendor serial of the host.
+        manufacturer: the name of the manufacturer.
         fqdn: the management console FQDN to use for this host.
         ipv4: the IP address to give the management interface.
 
@@ -153,12 +154,13 @@ class DHCPConfMgmt(DHCPConfiguration):
 
     datacenter: str
     serial: str
+    manufacturer: str
     fqdn: str
     ipv4: IPv4Address
 
     _template: str = """
     class "{s.fqdn}" {{
-        match if (lcase(option host-name) = "idrac-{s.lserial}");
+        match if (lcase(option host-name) = "{s.hostname}");
     }}
     pool {{
         allow members of "{s.fqdn}";
@@ -179,9 +181,13 @@ class DHCPConfMgmt(DHCPConfiguration):
         return f"""mgmt-{self.datacenter}/{self.fqdn}.conf"""
 
     @property
-    def lserial(self) -> str:
-        """Return the serial as lowercase."""
-        return self.serial.lower()
+    def hostname(self) -> str:
+        """Return the hostname based on manufacturer and serial."""
+        serial = self.serial.lower()
+        if self.manufacturer.lower() == "dell":
+            return f"idrac-{serial}"
+
+        return serial
 
 
 class DHCP:
