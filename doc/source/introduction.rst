@@ -199,15 +199,15 @@ Example
 
    import logging
 
-    logger = logging.getLogger(__name__)
+   logger = logging.getLogger(__name__)
 
-    logger.info('message')  # this goes to stdout in the operator shell and is logged in both files.
-    logger.debug('message') # this goes to stdout in the operator shell only if -v/--verbose is set and is logged only
-                            # in the extended file.
+   logger.info('message')  # this goes to stdout in the operator shell and is logged in both files.
+   logger.debug('message') # this goes to stdout in the operator shell only if -v/--verbose is set and is logged only
+                           # in the extended file.
 
-    def run(args, spicerack):
-        spicerack.irc_logger.info('message')  # This sends a message to the #wikimedia-operation IRC channel with:
-                                              # !log user@host message
+   def run(args, spicerack):
+       spicerack.irc_logger.info('message')  # This sends a message to the #wikimedia-operation IRC channel with:
+                                             # !log user@host message
 
 Spicerack library
 ^^^^^^^^^^^^^^^^^
