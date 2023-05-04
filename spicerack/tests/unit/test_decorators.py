@@ -61,19 +61,27 @@ def test_retry_pass_no_args_dry_run(mocked_sleep, dry_run):
     assert mocked_sleep.call_count == sleep_call_count
 
 
+@pytest.mark.parametrize("dry_run", (True, False, None))
 @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-def test_retry_pass_no_args_dry_run_func(mocked_sleep):
+def test_retry_pass_no_args_dry_run_func(mocked_sleep, dry_run):
     """Using @retry with no arguments should use the default values but set tries to 1 if in DRY-RUN."""
 
     @retry
-    def a_func(dry_run=True):
+    def a_func(*, dry_run=True):
         print(dry_run)
         raise SpicerackError
 
-    with pytest.raises(SpicerackError):
-        a_func()
+    kwargs = {}
+    if dry_run is not None:
+        kwargs["dry_run"] = dry_run
 
-    assert not mocked_sleep.called
+    with pytest.raises(SpicerackError):
+        a_func(**kwargs)
+
+    if dry_run is False:
+        assert mocked_sleep.called
+    else:
+        assert not mocked_sleep.called
 
 
 @pytest.mark.parametrize(
