@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx_autodoc_typehints",
+    "sphinxcontrib.jquery",
     "sphinxarg.ext",
 ]
 

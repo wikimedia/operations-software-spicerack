@@ -246,6 +246,7 @@ class GntInstance:
             " --hypervisor-parameters=kvm:boot_order=network"
             " -o debootstrap+default"
             " --no-install"
+            " --no-wait-for-sync"
             f" -g {group}"
             f" -B vcpus={vcpus},memory={memory}g"
             f" --disk 0:size={disk}g"

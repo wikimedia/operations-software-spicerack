@@ -41,13 +41,13 @@ def get_effective_tries(params: RetryParams, func: Callable, args: tuple, kwargs
         reduce_tries = True
 
     # When the decorated object is a function or method
-    signature_params = inspect.signature(func).parameters
-    if kwargs.get("dry_run", False) or (  # Has an explicit dry_run parameter that was set in by the caller
-        # Has a dry_run parameter with a default value
-        "dry_run" in signature_params
-        and signature_params["dry_run"].default is True
-    ):
-        reduce_tries = True
+    if "dry_run" in kwargs:  # Has an explicit dry_run parameter that was set in by the caller, use this one
+        if kwargs["dry_run"] is True:
+            reduce_tries = True
+    else:  # Check if has a dry_run parameter with a default value
+        signature_params = inspect.signature(func).parameters
+        if "dry_run" in signature_params and signature_params["dry_run"].default is True:
+            reduce_tries = True
 
     if reduce_tries:
         logger.warning("Reduce tries from %d to 1 in DRY-RUN mode", params.tries)
