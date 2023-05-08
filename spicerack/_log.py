@@ -3,10 +3,11 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from wmflib.irc import SALSocketHandler
+from wmflib.irc import SALSocketHandler, SocketHandler
 
 root_logger = logging.getLogger()
 irc_logger = logging.getLogger("spicerack_irc_announce")
+sal_logger = logging.getLogger("spicerack_sal_announce")
 
 
 class FilterOutCumin(logging.Filter):
@@ -87,8 +88,10 @@ def setup_logging(
     root_logger.setLevel(logging.DEBUG)
 
     if not dry_run and host is not None and port > 0:
-        irc_logger.addHandler(SALSocketHandler(host, port, user))
+        irc_logger.addHandler(SocketHandler(host, port, user))
         irc_logger.setLevel(logging.INFO)
+        sal_logger.addHandler(SALSocketHandler(host, port, user))
+        sal_logger.setLevel(logging.INFO)
 
     # Silence external noisy loggers
     logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -108,7 +111,7 @@ def log_task_start(message: str) -> None:
         message: the message to be logged.
 
     """
-    irc_logger.info("START - %s", message)
+    sal_logger.info("START - %s", message)
 
 
 def log_task_end(status: str, message: str) -> None:
@@ -119,4 +122,4 @@ def log_task_end(status: str, message: str) -> None:
         message: the message to be logged.
 
     """
-    irc_logger.info("END (%s) - %s", status, message)
+    sal_logger.info("END (%s) - %s", status, message)

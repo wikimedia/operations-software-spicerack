@@ -21,7 +21,7 @@ def _assert_match_in_tmpdir(match, tmp_dir):
 
 def _reset_logging_module():
     """Reset the logging module removing all handlers and filters."""
-    for log_logger in (log.root_logger, log.irc_logger):
+    for log_logger in (log.root_logger, log.irc_logger, log.sal_logger):
         list(map(log_logger.removeHandler, log_logger.handlers))
         list(map(log_logger.removeFilter, log_logger.filters))
 
@@ -52,14 +52,18 @@ def test_setup_logging_no_irc(tmpdir, caplog):
 
 @mock.patch("wmflib.irc.socket")
 def test_setup_logging_with_irc(mocked_socket, tmpdir, caplog):
-    """Calling setup_logging() with host and port should also setup the IRC logger."""
+    """Calling setup_logging() with host and port should also setup the IRC loggers."""
     log.setup_logging(Path(tmpdir.strpath), "task", "user", host="host", port=123, dry_run=False)
-    message = str(uuid.uuid4())
-    log.irc_logger.info(message)
+    irc_message = str(uuid.uuid4())
+    sal_message = str(uuid.uuid4())
+    log.irc_logger.info(irc_message)
+    log.sal_logger.info(sal_message)
 
     assert mock.call.socket().connect(("host", 123)) in mocked_socket.mock_calls
-    assert message in caplog.text
-    _assert_match_in_tmpdir(message, tmpdir.strpath)
+    assert irc_message in caplog.text
+    assert sal_message in caplog.text
+    _assert_match_in_tmpdir(irc_message, tmpdir.strpath)
+    _assert_match_in_tmpdir(sal_message, tmpdir.strpath)
     _reset_logging_module()
 
 
