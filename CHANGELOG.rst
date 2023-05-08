@@ -1,6 +1,22 @@
 Spicerack Changelog
 -------------------
 
+`v6.4.3`_ (2023-05-08)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* ganeti: enable ``--no-wait-for-sync`` by default for the virtual machine creation command.
+
+Bug fixes
+"""""""""
+
+* decorators: fix ``dry_run`` detection that had a bug in the case of a function with a ``dry_run`` argument with a
+  default value. The default value was used also in the presence of a an explicit value set by the caller (`T335855`_).
+* doc: fix search in documentation as ``jQuery`` is not automatically loaded by the rtd theme.
+* doc: Remove extra preceding space in intro example.
+
 `v6.4.2`_ (2023-04-17)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2456,6 +2472,7 @@ New features
 .. _`T325168`: https://phabricator.wikimedia.org/T325168
 .. _`T329773`: https://phabricator.wikimedia.org/T329773
 .. _`T330318`: https://phabricator.wikimedia.org/T330318
+.. _`T335855`: https://phabricator.wikimedia.org/T335855
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2554,3 +2571,4 @@ New features
 .. _`v6.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.0
 .. _`v6.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.1
 .. _`v6.4.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.2
+.. _`v6.4.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.3
