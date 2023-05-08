@@ -16,7 +16,7 @@ from wmflib.interactive import get_username
 from wmflib.phabricator import Phabricator, create_phabricator
 from wmflib.prometheus import Prometheus, Thanos
 
-from spicerack._log import irc_logger
+from spicerack._log import irc_logger, sal_logger
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
@@ -120,6 +120,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._username = get_username()
         self._current_hostname = gethostname()
         self._irc_logger = irc_logger
+        self._sal_logger = sal_logger
         self._confctl: Optional[Confctl] = None
         self._service_catalog: Optional[Catalog] = None
         self._management_password: str = ""
@@ -190,8 +191,13 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
     @property
     def irc_logger(self) -> Logger:
-        """Returns the logger instance to write to IRC logging to SAL."""
+        """Returns the logger instance to write to IRC in the #wikimedia-operations channel."""
         return self._irc_logger
+
+    @property
+    def sal_logger(self) -> Logger:
+        """Returns the logger instance to write to IRC in the #wikimedia-operations and logging to SAL."""
+        return self._sal_logger
 
     @property
     def actions(self) -> ActionsDict:

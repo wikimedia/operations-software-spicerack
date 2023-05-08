@@ -11,6 +11,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use pathlib's resolve() to make it absolute, like shown here.
 #
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -39,9 +40,10 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx_autodoc_typehints",
-    "sphinxcontrib.jquery",
     "sphinxarg.ext",
 ]
+if not os.environ.get("PYBUILD_NAME", ""):
+    extensions.append("sphinxcontrib.jquery")
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

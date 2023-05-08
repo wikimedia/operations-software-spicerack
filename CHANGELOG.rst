@@ -1,6 +1,23 @@
 Spicerack Changelog
 -------------------
 
+`v7.0.0`_ (2023-05-08)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* spicerack: refactor IRC logging:
+
+  * Rename the existing ``irc_logger`` to ``sal_logger`` as it logs to IRC with the ``!log`` and hence to SAL.
+  * Add a new ``irc_logger`` property to log to IRC on the ``#wikimedia-operations`` channel without the ``!log``
+    prefix to just log to IRC and not SAL.
+
+Bug fixes
+"""""""""
+
+* doc: do not load UI fix when building the manpage.
+
 `v6.4.3`_ (2023-05-08)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2572,3 +2589,4 @@ New features
 .. _`v6.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.1
 .. _`v6.4.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.2
 .. _`v6.4.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.3
+.. _`v7.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.0.0

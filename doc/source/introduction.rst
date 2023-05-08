@@ -170,9 +170,10 @@ cookbook can just initialize its own :py:mod:`logging` instance and log.
 
 A special logger to send notification to the ``#wikimedia-operations`` IRC channel with the ``!log`` prefix is also
 available through the ``spicerack`` argument, passed to the cookbook's ``run()`` function for the module API or
-available in the cookbook class as ``self.spicerack`` for the class API, in its ``irc_logger`` property.
+available in the cookbook class as ``self.spicerack`` for the class API, in its ``sal_logger`` property. An additional
+``irc_logger`` logger is also available to just write to the ``#wikimedia-operations`` IRC channel.
 
-The ``irc_logger`` logs to both IRC and the nomal log outputs of Spicerack. If the dry-run mode is set it does not log
+Both IRC loggers log to both IRC and the nomal log outputs of Spicerack. If the dry-run mode is set it does not log
 to IRC.
 
 Log files
