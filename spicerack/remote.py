@@ -544,21 +544,31 @@ class RemoteHosts:
 
         Raises:
             spicerack.remote.RemoteCheckError: if unable to connect to the host or the uptime is higher than expected.
+                When in DRY-RUN mode, it will raise only if unable to connect.
 
         """
         delta = (datetime.utcnow() - since).total_seconds()
         try:
             uptimes = self.uptime(print_progress_bars=print_progress_bars)
         except (RemoteExecutionError, RemoteError) as e:
-            raise RemoteCheckError(f"Unable to get uptime for {self._hosts}") from e
+            if self._dry_run:
+                raise RemoteCheckError(f"Reboot for {self._hosts} not found: unable to get uptime") from e
+            raise RemoteCheckError(
+                f"Reboot for {self._hosts} not found yet, keep polling for it: unable to get uptime"
+            ) from e
 
         for nodeset, uptime in uptimes:
             if uptime >= delta:
-                raise RemoteCheckError(
-                    f"Uptime for {nodeset} higher than threshold: {round(uptime, 2)} > {round(delta, 2)}"
-                )
+                msg = f"uptime {round(uptime, 2)} > threshold {round(delta, 2)}"
+                if self._dry_run:
+                    logger.info(
+                        "Reboot for %s not found - expected in dry run mode, host not rebooted: %s", nodeset, msg
+                    )
+                else:
+                    raise RemoteCheckError(f"Reboot for {nodeset} not found yet, keep polling for it: {msg}")
 
-        logger.info("Found reboot since %s for hosts %s", since, self._hosts)
+        if not self._dry_run:
+            logger.info("Found reboot since %s for hosts %s", since, self._hosts)
 
     def uptime(self, print_progress_bars: bool = True) -> list[tuple[NodeSet, float]]:
         """Get current uptime.

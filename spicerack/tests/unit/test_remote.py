@@ -381,7 +381,7 @@ class TestRemoteHosts:
         mocked_uptime.side_effect = side_effect
         with pytest.raises(
             remote.RemoteCheckError,
-            match=r"Unable to get uptime for host\[1-9\]",
+            match=r"Reboot for host\[1-9\] not found yet, keep polling for it: unable to get uptime",
         ):
             self.remote_hosts.wait_reboot_since(since)
 
@@ -397,12 +397,41 @@ class TestRemoteHosts:
         mocked_uptime.return_value = [(nodeset("host[1-9]"), 30.0)]
         with pytest.raises(
             remote.RemoteCheckError,
-            match=r"Uptime for host\[1-9\] higher than threshold",
+            match=r"Reboot for host\[1-9\] not found yet, keep polling for it: uptime .* > threshold",
         ):
             self.remote_hosts.wait_reboot_since(since)
 
         mocked_uptime.assert_called_with(print_progress_bars=True)
         assert mocked_sleep.called
+
+    @pytest.mark.parametrize(
+        "side_effect",
+        (
+            remote.RemoteExecutionError(message="unable to connect", retcode=1, results=iter(())),
+            remote.RemoteError("Unable to extract data"),
+        ),
+    )
+    @mock.patch("spicerack.remote.RemoteHosts.uptime")
+    def test_wait_reboot_since_uptime_fails_dry_run(self, mocked_uptime, side_effect):
+        """It should raise RemoteCheckError if unable to check the uptime on any host."""
+        since = datetime.utcnow()
+        mocked_uptime.side_effect = side_effect
+        with pytest.raises(
+            remote.RemoteCheckError,
+            match=r"Reboot for host\[1-9\] not found: unable to get uptime",
+        ):
+            self.remote_hosts_dry_run.wait_reboot_since(since)
+
+        # tries reduced to 1 when dry_run is True.
+        mocked_uptime.assert_called_once_with(print_progress_bars=True)
+
+    @mock.patch("spicerack.remote.RemoteHosts.uptime")
+    def test_wait_reboot_since_uptime_too_big_dry_run(self, mocked_uptime):
+        """It should succeed in dry-run mode, even when the uptime is too high."""
+        since = datetime.utcnow()
+        mocked_uptime.return_value = [(nodeset("host[1-9]"), 30.0)]
+        self.remote_hosts_dry_run.wait_reboot_since(since)
+        mocked_uptime.assert_called_once_with(print_progress_bars=True)
 
     def test_uptime_ok(self):
         """It should gather the current uptime from the target hosts."""
