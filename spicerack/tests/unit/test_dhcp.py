@@ -169,12 +169,12 @@ configuration_generator_data = (
         "ttyS1-115200/testhost0.conf",
     ),
     # dhcpconfmgmt tests
-    # - basic check of functionality
-    (
+    (  # Dell host
         dhcp.DHCPConfMgmt,
         {
             "datacenter": "eqiad",
             "serial": "TEST",
+            "manufacturer": "Dell",
             "fqdn": "test1001.mgmt.eqiad.wmnet",
             "ipv4": IPv4Address("10.0.0.1"),
         },
@@ -187,6 +187,25 @@ configuration_generator_data = (
             "}\n"
         ),
         "mgmt-eqiad/test1001.mgmt.eqiad.wmnet.conf",
+    ),
+    (  # Juniper device
+        dhcp.DHCPConfMgmt,
+        {
+            "datacenter": "eqiad",
+            "serial": "TESTSERIAL",
+            "manufacturer": "Juniper",
+            "fqdn": "test-switch1001.mgmt.eqiad.wmnet",
+            "ipv4": IPv4Address("10.0.0.1"),
+        },
+        (
+            '\nclass "test-switch1001.mgmt.eqiad.wmnet" {\n'
+            '    match if (lcase(option host-name) = "testserial");\n'
+            "}\npool {\n"
+            '    allow members of "test-switch1001.mgmt.eqiad.wmnet";\n'
+            "    range 10.0.0.1 10.0.0.1;\n"
+            "}\n"
+        ),
+        "mgmt-eqiad/test-switch1001.mgmt.eqiad.wmnet.conf",
     ),
 )
 """`tuple[class, tuple[dict[str, str], str]]`: Parameters for test_configuration_generator."""
@@ -245,11 +264,11 @@ def test_dhcp_mgmt_fail():
     """A DHCPConfMgmt object should fail to create if invalid parameters are passed to its init."""
     with pytest.raises(dhcp.DHCPError):
         # data center must be a value in ALL_DATACENTERS
-        dhcp.DHCPConfMgmt(datacenter="not-a-real-datacenter", serial="", fqdn="", ipv4=None)
+        dhcp.DHCPConfMgmt(datacenter="not-a-real-datacenter", serial="", manufacturer="", fqdn="", ipv4=None)
 
     with pytest.raises(dhcp.DHCPError):
         # hostname must be in the correct format
-        dhcp.DHCPConfMgmt(datacenter="eqiad", serial="", fqdn="not-a-real-hostname", ipv4=None)
+        dhcp.DHCPConfMgmt(datacenter="eqiad", serial="", manufacturer="", fqdn="not-a-real-hostname", ipv4=None)
 
 
 def test_create_dhcp_fail():
