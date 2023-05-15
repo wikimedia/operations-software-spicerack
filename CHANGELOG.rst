@@ -1,6 +1,16 @@
 Spicerack Changelog
 -------------------
 
+`v7.1.0`_ (2023-05-15)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* dhcp: expand support for hostname based match using the manufacturer to adapt to different settings.
+* remote: improve usability of ``RemoteHosts.wait_reboot_since()`` clarifying the message and making it more DRY-RUN
+  friendly.
+
 `v7.0.0`_ (2023-05-08)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2590,3 +2600,4 @@ New features
 .. _`v6.4.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.2
 .. _`v6.4.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.3
 .. _`v7.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.0.0
+.. _`v7.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.1.0
