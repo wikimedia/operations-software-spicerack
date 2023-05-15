@@ -1,6 +1,5 @@
 """Netbox module."""
 import logging
-import warnings
 from typing import Union
 
 import pynetbox
@@ -53,33 +52,33 @@ class Netbox:
         """
         return self._api
 
-    def _fetch_host(self, hostname: str) -> pynetbox.core.response.Record:
-        """Fetch a host (dcim.devices) object.
+    def _get_device(self, name: str) -> pynetbox.core.response.Record:
+        """Get a device (dcim.devices) object.
 
         Arguments:
-            hostname: the name of the host to fetch.
+            name: the name of the device to get.
 
         Raises:
             spicerack.netbox.NetboxAPIError: on API error.
             spicerack.netbox.NetboxError: on parameter error.
-            spicerack.netbox.NetboxHostNotFoundError: if the host is not found.
+            spicerack.netbox.NetboxHostNotFoundError: if the device is not found.
 
         """
         try:
-            host = self._api.dcim.devices.get(name=hostname)
+            device = self._api.dcim.devices.get(name=name)
         except pynetbox.RequestError as ex:
-            # excepts on other errors
-            raise NetboxAPIError("Error retrieving Netbox host") from ex
+            raise NetboxAPIError("Error retrieving Netbox device") from ex
 
-        if host is None:
-            raise NetboxHostNotFoundError
-        return host
+        if device is None:
+            raise NetboxHostNotFoundError(name)
 
-    def _fetch_virtual_machine(self, hostname: str) -> pynetbox.core.response.Record:
-        """Fetch a virtual machine (virtualization.virtual_machine) object.
+        return device
+
+    def _get_virtual_machine(self, hostname: str) -> pynetbox.core.response.Record:
+        """Get a virtual machine (virtualization.virtual_machine) object.
 
         Arguments:
-            hostname: the name of the host to fetch.
+            hostname: the name of the host to get.
 
         Raises:
             spicerack.netbox.NetboxAPIError: on API error.
@@ -90,113 +89,12 @@ class Netbox:
         try:
             host = self._api.virtualization.virtual_machines.get(name=hostname)
         except pynetbox.RequestError as ex:
-            # excepts on other errors
             raise NetboxAPIError("Error retrieving Netbox VM") from ex
 
         if host is None:
             raise NetboxHostNotFoundError
 
         return host
-
-    def put_host_status(self, hostname: str, status: str) -> None:
-        """Set the device status.
-
-        .. deprecated:: v0.0.50
-            use :py:class:`spicerack.netbox.NetboxServer` instead.
-
-        Note:
-           This method does not operate on virtual machines since they are updated automatically from Ganeti into
-           Netbox.
-
-        Arguments:
-            hostname: the name of the host to operate on.
-            status: A status label or name.
-
-        Raises:
-            spicerack.netbox.NetboxAPIError: on API error.
-            spicerack.netbox.NetboxError: on parameter error.
-
-        """
-        warnings.warn("Deprecated method, use spicearack.netbox_server() instead", DeprecationWarning)
-        status = status.lower()
-        host = self._fetch_host(hostname)
-        oldstatus = host.status
-
-        if self._dry_run:
-            logger.info(
-                "Skipping Netbox status update in DRY-RUN mode for host %s %s -> %s",
-                hostname,
-                oldstatus,
-                status,
-            )
-            return
-
-        host.status = status
-        try:
-            save_result = host.save()
-        except pynetbox.RequestError as ex:
-            raise NetboxAPIError(f"Failed to save Netbox status for host {hostname} {oldstatus} -> {status}") from ex
-
-        if save_result:
-            logger.info(
-                "Netbox status updated for host %s %s -> %s",
-                hostname,
-                oldstatus,
-                status,
-            )
-        else:
-            raise NetboxAPIError(f"Failed to update Netbox status for host {hostname} {oldstatus} -> {status}")
-
-    def fetch_host_status(self, hostname: str) -> str:
-        """Return the current status of a host as a string.
-
-        .. deprecated:: v0.0.50
-            use :py:class:`spicerack.netbox.NetboxServer` instead.
-
-        Arguments:
-            hostname: the name of the host status
-
-        Raises:
-            spicerack.netbox.NetboxAPIError: on API error.
-            spicerack.netbox.NetboxError: on parameter error.
-            spicerack.netbox.NetboxHostNotFoundError: if the host is not found.
-
-        """
-        warnings.warn("Deprecated method, use spicearack.netbox_server() instead", DeprecationWarning)
-        try:
-            return str(self._fetch_host(hostname).status)
-        except NetboxHostNotFoundError:
-            return str(self._fetch_virtual_machine(hostname).status)
-
-    def fetch_host_detail(self, hostname: str) -> dict:
-        """Return a dict containing details about the host.
-
-        .. deprecated:: v0.0.50
-            use :py:class:`spicerack.netbox.NetboxServer` instead.
-
-        Arguments:
-            hostname: the name of the host to retrieve.
-
-        Raises:
-            spicerack.netbox.NetboxAPIError: on API error.
-            spicerack.netbox.NetboxError: on parameter error.
-            spicerack.netbox.NetboxHostNotFoundError: if the host is not found.
-
-        """
-        warnings.warn("Deprecated method, use spicearack.netbox_server() instead", DeprecationWarning)
-        is_virtual = False
-        vm_cluster = "N/A"
-        try:
-            host = self._fetch_host(hostname)
-        except NetboxHostNotFoundError:
-            host = self._fetch_virtual_machine(hostname)
-            is_virtual = True
-            vm_cluster = host.cluster.name
-
-        ret = host.serialize()
-        ret["is_virtual"] = is_virtual
-        ret["ganeti_cluster"] = vm_cluster
-        return ret
 
     def get_server(self, hostname: str) -> "NetboxServer":
         """Return a NetboxServer instance for the given hostname.
@@ -210,9 +108,9 @@ class Netbox:
 
         """
         try:
-            server = self._fetch_host(hostname)
+            server = self._get_device(hostname)
         except NetboxHostNotFoundError:
-            server = self._fetch_virtual_machine(hostname)
+            server = self._get_virtual_machine(hostname)
 
         return NetboxServer(api=self._api, server=server, dry_run=self._dry_run)
 
