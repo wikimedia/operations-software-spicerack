@@ -1,6 +1,7 @@
 """Provide an interface for manipulating DHCP configuration snippets for our dynamic/temporary DHCP system."""
 
 import base64
+import logging
 import re
 import textwrap
 from abc import ABC, abstractmethod
@@ -15,6 +16,7 @@ from wmflib.constants import ALL_DATACENTERS
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteExecutionError, RemoteHosts
 
+logger = logging.getLogger(__name__)
 DHCP_TARGET_PATH: str = "/etc/dhcp/automation"
 """The path to the top of the DHCPd automation directory."""
 
@@ -240,7 +242,15 @@ class DHCP:
         except RemoteExecutionError as exc:
             raise DHCPError(f"target file {filename} failed to be created.") from exc
 
-        self.refresh_dhcp()
+        try:
+            self.refresh_dhcp()
+        except DHCPRestartError:
+            logger.error("Failed to restart DHCP, removing snippet {filename} and restarting DHCP")
+            self._hosts.run_sync(
+                f"/bin/rm -v {DHCP_TARGET_PATH}/{filename}", print_output=False, print_progress_bars=False
+            )
+            self.refresh_dhcp()
+            raise
 
     def remove_configuration(self, configuration: DHCPConfiguration, force: bool = False) -> None:
         """Remove configuration from target DHCP server then call refresh_dhcp.

@@ -354,6 +354,23 @@ class TestDHCP:
             self.dhcp.push_configuration(config)
         assert str(exc.value) == f"target file {config.filename} failed to be created."
 
+    def test_push_configuration_refresh_fail(self):
+        """When the call to refresh_dhcp() fails, it should remove the snippet and refresh again."""
+        config = get_mock_config()
+        hosts = get_mock_suc_fail_hosts()
+        hosts.run_sync.side_effect = [
+            "some value",
+            "some value",
+            RemoteExecutionError("mock error", 1, iter(())),
+            "some value",
+            "some value",
+        ]
+        self._setup_dhcp_mocks(hosts=hosts)
+
+        with pytest.raises(dhcp.DHCPRestartError) as exc:
+            self.dhcp.push_configuration(config)
+        assert str(exc.value) == "restarting generating dhcp config or restarting dhcpd failed"
+
     # test DHCP.remove_configuration
     # - does it deal correctly with succeeding commands
     def test_remove_config(self):
