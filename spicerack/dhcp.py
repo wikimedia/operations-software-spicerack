@@ -19,7 +19,6 @@ from spicerack.remote import RemoteExecutionError, RemoteHosts
 logger = logging.getLogger(__name__)
 DHCP_TARGET_PATH: str = "/etc/dhcp/automation"
 """The path to the top of the DHCPd automation directory."""
-
 MGMT_HOSTNAME_RE: str = r"\.mgmt\.{dc}\.wmnet"
 """A regular expression when formatted with a `dc` parameter will match a management hostname."""
 
@@ -133,7 +132,7 @@ class DHCPConfMac(DHCPConfiguration):
         """
         mac_pattern = r"[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}"
         if re.fullmatch(mac_pattern, self.mac) is None:
-            raise DHCPError(f"Got invalid MAC address {self.mac}, not matching pattern {mac_pattern}")
+            raise DHCPError(f"Invalid MAC address {self.mac}, must match pattern {mac_pattern}.")
 
     @property
     def filename(self) -> str:
@@ -173,9 +172,10 @@ class DHCPConfMgmt(DHCPConfiguration):
     def __post_init__(self) -> None:
         """Validate parameters."""
         if self.datacenter not in ALL_DATACENTERS:
-            raise DHCPError(f"invalid datacenter {self.datacenter}")
-        if not re.search(MGMT_HOSTNAME_RE.format(dc=self.datacenter), self.fqdn):
-            raise DHCPError(f"hostname does not look like a valid management hostname: {self.fqdn}")
+            raise DHCPError(f"Invalid datacenter {self.datacenter}, must be one of {ALL_DATACENTERS}.")
+        pattern = MGMT_HOSTNAME_RE.format(dc=self.datacenter)
+        if not re.search(pattern, self.fqdn):
+            raise DHCPError(f"Invalid management FQDN {self.fqdn}, must match {pattern}.")
 
     @property
     def filename(self) -> str:
@@ -213,7 +213,7 @@ class DHCP:
         try:
             self._hosts.run_sync("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
         except RemoteExecutionError as exc:
-            raise DHCPRestartError("restarting generating dhcp config or restarting dhcpd failed") from exc
+            raise DHCPRestartError("Failed to refresh the DHCP server when running dhcpincludes.") from exc
 
     def push_configuration(self, configuration: DHCPConfiguration) -> None:
         """Push a specified file with specified content to DHCP server and call refresh_dhcp.
@@ -222,33 +222,30 @@ class DHCP:
             configuration: An instance which provides content and filename for a configuration.
 
         """
-        filename = configuration.filename
+        filename = f"{DHCP_TARGET_PATH}/{configuration.filename}"
         try:
             self._hosts.run_sync(
-                f"/usr/bin/test '!' '-e'  {DHCP_TARGET_PATH}/{filename}",
-                is_safe=True,
-                print_output=False,
-                print_progress_bars=False,
+                f"/usr/bin/test '!' '-e' {filename}", is_safe=True, print_output=False, print_progress_bars=False
             )
         except RemoteExecutionError as exc:
-            raise DHCPError(f"target file {filename} exists") from exc
+            raise DHCPError(
+                f"Snippet {filename} already exists, is there another operation in progress for the same device? "
+                "If not you delete it and retry."
+            ) from exc
 
         b64encoded = base64.b64encode(str(configuration).encode()).decode()
         try:
             self._hosts.run_sync(
-                f"/bin/echo '{b64encoded}' | /usr/bin/base64 -d > {DHCP_TARGET_PATH}/{filename}",
-                print_progress_bars=False,
+                f"/bin/echo '{b64encoded}' | /usr/bin/base64 -d > {filename}", print_progress_bars=False
             )
         except RemoteExecutionError as exc:
-            raise DHCPError(f"target file {filename} failed to be created.") from exc
+            raise DHCPError(f"Failed to create snippet {filename}.") from exc
 
         try:
             self.refresh_dhcp()
         except DHCPRestartError:
-            logger.error("Failed to restart DHCP, removing snippet {filename} and restarting DHCP")
-            self._hosts.run_sync(
-                f"/bin/rm -v {DHCP_TARGET_PATH}/{filename}", print_output=False, print_progress_bars=False
-            )
+            logger.error("Failed to refresh DHCPd, removing snippet {filename} and refreshing again.")
+            self._hosts.run_sync(f"/bin/rm -v {filename}", print_output=False, print_progress_bars=False)
             self.refresh_dhcp()
             raise
 
@@ -262,37 +259,36 @@ class DHCP:
             force: If set to True, will remove filename regardless.
 
         """
+        filename = f"{DHCP_TARGET_PATH}/{configuration.filename}"
         if not force:
             confsha256 = sha256(str(configuration).encode()).hexdigest()
             try:
                 results = self._hosts.run_sync(
-                    f"sha256sum {DHCP_TARGET_PATH}/{configuration.filename}",
-                    is_safe=True,
-                    print_output=False,
-                    print_progress_bars=False,
+                    f"sha256sum {filename}", is_safe=True, print_output=False, print_progress_bars=False
                 )
             except RemoteExecutionError as exc:
-                raise DHCPError(f"Can't test {configuration.filename} for removal.") from exc
+                raise DHCPError(f"Failed to checksum {filename} for safe removal.") from exc
+
             seen_match = False
             for _, result in RemoteHosts.results_to_list(results):
                 remotesha256 = result.strip().split()[0]
                 if remotesha256 != confsha256 and not self._dry_run:
-                    raise DHCPError(f"Remote {configuration.filename} has a mismatched SHA256, refusing to remove.")
+                    raise DHCPError(f"Remote snippet {filename} has a mismatched SHA256, refusing to remove it.")
                 seen_match = True
+
             if not seen_match:
-                raise DHCPError("Did not get any result trying to get SHA256, refusing to attempt to remove.")
+                raise DHCPError(f"No output when trying to checksum snippet {filename}, refusing to remove it.")
+
         try:
-            self._hosts.run_sync(
-                f"/bin/rm -v {DHCP_TARGET_PATH}/{configuration.filename}", print_output=False, print_progress_bars=False
-            )
+            self._hosts.run_sync(f"/bin/rm -v {filename}", print_output=False, print_progress_bars=False)
         except RemoteExecutionError as exc:
-            raise DHCPError(f"Can't remove {configuration.filename}.") from exc
+            raise DHCPError(f"Failed to remove snippet {filename}.") from exc
 
         self.refresh_dhcp()
 
     @contextmanager
     def config(self, dhcp_config: DHCPConfiguration) -> Iterator[None]:
-        """A context manager to perform actions while the given DHCP config is valid.
+        """A context manager to perform actions while the given DHCP config is active.
 
         Arguments:
              dhcp_config: The DHCP configuration to use.

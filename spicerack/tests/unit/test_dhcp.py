@@ -256,7 +256,7 @@ def test_dhcp_conf_mac_valid_mac(mac):
 )
 def test_dhcp_conf_mac_invalid_mac(mac):
     """It should raise DHCPError if an invalid MAC address is passed."""
-    with pytest.raises(dhcp.DHCPError, match="Got invalid MAC address"):
+    with pytest.raises(dhcp.DHCPError, match="Invalid MAC address"):
         dhcp.DHCPConfMac(hostname="testhost0", ipv4=IPv4Address("10.0.0.1"), mac=mac, ttys=1, distro="bullseye")
 
 
@@ -323,7 +323,7 @@ class TestDHCP:
         self.dhcp.push_configuration(config)
 
         call_test = mock.call(
-            f"/usr/bin/test '!' '-e'  {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            f"/usr/bin/test '!' '-e' {dhcp.DHCP_TARGET_PATH}/{config.filename}",
             is_safe=True,
             print_output=False,
             print_progress_bars=False,
@@ -342,7 +342,7 @@ class TestDHCP:
 
         with pytest.raises(dhcp.DHCPError) as exc:
             self.dhcp.push_configuration(config)
-        assert str(exc.value) == f"target file {config.filename} exists"
+        assert "already exists, is there another operation in progress" in str(exc.value)
 
     # - does it deal correctly with echo command failing
     def test_push_configuration_echo_fail(self):
@@ -352,7 +352,7 @@ class TestDHCP:
 
         with pytest.raises(dhcp.DHCPError) as exc:
             self.dhcp.push_configuration(config)
-        assert str(exc.value) == f"target file {config.filename} failed to be created."
+        assert "Failed to create snippet" in str(exc.value)
 
     def test_push_configuration_refresh_fail(self):
         """When the call to refresh_dhcp() fails, it should remove the snippet and refresh again."""
@@ -369,7 +369,7 @@ class TestDHCP:
 
         with pytest.raises(dhcp.DHCPRestartError) as exc:
             self.dhcp.push_configuration(config)
-        assert str(exc.value) == "restarting generating dhcp config or restarting dhcpd failed"
+        assert str(exc.value) == "Failed to refresh the DHCP server when running dhcpincludes."
 
     # test DHCP.remove_configuration
     # - does it deal correctly with succeeding commands
@@ -405,7 +405,7 @@ class TestDHCP:
 
             with pytest.raises(dhcp.DHCPError) as exc:
                 self.dhcp.remove_configuration(config)
-            assert str(exc.value) == "Did not get any result trying to get SHA256, refusing to attempt to remove."
+            assert "No output when trying to checksum snippet" in str(exc.value)
 
     # - does it deal with sha256sum failing
     def test_remove_config_sha256_fail(self):
@@ -415,7 +415,7 @@ class TestDHCP:
 
         with pytest.raises(dhcp.DHCPError) as exc:
             self.dhcp.remove_configuration(config)
-        assert str(exc.value) == f"Can't test {config.filename} for removal."
+        assert "Failed to checksum" in str(exc.value)
 
     # - does it deal with sha256sum mismatch
     def test_remove_config_sha256_mismatch(self):
@@ -429,7 +429,7 @@ class TestDHCP:
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             with pytest.raises(dhcp.DHCPError) as exc:
                 self.dhcp.remove_configuration(config)
-            assert str(exc.value) == f"Remote {config.filename} has a mismatched SHA256, refusing to remove."
+            assert "has a mismatched SHA256, refusing to remove it" in str(exc.value)
 
     # - does it deal with sha256sum mismatch (but force)
     def test_remove_config_sha256_mismatch_force(self):
@@ -462,7 +462,7 @@ class TestDHCP:
 
             with pytest.raises(dhcp.DHCPError) as exc:
                 self.dhcp.remove_configuration(config)
-            assert str(exc.value) == f"Can't remove {config.filename}."
+            assert "Failed to remove snippet" in str(exc.value)
 
     def test_push_context_manager(self):
         """Test push context manager success."""
@@ -495,7 +495,7 @@ class TestDHCP:
         hosts = self._setup_dhcp_mocks()
 
         call_test = mock.call(
-            f"/usr/bin/test '!' '-e'  {dhcp.DHCP_TARGET_PATH}/{config.filename}",
+            f"/usr/bin/test '!' '-e' {dhcp.DHCP_TARGET_PATH}/{config.filename}",
             is_safe=True,
             print_output=False,
             print_progress_bars=False,
