@@ -147,6 +147,28 @@ class GanetiRAPI:
 
         return instance_info["nic.macs"][0]
 
+    def groups(self, bulk: bool = False) -> dict:
+        """Get a list of Cluster groups.
+
+        Arguments:
+            bulk: if true set bulk=1 to return detailed information.
+                see https://docs.ganeti.org/docs/ganeti/2.9/html/rapi.html#bulk
+
+        """
+        target = "groups?bulk=1" if bulk else "groups"
+        return self._api_get_request(target)
+
+    def nodes(self, bulk: bool = False) -> dict:
+        """Get a list of Cluster nodes.
+
+        Arguments:
+            bulk: if true set bulk=1 to return detailed information.
+                see https://docs.ganeti.org/docs/ganeti/2.9/html/rapi.html#bulk
+
+        """
+        target = "nodes?bulk=1" if bulk else "nodes"
+        return self._api_get_request(target)
+
 
 class GntInstance:
     """Class that wraps gnt-instance command execution on a Ganeti cluster master host."""

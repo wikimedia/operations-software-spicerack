@@ -1,0 +1,105 @@
+[
+    {
+        "alloc_policy": "preferred",
+        "name": "A-test",
+        "node_cnt": 3,
+        "node_list": [
+            "ganeti-test2001.example.org",
+            "ganeti-test2003.example.org",
+            "ganeti-test2002.example.org"
+        ],
+        "ipolicy": {
+            "minmax": [
+                {
+                    "min": {
+                        "memory-size": 128,
+                        "disk-size": 1024,
+                        "disk-count": 1,
+                        "cpu-count": 1,
+                        "nic-count": 1,
+                        "spindle-use": 1
+                    },
+                    "max": {
+                        "memory-size": 32768,
+                        "disk-size": 1048576,
+                        "disk-count": 16,
+                        "cpu-count": 8,
+                        "nic-count": 8,
+                        "spindle-use": 12
+                    }
+                }
+            ],
+            "std": {
+                "memory-size": 128,
+                "disk-size": 1024,
+                "disk-count": 1,
+                "cpu-count": 1,
+                "nic-count": 1,
+                "spindle-use": 1
+            },
+            "spindle-ratio": 32,
+            "vcpu-ratio": 4,
+            "disk-templates": [
+                "drbd",
+                "plain"
+            ]
+        },
+        "custom_ipolicy": {},
+        "diskparams": {
+            "blockdev": {},
+            "diskless": {},
+            "drbd": {
+                "c-delay-target": 1,
+                "c-fill-target": 0,
+                "c-max-rate": 61440,
+                "c-min-rate": 4096,
+                "c-plan-ahead": 20,
+                "data-stripes": 1,
+                "disk-barriers": "n",
+                "disk-custom": "",
+                "dynamic-resync": false,
+                "meta-barriers": false,
+                "meta-stripes": 1,
+                "metavg": "ganeti",
+                "net-custom": "",
+                "protocol": "C",
+                "resync-rate": 61440
+            },
+            "ext": {
+                "access": "kernelspace"
+            },
+            "file": {},
+            "gluster": {
+                "access": "kernelspace",
+                "host": "127.0.0.1",
+                "port": 24007,
+                "volume": "gv0"
+            },
+            "plain": {
+                "stripes": 1
+            },
+            "rbd": {
+                "access": "kernelspace",
+                "pool": "rbd"
+            },
+            "sharedfile": {}
+        },
+        "custom_diskparams": {},
+        "ndparams": {
+            "oob_program": "",
+            "spindle_count": 1,
+            "exclusive_storage": false,
+            "ovs": false,
+            "ovs_name": "switch1",
+            "ovs_link": "",
+            "ssh_port": 22,
+            "cpu_speed": 1
+        },
+        "custom_ndparams": {},
+        "ctime": 0,
+        "mtime": 1657008865.454074,
+        "uuid": "e8407b8a-5592-4f9b-9275-524b1fa34e0b",
+        "serial_no": 6,
+        "tags": []
+    }
+]
