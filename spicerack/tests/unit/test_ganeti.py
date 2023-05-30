@@ -299,7 +299,7 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
 
         self.remote.query.return_value.run_sync.assert_called_once_with(
             "gnt-instance add -t drbd -I hail --net 0:link=private --hypervisor-parameters=kvm:boot_order=network "
-            "-o debootstrap+default --no-install --no-wait-for-sync -g row_A -B vcpus=2,memory=3g --disk 0:size=4g "
+            "-o debootstrap+default --no-install --no-wait-for-sync -g row_A -B vcpus=2,memory=3072m --disk 0:size=4g "
             "test.example.com",
             print_output=True,
         )

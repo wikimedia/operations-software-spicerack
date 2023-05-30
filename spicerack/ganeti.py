@@ -270,7 +270,7 @@ class GntInstance:
             " --no-install"
             " --no-wait-for-sync"
             f" -g {group}"
-            f" -B vcpus={vcpus},memory={memory}g"
+            f" -B vcpus={vcpus},memory={memory*1024}m"
             f" --disk 0:size={disk}g"
             f" {self._instance}"
         )
