@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import RequestException
@@ -233,7 +233,7 @@ class GntInstance:
         )
         self._master.run_sync(f"gnt-instance remove --shutdown-timeout={shutdown_timeout} --force {self._instance}")
 
-    def add(self, *, group: str, vcpus: int, memory: int, disk: int, link: str) -> None:
+    def add(self, *, group: str, vcpus: int, memory: Union[int, float], disk: int, link: str) -> None:
         """Create the VM for the instance in the Ganeti cluster with the specified characteristic.
 
         Arguments:
@@ -260,6 +260,7 @@ class GntInstance:
                     f"Invalid value '{local_vars[var_label]}' for {var_label}, expected positive integer."
                 )
 
+        memory_mb = int(memory * 1024)
         command = (
             "gnt-instance add"
             " -t drbd"
@@ -270,7 +271,7 @@ class GntInstance:
             " --no-install"
             " --no-wait-for-sync"
             f" -g {group}"
-            f" -B vcpus={vcpus},memory={memory*1024}m"
+            f" -B vcpus={vcpus},memory={memory_mb}m"
             f" --disk 0:size={disk}g"
             f" {self._instance}"
         )
