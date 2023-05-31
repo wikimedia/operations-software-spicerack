@@ -1,6 +1,24 @@
 Spicerack Changelog
 -------------------
 
+`v7.2.0`_ (2023-05-31)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* ganeti: add new ``GanetiRAPI`` methods ``nodes()`` and ``groups()`` to get the related info from the cluster.
+* ganeti: specify VM memory size in MB to allow for more fine-tune than GB.
+* dhcp: when re-generating the DHCP includes and then restarting the DHCP server, in case of a failure make sure to
+  delete the newly created snippet and refresh again to ensure the DHCP is in a good shape.
+* dhcp: reword some exception messages.
+
+Miscellanea
+"""""""""""
+
+* .gitignore: add local config files to it.
+* Add Python 3.11 support.
+
 `v7.1.0`_ (2023-05-15)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2601,3 +2619,4 @@ New features
 .. _`v6.4.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v6.4.3
 .. _`v7.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.0.0
 .. _`v7.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.1.0
+.. _`v7.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.0
