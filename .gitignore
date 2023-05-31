@@ -27,3 +27,7 @@ flycheck_*.el
 .projectile
 .dir-locals.el
 *.sw?
+
+# Local config files
+/config.yaml
+/.config/

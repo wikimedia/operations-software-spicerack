@@ -1,0 +1,142 @@
+[
+    {
+        "name": "ganeti-test2001.example.org",
+        "offline": false,
+        "master_candidate": true,
+        "drained": false,
+        "dtotal": 2630884,
+        "dfree": 2589540,
+        "sptotal": 0,
+        "spfree": 0,
+        "mtotal": 64036,
+        "mnode": 2608,
+        "mfree": 59761,
+        "pinst_cnt": 1,
+        "sinst_cnt": 2,
+        "ctotal": 40,
+        "cnos": 40,
+        "cnodes": 1,
+        "csockets": 1,
+        "pip": "192.0.2.73",
+        "sip": "192.0.2.73",
+        "role": "M",
+        "pinst_list": [
+            "testvm2006.example.org"
+        ],
+        "sinst_list": [
+            "testvm2002.example.org",
+            "testvm2005.example.org"
+        ],
+        "master_capable": true,
+        "vm_capable": true,
+        "ndparams": {
+            "oob_program": "",
+            "spindle_count": 1,
+            "exclusive_storage": false,
+            "ovs": false,
+            "ovs_name": "switch1",
+            "ovs_link": "",
+            "ssh_port": 22,
+            "cpu_speed": 1
+        },
+        "group.uuid": "e8407b8a-5592-4f9b-9275-524b1fa34e0b",
+        "ctime": 1651066534.1149206,
+        "mtime": 1651066534.1149206,
+        "uuid": "502a5323-20af-4da1-a4bb-171af099a412",
+        "serial_no": 1,
+        "tags": []
+    },
+    {
+        "name": "ganeti-test2002.example.org",
+        "offline": false,
+        "master_candidate": true,
+        "drained": false,
+        "dtotal": 2630884,
+        "dfree": 2589668,
+        "sptotal": 0,
+        "spfree": 0,
+        "mtotal": 64036,
+        "mnode": 4069,
+        "mfree": 57887,
+        "pinst_cnt": 1,
+        "sinst_cnt": 1,
+        "ctotal": 40,
+        "cnos": 40,
+        "cnodes": 1,
+        "csockets": 1,
+        "pip": "192.0.2.74",
+        "sip": "192.0.2.74",
+        "role": "C",
+        "pinst_list": [
+            "testvm2005.example.org"
+        ],
+        "sinst_list": [
+            "testvm2004.example.org"
+        ],
+        "master_capable": true,
+        "vm_capable": true,
+        "ndparams": {
+            "oob_program": "",
+            "spindle_count": 1,
+            "exclusive_storage": false,
+            "ovs": false,
+            "ovs_name": "switch1",
+            "ovs_link": "",
+            "ssh_port": 22,
+            "cpu_speed": 1
+        },
+        "group.uuid": "e8407b8a-5592-4f9b-9275-524b1fa34e0b",
+        "ctime": 1651224797.5971065,
+        "mtime": 1651224797.5971065,
+        "uuid": "d0e401b9-1b3d-4ee3-a919-21cee93b7989",
+        "serial_no": 1,
+        "tags": []
+    },
+    {
+        "name": "ganeti-test2003.example.org",
+        "offline": false,
+        "master_candidate": true,
+        "drained": false,
+        "dtotal": 2630884,
+        "dfree": 2589540,
+        "sptotal": 0,
+        "spfree": 0,
+        "mtotal": 64036,
+        "mnode": 5531,
+        "mfree": 57250,
+        "pinst_cnt": 2,
+        "sinst_cnt": 1,
+        "ctotal": 40,
+        "cnos": 40,
+        "cnodes": 1,
+        "csockets": 1,
+        "pip": "192.0.2.93",
+        "sip": "192.0.2.93",
+        "role": "C",
+        "pinst_list": [
+            "testvm2002.example.org",
+            "testvm2004.example.org"
+        ],
+        "sinst_list": [
+            "testvm2006.example.org"
+        ],
+        "master_capable": true,
+        "vm_capable": true,
+        "ndparams": {
+            "oob_program": "",
+            "spindle_count": 1,
+            "exclusive_storage": false,
+            "ovs": false,
+            "ovs_name": "switch1",
+            "ovs_link": "",
+            "ssh_port": 22,
+            "cpu_speed": 1
+        },
+        "group.uuid": "e8407b8a-5592-4f9b-9275-524b1fa34e0b",
+        "ctime": 1651239740.6297915,
+        "mtime": 1651239740.6297915,
+        "uuid": "9bba1a10-1a6e-4bad-ac91-6d2c6da8c42c",
+        "serial_no": 1,
+        "tags": []
+    }
+]

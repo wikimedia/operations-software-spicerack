@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import RequestException
@@ -147,6 +147,28 @@ class GanetiRAPI:
 
         return instance_info["nic.macs"][0]
 
+    def groups(self, bulk: bool = False) -> dict:
+        """Get a list of Cluster groups.
+
+        Arguments:
+            bulk: if true set bulk=1 to return detailed information.
+                see https://docs.ganeti.org/docs/ganeti/2.9/html/rapi.html#bulk
+
+        """
+        target = "groups?bulk=1" if bulk else "groups"
+        return self._api_get_request(target)
+
+    def nodes(self, bulk: bool = False) -> dict:
+        """Get a list of Cluster nodes.
+
+        Arguments:
+            bulk: if true set bulk=1 to return detailed information.
+                see https://docs.ganeti.org/docs/ganeti/2.9/html/rapi.html#bulk
+
+        """
+        target = "nodes?bulk=1" if bulk else "nodes"
+        return self._api_get_request(target)
+
 
 class GntInstance:
     """Class that wraps gnt-instance command execution on a Ganeti cluster master host."""
@@ -211,7 +233,7 @@ class GntInstance:
         )
         self._master.run_sync(f"gnt-instance remove --shutdown-timeout={shutdown_timeout} --force {self._instance}")
 
-    def add(self, *, group: str, vcpus: int, memory: int, disk: int, link: str) -> None:
+    def add(self, *, group: str, vcpus: int, memory: Union[int, float], disk: int, link: str) -> None:
         """Create the VM for the instance in the Ganeti cluster with the specified characteristic.
 
         Arguments:
@@ -238,6 +260,7 @@ class GntInstance:
                     f"Invalid value '{local_vars[var_label]}' for {var_label}, expected positive integer."
                 )
 
+        memory_mb = int(memory * 1024)
         command = (
             "gnt-instance add"
             " -t drbd"
@@ -248,7 +271,7 @@ class GntInstance:
             " --no-install"
             " --no-wait-for-sync"
             f" -g {group}"
-            f" -B vcpus={vcpus},memory={memory}g"
+            f" -B vcpus={vcpus},memory={memory_mb}m"
             f" --disk 0:size={disk}g"
             f" {self._instance}"
         )

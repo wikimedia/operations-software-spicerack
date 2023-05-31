@@ -21,7 +21,7 @@ TEST_CLUSTERS = {
 }
 
 
-class TestGaneti:
+class TestGaneti:  # pylint: disable=too-many-instance-attributes
     """Ganeti tests class."""
 
     def setup_method(self):
@@ -58,6 +58,14 @@ class TestGaneti:
             self.instance_info = instance_json.read()
         with open(get_fixture_path("ganeti", "bogus.json"), encoding="utf-8") as bogus_json:
             self.bogus_data = bogus_json.read()
+        with open(get_fixture_path("ganeti", "groups.json"), encoding="utf-8") as groups_json:
+            self.groups_data = groups_json.read()
+        with open(get_fixture_path("ganeti", "groups_bulk.json"), encoding="utf-8") as groups_bulk_json:
+            self.groups_bulk_data = groups_bulk_json.read()
+        with open(get_fixture_path("ganeti", "nodes.json"), encoding="utf-8") as nodes_json:
+            self.nodes_data = nodes_json.read()
+        with open(get_fixture_path("ganeti", "nodes_bulk.json"), encoding="utf-8") as nodes_bulk_json:
+            self.nodes_bulk_data = nodes_bulk_json.read()
 
     def _set_requests_mock_for_instance(self, requests_mock, missing_active=False):
         """Set request mock to be 404 on all other clusters."""
@@ -175,6 +183,36 @@ class TestGaneti:
         mac = json.loads(self.instance_info)["nic.macs"][0]
         assert mac == rapi.fetch_instance_mac(self.instance)
 
+    @pytest.mark.parametrize("bulk", (True, False))
+    def test_rapi_nodes(self, requests_mock, bulk):
+        """The master property of a RAPI should be the hostname for the master of this cluster."""
+        if bulk:
+            uri = "/nodes?bulk=1"
+            data = self.nodes_bulk_data
+        else:
+            uri = "/nodes"
+            data = self.nodes_data
+        rapi = self.ganeti.rapi(self.cluster)
+        requests_mock.get(self.base_url + uri, text=data)
+
+        nodes = json.loads(data)
+        assert rapi.nodes(bulk) == nodes
+
+    @pytest.mark.parametrize("bulk", (True, False))
+    def test_rapi_groups(self, requests_mock, bulk):
+        """The master property of a RAPI should be the hostname for the master of this cluster."""
+        if bulk:
+            uri = "/groups?bulk=1"
+            data = self.groups_bulk_data
+        else:
+            uri = "/groups"
+            data = self.groups_data
+        requests_mock.get(self.base_url + uri, text=data)
+
+        groups = json.loads(data)
+        rapi = self.ganeti.rapi(self.cluster)
+        assert rapi.groups(bulk) == groups
+
     @pytest.mark.parametrize("cluster", ("", "sitea"))
     def test_instance_ok(self, cluster, requests_mock):
         """It should return an instance of GntInstance for a properly configured cluster."""
@@ -257,11 +295,11 @@ class TestGaneti:
         ]
         self.remote.query.return_value.run_sync.return_value = iter(results)
 
-        instance.add(group="row_A", vcpus=2, memory=3, disk=4, link="private")
+        instance.add(group="row_A", vcpus=2, memory=3.1, disk=4, link="private")
 
         self.remote.query.return_value.run_sync.assert_called_once_with(
             "gnt-instance add -t drbd -I hail --net 0:link=private --hypervisor-parameters=kvm:boot_order=network "
-            "-o debootstrap+default --no-install --no-wait-for-sync -g row_A -B vcpus=2,memory=3g --disk 0:size=4g "
+            "-o debootstrap+default --no-install --no-wait-for-sync -g row_A -B vcpus=2,memory=3174m --disk 0:size=4g "
             "test.example.com",
             print_output=True,
         )

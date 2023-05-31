@@ -1,0 +1,14 @@
+[
+    {
+        "id": "ganeti-test2001.example.org",
+        "uri": "/2/nodes/ganeti-test2001.example.org"
+    },
+    {
+        "id": "ganeti-test2002.example.org",
+        "uri": "/2/nodes/ganeti-test2002.example.org"
+    },
+    {
+        "id": "ganeti-test2003.example.org",
+        "uri": "/2/nodes/ganeti-test2003.example.org"
+    }
+]
