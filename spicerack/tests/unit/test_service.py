@@ -36,7 +36,7 @@ class TestCatalog:
 
     def test_service_names(self):
         """It should return the list of all service names."""
-        assert self.catalog.service_names == ["service1", "service_no_lvs", "service2", "service3"]
+        assert self.catalog.service_names == ["service1", "service_no_lvs", "service2", "service3", "service4"]
 
     def test_get_instance(self):
         """It should return a Service instance for the given service."""
@@ -53,7 +53,7 @@ class TestCatalog:
 
     def test_len(self):
         """It should return the number of services in the catalog."""
-        assert len(self.catalog) == 4
+        assert len(self.catalog) == 5
 
 
 class TestService:
