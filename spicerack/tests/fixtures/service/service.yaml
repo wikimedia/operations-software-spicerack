@@ -156,3 +156,37 @@ service3:
       active_active: true
     - dnsdisc: service3_b
       active_active: false
+
+service4:
+  description: Service4 description
+  encryption: true
+  ip:
+    codfw: *id001
+    eqiad: *id002
+  lvs:
+    class: low-traffic
+    conftool:
+      cluster: cluster1
+      service: service4
+    depool_threshold: ".5"
+    enabled: true
+    scheduler: wrr
+  page: false
+  probes:
+    - type: http
+      path: /health
+  monitoring:
+    check_command: check_https_lvs_on_port!service4.discovery.wmnet!443!/health
+    sites:
+      codfw:
+        hostname: service4.svc.codfw.wmnet
+      eqiad:
+        hostname: service4.svc.eqiad.wmnet
+  port: 443
+  sites:
+    - codfw
+    - eqiad
+  state: production
+  discovery:
+    - dnsdisc: service4
+      active_active: true

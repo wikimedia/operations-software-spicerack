@@ -325,7 +325,7 @@ class ServiceLVS:
     depool_threshold: str
     enabled: bool
     lvs_class: str
-    monitors: dict[str, dict]
+    monitors: Optional[dict[str, dict]] = None  # Optional field in puppet
     bgp: bool = True  # Default value in Puppet.
     protocol: str = "tcp"  # Default value in Puppet.
     scheduler: str = "wrr"  # Default value in Puppet.

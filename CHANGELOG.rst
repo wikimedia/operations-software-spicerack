@@ -1,6 +1,15 @@
 Spicerack Changelog
 -------------------
 
+`v7.2.1`_ (2023-06-21)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* service: make the ``monitors`` field of the ``ServiceLVS`` class optional to adapt it to the recent change in Puppet
+  about it.
+
 `v7.2.0`_ (2023-05-31)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2620,3 +2629,4 @@ New features
 .. _`v7.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.0.0
 .. _`v7.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.1.0
 .. _`v7.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.0
+.. _`v7.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.1
