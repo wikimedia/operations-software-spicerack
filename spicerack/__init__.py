@@ -321,7 +321,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return DHCP(remote_hosts, dry_run=self._dry_run)
 
     def dns(self) -> Dns:
-        """Get a Dns instance that will use the operating system default namserver(s)."""
+        """Get a Dns instance that will use the operating system default nameserver(s)."""
         return Dns()
 
     def discovery(self, *records: str) -> Discovery:
