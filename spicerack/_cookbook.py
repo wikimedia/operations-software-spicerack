@@ -330,6 +330,11 @@ def argument_parser() -> argparse.ArgumentParser:
         help="Verbose output, also for the cookbook.",
     )
     parser.add_argument(
+        "--no-locks",
+        action="store_true",
+        help="Do not acquire or check distributed locks on etcd. To be used only if there are issues with etcd.",
+    )
+    parser.add_argument(
         "cookbook",
         metavar="COOKBOOK",
         nargs="?",
@@ -457,6 +462,9 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
         except Exception as e:  # pylint: disable=broad-except
             print(f"Failed to import the extender_class {params['extender_class']}:", e, file=sys.stderr)
             return 1
+
+    if args.no_locks:
+        params["etcd_config"] = ""  # Disable locking support
 
     try:
         spicerack = Spicerack(**params)
