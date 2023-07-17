@@ -1,0 +1,4 @@
+locking
+=======
+
+.. automodule:: spicerack.locking
