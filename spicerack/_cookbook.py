@@ -260,11 +260,25 @@ class CookbookCollection:
         except AttributeError as e:
             raise CookbookError(f"Unable to find run function in module {module.__name__}") from e
 
+        if hasattr(module, "MAX_CONCURRENCY"):
+            max_concurrency = module.MAX_CONCURRENCY
+        else:
+            max_concurrency = cookbook.CookbookRunnerBase.max_concurrency
+
+        if hasattr(module, "LOCK_TTL"):
+            lock_ttl = module.LOCK_TTL
+        else:
+            lock_ttl = cookbook.CookbookRunnerBase.lock_ttl
+
         runner_name = f"{name}Runner"
         runner = type(
             runner_name,
             (_module_api.CookbookModuleRunnerBase,),
-            {"_run": staticmethod(run)},
+            {
+                "_run": staticmethod(run),
+                "max_concurrency": max_concurrency,
+                "lock_ttl": lock_ttl,
+            },
         )
         runner.__module__ = module_name
 

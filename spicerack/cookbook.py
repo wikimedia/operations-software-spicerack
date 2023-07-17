@@ -1,6 +1,7 @@
 """Cookbook module."""
 import argparse
 from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 from typing import Optional
 
 from spicerack import Spicerack
@@ -27,6 +28,26 @@ class ArgparseFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDesc
     It can be used as the ``formatter_class`` for the ``ArgumentParser`` instances and it has the capabilities of
     both :py:class:`argparse.ArgumentDefaultsHelpFormatter` and :py:class:`argparse.RawDescriptionHelpFormatter`.
     """
+
+
+@dataclass(frozen=True)
+class LockArgs:
+    """A dataclass to represent the arguments to use for the cookbook automatically acquired lock for each run.
+
+    To be used when a cookbook overrides the ``lock_args`` property.
+
+    Arguments:
+        suffix: a custom suffix to add to the lock key. The lock key is based on the cookbook's full name and the
+            suffix is added to it with a colon separator, for example with suffix ``ro`` the key will become
+            ``sre.some.cookbook:ro``.
+        concurrency: how many parallel runs of the cookbook with the same lock arguments can be run.
+        ttl: the lock time to live (TTL) in seconds. It should be higher than the expected run time of the cookbook.
+
+    """
+
+    suffix: str
+    concurrency: int
+    ttl: int
 
 
 class CookbookBase(metaclass=ABCMeta):
@@ -100,6 +121,13 @@ class CookbookRunnerBase(metaclass=ABCMeta):
     it as needed.
     """
 
+    max_concurrency: int = 20
+    """How many parallel runs of a specific cookbook inheriting from this class are accepted. If the ``lock_args``
+    property is defined this one is ignored."""
+    lock_ttl: int = 1800
+    """The concurrency lock time to live (TTL) in seconds. For each concurrent run a lock is acquired for this amount
+    of seconds. If the ``lock_args`` property is defined this one is ignored."""
+
     @property
     def runtime_description(self) -> str:
         """Optional message to be used as the runtime description of the cookbook.
@@ -109,6 +137,23 @@ class CookbookRunnerBase(metaclass=ABCMeta):
         implementation returns an empty string.
         """
         return ""
+
+    @property
+    def lock_args(self) -> LockArgs:
+        """Optional property to dynamically modify the arguments used for the distributed lock of the cookbook runs.
+
+        It is useful to allow to set a different concurrency and TTL for the cookbook's lock  based on the operation
+        performed. For example allowing for an increased concurrency when performing read-only operations, or to
+        differentiate the lock based on the given arguments, say having different locks for different datacenters or
+        clusters.
+        This property by default returns the static ``max_concurrency`` and ``lock_ttl`` class properties with an
+        empty suffix.
+
+        Returns:
+            the arguments to be used by Spicerack to acquire the lock for the current cookbook.
+
+        """
+        return LockArgs(suffix="", concurrency=self.max_concurrency, ttl=self.lock_ttl)
 
     @abstractmethod
     def run(self) -> Optional[int]:

@@ -18,6 +18,7 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |   |-- class_api.call_another_cookbook
 |   |-- class_api.example
 |   |-- class_api.get_runner_raise
+|   |-- class_api.lock_args
 |   |-- class_api.multiple.CookbookA
 |   |-- class_api.multiple.CookbookB
 |   |-- class_api.rollback
@@ -59,6 +60,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |-- class_api.call_another_cookbook: A cookbook that calls another cookbook.
 |   |-- class_api.example: -
 |   |-- class_api.get_runner_raise: Class API get_runner raise cookbook.
+|   |-- class_api.lock_args: Cookbook that overrides the lock arguments.
 |   |-- class_api.multiple.CookbookA: Multiple cookbook classes.
 |   |-- class_api.multiple.CookbookB: Multiple cookbook classes.
 |   |-- class_api.rollback: Class API rollback cookbook.
@@ -112,7 +114,7 @@ LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
         `-- group3.subgroup3.cookbook4
 """
 COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
-[0/10] class_api: Class API Test Cookbooks.
+[0/11] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -124,7 +126,7 @@ q - Quit
 h - Help
 """
 COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
-[0/10] class_api: Class API Test Cookbooks.
+[0/11] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -436,6 +438,16 @@ class TestCookbookCollection:
                 [],
             ),
             (
+                "class_api.lock_args",
+                [
+                    "START - Cookbook class_api.lock_args",
+                    "END (PASS) - Cookbook class_api.lock_args (exit_code=0)",
+                ],
+                [],
+                0,
+                [],
+            ),
+            (
                 "class_api.runtime_description",
                 [
                     "START - Cookbook class_api.runtime_description Runtime description",
@@ -556,12 +568,11 @@ class TestCookbookCollection:
         config = {
             "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
+            "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with mock.patch("spicerack._cookbook.Spicerack") as mocked_spicerack:
-                ret = _cookbook.main(["--no-locks", "root"])
+            ret = _cookbook.main(["--no-locks", "root"])
 
-        assert mocked_spicerack.call_args.kwargs["etcd_config"] == ""
         assert ret == 0
 
     def test_main_list(self, tmpdir, capsys, caplog):
@@ -591,7 +602,7 @@ class TestCookbookCollection:
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         cookbooks = _cookbook.CookbookCollection(base_dirs=COOKBOOKS_BASE_PATHS, args=[], spicerack=self.spicerack)
         menu = cookbooks.get_item("")
-        assert menu.status == "0/29"
+        assert menu.status == "0/30"
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a TreeItem with all tasks completed should return DONE."""
