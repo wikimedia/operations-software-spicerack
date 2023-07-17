@@ -28,6 +28,7 @@ class CookbookCollection:
 
     def __init__(
         self,
+        *,
         base_dirs: list[Path],
         args: Sequence[str],
         spicerack: Spicerack,
@@ -439,7 +440,12 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
             :py:data:`None` on success, the return code otherwise, zero on success, non-zero on failure.
 
         """
-        cookbooks = CookbookCollection(cookbooks_base_dirs, cookbook_args, spicerack, path_filter=cookbook_path)
+        cookbooks = CookbookCollection(
+            base_dirs=cookbooks_base_dirs,
+            args=cookbook_args,
+            spicerack=spicerack,
+            path_filter=cookbook_path,
+        )
         return cookbooks.get_item(cookbook_path)
 
     params = config.get("instance_params", {})
@@ -457,7 +463,9 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
         print("Unable to instantiate Spicerack, check your configuration:", e, file=sys.stderr)
         return 1
 
-    cookbooks = CookbookCollection(cookbooks_base_dirs, args.cookbook_args, spicerack, path_filter=args.cookbook)
+    cookbooks = CookbookCollection(
+        base_dirs=cookbooks_base_dirs, args=args.cookbook_args, spicerack=spicerack, path_filter=args.cookbook
+    )
     if args.list:
         print(cookbooks.menu.get_tree(), end="")
         return 0
