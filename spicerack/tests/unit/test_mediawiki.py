@@ -51,7 +51,7 @@ class TestMediaWiki:
 
     def test_check_config_line(self, requests_mock):
         """It should verify the config published at noc.wikimedia.org."""
-        requests_mock.get("http://host1/conf/file1.php.txt", text="data")
+        requests_mock.get("https://mw-misc.discovery.wmnet:30443/conf/file1.php.txt", text="data")
         assert self.mediawiki.check_config_line("file1", "data") is True
 
     def test_get_master_datacenter(self):

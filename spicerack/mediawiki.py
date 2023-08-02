@@ -28,6 +28,9 @@ class MediaWiki:
     _siteinfo_url: str = "https://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
     """The URL of the siteinfo API to be formatted with a specific ``dc``."""
 
+    _config_file_base_url: str = "https://mw-misc.discovery.wmnet:30443/conf/"
+    """The URL of the internal service responding for noc.wikimedia.org/conf"""
+
     def __init__(self, conftool: ConftoolEntity, remote: Remote, user: str, dry_run: bool = True) -> None:
         """Initialize the instance.
 
@@ -58,8 +61,7 @@ class MediaWiki:
             requests.exceptions.RequestException: on error.
 
         """
-        noc_server = self._remote.query("O:Noc::Site").hosts[0]
-        url = f"http://{noc_server}/conf/{filename}.php.txt"
+        url = f"{self._config_file_base_url}{filename}.php.txt"
         mwconfig = self._http_session.get(url, headers={"Host": "noc.wikimedia.org"})
         found = expected in mwconfig.text
         logger.debug(
