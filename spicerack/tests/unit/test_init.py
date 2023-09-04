@@ -1,6 +1,7 @@
 """Initialization tests."""
 import logging
 import sys
+from collections import namedtuple
 from importlib import import_module
 from unittest import mock
 
@@ -33,7 +34,7 @@ from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NetboxServer
 from spicerack.peeringdb import PeeringDB
-from spicerack.puppet import PuppetHosts, PuppetMaster
+from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer
 from spicerack.redfish import RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteHosts
@@ -41,6 +42,9 @@ from spicerack.reposync import RepoSync
 from spicerack.service import Catalog
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
 from spicerack.toolforge.etcdctl import EtcdctlController
+
+MockedDnsSrv = namedtuple("MockedDnsSrv", ["target"])
+MockedDnsAnswer = namedtuple("MockedDnsAnswer", ["ttl", "rrset"])
 
 
 @mock.patch("wmflib.dns.resolver", autospec=True)
@@ -148,6 +152,49 @@ def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostn
     assert isinstance(spicerack.puppet_master(), PuppetMaster)
     mocked_get_puppet_ca_hostname.assert_called_once_with()
     assert mocked_remote_query.called
+
+
+@mock.patch("spicerack.Dns.resolve", autospec=True)
+@mock.patch("spicerack.remote.Remote.query", autospec=True)
+def test_spicerack_puppet_server(mocked_remote_query, mocked_dns_resolve):
+    """An instance of Spicerack should allow to get a PuppetServer instance."""
+    dns_answer = MockedDnsAnswer(ttl=600, rrset=[MockedDnsSrv(target="puppetserver1001.eqiad.wmnet")])
+    mocked_dns_resolve.return_value = dns_answer
+    host = mock.MagicMock(spec_set=RemoteHosts)
+    host.__len__.return_value = 1
+    mocked_remote_query.return_value = host
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    assert isinstance(spicerack.puppet_server(), PuppetServer)
+    mocked_dns_resolve.assert_called_once()
+    assert mocked_remote_query.called
+
+
+@pytest.mark.parametrize(
+    "response, err_msg",
+    (
+        (
+            None,
+            "Unable to find record for _x-puppet-ca._tcp.eqiad.wmnet",
+        ),
+        (
+            MockedDnsAnswer(ttl=600, rrset=[]),
+            "Unable to find any ca servers from DNS",
+        ),
+        (
+            MockedDnsAnswer(ttl=600, rrset=[MockedDnsSrv(target="foo"), MockedDnsSrv(target="bar")]),
+            "Found multiple ca servers from DNS: foo,bar",
+        ),
+    ),
+)
+@mock.patch("spicerack.Dns.resolve", autospec=True)
+def test_spicerack_puppet_server_raises(mocked_dns_resolve, response, err_msg):
+    """An instance of Spicerack should allow to get a PuppetServer instance."""
+    mocked_dns_resolve.return_value = response
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    with pytest.raises(SpicerackError, match=err_msg):
+        spicerack.puppet_server()
+    mocked_dns_resolve.assert_called_once()
 
 
 @mock.patch("spicerack.Netbox")

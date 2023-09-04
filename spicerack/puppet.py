@@ -24,7 +24,7 @@ def get_puppet_ca_hostname() -> str:
     """Return the FQDN of the current Puppet CA server.
 
     Raises:
-        spicerack.puppet.PuppetMasterError: if unable to get the configured Puppet CA server.
+        spicerack.puppet.PuppetServerError: if unable to get the configured Puppet CA server.
 
     """
     try:
@@ -32,10 +32,10 @@ def get_puppet_ca_hostname() -> str:
             check_output(["puppet", "config", "print", "--section", "agent", "ca_server"]).decode().strip()  # nosec
         )
     except CalledProcessError as e:
-        raise PuppetMasterError(f"Get Puppet ca_server failed (exit={e.returncode}): {e.output}") from e
+        raise PuppetServerError(f"Get Puppet ca_server failed (exit={e.returncode}): {e.output}") from e
 
     if not output:
-        raise PuppetMasterError("Got empty ca_server from Puppet agent")
+        raise PuppetServerError("Got empty ca_server from Puppet agent")
 
     return output
 
@@ -48,11 +48,11 @@ class PuppetHostsCheckError(SpicerackCheckError):
     """Custom base exception class for check errors in the PuppetHosts class."""
 
 
-class PuppetMasterError(SpicerackError):
+class PuppetServerError(SpicerackError):
     """Custom base exception class for errors in the PuppetMaster class."""
 
 
-class PuppetMasterCheckError(SpicerackCheckError):
+class PuppetServerCheckError(SpicerackCheckError):
     """Custom exception class for check errors in the PuppetMaster class."""
 
 
@@ -336,40 +336,41 @@ class PuppetHosts(RemoteHostsAdapter):
         return disabled
 
 
-class PuppetMaster(RemoteHostsAdapter):
-    """Class to manage nodes and certificates on a Puppet master and Puppet CA server."""
+class PuppetServer(RemoteHostsAdapter):
+    """Class to manage nodes and certificates on a Puppet server and Puppet CA server."""
 
     PUPPET_CERT_STATE_REQUESTED: str = "requested"
     """Puppet CA certificate status when requested."""
     PUPPET_CERT_STATE_SIGNED: str = "signed"
     """Puppet CA certificate status when signed."""
 
-    def __init__(self, master_host: RemoteHosts) -> None:
+    # NOTE: this is shared
+    def __init__(self, server_host: RemoteHosts) -> None:
         """Initialize the instance.
 
         Arguments:
-            master_host: the remote hosts instance for the Puppetmaster and Puppet CA server. It must have only one
+            server_host: the remote hosts instance for the Puppetserver and Puppet CA server. It must have only one
                 target host.
 
         Raises:
-            spicerack.puppet.PuppetMasterError: if the master_host doesn't have only one target host.
+            spicerack.puppet.PuppetServerError: if the server_host doesn't have only one target host.
 
         """
-        if len(master_host) != 1:
-            raise PuppetMasterError(
-                f"The master_host instance must target only one host, got {len(master_host)}: {master_host}"
+        if len(server_host) != 1:
+            raise PuppetServerError(
+                f"The server_host instance must target only one host, got {len(server_host)}: {server_host}"
             )
-        super().__init__(master_host)
+        super().__init__(server_host)
 
     @property
-    def master_host(self) -> RemoteHosts:
-        """Accessor for the master_host property."""
+    def server_host(self) -> RemoteHosts:
+        """Accessor for the server_host property."""
         return self._remote_hosts
 
     def delete(self, hostname: str) -> None:
-        """Remove the host from the Puppet master and PuppetDB.
+        """Remove the host from the Puppet server and PuppetDB.
 
-        Clean up signed certs, cached facts, node objects, and reports in the Puppet master, deactivate it in PuppetDB.
+        Clean up signed certs, cached facts, node objects, and reports in the Puppet server, deactivate it in PuppetDB.
         Doesn't raise exception if the host was already removed.
 
         Arguments:
@@ -377,7 +378,7 @@ class PuppetMaster(RemoteHostsAdapter):
 
         """
         commands = [f"puppet node {action} {hostname}" for action in ("clean", "deactivate")]
-        self.master_host.run_sync(*commands, print_progress_bars=False)
+        self.server_host.run_sync(*commands, print_progress_bars=False)
 
     def destroy(self, hostname: str) -> None:
         """Remove the certificate for the given hostname.
@@ -389,9 +390,7 @@ class PuppetMaster(RemoteHostsAdapter):
             hostname: the FQDN of the host for which to remove the certificate.
 
         """
-        self.master_host.run_sync(
-            f"puppet ca --disable_warnings deprecations destroy {hostname}", print_progress_bars=False
-        )
+        self.server_host.run_sync(f"puppetserver ca clean --certname {hostname}", print_progress_bars=False)
 
     def verify(self, hostname: str) -> None:
         """Verify that there is a valid certificate signed by the Puppet CA for the given hostname.
@@ -400,60 +399,50 @@ class PuppetMaster(RemoteHostsAdapter):
             hostname: the FQDN of the host for which to verify the certificate.
 
         Raises:
-            spicerack.puppet.PuppetMasterError: if the certificate is not valid.
+            spicerack.puppet.PuppetServerError: if the certificate is not valid.
 
         """
-        response = cast(
-            dict,
-            self._run_json_command(f"puppet ca --disable_warnings deprecations --render-as json verify {hostname}"),
-        )
+        cert = self.get_certificate_metadata(hostname)
+        if cert["state"] != PuppetServer.PUPPET_CERT_STATE_SIGNED:
+            raise PuppetServerError(f"Expected certificate for {hostname} to be signed, got: {cert['state']}")
 
-        if not response["valid"]:
-            raise PuppetMasterError(f"Invalid certificate for {hostname}: {response['error']}")
-
-    def sign(self, hostname: str, fingerprint: str, allow_alt_names: bool = False) -> None:
+    def sign(self, hostname: str, fingerprint: str) -> None:
         """Sign a CSR on the Puppet CA for the given host checking its fingerprint.
 
         Arguments:
             hostname: the FQDN of the host for which to sign the certificate.
             fingerprint: the fingerprint of the CSR generated on the client to verify it.
-            allow_alt_names: whether to allow DNS alternative names in the certificate.
 
         Raises:
-            spicerack.puppet.PuppetMasterError: if the certificate is in an unexpected state.
+            spicerack.puppet.PuppetServerError: if the certificate is in an unexpected state.
 
         """
         cert = self.get_certificate_metadata(hostname)
-        if cert["state"] != PuppetMaster.PUPPET_CERT_STATE_REQUESTED:
-            raise PuppetMasterError(f"Certificate for {hostname} not in requested state, got: {cert['state']}")
+        if cert["state"] != PuppetServer.PUPPET_CERT_STATE_REQUESTED:
+            raise PuppetServerError(f"Certificate for {hostname} not in requested state, got: {cert['state']}")
 
         if cert["fingerprint"] != fingerprint:
-            raise PuppetMasterError(
+            raise PuppetServerError(
                 f"CSR fingerprint {cert['fingerprint']} for {hostname} does not match provided fingerprint "
                 f"{fingerprint}"
             )
 
-        if allow_alt_names:
-            dns_option = "--allow-dns-alt-names"
-        else:
-            dns_option = "--no-allow-dns-alt-names"
-
-        command = f"puppet cert --disable_warnings deprecations sign {dns_option} {hostname}"
         logger.info("Signing CSR for %s with fingerprint %s", hostname, fingerprint)
-        executed = self.master_host.run_sync(command, print_output=False, print_progress_bars=False)
+        command = f"puppetserver ca sign --certname {hostname}"
+        executed = self.server_host.run_sync(command, print_output=False, print_progress_bars=False)
 
         cert = self.get_certificate_metadata(hostname)
-        if cert["state"] != PuppetMaster.PUPPET_CERT_STATE_SIGNED:
+        if cert["state"] != PuppetServer.PUPPET_CERT_STATE_SIGNED:
             for _, output in executed:
                 logger.error(output.message().decode())
 
-            raise PuppetMasterError(f"Expected certificate for {hostname} to be signed, got: {cert['state']}")
+            raise PuppetServerError(f"Expected certificate for {hostname} to be signed, got: {cert['state']}")
 
     @retry(
         tries=10,
         delay=timedelta(seconds=5),
         backoff_mode="power",
-        exceptions=(PuppetMasterCheckError,),
+        exceptions=(PuppetServerCheckError,),
     )
     def wait_for_csr(self, hostname: str) -> None:
         """Poll until a CSR appears for the given hostname or the timeout is reached.
@@ -462,13 +451,13 @@ class PuppetMaster(RemoteHostsAdapter):
             hostname: the FQDN of the host for which to check a CSR.
 
         Raises:
-            spicerack.puppet.PuppetMasterError: if the certificate is in an unexpected state.
-            spicerack.puppet.PuppetMasterCheckError: if within the timeout no CSR is found.
+            spicerack.puppet.PuppetServerError: if the certificate is in an unexpected state.
+            spicerack.puppet.PuppetServerCheckError: if within the timeout no CSR is found.
 
         """
         state = self.get_certificate_metadata(hostname)["state"]
-        if state != PuppetMaster.PUPPET_CERT_STATE_REQUESTED:
-            raise PuppetMasterError(f"Expected certificate in requested state, got: {state}")
+        if state != PuppetServer.PUPPET_CERT_STATE_REQUESTED:
+            raise PuppetServerError(f"Expected certificate in requested state, got: {state}")
 
     def get_certificate_metadata(self, hostname: str) -> dict:
         """Return the metadata of the certificate of the given hostname in the Puppet CA.
@@ -493,24 +482,31 @@ class PuppetMaster(RemoteHostsAdapter):
                 }
 
         Raises:
-            spicerack.puppet.PuppetMasterCheckError: if no certificate is found.
-            spicerack.puppet.PuppetMasterError: if more than one certificate is found or it has invalid data.
+            spicerack.puppet.PuppetServerCheckError: if no certificate is found.
+            spicerack.puppet.PuppetServerError: if more than one certificate is found or it has invalid data.
 
         """
-        pattern = hostname.replace(".", r"\.")
-        response = self._run_json_command(
-            f'puppet ca --disable_warnings deprecations --render-as json list --all --subject "^{pattern}$"'
-        )
+        response = self._run_json_command(f"puppetserver ca list --format json --certname {hostname}")
 
         if not response:
-            raise PuppetMasterCheckError(f"No certificate found for hostname: {hostname}")
+            raise PuppetServerCheckError(f"No certificate found for hostname: {hostname}")
 
-        if len(response) > 1:
-            raise PuppetMasterError(f"Expected one result from Puppet CA, got {len(response)}")
+        # The following should never happen however the return type of self._run_json_command is Dict | list.
+        # So we add this to keep mypy happy
+        if not isinstance(response, dict):
+            raise PuppetServerCheckError(f"Expected a dict but got list: {response}")
 
-        metadata = response[0]
+        if len(response.keys()) > 1:
+            raise PuppetServerError(f"Expected one result type from Puppet CA, got {len(response.keys())}")
+
+        # key will be either signed, requested, revoked Expected
+        # for now we don't return this information as it already exists in metadata['state']
+        key = list(response.keys())[0]
+        if len(response[key]) > 1:
+            raise PuppetServerError(f"Expected one result from Puppet CA, got {len(response[key])}")
+        metadata = response[key][0]
         if metadata["name"] != hostname:
-            raise PuppetMasterError(f"Hostname mismatch {metadata['name']} != {hostname}")
+            raise PuppetServerError(f"Hostname mismatch {metadata['name']} != {hostname}")
 
         return metadata
 
@@ -520,23 +516,140 @@ class PuppetMaster(RemoteHostsAdapter):
         The commands run are assumed to be safe as the JSON format is useful for read-only operations only.
 
         Arguments:
-            command: the command to execute on the Puppet master that returns JSON output.
+            command: the command to execute on the Puppet server that returns JSON output.
 
         Raises:
-            spicerack.puppet.PuppetMasterError: if unable to get or parse the command output.
+            spicerack.puppet.PuppetServerError: if unable to get or parse the command output.
 
         """
-        for _, output in self.master_host.run_sync(
+        for _, output in self.server_host.run_sync(
             command, is_safe=True, print_output=False, print_progress_bars=False
         ):
             lines = output.message().decode()
             break
         else:
-            raise PuppetMasterError(f"Got no output from Puppet master while executing command: {command}")
+            raise PuppetServerError(f"Got no output from Puppet server while executing command: {command}")
 
         try:
             response = json.loads(lines)
         except ValueError as e:
-            raise PuppetMasterError(f'Unable to parse Puppet master response for command "{command}": {lines}') from e
+            raise PuppetServerError(f'Unable to parse Puppet server response for command "{command}": {lines}') from e
 
         return response
+
+
+class PuppetMaster(PuppetServer):
+    """Class to manage nodes and certificates on a Puppet master and Puppet CA server."""
+
+    @property
+    def master_host(self) -> RemoteHosts:
+        """Accessor for the master_host property."""
+        return self.server_host
+
+    def destroy(self, hostname: str) -> None:
+        """Remove the certificate for the given hostname.
+
+        If there is no certificate to remove it doesn't raise exception as the Puppet CA just outputs
+        'Nothing was deleted'.
+
+        Arguments:
+            hostname: the FQDN of the host for which to remove the certificate.
+
+        """
+        self.server_host.run_sync(
+            f"puppet ca --disable_warnings deprecations destroy {hostname}", print_progress_bars=False
+        )
+
+    def verify(self, hostname: str) -> None:
+        """Verify that there is a valid certificate signed by the Puppet CA for the given hostname.
+
+        Arguments:
+            hostname: the FQDN of the host for which to verify the certificate.
+
+        Raises:
+            spicerack.puppet.PuppetServerError: if the certificate is not valid.
+
+        """
+        response = cast(
+            dict,
+            self._run_json_command(f"puppet ca --disable_warnings deprecations --render-as json verify {hostname}"),
+        )
+
+        if not response["valid"]:
+            raise PuppetServerError(f"Invalid certificate for {hostname}: {response['error']}")
+
+    def sign(self, hostname: str, fingerprint: str) -> None:
+        """Sign a CSR on the Puppet CA for the given host checking its fingerprint.
+
+        Arguments:
+            hostname: the FQDN of the host for which to sign the certificate.
+            fingerprint: the fingerprint of the CSR generated on the client to verify it.
+
+        Raises:
+            spicerack.puppet.PuppetServerError: if the certificate is in an unexpected state.
+
+        """
+        cert = self.get_certificate_metadata(hostname)
+        if cert["state"] != PuppetMaster.PUPPET_CERT_STATE_REQUESTED:
+            raise PuppetServerError(f"Certificate for {hostname} not in requested state, got: {cert['state']}")
+
+        if cert["fingerprint"] != fingerprint:
+            raise PuppetServerError(
+                f"CSR fingerprint {cert['fingerprint']} for {hostname} does not match provided fingerprint "
+                f"{fingerprint}"
+            )
+
+        command = f"puppet cert --disable_warnings deprecations sign {hostname}"
+        logger.info("Signing CSR for %s with fingerprint %s", hostname, fingerprint)
+        executed = self.server_host.run_sync(command, print_output=False, print_progress_bars=False)
+
+        cert = self.get_certificate_metadata(hostname)
+        if cert["state"] != PuppetMaster.PUPPET_CERT_STATE_SIGNED:
+            for _, output in executed:
+                logger.error(output.message().decode())
+
+            raise PuppetServerError(f"Expected certificate for {hostname} to be signed, got: {cert['state']}")
+
+    def get_certificate_metadata(self, hostname: str) -> dict:
+        """Return the metadata of the certificate of the given hostname in the Puppet CA.
+
+        Arguments:
+            hostname: the FQDN of the host for which to verify the certificate.
+
+        Returns:
+            As returned by the Puppet CA CLI with the render as JSON option set. As example::
+
+                {
+                    'dns_alt_names': ['DNS:service.example.com'],
+                    'fingerprint': '00:FF:...',
+                    'fingerprints': {
+                        'SHA1': '00:FF:...',
+                        'SHA256': '00:FF:...',
+                        'SHA512': '00:FF:...',
+                        'default': '00:FF:...',
+                    },
+                    'name': 'host.example.com',
+                    'state': 'signed',
+                }
+
+        Raises:
+            spicerack.puppet.PuppetServerCheckError: if no certificate is found.
+            spicerack.puppet.PuppetServerError: if more than one certificate is found or it has invalid data.
+
+        """
+        pattern = hostname.replace(".", r"\.")
+        response = self._run_json_command(
+            f'puppet ca --disable_warnings deprecations --render-as json list --all --subject "^{pattern}$"'
+        )
+
+        if not response:
+            raise PuppetServerCheckError(f"No certificate found for hostname: {hostname}")
+
+        if len(response) > 1:
+            raise PuppetServerError(f"Expected one result from Puppet CA, got {len(response)}")
+
+        metadata = response[0]
+        if metadata["name"] != hostname:
+            raise PuppetServerError(f"Hostname mismatch {metadata['name']} != {hostname}")
+
+        return metadata
