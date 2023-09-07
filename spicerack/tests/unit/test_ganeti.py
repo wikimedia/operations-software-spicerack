@@ -309,7 +309,7 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         (
             (
                 {"group": "row_A", "vcpus": 1, "memory": 1, "disk": 1, "link": "invalid"},
-                r"Invalid link 'invalid', expected one of: \('public', 'private', 'analytics'\)",
+                r"Invalid link 'invalid', expected one of: \('public', 'private', 'analytics', 'sandbox'\)",
             ),
             (
                 {"group": "row_A", "vcpus": -1, "memory": 1, "disk": 1, "link": "private"},
