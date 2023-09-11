@@ -41,7 +41,7 @@ class CookbookBase(metaclass=ABCMeta):
     """Reserved class property used by Spicerack internally to track the Cookbook's name."""
 
     def __init__(self, spicerack: Spicerack):
-        """Initializee the instance and store the Spicerack instance into ``self.spicerack``.
+        """Initialize the instance and store the Spicerack instance into ``self.spicerack``.
 
         Arguments:
             spicerack: the Spicerack accessor instance with which the cookbook can access all the Spicerack
@@ -52,7 +52,7 @@ class CookbookBase(metaclass=ABCMeta):
 
     @property
     def title(self) -> str:
-        """Retuns the title of the Cookbook, must be a single line string.
+        """Returns the title of the Cookbook, must be a single line string.
 
         The default implementation returns the first line of the class docstring if there is any, a single
         dash otherwise.
@@ -112,7 +112,7 @@ class CookbookRunnerBase(metaclass=ABCMeta):
 
     @abstractmethod
     def run(self) -> Optional[int]:
-        """Excute the cookbook.
+        """Execute the cookbook.
 
         Returns:
             The return code of the cookbook, it should be zero or :py:data:`None` on success, a positive
@@ -131,7 +131,7 @@ class CookbookRunnerBase(metaclass=ABCMeta):
         This method by default does nothing. Cookbooks classes that inherit from this one can override it to add their
         own custom actions to perform on error to rollback to a previous state.
         The method will be called if the cookbook raises any un-caught exception or exits with a non-zero exit code.
-        For example it can be used to cleanup any left-over unconsistent state as if the cookbook was never run.
+        For example it can be used to cleanup any left-over inconsistent state as if the cookbook was never run.
 
         Any un-caught exception raised by this method will be caught by Spicerack and logged, along with the original
         exit code of the cookbook. The final exit code will be the reserved

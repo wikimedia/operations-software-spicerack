@@ -247,7 +247,7 @@ class AlertmanagerHosts(Alertmanager):
         # Keep this kinda duplicated method from the parent class for a few reasons:
         # * It needs a different default value for the matchers argument.
         # * It needs a different docstring for documenting the different behaviour of the matchers argument.
-        # * Calling super() within a contextmanager is not that trival and will de-facto require more code.
+        # * Calling super() within a contextmanager is not that trivial and will de-facto require more code.
         downtime_id = self.downtime(reason, matchers=matchers, duration=duration)
         try:  # pylint: disable=no-else-raise
             yield

@@ -1,6 +1,26 @@
 Spicerack Changelog
 -------------------
 
+`v7.2.2`_ (2023-09-11)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* ganeti: add support also for the ``sandbox`` VLAN.
+* mediawiki: move the calls to ``noc.wikimedia.org`` to the kubernetes hosted one.
+
+Bug fixes
+"""""""""
+
+* puppet: drop deprecated ``--ignorecache`` switch.
+* Fix some docstring typos.
+
+Miscellanea
+"""""""""""
+
+* spicerack: make all ``CookbookCollection`` class arguments as keyword-only to avoid mistakes (internal API).
+
 `v7.2.1`_ (2023-06-21)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2630,3 +2650,4 @@ New features
 .. _`v7.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.1.0
 .. _`v7.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.0
 .. _`v7.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.1
+.. _`v7.2.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.2

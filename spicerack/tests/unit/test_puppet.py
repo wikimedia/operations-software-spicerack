@@ -208,10 +208,7 @@ class TestPuppetHosts:
             "systemctl reset-failed puppet.service || true",
             "puppet agent --enable",
             puppet.Command(
-                (
-                    "puppet agent --onetime --no-daemonize --verbose --no-splay --show_diff --ignorecache "
-                    "--no-usecacheonfailure"
-                ),
+                "puppet agent --onetime --no-daemonize --verbose --no-splay --show_diff --no-usecacheonfailure",
                 timeout=10800,
             ),
             print_output=False,
@@ -224,10 +221,7 @@ class TestPuppetHosts:
         self.mocked_remote_hosts.run_sync.assert_called_once_with(
             "puppet agent --enable",
             puppet.Command(
-                (
-                    "puppet agent --onetime --no-daemonize --verbose --no-splay --show_diff --ignorecache "
-                    "--no-usecacheonfailure"
-                ),
+                "puppet agent --onetime --no-daemonize --verbose --no-splay --show_diff --no-usecacheonfailure",
                 timeout=10800,
             ),
             print_output=False,

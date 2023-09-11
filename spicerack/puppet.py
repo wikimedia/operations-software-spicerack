@@ -216,10 +216,7 @@ class PuppetHosts(RemoteHostsAdapter):
         commands += [
             "puppet agent --enable",
             Command(
-                (
-                    "puppet agent --onetime --no-daemonize --verbose --no-splay --show_diff --ignorecache "
-                    "--no-usecacheonfailure"
-                ),
+                "puppet agent --onetime --no-daemonize --verbose --no-splay --show_diff --no-usecacheonfailure",
                 timeout=10800,
             ),
         ]

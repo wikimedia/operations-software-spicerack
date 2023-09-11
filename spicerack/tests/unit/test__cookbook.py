@@ -300,7 +300,9 @@ class TestCookbookCollection:
         spicerack = self.spicerack
         if verbose:
             spicerack = self.spicerack_verbose
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS, [], spicerack, path_filter=path_filter)
+        cookbooks = _cookbook.CookbookCollection(
+            base_dirs=COOKBOOKS_BASE_PATHS, args=[], spicerack=spicerack, path_filter=path_filter
+        )
         assert cookbooks.menu.get_tree() == expected
 
     def test_cookbooks_multiple_dirs_str(self, monkeypatch):
@@ -310,12 +312,14 @@ class TestCookbookCollection:
             shutil.rmtree(base_path / "cookbooks" / "__pycache__", ignore_errors=True)
 
         spicerack = self.spicerack
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS_MULTI, [], spicerack)
+        cookbooks = _cookbook.CookbookCollection(base_dirs=COOKBOOKS_BASE_PATHS_MULTI, args=[], spicerack=spicerack)
         assert cookbooks.menu.get_tree() == LIST_COOKBOOKS_ALL.format(external_cookbooks=LIST_EXTERNAL_COOKBOOKS)
 
     def test_cookbooks_non_existent(self):
         """The CookbookCollection class initialized with an empty path should not collect any cookbook."""
-        cookbooks = _cookbook.CookbookCollection([COOKBOOKS_BASE_PATH / "non_existent"], [], self.spicerack)
+        cookbooks = _cookbook.CookbookCollection(
+            base_dirs=[COOKBOOKS_BASE_PATH / "non_existent"], args=[], spicerack=self.spicerack
+        )
         assert cookbooks.menu.get_tree() == ""
 
     @pytest.mark.parametrize(
@@ -573,14 +577,16 @@ class TestCookbookCollection:
     def test_cookbooks_menu_status(self, monkeypatch):
         """Calling status on a TreeItem should show the completed and total tasks."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS, [], self.spicerack)
+        cookbooks = _cookbook.CookbookCollection(base_dirs=COOKBOOKS_BASE_PATHS, args=[], spicerack=self.spicerack)
         menu = cookbooks.get_item("")
         assert menu.status == "0/29"
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a TreeItem with all tasks completed should return DONE."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
-        cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS, [], self.spicerack, path_filter="group1")
+        cookbooks = _cookbook.CookbookCollection(
+            base_dirs=COOKBOOKS_BASE_PATHS, args=[], spicerack=self.spicerack, path_filter="group1"
+        )
         menu = cookbooks.get_item("group1")
         assert menu.status == "0/1"
         item = cookbooks.get_item("group1.cookbook1")
@@ -592,7 +598,9 @@ class TestCookbookCollection:
         """When a CookbookItem object fail to get initialized it should catch the MenuError, log it and continue."""
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         with caplog.at_level(logging.INFO):
-            cookbooks = _cookbook.CookbookCollection(COOKBOOKS_BASE_PATHS, [], self.spicerack, path_filter="cookbook")
+            cookbooks = _cookbook.CookbookCollection(
+                base_dirs=COOKBOOKS_BASE_PATHS, args=[], spicerack=self.spicerack, path_filter="cookbook"
+            )
             menu = cookbooks.get_item(".".join((cookbooks.cookbooks_module_prefix, "group1")))
         assert menu is None
         assert "fail to init" in caplog.text

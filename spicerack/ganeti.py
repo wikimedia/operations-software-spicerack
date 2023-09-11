@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 RAPI_URL_FORMAT: str = "https://{cluster}:5080"
 """The template string to construct the Ganeti RAPI URL."""
-INSTANCE_LINKS: tuple[str, ...] = ("public", "private", "analytics")
+INSTANCE_LINKS: tuple[str, ...] = ("public", "private", "analytics", "sandbox")
 """The list of possible instance link types."""
 
 
