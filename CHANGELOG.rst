@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v7.3.1`_ (2023-10-04)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* tests: fix test that was actually querying the DNS making it fail in the Debian package build process.
+
 `v7.3.0`_ (2023-10-04)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2678,3 +2686,4 @@ New features
 .. _`v7.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.1
 .. _`v7.2.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.2
 .. _`v7.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.3.0
+.. _`v7.3.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.3.1
