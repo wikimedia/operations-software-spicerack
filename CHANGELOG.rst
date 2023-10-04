@@ -1,6 +1,31 @@
 Spicerack Changelog
 -------------------
 
+`v7.3.0`_ (2023-10-04)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* puppet: Add new ``PuppetServer`` class and make the ``PuppetMaster`` inherit from it as it will be deprecated
+  first and then removed in future releases.
+
+Bug fixes
+"""""""""
+
+* decorators: fix the ``set_tries()`` function (`T346134`_).
+
+  * It is used to dynamically change the number of tries on a ``@retry``-decorated function/method but was not reading
+    the function signature default value when present. Inspect the signature and if the default value is present, is an
+    integer and is either untyped or typed as integer use it. Add also tests as they were not present and not spotted
+    because the code coverage was considering the function as tested because used in the service module.
+
+Miscellanea
+"""""""""""
+
+* tests: simplify the ``spicerack._cookbook.main()`` tests avoiding to mock the Spicerack instance and using instead
+  the configuration file to instantiate a real instance.
+
 `v7.2.2`_ (2023-09-11)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2547,6 +2572,7 @@ New features
 .. _`T329773`: https://phabricator.wikimedia.org/T329773
 .. _`T330318`: https://phabricator.wikimedia.org/T330318
 .. _`T335855`: https://phabricator.wikimedia.org/T335855
+.. _`T346134`: https://phabricator.wikimedia.org/T346134
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2651,3 +2677,4 @@ New features
 .. _`v7.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.0
 .. _`v7.2.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.1
 .. _`v7.2.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.2
+.. _`v7.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.3.0

@@ -274,7 +274,6 @@ class TestCookbookCollection:
         """Initialize the test environment."""
         # pylint: disable=attribute-defined-outside-init
         self.spicerack = Spicerack(verbose=False, dry_run=False, **SPICERACK_TEST_PARAMS)
-        self.spicerack_dry_run = Spicerack(verbose=False, dry_run=True, **SPICERACK_TEST_PARAMS)
         self.spicerack_verbose = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
     def teardown_method(self):
@@ -488,11 +487,11 @@ class TestCookbookCollection:
         config = {
             "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
+            "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                with caplog.at_level(logging.INFO):
-                    ret = _cookbook.main([module] + args)
+            with caplog.at_level(logging.INFO):
+                ret = _cookbook.main([module] + args)
 
         assert ret == code
         for message in err_messages:
@@ -506,11 +505,11 @@ class TestCookbookCollection:
         config = {
             "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS_MULTI,
             "logs_base_dir": tmpdir.strpath,
+            "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                with caplog.at_level(logging.INFO):
-                    ret = _cookbook.main([module])
+            with caplog.at_level(logging.INFO):
+                ret = _cookbook.main([module])
 
         assert ret == 0
         err_messages = [
@@ -526,11 +525,11 @@ class TestCookbookCollection:
         config = {
             "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
+            "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                with caplog.at_level(logging.INFO):
-                    ret = _cookbook.main(["group3.argparse_ok", "--invalid"])
+            with caplog.at_level(logging.INFO):
+                ret = _cookbook.main(["group3.argparse_ok", "--invalid"])
 
         assert ret == 2
         _, err = capsys.readouterr()
@@ -543,10 +542,10 @@ class TestCookbookCollection:
         config = {
             "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
+            "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack_dry_run):
-                ret = _cookbook.main(["-d", "root"])
+            ret = _cookbook.main(["-d", "root"])
 
         assert ret == 0
         _, err = capsys.readouterr()
@@ -557,11 +556,11 @@ class TestCookbookCollection:
         config = {
             "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
+            "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                with caplog.at_level(logging.INFO):
-                    ret = _cookbook.main(["-l"])
+            with caplog.at_level(logging.INFO):
+                ret = _cookbook.main(["-l"])
 
         out, _ = capsys.readouterr()
 
@@ -677,10 +676,10 @@ class TestCookbookCollection:
         config = {
             "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
+            "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                ret = _cookbook.main([])
+            ret = _cookbook.main([])
 
         out, _ = capsys.readouterr()
         assert ret == 0
@@ -695,10 +694,10 @@ class TestCookbookCollection:
         config = {
             "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
             "logs_base_dir": tmpdir.strpath,
+            "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with mock.patch("spicerack._cookbook.Spicerack", return_value=self.spicerack):
-                ret = _cookbook.main(["group2"])
+            ret = _cookbook.main(["group2"])
 
         out, _ = capsys.readouterr()
         assert ret == 0

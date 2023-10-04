@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 from wmflib.exceptions import WmflibError
 
-from spicerack.decorators import retry
+from spicerack.decorators import retry, set_tries
 from spicerack.exceptions import SpicerackError
 
 
@@ -20,6 +20,24 @@ class DryRunRetry:
     def fail(self):
         """A method that fail always to trigger the retry logic."""
         raise SpicerackError(f"self._dry_run={self._dry_run}")
+
+
+@retry(dynamic_params_callbacks=[set_tries])
+def set_tries_retry_typed(tries: int = 10, dry_run: bool = False):
+    """A test function that has a tries parameter and a dry_run one."""
+    raise SpicerackError("set_tries_retry_typed")
+
+
+@retry(dynamic_params_callbacks=[set_tries])
+def set_tries_retry_untyped(tries=10, dry_run=False):
+    """A test function that has a tries parameter and a dry_run one."""
+    raise SpicerackError("set_tries_retry_untyped")
+
+
+@retry(dynamic_params_callbacks=[set_tries])
+def set_tries_retry_wrongly_typed(tries: str = "10", dry_run: bool = False):
+    """A test function that has a tries parameter and a dry_run one."""
+    raise SpicerackError("set_tries_retry_wrongly_typed")
 
 
 def _generate_mocked_function(calls):
@@ -176,3 +194,29 @@ def test_retry_invalid(kwargs, message):
     """Using @retry with invalid arguments should raise WmflibError."""
     with pytest.raises(WmflibError, match=message):
         retry(**kwargs)(lambda: True)()
+
+
+@pytest.mark.parametrize(
+    "func, kwargs, sleep_call_count",
+    (
+        (set_tries_retry_typed, {}, 9),
+        (set_tries_retry_typed, {"dry_run": True}, 0),
+        (set_tries_retry_typed, {"tries": 5}, 4),
+        (set_tries_retry_typed, {"tries": 5, "dry_run": True}, 0),
+        (set_tries_retry_untyped, {}, 9),
+        (set_tries_retry_untyped, {"dry_run": True}, 0),
+        (set_tries_retry_untyped, {"tries": 5}, 4),
+        (set_tries_retry_untyped, {"tries": 5, "dry_run": True}, 0),
+        (set_tries_retry_wrongly_typed, {}, 2),
+        (set_tries_retry_wrongly_typed, {"dry_run": True}, 0),
+        (set_tries_retry_wrongly_typed, {"tries": 5}, 4),
+        (set_tries_retry_wrongly_typed, {"tries": 5, "dry_run": True}, 0),
+    ),
+)
+@mock.patch("wmflib.decorators.time.sleep", return_value=None)
+def test_retry_set_tries(mocked_sleep, func, kwargs, sleep_call_count):
+    """Setting the dynamic_params_callbacks to set_tries should adjust the tries accordingly."""
+    with pytest.raises(SpicerackError):
+        func(**kwargs)
+
+    assert mocked_sleep.call_count == sleep_call_count

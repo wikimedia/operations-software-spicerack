@@ -54,19 +54,28 @@ def get_effective_tries(params: RetryParams, func: Callable, args: tuple, kwargs
         params.tries = 1
 
 
-def set_tries(params: RetryParams, _func: Callable, _params: tuple, kwargs: dict) -> None:
+def set_tries(params: RetryParams, func: Callable, _args: tuple, kwargs: dict) -> None:
     """Simple function to allow adapting the number of retries.
 
     Arguments:
         params: the decorator original parameters.
-        _func: the decorated callable. Unused.
+        func: the decorated callable.
         _args: the decorated callable positional arguments as tuple. Unused.
         kwargs: the decorated callable keyword arguments as dictionary.
 
     """
-    override_default_retries = kwargs.get("tries", 0)
-    if override_default_retries:
-        params.tries = override_default_retries
+    existing_tries = params.tries
+    new_tries = None
+    if kwargs.get("tries", 0) and isinstance(kwargs["tries"], int):
+        new_tries = kwargs["tries"]
+    else:  # Check if the signature has an integer default value and is typed as int or untyped
+        param = inspect.signature(func).parameters.get("tries")
+        if param is not None and param.annotation in (int, inspect.Parameter.empty) and isinstance(param.default, int):
+            new_tries = param.default
+
+    if new_tries is not None:
+        params.tries = new_tries
+        logger.info("Tries set to %s instead of the default %s", new_tries, existing_tries)
 
 
 @ensure_wrap
