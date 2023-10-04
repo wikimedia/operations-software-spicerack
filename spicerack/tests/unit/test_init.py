@@ -154,12 +154,12 @@ def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostn
     assert mocked_remote_query.called
 
 
-@mock.patch("spicerack.Dns.resolve", autospec=True)
+@mock.patch("spicerack.Dns", autospec=True)
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
 def test_spicerack_puppet_server(mocked_remote_query, mocked_dns_resolve):
     """An instance of Spicerack should allow to get a PuppetServer instance."""
     dns_answer = MockedDnsAnswer(ttl=600, rrset=[MockedDnsSrv(target="puppetserver1001.eqiad.wmnet")])
-    mocked_dns_resolve.return_value = dns_answer
+    mocked_dns_resolve.return_value.resolve.return_value = dns_answer
     host = mock.MagicMock(spec_set=RemoteHosts)
     host.__len__.return_value = 1
     mocked_remote_query.return_value = host
@@ -187,10 +187,10 @@ def test_spicerack_puppet_server(mocked_remote_query, mocked_dns_resolve):
         ),
     ),
 )
-@mock.patch("spicerack.Dns.resolve", autospec=True)
+@mock.patch("spicerack.Dns", autospec=True)
 def test_spicerack_puppet_server_raises(mocked_dns_resolve, response, err_msg):
     """An instance of Spicerack should allow to get a PuppetServer instance."""
-    mocked_dns_resolve.return_value = response
+    mocked_dns_resolve.return_value.resolve.return_value = response
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
     with pytest.raises(SpicerackError, match=err_msg):
         spicerack.puppet_server()
