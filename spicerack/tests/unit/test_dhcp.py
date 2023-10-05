@@ -29,7 +29,7 @@ def get_mock_fail_hosts():
 def get_mock_suc_fail_hosts():
     """Return a `spicerack.remote.Hosts` mock where execution succeeds and then fails."""
     hosts = get_mock_hosts()
-    hosts.run_sync.side_effect = ["some value", RemoteExecutionError("mock error", 1, iter(()))]
+    hosts.run_sync.side_effect = [iter(()), RemoteExecutionError("mock error", 1, iter(()))]
     return hosts
 
 
@@ -321,34 +321,22 @@ class TestDHCP:
         hosts = self._setup_dhcp_mocks()
 
         self.dhcp.push_configuration(config)
-
-        call_test = mock.call(
-            f"/usr/bin/test '!' '-e' {dhcp.DHCP_TARGET_PATH}/{config.filename}",
-            is_safe=True,
-            print_output=False,
-            print_progress_bars=False,
+        hosts.run_sync.assert_has_calls(
+            [
+                mock.call(
+                    "/bin/echo 'dGVzdCBjb25maWd1cmF0aW9u' | /usr/bin/base64 -d > /etc/dhcp/automation/test.conf",
+                    print_progress_bars=False,
+                ),
+                mock.call("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False),
+            ]
         )
-        call_write = mock.call(
-            f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}",
-            print_progress_bars=False,
-        )
-        hosts.run_sync.assert_has_calls([call_test, call_write])
 
-    # - does it deal correctly with failure from test command (e.g. file exists)
-    def test_push_configuration_test_fail(self):
-        """Test push_configuration where the file apparently exists."""
-        config = get_mock_config()
-        self._setup_dhcp_mocks(hosts=get_mock_fail_hosts())
-
-        with pytest.raises(dhcp.DHCPError) as exc:
-            self.dhcp.push_configuration(config)
-        assert "already exists, is there another operation in progress" in str(exc.value)
-
-    # - does it deal correctly with echo command failing
     def test_push_configuration_echo_fail(self):
         """Test push_configuration, where writing to the file fails."""
         config = get_mock_config()
-        self._setup_dhcp_mocks(hosts=get_mock_suc_fail_hosts())
+        hosts = get_mock_suc_fail_hosts()
+        hosts.run_sync.side_effect = list(hosts.run_sync.side_effect)[1:]
+        self._setup_dhcp_mocks(hosts=hosts)
 
         with pytest.raises(dhcp.DHCPError) as exc:
             self.dhcp.push_configuration(config)
@@ -359,7 +347,6 @@ class TestDHCP:
         config = get_mock_config()
         hosts = get_mock_suc_fail_hosts()
         hosts.run_sync.side_effect = [
-            "some value",
             "some value",
             RemoteExecutionError("mock error", 1, iter(())),
             "some value",
@@ -494,17 +481,10 @@ class TestDHCP:
         config = get_mock_config()
         hosts = self._setup_dhcp_mocks()
 
-        call_test = mock.call(
-            f"/usr/bin/test '!' '-e' {dhcp.DHCP_TARGET_PATH}/{config.filename}",
-            is_safe=True,
-            print_output=False,
-            print_progress_bars=False,
-        )
         call_write = mock.call(
             f"/bin/echo '{config.config_base64}' | /usr/bin/base64 -d > {dhcp.DHCP_TARGET_PATH}/{config.filename}",
             print_progress_bars=False,
         )
-
         call_sha256 = mock.call(
             f"sha256sum {dhcp.DHCP_TARGET_PATH}/{config.filename}",
             is_safe=True,
@@ -523,4 +503,4 @@ class TestDHCP:
                 with self.dhcp.config(config):
                     raise RuntimeError()
 
-        hosts.run_sync.assert_has_calls([call_test, call_write, call_refresh, call_sha256, call_rm, call_refresh])
+        hosts.run_sync.assert_has_calls([call_write, call_refresh, call_sha256, call_rm, call_refresh])

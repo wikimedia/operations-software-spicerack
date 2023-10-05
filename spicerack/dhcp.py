@@ -223,16 +223,6 @@ class DHCP:
 
         """
         filename = f"{DHCP_TARGET_PATH}/{configuration.filename}"
-        try:
-            self._hosts.run_sync(
-                f"/usr/bin/test '!' '-e' {filename}", is_safe=True, print_output=False, print_progress_bars=False
-            )
-        except RemoteExecutionError as exc:
-            raise DHCPError(
-                f"Snippet {filename} already exists, is there another operation in progress for the same device? "
-                "If not you delete it and retry."
-            ) from exc
-
         b64encoded = base64.b64encode(str(configuration).encode()).decode()
         try:
             self._hosts.run_sync(
