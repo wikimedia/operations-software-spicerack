@@ -277,6 +277,9 @@ class CookbookItem(BaseItem):
         if ret >= 0 or parser is None:
             return ret, args
 
+        # Set a meaningful prog name in the parser for a better help message.
+        parser.prog = f"cookbook [GLOBAL_ARGS] {self.full_name}"
+
         return self._safe_call(
             parser.parse_args,
             [self.args],

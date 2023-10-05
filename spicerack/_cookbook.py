@@ -300,6 +300,7 @@ def argument_parser() -> argparse.ArgumentParser:
         description="Spicerack Cookbook Runner",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog="See also https://wikitech.wikimedia.org/wiki/Spicerack/Cookbooks",
+        allow_abbrev=False,  # Prevent matching of cookbook options
     )
     parser.add_argument(
         "-l",
