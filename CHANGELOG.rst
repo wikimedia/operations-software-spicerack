@@ -1,6 +1,45 @@
 Spicerack Changelog
 -------------------
 
+`v7.4.0`_ (2023-10-09)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* Add distribted locking support (`T341973`_):
+
+  * locking: add new module for distributed locking support via etcd.
+  * spicerack: add a new spicerack accessor ``lock()`` to get an instance of the locking class to acquire and release
+    cookbook specific custom locks (`T341973`_).
+  * cookbook: add ``--no-locks`` CLI argument to disable locking acquisition/release on a per-run basis. To be used in
+    case of emergency or if there are issues with etcd that prevents to acquire/release locks properly.
+  * By default the locking support is disabled unless the ``etcd_config`` is set in the configuration file.
+
+Minor improvements
+""""""""""""""""""
+
+* spicerack: add ``owner`` property to get a pre-formatted string of the form ``user@host [pid]`` useful to identify
+  the owner of a current running process.
+* spicerack: add ``current_hostname`` property to get the hostname of the host where the cookbook is currently running.
+* spicerack: improve cookbooks help message:
+
+  * The default argument parser in the CookbookBase class doesn't provide a ``prog`` name as it's a bit tricky to
+    guess it because it depends on how many cookbooks are defined in a single file.
+  * As a result the help message was not very clear up to now::
+
+        $ sudo cookbook sre.hosts.decommission -h
+        usage: cookbook [-h] -t TASK_ID [--force] query
+
+  * With this release we inject the cookbook real name in the parser with the additional costruct to use::
+
+        $ sudo cookbook sre.hosts.decommission -h
+        usage: cookbook [GLOBAL_ARGS] sre.hosts.decommission [-h] -t TASK_ID [--force] query
+
+  * This way it should also help to remind the user that there are global arguments for the cookbook binary in
+    addition to the cookbook-specific ones. It was deemed not necessary to add a message to run ``cookbook -h`` to
+    get the available ``GLOBAL_ARGS``, but it can be easily added.
+
 `v7.3.1`_ (2023-10-04)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2580,6 +2619,7 @@ New features
 .. _`T329773`: https://phabricator.wikimedia.org/T329773
 .. _`T330318`: https://phabricator.wikimedia.org/T330318
 .. _`T335855`: https://phabricator.wikimedia.org/T335855
+.. _`T341973`: https://phabricator.wikimedia.org/T341973
 .. _`T346134`: https://phabricator.wikimedia.org/T346134
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
@@ -2687,3 +2727,4 @@ New features
 .. _`v7.2.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.2.2
 .. _`v7.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.3.0
 .. _`v7.3.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.3.1
+.. _`v7.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.4.0
