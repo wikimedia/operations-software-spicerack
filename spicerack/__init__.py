@@ -2,9 +2,10 @@
 from collections.abc import Callable, Sequence
 from ipaddress import ip_interface
 from logging import Logger, getLogger
+from os import getpid
 from pathlib import Path
 from socket import gethostname
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from git import Repo
 from pkg_resources import DistributionNotFound, get_distribution
@@ -33,6 +34,7 @@ from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.k8s import Kubernetes
 from spicerack.kafka import Kafka
+from spicerack.locking import COOKBOOKS_CUSTOM_PREFIX, Lock, NoLock, get_lock_instance
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
@@ -73,6 +75,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         conftool_config: str = "/etc/conftool/config.yaml",
         conftool_schema: str = "/etc/conftool/schema.yaml",
         debmonitor_config: str = "/etc/debmonitor.conf",
+        etcd_config: str = "",  # Locking support, if empty string is disabled
         spicerack_config_dir: str = "/etc/spicerack",
         http_proxy: str = "",
         get_cookbook_callback: Optional[Callable[["Spicerack", str, Sequence[str]], Optional["BaseItem"]]] = None,
@@ -95,6 +98,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
                     cert=/etc/debmonitor/ssl/cert.pem
                     key=/etc/debmonitor/ssl/server.key
 
+            etcd_config: the path to the Etcd configuration file. Set to empty string to disable the locking support.
             spicerack_config_dir: the path for the root configuration directory for Spicerack. Module-specific
                 configuration will be loaded from ``config_dir/module_name/``.
             http_proxy: the ``scheme://url:port`` of the HTTP proxy to use for external calls.
@@ -114,6 +118,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._conftool_config = conftool_config
         self._conftool_schema = conftool_schema
         self._debmonitor_config = debmonitor_config
+        self._etcd_config: Optional[Path] = Path(etcd_config) if etcd_config else None
         self._spicerack_config_dir = Path(spicerack_config_dir)
         self._get_cookbook_callback = get_cookbook_callback
 
@@ -159,6 +164,16 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
     def username(self) -> str:
         """Returns the name of the effective running user."""
         return self._username
+
+    @property
+    def current_hostname(self) -> str:
+        """Returns the name of the hostname where the code is running."""
+        return self._current_hostname
+
+    @property
+    def owner(self) -> str:
+        """Returns the owner of the current code: user@host [pid]."""
+        return f"{self._username}@{self._current_hostname} [{getpid()}]"
 
     @property
     def config_dir(self) -> Path:
@@ -283,6 +298,20 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         logger.debug("Executing cookbook %s with args: %s", cookbook, args)
         return cookbook_item.run() or 0  # Force the return code to be 0 if the cookbook returns None
+
+    def lock(self) -> Union[Lock, NoLock]:
+        """Get a Lock instance to acquire custom locks with concurrency and TTL around specific lines of code.
+
+        In case the locking support is disabled, a :py:class:`spicerack.locking.NoLock` instance is returned, with the
+        same API of the :py:class:`spicerack.locking.Lock` class but that does nothing.
+
+        Returns:
+            The lock instance already initialized with a dedicated prefix for the keys.
+
+        """
+        return get_lock_instance(
+            config_file=self._etcd_config, prefix=COOKBOOKS_CUSTOM_PREFIX, owner=self.owner, dry_run=self._dry_run
+        )
 
     def remote(self, installer: bool = False) -> Remote:
         """Get a Remote instance.

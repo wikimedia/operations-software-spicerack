@@ -551,6 +551,19 @@ class TestCookbookCollection:
         _, err = capsys.readouterr()
         assert "DRY-RUN" in err
 
+    def test_main_execute_no_lock(self, tmpdir):
+        """Calling main() with the CLI --no-lock flag mode should bypass the locking mechanism."""
+        config = {
+            "cookbooks_base_dirs": COOKBOOKS_BASE_PATHS,
+            "logs_base_dir": tmpdir.strpath,
+        }
+        with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
+            with mock.patch("spicerack._cookbook.Spicerack") as mocked_spicerack:
+                ret = _cookbook.main(["--no-locks", "root"])
+
+        assert mocked_spicerack.call_args.kwargs["etcd_config"] == ""
+        assert ret == 0
+
     def test_main_list(self, tmpdir, capsys, caplog):
         """Calling main() with the -l/--list option should print the available cookbooks."""
         config = {

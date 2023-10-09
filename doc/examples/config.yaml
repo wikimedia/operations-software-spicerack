@@ -18,6 +18,8 @@ instance_params:
   conftool_config: /etc/conftool/config.yaml  # Conftool's YAML configuration file.
   conftool_schema: /etc/conftool/schema.yaml  # Conftool's YAML schema file.
   debmonitor_config: /etc/debmonitor.conf  # Debmonitor's INI configuration file.
+  # etcd YAML configuration file to pass to an etcd client. Set to empty string to disable the locking mechanism.
+  etcd_config: /etc/etcd/etcdrc
   spicerack_config_dir: /etc/spicerack  # Path to the modules and cookbooks specific configuration files.
   http_proxy: http://proxy.example.com:8080  # HTTP/HTTPS proxy scheme://url:port to use for external calls.
   # The qualified name of the Python class that inherits from `spicerack.SpicerackExtenderBase` to be used in

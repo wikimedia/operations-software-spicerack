@@ -3,6 +3,7 @@ import logging
 import sys
 from collections import namedtuple
 from importlib import import_module
+from socket import gethostname
 from unittest import mock
 
 import pytest
@@ -29,6 +30,7 @@ from spicerack.icinga import IcingaHosts
 from spicerack.ipmi import Ipmi
 from spicerack.k8s import Kubernetes
 from spicerack.kafka import Kafka
+from spicerack.locking import Lock, NoLock
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
@@ -61,6 +63,7 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert spicerack.username == "user1"
     assert spicerack.config_dir == get_fixture_path()
     assert spicerack.http_proxy == proxy
+    assert spicerack.current_hostname == gethostname()
     assert spicerack.requests_proxies == {"http": proxy, "https": proxy}
     assert spicerack.authdns_servers == {"authdns1001.example.org": "10.0.0.1", "authdns2001.example.org": "10.0.0.2"}
     assert list(spicerack.authdns_active_hosts.hosts) == ["authdns1001.example.org", "authdns2001.example.org"]
@@ -104,6 +107,7 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert isinstance(service_catalog, Catalog)
     assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
     assert isinstance(spicerack.apt_get(mock.MagicMock(spec_set=RemoteHosts)), AptGetHosts)
+    assert isinstance(spicerack.lock(), NoLock)
 
     assert mocked_dns_resolver.Resolver.called
 
@@ -361,3 +365,9 @@ def test_spicerack_extender():
     with pytest.raises(AttributeError, match="'SpicerackExtender' object has no attribute 'nonexistent'"):
         # Test that non-existent accessors raise when there is an extender.
         spicerack.nonexistent()
+
+
+def test_spicerack_lock():
+    """It should return an instance of spicerack.locking.Lock."""
+    spicerack = Spicerack(etcd_config=get_fixture_path("locking", "config.yaml"), **SPICERACK_TEST_PARAMS)
+    assert isinstance(spicerack.lock(), Lock)

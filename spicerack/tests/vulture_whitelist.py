@@ -15,6 +15,9 @@ whitelist_logging.raiseExceptions
 whitelist_ganeti = Whitelist()
 whitelist_ganeti.Ganeti._http_session.auth
 
+whitelist__menu = Whitelist()
+whitelist__menu.CookbookItem._parse_args.parser.prog
+
 # Needed because of https://github.com/jendrikseipp/vulture/issues/264
 whitelist_dhcp = Whitelist()
 whitelist_dhcp.DHCPConfOpt82.ipv4

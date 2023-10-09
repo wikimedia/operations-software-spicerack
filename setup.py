@@ -18,6 +18,7 @@ INSTALL_REQUIRES = [
     "packaging",
     "pymysql>=0.9.3",
     "pynetbox~=6.6",
+    "python-etcd~=0.4.5",
     "redis>=3.5.3,<=4.1.3",
     "requests>=2.25.0",
     "wmflib",

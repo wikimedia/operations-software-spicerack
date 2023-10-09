@@ -30,6 +30,7 @@ Spicerack Python API autodoc.
    spicerack.ipmi
    spicerack.k8s
    spicerack.kafka
+   spicerack.locking
    spicerack.mediawiki
    spicerack.mysql
    spicerack.mysql_legacy
