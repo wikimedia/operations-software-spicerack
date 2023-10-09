@@ -2,16 +2,17 @@ Source: spicerack
 Section: utils
 Priority: optional
 Maintainer: Riccardo Coccioli <rcoccioli@wikimedia.org>
-Standards-Version: 4.6.0.1
+Standards-Version: 4.6.2.0
 Build-Depends:
   cumin,
   debhelper (>= 12),
   dh-python (>= 3.20190308~),
-  python3-all (>= 3.7),
+  python3-all (>= 3.9),
   python3-conftool,
   python3-dnspython,
   python3-elasticsearch,
   python3-elasticsearch-curator,
+  python3-etcd,
   python3-git,
   python3-kafka,
   python3-kubernetes,
@@ -32,7 +33,7 @@ Build-Depends:
   python3-sphinx-rtd-theme,
   python3-wmflib,
 Homepage: https://github.com/wikimedia/operations-software-spicerack
-X-Python3-Version: >= 3.7
+X-Python3-Version: >= 3.9
 
 Package: spicerack
 Architecture: any

@@ -1,3 +1,12 @@
+spicerack (7.4.0-1) unstable; urgency=medium
+
+  * v7.4.0 upstream release.
+  * Add python3-etcd as dependency.
+  * Bump minimum version of Python required to 3.9.
+  * Bump Standards-Version to 4.6.2.0.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Mon, 09 Oct 2023 11:56:45 -0000
+
 spicerack (7.3.1-1) unstable; urgency=medium
 
   * v7.3.1 upstream release.
