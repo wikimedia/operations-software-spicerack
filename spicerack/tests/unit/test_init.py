@@ -367,7 +367,8 @@ def test_spicerack_extender():
         spicerack.nonexistent()
 
 
-def test_spicerack_lock():
+def test_spicerack_lock(monkeypatch):
     """It should return an instance of spicerack.locking.Lock."""
+    monkeypatch.setenv("USER", "")
     spicerack = Spicerack(etcd_config=get_fixture_path("locking", "config.yaml"), **SPICERACK_TEST_PARAMS)
     assert isinstance(spicerack.lock(), Lock)

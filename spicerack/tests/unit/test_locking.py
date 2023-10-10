@@ -23,14 +23,21 @@ KEY_LOCKS_JSON = f"""
 """
 
 
-def test_get_lock_instance():
+@pytest.mark.parametrize("stem", ("config", "non-existent"))
+def test_get_lock_instance(stem, monkeypatch):
     """It should return a Lock instance."""
-    lock = locking.get_lock_instance(
-        config_file=get_fixture_path("locking", "config.yaml"),
-        prefix="cookbooks",
-        owner="user@host [123]",
-        dry_run=False,
-    )
+    monkeypatch.setenv("USER", "")
+    config_file = get_fixture_path("locking", "config.yaml")
+    with mock.patch("spicerack.locking.Path") as mocked_path:
+        mocked_path.return_value = config_file.with_stem(stem)
+        lock = locking.get_lock_instance(
+            config_file=config_file,
+            prefix="cookbooks",
+            owner="user@host [123]",
+            dry_run=False,
+        )
+        mocked_path.assert_called_once_with("~/.etcdrc")
+
     assert isinstance(lock, locking.Lock)
 
 

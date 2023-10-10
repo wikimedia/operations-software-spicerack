@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -36,12 +37,11 @@ def get_lock_instance(
 ) -> Union[Lock, NoLock]:
     """Get a lock instance based on the configuration file and prefix.
 
-    If the configuration file path is empty the locking support is considered to be disabled and a NoLock instance
-    will be returned.
-
     Arguments:
         config_file: the path to the configuration file for the locking backend or :py:data:`None` to disable the
-            locking support and continue without acquiring any lock.
+            locking support and return a :py:class:`spicerack.locking.NoLock` instance. When the configuration file is
+            present a :py:class:`spicerack.locking.Lock` instance is returned instead. The configuration is also
+            automatically merged with the ``~/.etcdrc`` config file of the running user, if present.
         prefix: the name of the directory to use to prefix the lock. Must be one of
             :py:const:`spicerack.locking.ALLOWED_PREFIXES`.
         owner: a way to identify the owner of the lock, usually in the form ``{user}@{hostname} [{pid}]``.
@@ -59,7 +59,9 @@ def get_lock_instance(
         raise LockError(f"Invalid prefix {prefix}, must be one of: {ALLOWED_PREFIXES}")
 
     if config_file is not None:
+        user = os.environ.get("USER", "")
         config = load_yaml_config(config_file)
+        config.update(load_yaml_config(Path(f"~{user}/.etcdrc").expanduser(), raises=False))
         return Lock(prefix=prefix, config=config, owner=owner, dry_run=dry_run)
 
     return NoLock()
