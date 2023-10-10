@@ -372,3 +372,14 @@ def test_spicerack_lock(monkeypatch):
     monkeypatch.setenv("USER", "")
     spicerack = Spicerack(etcd_config=get_fixture_path("locking", "config.yaml"), **SPICERACK_TEST_PARAMS)
     assert isinstance(spicerack.lock(), Lock)
+
+
+def test_spicerack_private_lock():
+    """It should return a lock instance for the spicerack modules and also cache it for re-use."""
+    Spicerack.test_accessor = lambda self: getattr(self, "_spicerack_lock")
+    spicerack = Spicerack(**SPICERACK_TEST_PARAMS)
+
+    lock_1 = spicerack.test_accessor()
+    lock_2 = spicerack.test_accessor()
+    assert isinstance(lock_1, NoLock)
+    assert lock_1 is lock_2  # Test that it returns the cached object
