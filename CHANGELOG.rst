@@ -1,6 +1,18 @@
 Spicerack Changelog
 -------------------
 
+`v7.4.1`_ (2023-10-10)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* locking: load also ``~/.etcdrc`` for the running user (`T341973`_):
+
+    * We currently save the authentication credential in ``/root/.etcdrc``. Generically load the effective running
+      user's ``~/.etcdrc`` configuration file too and merge it into the one provided in the configuration. This is
+      done best effort, if the ~/.etcdrc file is missing it will be silently ignored.
+
 `v7.4.0`_ (2023-10-09)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2728,3 +2740,4 @@ New features
 .. _`v7.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.3.0
 .. _`v7.3.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.3.1
 .. _`v7.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.4.0
+.. _`v7.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.4.1
