@@ -1,6 +1,7 @@
 # pylint: disable=too-many-lines
 """Puppet module tests."""
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from subprocess import CalledProcessError
 from unittest import mock
@@ -743,6 +744,11 @@ class TestPuppetServer:
                 r"Expected a dict but got list: \[True\]",
             ),
             (
+                b'{"missing":["test.example.com"]}',
+                puppet.PuppetServerCheckError,
+                r"The puppet server has no CSR for test.example.com",
+            ),
+            (
                 b'{"signed":[{"name":"invalid.example.com"}]}',
                 puppet.PuppetServerError,
                 "Hostname mismatch invalid.example.com != test.example.com",
@@ -766,6 +772,20 @@ class TestPuppetServer:
 
         with pytest.raises(exception, match=exception_message):
             self.puppet_server.get_certificate_metadata("test.example.com")
+
+    def test_run_json_command_none_zero_rc(self):
+        """If the cumin commands returns 0 the function should still return data."""
+        json_output = b'{"missing":["test.example.com"]}'
+        results = [
+            (
+                nodeset("puppetserver.example.com"),
+                MsgTreeElem(json_output, parent=MsgTreeElem()),
+            )
+        ]
+        self.mocked_server_host.run_sync.return_value = iter(results)
+        side_effect = RemoteExecutionError(1, "Cumin, execution failed", iter(results))
+        self.mocked_server_host.run_sync.side_effect = side_effect
+        assert self.puppet_server._run_json_command("") == json.loads(json_output)  # pylint: disable=protected-access
 
 
 class TestPuppetMaster:
@@ -838,8 +858,10 @@ class TestPuppetMaster:
         with pytest.raises(
             puppet.PuppetServerError,
             match=(
-                "Got no output from Puppet server while executing command: "
-                "puppet ca --disable_warnings deprecations --render-as json verify test.example.com"
+                re.escape(
+                    "Got no output from Puppet server while executing command (rc: 0): "
+                    "puppet ca --disable_warnings deprecations --render-as json verify test.example.com"
+                )
             ),
         ):
             self.puppet_master.verify("test.example.com")
@@ -858,8 +880,11 @@ class TestPuppetMaster:
         with pytest.raises(
             puppet.PuppetServerError,
             match=(
-                "Unable to parse Puppet server response for command "
-                '"puppet ca --disable_warnings deprecations --render-as json verify test.example.com"'
+                re.escape(
+                    "Unable to parse Puppet server response for command (rc: 0): "
+                    '"puppet ca --disable_warnings deprecations --render-as json verify test.example.com": '
+                    r'{"host":"test.example.com",,}'
+                )
             ),
         ):
             self.puppet_master.verify("test.example.com")
