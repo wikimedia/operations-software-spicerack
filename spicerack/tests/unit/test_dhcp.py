@@ -8,6 +8,7 @@ from unittest import mock
 import pytest
 
 from spicerack import dhcp
+from spicerack.locking import NoLock
 from spicerack.remote import RemoteExecutionError
 
 
@@ -273,12 +274,20 @@ def test_dhcp_mgmt_fail(datacenter, fqdn, error):
         dhcp.DHCPConfMgmt(datacenter=datacenter, serial="", manufacturer="", fqdn=fqdn, ipv4=None)
 
 
-def test_create_dhcp_fail():
+def test_create_dhcp_no_hosts():
     """Test fail (hosts parameter has no hosts) DHCP instance creation."""
     hosts_mock = get_mock_hosts()
     hosts_mock.__len__.return_value = 0
     with pytest.raises(dhcp.DHCPError, match="No target hosts provided"):
-        dhcp.DHCP(hosts_mock)
+        dhcp.DHCP(hosts_mock, datacenter="eqiad", lock=NoLock())
+
+
+def test_create_dhcp_wrong_dc():
+    """It should raise a DHCPError in case the datacenter is inexistent."""
+    hosts_mock = get_mock_hosts()
+    hosts_mock.__len__.return_value = 2
+    with pytest.raises(dhcp.DHCPError, match="Invalid datacenter invalid, must be one of"):
+        dhcp.DHCP(hosts_mock, datacenter="invalid", lock=NoLock())
 
 
 class TestDHCP:
@@ -288,7 +297,7 @@ class TestDHCP:
         """Do any one time setup for the tests."""
         # pylint: disable=attribute-defined-outside-init
         remotehosts_mock = get_mock_hosts()
-        self.dhcp = dhcp.DHCP(remotehosts_mock, dry_run=False)
+        self.dhcp = dhcp.DHCP(remotehosts_mock, datacenter="eqiad", lock=NoLock(), dry_run=False)
 
     def _setup_dhcp_mocks(self, hosts=None):
         """Setup the DHCP's hosts remote as new mocks."""
@@ -297,20 +306,6 @@ class TestDHCP:
 
         self.dhcp._hosts = hosts  # pylint: disable=protected-access
         return hosts
-
-    def test_refresh_dhcp_ok(self):
-        """Test refresh_dhcp method for correct execution."""
-        hosts = self._setup_dhcp_mocks()
-        self.dhcp.refresh_dhcp()
-        hosts.run_sync.assert_called_with("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
-
-    def test_refresh_dhcp_dhcpincludes_fail(self):
-        """Test refresh_dhcp method for execution where the include compilation fails."""
-        hosts = get_mock_fail_hosts()
-        self._setup_dhcp_mocks(hosts=hosts)
-        with pytest.raises(dhcp.DHCPRestartError, match="Failed to refresh the DHCP server when running dhcpincludes"):
-            self.dhcp.refresh_dhcp()
-        hosts.run_sync.assert_called_with("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)
 
     def test_push_configuration_ok(self):
         """Test push_configuration success."""
@@ -339,7 +334,7 @@ class TestDHCP:
             self.dhcp.push_configuration(config)
 
     def test_push_configuration_refresh_fail(self):
-        """When the call to refresh_dhcp() fails, it should remove the snippet and refresh again."""
+        """When the call to _refresh_dhcp() fails, it should remove the snippet and refresh again."""
         config = get_mock_config()
         hosts = get_mock_suc_fail_hosts()
         hosts.run_sync.side_effect = [
@@ -352,6 +347,10 @@ class TestDHCP:
 
         with pytest.raises(dhcp.DHCPRestartError, match="Failed to refresh the DHCP server when running dhcpincludes"):
             self.dhcp.push_configuration(config)
+
+        hosts.run_sync.assert_has_calls(
+            [mock.call("/usr/local/sbin/dhcpincludes -r commit", print_progress_bars=False)]
+        )
 
     def test_remove_config_ok(self):
         """Test remove_configuration where everything succeeds."""

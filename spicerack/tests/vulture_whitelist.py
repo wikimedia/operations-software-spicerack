@@ -18,9 +18,6 @@ whitelist_ganeti.Ganeti._http_session.auth
 whitelist__menu = Whitelist()
 whitelist__menu.CookbookItem._parse_args.parser.prog
 
-whitelist_spicerack = Whitelist()
-whitelist_spicerack.Spicerack._spicerack_lock
-
 # Needed because of https://github.com/jendrikseipp/vulture/issues/264
 whitelist_dhcp = Whitelist()
 whitelist_dhcp.DHCPConfOpt82.ipv4

@@ -43,7 +43,7 @@ from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer, get_puppet_ca_hostname
 from spicerack.redfish import Redfish, RedfishDell
 from spicerack.redis_cluster import RedisCluster
-from spicerack.remote import Remote, RemoteHosts
+from spicerack.remote import Remote, RemoteError, RemoteHosts
 from spicerack.reposync import RepoSync
 from spicerack.service import Catalog
 from spicerack.toolforge.etcdctl import EtcdctlController
@@ -359,14 +359,21 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         return self._confctl.entity(entity_name)
 
-    def dhcp(self, remote_hosts: RemoteHosts) -> DHCP:
-        """Return a DHCP configuration manager for the specified site.
+    def dhcp(self, datacenter: str) -> DHCP:
+        """Return a DHCP configuration manager for the specified datacenter.
 
         Arguments:
-            remote_hosts: Hosts to operate on, which are normally install servers with dhcp.
+            datacenter: the datacenter for which the DHCP servers will be targeted.
 
         """
-        return DHCP(remote_hosts, dry_run=self._dry_run)
+        remote = self.remote()
+        try:
+            dhcp_hosts = remote.query(f"A:installserver and A:{datacenter}")
+        except RemoteError:  # Fallback to eqiad's install server if the above fails, i.e. for a new DC
+            datacenter = "eqiad"
+            dhcp_hosts = remote.query(f"A:installserver and A:{datacenter}")
+
+        return DHCP(dhcp_hosts, datacenter=datacenter, lock=self._spicerack_lock, dry_run=self._dry_run)
 
     def dns(self) -> Dns:
         """Get a Dns instance that will use the operating system default nameserver(s)."""
