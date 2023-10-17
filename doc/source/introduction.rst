@@ -248,6 +248,8 @@ Reserved exit codes
 Cookbook exit codes in the range ``90-99`` are reserved by Spicerack and must not be used by the cookbooks.
 The currently defined reserved exit codes are documented in the :py:mod:`spicerack.cookbook` module.
 
+.. _distributed-locking:
+
 Distributed locking
 ^^^^^^^^^^^^^^^^^^^
 
