@@ -9,6 +9,7 @@ from typing import Any, Optional, cast
 
 from spicerack import Spicerack, _log, _module_api, cookbook
 from spicerack.exceptions import SpicerackError
+from spicerack.locking import COOKBOOKS_PREFIX, get_lock_instance
 
 logger = logging.getLogger(__name__)
 HELP_MESSAGE = """Cookbooks interactive menu help
@@ -205,9 +206,38 @@ class CookbookItem(BaseItem):
             logger.exception("Failed to get runtime_description from Cookbook %s:", self.full_name)
             description = ""
 
-        _log.log_task_start(" ".join(("Cookbook", self.full_name, description)).strip())
-        message = "raised while executing cookbook"
+        lock = get_lock_instance(
+            config_file=self.spicerack._etcd_config,  # pylint: disable=protected-access
+            prefix=COOKBOOKS_PREFIX,
+            owner=self.spicerack.owner,
+            dry_run=self.spicerack.dry_run,
+        )
+        lock_args = runner.lock_args
+        lock_key = f"{self.full_name}:{lock_args.suffix}" if lock_args.suffix else self.full_name
 
+        with lock.acquired(lock_key, concurrency=lock_args.concurrency, ttl=lock_args.ttl):
+            _log.log_task_start(" ".join(("Cookbook", self.full_name, description)).strip())
+            ret = self._run(runner)
+
+        _log.log_task_end(
+            self.status,
+            f"Cookbook {self.full_name} (exit_code={ret}) {description}".strip(),
+        )
+
+        return ret
+
+    def _run(self, runner: cookbook.CookbookRunnerBase) -> int:  # noqa: MC0001
+        """Execute the active part of the cookbook.
+
+        Arguments:
+            runner: the cokbook runner to execute.
+
+        Returns:
+            The return code to use for this cookbook, it should be zero on success, a positive integer smaller than
+            ``128`` and not in the range ``90-99`` (see :ref:`Reserved exit codes<reserved-codes>`) in case of failure.
+
+        """
+        message = "raised while executing cookbook"
         try:
             raw_ret = runner.run()
             if raw_ret is None:
@@ -248,11 +278,6 @@ class CookbookItem(BaseItem):
             except BaseException:  # pylint: disable=broad-except
                 logger.exception("Exception %s %s rollback() (exit_code=%d):", message, self.full_name, ret)
                 ret = cookbook.ROLLBACK_FAIL_RETCODE
-
-        _log.log_task_end(
-            self.status,
-            f"Cookbook {self.full_name} (exit_code={ret}) {description}".strip(),
-        )
 
         return ret
 

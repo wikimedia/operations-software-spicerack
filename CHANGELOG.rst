@@ -1,6 +1,71 @@
 Spicerack Changelog
 -------------------
 
+`v8.0.0`_ (2023-10-17)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* dhcp: the ``spicerack.Spicerack.dhcp()`` accessor has changed signature and now accepts just a datacenter name
+  instead of ``RemoteHosts`` instance. All cookbooks using this accessor had the same logic implemented to find the
+  specific dhcp hosts in a given datacenter and this logic has been moved inside the accessor. All existing usage
+  will be migrated at deploy time.
+* netbox: remove methods ``fetch_host_status``, ``fetch_host_detail`` and ``put_host_status`` that were deprecated
+  since ``v0.0.50`` and replaced by the ``spicerack.netbox.NetboxServer`` class. Some private methods have also been
+  renamed to follow more closely Netbox namings.
+
+New features
+""""""""""""
+
+* Distributed locking support (`T341973`_):
+
+  * See the dedicated :ref:`Distributed locking<distributed-locking>` section of the documentation for a general
+    overview.
+  * Cookbooks class API additions to the ``spicerack.cookbook.CookbookRunnerBase`` base class:
+
+    * ``max_concurrency`` class property to statically set the maximum number of concurrent runs of a given cookbook,
+      enforced by the distributed lock.
+    * ``lock_ttl`` class property to statically set the TTL of the distributed lock acquired for each cookbook run.
+    * ``lock_args`` instance property to dynamically modify the locking arguments, for example based on the CLI
+      arguments (RO vs RW mode of operations).
+
+  * Cookbooks module API additions:
+
+    * ``MAX_CONCURRENCY`` module constant to statically set the maximum number of concurrent runs of a given cookbook,
+      enforced by the distributed lock.
+    * ``LOCK_TTL`` module constant to statically set the TTL of the distributed lock acquired for each cookbook run.
+
+  * Automatically acquire a lock for each cookbook run according to the values defined above.
+  * spicerack: add a ``_spicerack_lock`` private accessor to get a lock instance to be passed to the Spicerack modules
+    that would need to acquire a distributed lock with concurrency and TTL. It is different from the public accessor
+    for the cookbooks because the key prefix is different to keep cookbooks custom locks separate from the spicerack
+    modules ones. It's mentioned here as information for Spicerack developers.
+
+Minor improvements
+""""""""""""""""""
+
+* dhcp: acquire exclusive per-DC lock on write operations:
+
+  * Acquire an exclusive lock on a per-DC basis when performing write operations, both during the creation of a DHCP
+    snippet and its deletion.
+  * Always rewrite the DHCP snippet. With the protection of the lock, there is no more need for this check and the
+    library can safely overwrite all the time the DHCP snippet for a given host.
+
+* puppet: add support for puppetserver JSON commands returning non-zero exit code with JSON output (e.g. if a host is
+  missing).
+
+Miscellanea
+"""""""""""
+
+* documentation: add new section for the distributed locking support in the Introduction page.
+* documentation: mark the module interface as deprecated instead of having the class one as preferred, to better
+  describe the current state.
+* tox.ini: remove optimization for tox <4. Tox 4 will not re-use the environments because of the different names,
+  so removing this tox <4 optimization as it's making subsequent runs slower with tox 4+.
+* dhcp: simplify tests.
+* tests: remove obsolete or not anymore needed items from the false positive list of unused code catched by vulture.
+
 `v7.4.1`_ (2023-10-10)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2741,3 +2806,4 @@ New features
 .. _`v7.3.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.3.1
 .. _`v7.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.4.0
 .. _`v7.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.4.1
+.. _`v8.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.0

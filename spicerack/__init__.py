@@ -34,7 +34,7 @@ from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.k8s import Kubernetes
 from spicerack.kafka import Kafka
-from spicerack.locking import COOKBOOKS_CUSTOM_PREFIX, Lock, NoLock, get_lock_instance
+from spicerack.locking import COOKBOOKS_CUSTOM_PREFIX, SPICERACK_PREFIX, Lock, NoLock, get_lock_instance
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
@@ -43,7 +43,7 @@ from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer, get_puppet_ca_hostname
 from spicerack.redfish import Redfish, RedfishDell
 from spicerack.redis_cluster import RedisCluster
-from spicerack.remote import Remote, RemoteHosts
+from spicerack.remote import Remote, RemoteError, RemoteHosts
 from spicerack.reposync import RepoSync
 from spicerack.service import Catalog
 from spicerack.toolforge.etcdctl import EtcdctlController
@@ -121,6 +121,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         self._etcd_config: Optional[Path] = Path(etcd_config) if etcd_config else None
         self._spicerack_config_dir = Path(spicerack_config_dir)
         self._get_cookbook_callback = get_cookbook_callback
+        self._spicerack_lock_cache: Optional[Union[Lock, NoLock]] = None
 
         self._username = get_username()
         self._current_hostname = gethostname()
@@ -149,6 +150,24 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             return getattr(self._extender, name)
 
         raise AttributeError(f"AttributeError: '{self.__class__.__name__}' object has no attribute '{name}'")
+
+    @property
+    def _spicerack_lock(self) -> Union[Lock, NoLock]:
+        """Get a Lock instance to acquire locks with concurrency and TTL inside Spicerack modules.
+
+        In case the locking support is disabled, a :py:class:`spicerack.locking.NoLock` instance is returned, with the
+        same API of the :py:class:`spicerack.locking.Lock` class but that does nothing.
+
+        Returns:
+            The lock instance already initialized with a dedicated prefix for the keys.
+
+        """
+        if self._spicerack_lock_cache is None:
+            self._spicerack_lock_cache = get_lock_instance(
+                config_file=self._etcd_config, prefix=SPICERACK_PREFIX, owner=self.owner, dry_run=self._dry_run
+            )
+
+        return self._spicerack_lock_cache
 
     @property
     def dry_run(self) -> bool:
@@ -340,14 +359,21 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         return self._confctl.entity(entity_name)
 
-    def dhcp(self, remote_hosts: RemoteHosts) -> DHCP:
-        """Return a DHCP configuration manager for the specified site.
+    def dhcp(self, datacenter: str) -> DHCP:
+        """Return a DHCP configuration manager for the specified datacenter.
 
         Arguments:
-            remote_hosts: Hosts to operate on, which are normally install servers with dhcp.
+            datacenter: the datacenter for which the DHCP servers will be targeted.
 
         """
-        return DHCP(remote_hosts, dry_run=self._dry_run)
+        remote = self.remote()
+        try:
+            dhcp_hosts = remote.query(f"A:installserver and A:{datacenter}")
+        except RemoteError:  # Fallback to eqiad's install server if the above fails, i.e. for a new DC
+            datacenter = "eqiad"
+            dhcp_hosts = remote.query(f"A:installserver and A:{datacenter}")
+
+        return DHCP(dhcp_hosts, datacenter=datacenter, lock=self._spicerack_lock, dry_run=self._dry_run)
 
     def dns(self) -> Dns:
         """Get a Dns instance that will use the operating system default nameserver(s)."""

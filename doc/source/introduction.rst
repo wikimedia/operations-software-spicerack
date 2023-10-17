@@ -5,11 +5,12 @@ Introduction
 .. include:: ../../README.rst
 
 
-Cookbooks API
--------------
+Cookbooks
+---------
 
-Collection of cookbooks to automate and orchestrate operations in the WMF infrastructure.
-The cookbooks will be executed by the ``cookbook`` entry point script of the ``spicerack`` package.
+The cookbooks are the user facing units of automation. There is a collection of cookbooks to automate and orchestrate
+operations in the WMF infrastructure. The cookbooks are executed by the ``cookbook`` binary provided by the
+``spicerack`` package.
 
 Cookbooks hierarchy
 ^^^^^^^^^^^^^^^^^^^
@@ -133,6 +134,21 @@ following constants and functions.
 
    :type: str
 
+.. attribute:: MAX_CONCURRENCY
+
+   Optional module attribute that defines how many parallel runs of the cookbook are allowed. If not set the value
+   defined in :py:attr:`spicerack.cookbook.CookbookRunnerBase.max_concurrency` will be used.
+
+   :type: int
+
+.. attribute:: LOCK_TTL
+
+   Optional module attribute that defines the concurrency lock time to live (TTL) in seconds. For each concurrent run
+   a lock is acquired for this amount of seconds. If not set the value defined in
+   :py:attr:`spicerack.cookbook.CookbookRunnerBase.lock_ttl` will be used.
+
+   :type: int
+
 .. function:: argument_parser() -> argparse.ArgumentParser:
 
    Optional module function to define if the cookbook should accept command line arguments.
@@ -231,3 +247,46 @@ Reserved exit codes
 
 Cookbook exit codes in the range ``90-99`` are reserved by Spicerack and must not be used by the cookbooks.
 The currently defined reserved exit codes are documented in the :py:mod:`spicerack.cookbook` module.
+
+.. _distributed-locking:
+
+Distributed locking
+^^^^^^^^^^^^^^^^^^^
+
+Spicerack supports also distributed locking to prevent some actions from being executed multiple times in parallel in
+the environments with etcd configured. Each lock can be defined with arbitraty concurrency and TTL (time to live). That
+means that each lock can either be exclusive or allow a given number of parallel executions. The locks are saved in
+etcd. The locking support can be globablly enabled/disabled via configuration file and can also be disabled on a given
+cookbook run via the ``--no-locks`` command line flag. This can be used in an emergency if unable to acquire locks or
+if there are issues with the locking backend.
+
+There are three types of locks:
+
+* **Spicerack locks**: acquired by Spicerack modules around specific lines of code that are deemed critical and require a
+  dedicated lock.
+* **Cookbooks custom locks**: locks created by the cookbooks using the Spicerack accessor
+  :py:meth:`spicerack.Spicerack.lock` around specific lines of code.
+* **Automatic cookbook locks for each run**: Spicerack acquires a lock for each cookbook run with the cookbook full name
+  as key (e.g. ``sre.hosts.name``). By default it uses the concurrency and TTL defined in
+  :py:attr:`spicerack.cookbook.CookbookRunnerBase.max_concurrency` and
+  :py:attr:`spicerack.cookbook.CookbookRunnerBase.lock_ttl` respectively. The cookbook can customize these parameters
+  in two different ways:
+
+  * **Static override**: just overriding the ``max_concurrency`` and ``lock_ttl`` class properties in the cookbook runner
+    class will make the lock be acquired with these parameters.
+  * **Dynamic override**: for a more in-depth customization, the cookbook runner class can override the
+    :py:attr:`spicerack.cookbook.CookbookRunnerBase.lock_args` instance property to dynamically return a
+    :py:attr:`spicerack.cookbook.LockArgs` instance based on any live argument. This way the cookbook can also provide
+    a custom key suffix to use for the lock key, allowing to hold a different lock based on the use case. For example:
+
+    * If the cookbook has a read-only (e.g. check, list, etc.) and a read-write (e.g. create, update, delete) mode of
+      operation, it could set the ``max_concurrency`` to ``0`` when executed in read-only mode and to ``1`` or a very
+      low value when executed in read-write mode.
+    * If the cookbook targets a specific host/cluster it could use the host/cluster name as suffix so that the lock
+      will be per-host/cluster. An unlimited concurrent runs of the cookbook can be made with different hosts/clusters
+      but for example it could limit to only one concurrent run of the cookbook for any given host/cluster.::
+
+        @property
+        def lock_args(self):
+            """Make the cookbook lock per-cluster."""
+            return LockArgs(suffix=self.cluster, concurrency=1, ttl=600)

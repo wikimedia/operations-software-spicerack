@@ -502,6 +502,9 @@ class PuppetServer(RemoteHostsAdapter):
         # key will be either signed, requested, revoked Expected
         # for now we don't return this information as it already exists in metadata['state']
         key = list(response.keys())[0]
+        if key == "missing":
+            raise PuppetServerCheckError(f"The puppet server has no CSR for {hostname}")
+
         if len(response[key]) > 1:
             raise PuppetServerError(f"Expected one result from Puppet CA, got {len(response[key])}")
         metadata = response[key][0]
@@ -522,18 +525,27 @@ class PuppetServer(RemoteHostsAdapter):
             spicerack.puppet.PuppetServerError: if unable to get or parse the command output.
 
         """
-        for _, output in self.server_host.run_sync(
-            command, is_safe=True, print_output=False, print_progress_bars=False
-        ):
+        return_code = 0
+        try:
+            command_results = self.server_host.run_sync(
+                command, is_safe=True, print_output=False, print_progress_bars=False
+            )
+        except RemoteExecutionError as e:
+            return_code = e.retcode
+            command_results = e.results
+        for _, output in command_results:
             lines = output.message().decode()
             break
         else:
-            raise PuppetServerError(f"Got no output from Puppet server while executing command: {command}")
-
+            raise PuppetServerError(
+                f"Got no output from Puppet server while executing command (rc: {return_code}): {command}"
+            )
         try:
             response = json.loads(lines)
         except ValueError as e:
-            raise PuppetServerError(f'Unable to parse Puppet server response for command "{command}": {lines}') from e
+            raise PuppetServerError(
+                f'Unable to parse Puppet server response for command (rc: {return_code}): "{command}": {lines}'
+            ) from e
 
         return response
 

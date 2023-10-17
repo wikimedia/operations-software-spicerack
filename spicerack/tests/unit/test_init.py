@@ -39,7 +39,7 @@ from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer
 from spicerack.redfish import RedfishDell
 from spicerack.redis_cluster import RedisCluster
-from spicerack.remote import Remote, RemoteHosts
+from spicerack.remote import Remote, RemoteError, RemoteHosts
 from spicerack.reposync import RepoSync
 from spicerack.service import Catalog
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
@@ -269,13 +269,28 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_dns, read
     assert isinstance(spicerack.netbox_server("host1"), NetboxServer)
 
 
-def test_spicerack_dhcp():
-    """Test spicerack.dhcp. It should succeed if a host list with more than one member is passed."""
-    mock_hosts = mock.MagicMock()
+@mock.patch("spicerack.remote.Remote.query", autospec=True)
+def test_spicerack_dhcp_ok(mocked_remote_query):
+    """It should return an instance of the DHCP class if created with the correct parameters."""
+    mock_hosts = mock.MagicMock(spec_set=RemoteHosts)
     mock_hosts.__len__.return_value = 1
+    mocked_remote_query.return_value = mock_hosts
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-    assert isinstance(spicerack.dhcp(mock_hosts), DHCP)
+    assert isinstance(spicerack.dhcp("codfw"), DHCP)
+    assert mocked_remote_query.call_args.args[1] == "A:installserver and A:codfw"
+
+
+@mock.patch("spicerack.remote.Remote.query", autospec=True)
+def test_spicerack_dhcp_fallback(mocked_remote_query):
+    """It should still create an instance of the DHCP class but fallback to eqiad if the query fails."""
+    mock_hosts = mock.MagicMock(spec_set=RemoteHosts)
+    mock_hosts.__len__.return_value = 1
+    mocked_remote_query.side_effect = [RemoteError(), mock_hosts]
+
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    assert isinstance(spicerack.dhcp("codfw"), DHCP)
+    assert mocked_remote_query.call_args.args[1] == "A:installserver and A:eqiad"
 
 
 def test_run_cookbook_no_callback():
@@ -372,3 +387,14 @@ def test_spicerack_lock(monkeypatch):
     monkeypatch.setenv("USER", "")
     spicerack = Spicerack(etcd_config=get_fixture_path("locking", "config.yaml"), **SPICERACK_TEST_PARAMS)
     assert isinstance(spicerack.lock(), Lock)
+
+
+def test_spicerack_private_lock():
+    """It should return a lock instance for the spicerack modules and also cache it for re-use."""
+    Spicerack.test_accessor = lambda self: getattr(self, "_spicerack_lock")
+    spicerack = Spicerack(**SPICERACK_TEST_PARAMS)
+
+    lock_1 = spicerack.test_accessor()
+    lock_2 = spicerack.test_accessor()
+    assert isinstance(lock_1, NoLock)
+    assert lock_1 is lock_2  # Test that it returns the cached object

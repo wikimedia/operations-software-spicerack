@@ -2,6 +2,8 @@
 import argparse
 
 __title__ = __doc__
+MAX_CONCURRENCY = 5
+LOCK_TTL = 120
 
 
 def argument_parser():

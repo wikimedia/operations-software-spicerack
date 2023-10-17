@@ -31,6 +31,13 @@ class CookbooksModuleInterface:
     __title__: str = ""
     """The cookbook static title."""
 
+    MAX_CONCURRENCY: int = CookbookModuleRunnerBase.max_concurrency
+    """How many parallel runs of a specific cookbook inheriting from this class are accepted."""
+
+    LOCK_TTL: int = CookbookModuleRunnerBase.lock_ttl
+    """The concurrency lock time to live (TTL) in seconds. For each concurrent run a lock is acquired for this amount
+    of seconds."""
+
     @staticmethod
     def argument_parser() -> argparse.ArgumentParser:  # type: ignore[empty-body]
         """Optional module function to define if the cookbook should accept command line arguments."""
