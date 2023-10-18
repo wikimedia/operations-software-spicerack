@@ -287,7 +287,7 @@ class Lock:
         return "/".join([KEYS_BASE_PATH, self._prefix, name])
 
     def _set(self, lock: KeyLocks) -> None:
-        """Set the locks for the given key.
+        """Set the locks for the given key, deletes the key if there are no more locks.
 
         Arguments:
             lock: the lock instance that represent the locks for a given key.
@@ -296,7 +296,10 @@ class Lock:
         if self._dry_run:
             logger.info("Skipping lock acquire/release in DRY-RUN mode")
         else:
-            self._etcd.set(lock.key, lock.to_json())
+            if lock.locks:
+                self._etcd.set(lock.key, lock.to_json())
+            else:  # No locks present, delete the key to keep etcd clean
+                self._etcd.delete(lock.key)
 
     @retry(  # Retry for 2 minutes
         tries=15,
