@@ -278,17 +278,13 @@ class Lock:
         if "/" in name:
             raise InvalidLockError(f"The lock name cannot contain '/', got: {name}")
 
-        parts = [KEYS_BASE_PATH]
         if self._prefix == SPICERACK_PREFIX:  # Ensure the key represent a spicerack module
             if not name.startswith("spicerack."):
                 raise InvalidLockError(
                     f"Locks with prefix '{SPICERACK_PREFIX}' must have names starting with 'spicerack.', got: {name}"
                 )
-        else:
-            parts.append(self._prefix)
 
-        parts.append(name)
-        return "/".join(parts)
+        return "/".join([KEYS_BASE_PATH, self._prefix, name])
 
     def _set(self, lock: KeyLocks) -> None:
         """Set the locks for the given key.

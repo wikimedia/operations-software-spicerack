@@ -142,6 +142,7 @@ class TestLock:
 
         self.mocked_client.set.assert_not_called()
         assert "Skipping lock acquire/release in DRY-RUN mode" in caplog.text
+        assert "/spicerack/locks/modules/spicerack.module.name" in caplog.text
 
     @mock.patch("spicerack.locking.etcd.Lock", autospec=True)
     def test_acquire_ok(self, mocked_lock, caplog):
