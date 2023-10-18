@@ -1,6 +1,15 @@
 Spicerack Changelog
 -------------------
 
+`v8.0.2`_ (2023-10-18)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* locking: delete the key on etcd if no locks remain to keep etcd clean and avoid to left a lot of keys with emty
+  dictionaries as values (`T341973`_).
+
 `v8.0.1`_ (2023-10-18)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2816,3 +2825,4 @@ New features
 .. _`v7.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.4.1
 .. _`v8.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.0
 .. _`v8.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.1
+.. _`v8.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.2

@@ -128,9 +128,15 @@ class TestLock:
                 executed = True
 
         mocked_uuid.assert_called_once()
-        self.mocked_client.set.assert_called_with(self.full_key, "{}")
+        self.mocked_client.set.assert_called_once()
+        self.mocked_client.delete.assert_called_once_with(self.full_key)
+        assert self.mocked_client.set.call_args.args[0] == self.full_key
+        saved_payload = json.loads(self.mocked_client.set.call_args.args[1])
+        assert len(saved_payload) == 1
+        assert saved_payload[mocked_uuid()]["concurrency"] == 2
+        assert saved_payload[mocked_uuid()]["owner"] == "user@host [123]"
+        assert saved_payload[mocked_uuid()]["ttl"] == 60
         assert executed
-        assert self.mocked_client.set.call_count == 2
         assert f"Acquired lock for key {self.full_key}:" in caplog.text
         assert f"Released lock for key {self.full_key}:" in caplog.text
 
@@ -218,7 +224,7 @@ class TestLock:
 
     @mock.patch("spicerack.locking.etcd.Lock", autospec=True)
     def test_release_ok(self, mocked_lock, caplog):
-        """It should acquire and then release the lock on the backend."""
+        """It should acquire and then delete the lock on the backend."""
         mocked_lock.return_value.is_acquired = True
         self.mocked_client.read.return_value.value = KEY_LOCKS_JSON
         lock_id = self.lock.acquire("key", concurrency=2, ttl=60)
@@ -228,7 +234,27 @@ class TestLock:
         with caplog.at_level(logging.INFO):
             self.lock.release("key", lock_id)
 
-        self.mocked_client.set.assert_called_once_with(self.full_key, "{}")
+        self.mocked_client.delete.assert_called_once_with(self.full_key)
+        assert f"Released lock for key {self.full_key}:" in caplog.text
+
+    @mock.patch("spicerack.locking.etcd.Lock", autospec=True)
+    def test_release_remaining_ok(self, mocked_lock, caplog):
+        """It should acquire and then release the lock on the backend keeping the existing one."""
+        locks = json.loads(KEY_LOCKS_JSON)
+        locks[SAMPLE_UUID]["created"] = str(datetime.utcnow())
+        mocked_lock.return_value.is_acquired = True
+        self.mocked_client.read.return_value.value = json.dumps(locks)
+        lock_id = self.lock.acquire("key", concurrency=2, ttl=60)
+        self.mocked_client.reset_mock()
+        locks[lock_id] = locks[SAMPLE_UUID].copy()
+        locks[lock_id]["created"] = str(datetime.utcnow())
+        self.mocked_client.read.return_value.value = json.dumps(locks)
+
+        with caplog.at_level(logging.INFO):
+            self.lock.release("key", lock_id)
+
+        del locks[lock_id]
+        self.mocked_client.set.assert_called_once_with(self.full_key, json.dumps(locks))
         assert f"Released lock for key {self.full_key}:" in caplog.text
 
     @mock.patch("spicerack.locking.etcd.Lock", autospec=True)
