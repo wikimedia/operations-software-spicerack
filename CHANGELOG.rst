@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v8.0.1`_ (2023-10-18)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* locking: fix path for Spicerack modules locks that was not correctly calculated.
+
 `v8.0.0`_ (2023-10-17)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2807,3 +2815,4 @@ New features
 .. _`v7.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.4.0
 .. _`v7.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v7.4.1
 .. _`v8.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.0
+.. _`v8.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.1
