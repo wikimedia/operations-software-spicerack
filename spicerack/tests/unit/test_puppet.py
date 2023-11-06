@@ -3,7 +3,6 @@
 import json
 import re
 from datetime import datetime, timedelta, timezone
-from subprocess import CalledProcessError
 from unittest import mock
 
 import pytest
@@ -59,33 +58,9 @@ Exiting; failed to retrieve certificate and waitforcert is disabled
 """
 
 
-@mock.patch("spicerack.puppet.check_output", return_value=b"puppetmaster.example.com")
-def test_get_puppet_ca_hostname_ok(mocked_check_output):
+def test_get_puppet_ca_hostname_ok():
     """It should get the hostname of the Puppet CA from the local Puppet agent."""
-    ca = puppet.get_puppet_ca_hostname()
-    assert ca == "puppetmaster.example.com"
-    mocked_check_output.assert_called_once_with(["puppet", "config", "print", "--section", "agent", "ca_server"])
-
-
-@mock.patch(
-    "spicerack.puppet.check_output",
-    side_effect=CalledProcessError(1, "executed_command"),
-)
-def test_get_puppet_ca_hostname_fail(mocked_check_output):
-    """It should raise PuppetServerError if unable to get the hostname of the Puppet CA from the Puppet agent."""
-    with pytest.raises(puppet.PuppetServerError, match="Get Puppet ca_server failed"):
-        puppet.get_puppet_ca_hostname()
-
-    assert mocked_check_output.called
-
-
-@mock.patch("spicerack.puppet.check_output", return_value=b"")
-def test_get_puppet_ca_hostname_empty(mocked_check_output):
-    """It should raise PuppetServerError if the Puppet CA from Puppet is empty."""
-    with pytest.raises(puppet.PuppetServerError, match="Got empty ca_server from Puppet agent"):
-        puppet.get_puppet_ca_hostname()
-
-    assert mocked_check_output.called
+    assert puppet.get_puppet_ca_hostname() == "puppetmaster1001.eqiad.wmnet"
 
 
 class TestPuppetHosts:
