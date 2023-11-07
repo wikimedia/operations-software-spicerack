@@ -579,6 +579,19 @@ class PuppetServer(RemoteHostsAdapter):
 
         return response
 
+    def hiera_lookup(self, fqdn: str, key: str) -> str:
+        """Lookup a hiera value for a specific host.
+
+        Arguments:
+            fqdn: the fqdn whose values we are looking up
+            key: the hiera key to lookup
+
+        """
+        command = f"puppet lookup --render-as s --compile --node {fqdn} {key} 2>/dev/null"
+        result = self.server_host.run_sync(command, is_safe=True, print_output=False, print_progress_bars=False)
+        _, output = next(result)
+        return output.message().decode()
+
 
 class PuppetMaster(PuppetServer):
     """Class to manage nodes and certificates on a Puppet master and Puppet CA server."""

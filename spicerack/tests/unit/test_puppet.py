@@ -860,6 +860,25 @@ class TestPuppetServer:
         self.mocked_server_host.run_sync.side_effect = side_effect
         assert self.puppet_server._run_json_command("") == json.loads(json_output)  # pylint: disable=protected-access
 
+    def test_hiera_lookup(self):
+        """It should return the metadata of the certificate for the host in the Puppet CA."""
+        results = [
+            (
+                nodeset("puppetserver.example.com"),
+                MsgTreeElem(b"misc", parent=MsgTreeElem()),
+            )
+        ]
+        self.mocked_server_host.run_sync.return_value = iter(results)
+
+        assert self.puppet_server.hiera_lookup("test.example.com", "cluster") == "misc"
+
+        self.mocked_server_host.run_sync.assert_called_once_with(
+            "puppet lookup --render-as s --compile --node test.example.com cluster 2>/dev/null",
+            is_safe=True,
+            print_output=False,
+            print_progress_bars=False,
+        )
+
 
 class TestPuppetMaster:
     """Test class for the PuppetMaster class."""
