@@ -265,6 +265,12 @@ if there are issues with the locking backend.
 Spicerack will automatically retry for half an hour to acquire a lock if there is no slot available for the given key
 and concurrency, listing which are the holders of the exiting locks for the same key in the form ``user@host [PID]``.
 
+Example output in case of being unable to acquire the lock::
+
+    [1/27, retrying in 5.00s] Unable to acquire lock: {'concurrency': 1, 'created': '2023-10-19 12:52:06.006568', 'owner': 'user1@cumin2002 [249024]', 'ttl': 300} for key /spicerack/locks/cookbooks/sre.dns.netbox.
+    There are already 1 concurrent locks and the concurrency allowed is 1:
+          2023-10-19 12:52:05.985199: user2@cumin1001 [340699]
+
 There are three types of locks:
 
 * **Spicerack locks**: acquired by Spicerack modules around specific lines of code that are deemed critical and require a
