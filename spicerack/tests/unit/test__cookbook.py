@@ -202,11 +202,13 @@ def test_main_wrong_instance_config(capsys):
     _reset_logging_module()
 
 
-def test_main_call_another_cookbook_ok(capsys):
+def test_main_call_another_cookbook_ok(capsys, caplog):
     """It should execute the cookbook that calls another cookbook."""
-    ret = _cookbook.main(
-        ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.example"]
-    )
+    with caplog.at_level(logging.DEBUG):
+        ret = _cookbook.main(
+            ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.example"]
+        )
+
     _, err = capsys.readouterr()
     assert ret == 0
     expected = [
@@ -217,6 +219,9 @@ def test_main_call_another_cookbook_ok(capsys):
     ]
     for line in expected:
         assert line in err
+
+    assert "__COOKBOOK_STATS__:name=class_api.call_another_cookbook,exit_code=0,duration=" in caplog.text
+    assert "__COOKBOOK_STATS__:name=class_api.example,exit_code=0,duration=" in caplog.text
     _reset_logging_module()
 
 
@@ -324,7 +329,7 @@ class TestCookbookCollection:
         assert cookbooks.menu.get_tree() == ""
 
     @pytest.mark.parametrize(
-        "module, err_messages, absent_err_messages, code, args",
+        "module, messages, absent_messages, code, args",
         (
             (
                 "cookbook",
@@ -493,7 +498,7 @@ class TestCookbookCollection:
         ),
     )
     def test_main_execute_cookbook(  # pylint: disable=too-many-arguments
-        self, tmpdir, caplog, module, err_messages, absent_err_messages, code, args
+        self, tmpdir, caplog, module, messages, absent_messages, code, args
     ):
         """Calling main with the given cookbook and args should execute it."""
         config = {
@@ -506,9 +511,9 @@ class TestCookbookCollection:
                 ret = _cookbook.main([module] + args)
 
         assert ret == code
-        for message in err_messages:
+        for message in messages:
             assert message in caplog.text
-        for message in absent_err_messages:
+        for message in absent_messages:
             assert message not in caplog.text
 
     @pytest.mark.parametrize("module", ("external_cookbook", "external_group.cookbook1"))
@@ -520,17 +525,30 @@ class TestCookbookCollection:
             "instance_params": {**SPICERACK_TEST_PARAMS},  # Make a copy
         }
         with mock.patch("spicerack._cookbook.load_yaml_config", lambda config_dir: config):
-            with caplog.at_level(logging.INFO):
+            with caplog.at_level(logging.DEBUG):
                 ret = _cookbook.main([module])
 
         assert ret == 0
-        err_messages = [
+        messages = [
             f"START - Cookbook {module}",
             f"END (PASS) - Cookbook {module} (exit_code=0)",
         ]
         assert ret == 0
-        for message in err_messages:
+        for message in messages:
             assert message in caplog.text
+
+        for line in caplog.text.splitlines():
+            if "__COOKBOOK_STATS__" in line:
+                break
+        else:
+            raise AssertionError("__COOKBOOK_STATS__ not found in logs")
+
+        title, content = line.split()[-1].split(":")
+        assert title == "__COOKBOOK_STATS__"
+        stats = dict((item.split("=") for item in content.split(",")))
+        assert stats["name"] == module
+        assert stats["exit_code"] == "0"
+        assert float(stats["duration"]) >= 0
 
     def test_main_execute_cookbook_invalid_args(self, tmpdir, capsys, caplog):
         """Calling a cookbook with the wrong args should let argparse print its message."""
