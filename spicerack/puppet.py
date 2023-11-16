@@ -4,7 +4,6 @@ import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timedelta
-from subprocess import CalledProcessError, check_output
 from typing import Optional, Union, cast
 
 from cumin import NodeSet, nodeset
@@ -27,17 +26,7 @@ def get_puppet_ca_hostname() -> str:
         spicerack.puppet.PuppetServerError: if unable to get the configured Puppet CA server.
 
     """
-    try:
-        output = (
-            check_output(["puppet", "config", "print", "--section", "agent", "ca_server"]).decode().strip()  # nosec
-        )
-    except CalledProcessError as e:
-        raise PuppetServerError(f"Get Puppet ca_server failed (exit={e.returncode}): {e.output}") from e
-
-    if not output:
-        raise PuppetServerError("Got empty ca_server from Puppet agent")
-
-    return output
+    return "puppetmaster1001.eqiad.wmnet"
 
 
 class PuppetHostsError(SpicerackError):

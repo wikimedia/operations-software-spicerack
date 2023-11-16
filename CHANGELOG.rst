@@ -1,6 +1,22 @@
 Spicerack Changelog
 -------------------
 
+`v8.0.3`_ (2023-11-16)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* puppet: for the Puppet 7 migration set temporarily the return value of `get_puppet_ca_hostname()` hardcoded to
+  ``puppetmaster1001`` to allow to migrate the cumin hosts to Puppet 7.
+
+Miscellanea
+"""""""""""
+
+* documentation: expand distributed locking docs, add an example of logging when unable to acquire a lock.
+* spicerack: log at debug level some stats of each cookbook execution in a machine-readable format. This can be useful
+  to generate some stats of the cookbook executions allowing to split them by exit code too.
+
 `v8.0.2`_ (2023-10-18)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2826,3 +2842,4 @@ New features
 .. _`v8.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.0
 .. _`v8.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.1
 .. _`v8.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.2
+.. _`v8.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.3

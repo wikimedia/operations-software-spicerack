@@ -256,9 +256,20 @@ Distributed locking
 Spicerack supports also distributed locking to prevent some actions from being executed multiple times in parallel in
 the environments with etcd configured. Each lock can be defined with arbitraty concurrency and TTL (time to live). That
 means that each lock can either be exclusive or allow a given number of parallel executions. The locks are saved in
-etcd. The locking support can be globablly enabled/disabled via configuration file and can also be disabled on a given
+etcd.
+
+The locking support can be globablly enabled/disabled via configuration file and can also be disabled on a given
 cookbook run via the ``--no-locks`` command line flag. This can be used in an emergency if unable to acquire locks or
 if there are issues with the locking backend.
+
+Spicerack will automatically retry for half an hour to acquire a lock if there is no slot available for the given key
+and concurrency, listing which are the holders of the exiting locks for the same key in the form ``user@host [PID]``.
+
+Example output in case of being unable to acquire the lock::
+
+    [1/27, retrying in 5.00s] Unable to acquire lock: {'concurrency': 1, 'created': '2023-10-19 12:52:06.006568', 'owner': 'user1@cumin2002 [249024]', 'ttl': 300} for key /spicerack/locks/cookbooks/sre.dns.netbox.
+    There are already 1 concurrent locks and the concurrency allowed is 1:
+          2023-10-19 12:52:05.985199: user2@cumin1001 [340699]
 
 There are three types of locks:
 

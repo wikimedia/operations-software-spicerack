@@ -5,6 +5,7 @@ import shlex
 import sys
 from abc import abstractmethod
 from collections.abc import Callable, Sequence
+from datetime import datetime
 from typing import Any, Optional, cast
 
 from spicerack import Spicerack, _log, _module_api, cookbook
@@ -216,9 +217,16 @@ class CookbookItem(BaseItem):
         lock_key = f"{self.full_name}:{lock_args.suffix}" if lock_args.suffix else self.full_name
 
         with lock.acquired(lock_key, concurrency=lock_args.concurrency, ttl=lock_args.ttl):
+            start_time = datetime.utcnow()
             _log.log_task_start(" ".join(("Cookbook", self.full_name, description)).strip())
             ret = self._run(runner)
 
+        logger.debug(
+            "__COOKBOOK_STATS__:name=%s,exit_code=%d,duration=%.3f",
+            self.full_name,
+            ret,
+            (datetime.utcnow() - start_time).total_seconds(),
+        )
         _log.log_task_end(
             self.status,
             f"Cookbook {self.full_name} (exit_code={ret}) {description}".strip(),
