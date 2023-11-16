@@ -2,6 +2,7 @@
 """Puppet module tests."""
 import json
 import re
+from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 from unittest import mock
 
@@ -11,6 +12,7 @@ from cumin import nodeset
 
 from spicerack import puppet
 from spicerack.administrative import Reason
+from spicerack.exceptions import SpicerackError
 from spicerack.remote import RemoteExecutionError, RemoteHosts
 
 REASON = Reason("Disable reason", "user1", "orchestration-host", task_id="T12345")
@@ -56,6 +58,43 @@ On the agent:
   2. puppet agent -t
 Exiting; failed to retrieve certificate and waitforcert is disabled
 """
+
+MockedDnsSrv = namedtuple("MockedDnsSrv", ["target"])
+MockedDnsAnswer = namedtuple("MockedDnsAnswer", ["ttl", "rrset"])
+
+
+@mock.patch("spicerack.puppet.Dns", autospec=True)
+def test_get_ca_via_srv_record(mocked_dns_resolve):
+    """An instance of Spicerack should allow to get a PuppetServer instance."""
+    dns_answer = MockedDnsAnswer(ttl=600, rrset=[MockedDnsSrv(target="puppetserver1001.eqiad.wmnet")])
+    mocked_dns_resolve.return_value.resolve.return_value = dns_answer
+    assert puppet.get_ca_via_srv_record("eqiad.wmnet") == "puppetserver1001.eqiad.wmnet"
+
+
+@pytest.mark.parametrize(
+    "response, err_msg",
+    (
+        (
+            MockedDnsAnswer(ttl=600, rrset=None),
+            "Unable to find record for _x-puppet-ca._tcp.eqiad.wmnet",
+        ),
+        (
+            MockedDnsAnswer(ttl=600, rrset=[]),
+            "Unable to find record for _x-puppet-ca._tcp.eqiad.wmnet",
+        ),
+        (
+            MockedDnsAnswer(ttl=600, rrset=[MockedDnsSrv(target="foo"), MockedDnsSrv(target="bar")]),
+            "_x-puppet-ca._tcp.eqiad.wmnet returned multiple ca servers: foo,bar",
+        ),
+    ),
+)
+@mock.patch("spicerack.puppet.Dns", autospec=True)
+def test_get_ca_via_srv_record_raises(mocked_dns_resolve, response, err_msg):
+    """An instance of Spicerack should allow to get a PuppetServer instance."""
+    mocked_dns_resolve.return_value.resolve.return_value = response
+    with pytest.raises(SpicerackError, match=err_msg):
+        puppet.get_ca_via_srv_record("eqiad.wmnet")
+    mocked_dns_resolve.assert_called_once()
 
 
 def test_get_puppet_ca_hostname_ok():
@@ -370,7 +409,74 @@ class TestPuppetHosts:
             print_progress_bars=False,
         )
 
-    def test_get_ca_servers_explodes_multihost_nodeset_into_single_hosts(self):
+    @pytest.mark.parametrize(
+        "get_config_return, puppethost_side_effect",
+        (
+            (
+                {"test1001.example.org": "true", "test1002.example.org": "true", "test1003.example.org": "false"},
+                [
+                    {"test1001.example.org": "eqiad.wmnet", "test1002.example.org": "codfw.wmnet"},
+                    {"test1003.example.org": "dummy.puppetmast.er"},
+                ],
+            ),
+            (
+                {"test1001.example.org": "true", "test1002.example.org": "true", "test1003.example.org": "true"},
+                [
+                    {
+                        "test1001.example.org": "eqiad.wmnet",
+                        "test1002.example.org": "codfw.wmnet",
+                        "test1003.example.org": "eqiad.wmnet",
+                    },
+                ],
+            ),
+            (
+                {"test1001.example.org": "false", "test1002.example.org": "false", "test1003.example.org": "false"},
+                [
+                    {
+                        "test1001.example.org": "dummy.puppetmast.er",
+                        "test1002.example.org": "dummy.puppetmast.er",
+                        "test1003.example.org": "dummy.puppetmast.er",
+                    },
+                ],
+            ),
+        ),
+    )
+    @mock.patch("spicerack.puppet.get_ca_via_srv_record")
+    @mock.patch("spicerack.puppet.PuppetHosts")
+    @mock.patch("spicerack.puppet.PuppetHosts.get_config")
+    def test_get_ca_servers(
+        self,
+        mocked_get_config,
+        mocked_puppet_hosts,
+        mocked_get_ca_via_srv_record,
+        get_config_return,
+        puppethost_side_effect,
+    ):
+        """Test that get ca servers explodes multihost nodeset into single hosts."""
+        expected_puppetmaster = "dummy.puppetmast.er"
+        mocked_get_config.return_value = get_config_return
+        mocked_puppet_hosts.return_value.get_config.side_effect = puppethost_side_effect
+        mocked_get_ca_via_srv_record.return_value = expected_puppetmaster
+
+        check_srv_domains = any(v == "true" for v in get_config_return)
+        check_ca_server = any(v == "false" for v in get_config_return)
+
+        result = self.puppet_hosts.get_ca_servers()
+
+        mocked_get_config.assert_called_once_with("use_srv_records")
+        if check_srv_domains:
+            mocked_puppet_hosts.return_value.get_config.assert_any_call("srv_domain")
+        if check_ca_server:
+            mocked_puppet_hosts.return_value.get_config.assert_any_call("ca_server")
+
+        assert "test1001.example.org" in result
+        assert result["test1001.example.org"] == expected_puppetmaster
+        assert "test1002.example.org" in result
+        assert result["test1002.example.org"] == expected_puppetmaster
+        assert "test1003.example.org" in result
+        assert result["test1003.example.org"] == expected_puppetmaster
+
+    def test_get_config_explodes_multihost_nodeset_into_single_hosts(self):
         """Test that get ca servers explodes multihost nodeset into single hosts."""
         expected_puppetmaster = "dummy.puppetmast.er"
         self.mocked_remote_hosts.run_sync.return_value = [
@@ -379,25 +485,21 @@ class TestPuppetHosts:
                 MsgTreeElem(expected_puppetmaster.encode(), parent=MsgTreeElem()),
             ),
         ]
-
-        result = self.puppet_hosts.get_ca_servers()
-
+        result = self.puppet_hosts.get_config("ca_server")
         self.mocked_remote_hosts.run_sync.assert_called_once()
         assert "test0.example.com" in result
         assert result["test0.example.com"] == expected_puppetmaster
         assert "test1.example.com" in result
         assert result["test1.example.com"] == expected_puppetmaster
 
-    def test_get_ca_servers_handles_empty_result(self):
+    def test_get_config_handles_empty_result(self):
         """Test that get ca servers handles empty result."""
         self.mocked_remote_hosts.run_sync.return_value = []
-
-        result = self.puppet_hosts.get_ca_servers()
-
+        result = self.puppet_hosts.get_config("ca_server")
         self.mocked_remote_hosts.run_sync.assert_called_once()
         assert result == {}  # pylint: disable=use-implicit-booleaness-not-comparison
 
-    def test_get_ca_servers_handles_multiple_results(self):
+    def test_get_config_handles_multiple_results(self):
         """Test test get ca servers handles multiple results."""
         self.mocked_remote_hosts.run_sync.return_value = [
             (
@@ -409,16 +511,14 @@ class TestPuppetHosts:
                 MsgTreeElem(b"test1.puppetmast.er", parent=MsgTreeElem()),
             ),
         ]
-
-        result = self.puppet_hosts.get_ca_servers()
-
+        result = self.puppet_hosts.get_config("ca_server")
         self.mocked_remote_hosts.run_sync.assert_called_once()
         assert "test0.example.com" in result
         assert result["test0.example.com"] == "test0.puppetmast.er"
         assert "test1.example.com" in result
         assert result["test1.example.com"] == "test1.puppetmast.er"
 
-    def test_get_ca_servers_handles_multiple_lines_in_command_output(self):
+    def test_get_config_handles_multiple_lines_in_command_output(self):
         """Test test get ca servers handles multiple results."""
         self.mocked_remote_hosts.run_sync.return_value = [
             (
@@ -429,9 +529,7 @@ class TestPuppetHosts:
                 ),
             ),
         ]
-
-        result = self.puppet_hosts.get_ca_servers()
-
+        result = self.puppet_hosts.get_config("ca_server")
         self.mocked_remote_hosts.run_sync.assert_called_once()
         assert "test0.example.com" in result
         assert result["test0.example.com"] == "test0.puppetmast.er"

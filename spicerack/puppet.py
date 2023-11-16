@@ -8,6 +8,7 @@ from typing import Optional, Union, cast
 
 from cumin import NodeSet, nodeset
 from cumin.transports import Command
+from wmflib.dns import Dns
 
 from spicerack.administrative import Reason
 from spicerack.decorators import retry
@@ -17,6 +18,18 @@ from spicerack.remote import RemoteExecutionError, RemoteHosts, RemoteHostsAdapt
 PUPPET_COMMON_SCRIPT: str = "/usr/local/share/bash/puppet-common.sh"
 """The absolute path of the puppet-common script shipped by Puppet with useful functions."""
 logger = logging.getLogger(__name__)
+
+
+def get_ca_via_srv_record(domain: str) -> str:
+    """Lookup the CA Server via the domain srv record."""
+    question = f"_x-puppet-ca._tcp.{domain}"
+    response = Dns().resolve(question, "SRV")
+    if not response.rrset:
+        raise SpicerackError(f"Unable to find record for {question}")
+    answers = [str(rdata.target) for rdata in response.rrset]
+    if len(answers) > 1:
+        raise SpicerackError(f"{question} returned multiple ca servers: {','.join(answers)}")
+    return answers[0].rstrip(".")
 
 
 def get_puppet_ca_hostname() -> str:
@@ -65,14 +78,42 @@ class PuppetHosts(RemoteHostsAdapter):
 
     def get_ca_servers(self) -> dict[str, str]:
         """Retrieve the ca_servers for each node."""
-        raw_results = self._remote_hosts.run_sync("puppet config --section agent print ca_server")
+        host_to_use_srv_records = self.get_config("use_srv_records")
+        host_use_srv = nodeset()
+        host_ca_server = nodeset()
 
-        host_to_ca_server: dict[str, str] = {}
-        for node_set, output in raw_results:
-            for hostname in node_set:
-                host_to_ca_server[hostname] = list(output.lines())[-1].decode()
+        for hostname, use_srv_records in host_to_use_srv_records.items():
+            if use_srv_records == "true":
+                host_use_srv.add(hostname)
+            else:
+                host_ca_server.add(hostname)
 
+        host_to_srv_domain = {}
+        host_to_ca_server = {}
+
+        if len(host_use_srv) > 0:
+            host_to_srv_domain = PuppetHosts(self._remote_hosts.get_subset(host_use_srv)).get_config("srv_domain")
+        if len(host_ca_server) > 0:
+            host_to_ca_server = PuppetHosts(self._remote_hosts.get_subset(host_ca_server)).get_config("ca_server")
+
+        answers = {}
+        for fqdn, srv_domain in host_to_srv_domain.items():
+            if srv_domain not in answers:
+                ca_server = get_ca_via_srv_record(srv_domain)
+                answers[srv_domain] = ca_server
+            host_to_ca_server[fqdn] = answers[srv_domain]
         return host_to_ca_server
+
+    def get_config(self, config: str, *, section: str = "agent") -> dict[str, str]:
+        """Retrieve the ca_servers for each node."""
+        raw_results = self._remote_hosts.run_sync(f"puppet config --section {section} print {config}")
+
+        host_to_config: dict[str, str] = {}
+        for node_set, output in raw_results:
+            config = list(output.lines())[-1].decode()
+            host_to_config.update({host: config for host in node_set})
+
+        return host_to_config
 
     @staticmethod
     def _puppet_reason(reason: Reason, verbatim_reason: bool = False) -> str:
