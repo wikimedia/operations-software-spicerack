@@ -1,4 +1,5 @@
 """Interactive module tests."""
+import re
 from datetime import datetime, timedelta
 from unittest import mock
 
@@ -487,6 +488,37 @@ class TestRemoteHosts:
         for result in results:
             assert len(result) == 1
             assert result._dry_run is False  # pylint: disable=protected-access
+
+    @pytest.mark.parametrize(
+        "subset",
+        (
+            nodeset("host1"),
+            nodeset("host1,host9"),
+            nodeset("host[1-5]"),
+            nodeset("host[1-9]"),
+        ),
+    )
+    def test_get_subset_ok(self, subset):
+        """It should return a new RemoteHosts instance with the subset hosts."""
+        new = self.remote_hosts.get_subset(subset)
+        assert new.hosts == subset
+
+    @pytest.mark.parametrize(
+        "subset",
+        (
+            nodeset("host10"),
+            nodeset("host1,host10"),
+            nodeset("host[0-5]"),
+            nodeset("host[0-9]"),
+        ),
+    )
+    def test_get_subset_fail(self, subset):
+        """It should raise a RemoteError exception if the subset contains any hosts not part of the current set."""
+        with pytest.raises(
+            remote.RemoteError,
+            match=re.escape(f"The provided set {subset} is not a subset of the current set {self.remote_hosts.hosts}"),
+        ):
+            self.remote_hosts.get_subset(subset)
 
     @mock.patch("spicerack.remote.transport.Transport.new")
     def test_using_sudo_prepends_when_command_is_string(self, mocked_transport_new):
