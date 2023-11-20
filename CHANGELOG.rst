@@ -1,6 +1,18 @@
 Spicerack Changelog
 -------------------
 
+`v8.1.0`_ (2023-11-20)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* remote: add a new ``RemoteHost.get_subset()`` method return a new ``RemoteHosts`` instance with a subset of the
+  hosts. Useful when working with instances that inherit from ``RemoteHostsAdapter`` to be able to work on a subset
+  of the hosts.
+* service: Add ``ipip_encapsulation`` field to ``ServiceLVS`` to follow what's in Puppet.
+* puppet: Update ``get_ca_server`` to also support SRV discovery records.
+
 `v8.0.3`_ (2023-11-16)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2843,3 +2855,4 @@ New features
 .. _`v8.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.1
 .. _`v8.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.2
 .. _`v8.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.3
+.. _`v8.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.1.0

@@ -40,7 +40,7 @@ from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import MANAGEMENT_IFACE_NAME, Netbox, NetboxServer
 from spicerack.peeringdb import PeeringDB
-from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer, get_puppet_ca_hostname
+from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer, get_ca_via_srv_record, get_puppet_ca_hostname
 from spicerack.redfish import Redfish, RedfishDell
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteError, RemoteHosts
@@ -514,16 +514,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
     def puppet_server(self) -> PuppetServer:
         """Get a PuppetServer instance to manage hosts and certificates from a Puppet master."""
-        domain = "_x-puppet-ca._tcp.eqiad.wmnet"
-        response = self.dns().resolve(domain, "SRV")
-        if response is None or response.rrset is None:
-            raise SpicerackError(f"Unable to find record for {domain}")
-        answers = [str(rdata.target) for rdata in response.rrset]
-        if not answers:
-            raise SpicerackError("Unable to find any ca servers from DNS")
-        if len(answers) > 1:
-            raise SpicerackError(f"Found multiple ca servers from DNS: {','.join(answers)}")
-        return PuppetServer(self.remote().query(answers[0].rstrip(".")))
+        # We only have one CA so it doesn't matter which site we lookup
+        domain = "eqiad.wmnet"
+        return PuppetServer(self.remote().query(get_ca_via_srv_record(domain)))
 
     def puppet_master(self) -> PuppetMaster:
         """Get a PuppetMaster instance to manage hosts and certificates from a Puppet master."""

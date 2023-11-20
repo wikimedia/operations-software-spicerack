@@ -419,6 +419,24 @@ class RemoteHosts:
         for nodeset in self._hosts.split(n_slices):
             yield RemoteHosts(self._config, nodeset, dry_run=self._dry_run, use_sudo=self._use_sudo)
 
+    def get_subset(self, subset: NodeSet) -> "RemoteHosts":
+        """Return a new RemoteHosts instance with a subset of the existing set of hosts.
+
+        Arguments:
+            subset: the subset of hosts to select. They must all be part of the current set.
+
+        Raises:
+            spicerack.remote.RemoteError: if any host in the subset is not part of the instance hosts.
+
+        Returns:
+            a new instance with only the subset hosts.
+
+        """
+        if not self._hosts.issuperset(subset):
+            raise RemoteError(f"The provided set {subset} is not a subset of the current set {self._hosts}")
+
+        return RemoteHosts(self._config, subset, dry_run=self._dry_run, use_sudo=self._use_sudo)
+
     @staticmethod
     def _prepend_sudo(command: Union[str, Command]) -> Union[str, Command]:
         if isinstance(command, str):

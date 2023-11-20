@@ -76,6 +76,7 @@ whitelist_service.Service.protocol
 whitelist_service.Service.public_aliases
 whitelist_service.Service.public_endpoint
 whitelist_service.Service.scheduler
+whitelist_service.Service.ipip_encapsulation
 whitelist_service.ServiceMonitoring.check_command
 whitelist_service.ServiceMonitoring.contact_group
 whitelist_service.ServiceMonitoring.notes_url

@@ -158,47 +158,18 @@ def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostn
     assert mocked_remote_query.called
 
 
-@mock.patch("spicerack.Dns", autospec=True)
+@mock.patch("spicerack.get_ca_via_srv_record", return_value="puppetserver1001.example.org")
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
-def test_spicerack_puppet_server(mocked_remote_query, mocked_dns_resolve):
+def test_spicerack_puppet_server(mocked_remote_query, mocked_get_ca_via_srv_record):
     """An instance of Spicerack should allow to get a PuppetServer instance."""
-    dns_answer = MockedDnsAnswer(ttl=600, rrset=[MockedDnsSrv(target="puppetserver1001.eqiad.wmnet")])
-    mocked_dns_resolve.return_value.resolve.return_value = dns_answer
     host = mock.MagicMock(spec_set=RemoteHosts)
     host.__len__.return_value = 1
     mocked_remote_query.return_value = host
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
     assert isinstance(spicerack.puppet_server(), PuppetServer)
-    mocked_dns_resolve.assert_called_once()
     assert mocked_remote_query.called
-
-
-@pytest.mark.parametrize(
-    "response, err_msg",
-    (
-        (
-            None,
-            "Unable to find record for _x-puppet-ca._tcp.eqiad.wmnet",
-        ),
-        (
-            MockedDnsAnswer(ttl=600, rrset=[]),
-            "Unable to find any ca servers from DNS",
-        ),
-        (
-            MockedDnsAnswer(ttl=600, rrset=[MockedDnsSrv(target="foo"), MockedDnsSrv(target="bar")]),
-            "Found multiple ca servers from DNS: foo,bar",
-        ),
-    ),
-)
-@mock.patch("spicerack.Dns", autospec=True)
-def test_spicerack_puppet_server_raises(mocked_dns_resolve, response, err_msg):
-    """An instance of Spicerack should allow to get a PuppetServer instance."""
-    mocked_dns_resolve.return_value.resolve.return_value = response
-    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-    with pytest.raises(SpicerackError, match=err_msg):
-        spicerack.puppet_server()
-    mocked_dns_resolve.assert_called_once()
+    assert mocked_get_ca_via_srv_record.called
 
 
 @mock.patch("spicerack.Netbox")
