@@ -1,6 +1,15 @@
 Spicerack Changelog
 -------------------
 
+`v8.2.0`_ (2023-11-22)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* puppet: add a ``hiera_lookup()`` method to the ``PuppetServer`` and ``PuppetMaster`` classes to perform a hiera
+  lookup of a specific key from the perspective of a specific host.
+
 `v8.1.0`_ (2023-11-20)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2856,3 +2865,4 @@ New features
 .. _`v8.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.2
 .. _`v8.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.3
 .. _`v8.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.1.0
+.. _`v8.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.2.0
