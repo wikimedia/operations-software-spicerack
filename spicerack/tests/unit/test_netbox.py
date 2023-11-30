@@ -4,11 +4,20 @@ from unittest import mock
 
 import pynetbox
 import pytest
+import requests
 
-from spicerack.netbox import Netbox, NetboxAPIError, NetboxError, NetboxHostNotFoundError, NetboxServer
+from spicerack.netbox import (
+    Netbox,
+    NetboxAPIError,
+    NetboxError,
+    NetboxHostNotFoundError,
+    NetboxScriptError,
+    NetboxServer,
+)
 
 NETBOX_URL = "https://example.com/"
 NETBOX_TOKEN = "secret_token"
+SCRIPT_URL = f"{NETBOX_URL}api/script/"
 
 
 def _request_error():
@@ -127,6 +136,33 @@ class TestNetbox:
         self.mocked_api().virtualization.virtual_machines.get.return_value = None
         with pytest.raises(NetboxHostNotFoundError):
             self.netbox.get_server("inexistent")
+
+    def test_run_script_ok(self, requests_mock):
+        """It should returns the script logs exposed by the server."""
+        data = {"data": {"log": ["log1", "log2"]}}
+        self.mocked_api().extras.scripts.get.return_value.url = SCRIPT_URL
+        requests_mock.post(SCRIPT_URL, json={"result": {"url": SCRIPT_URL}})
+        requests_mock.get(SCRIPT_URL, json=data)
+        run_script = self.netbox_dry_run.run_script(name="test_script", commit=True, params={})
+        assert run_script == ["log1", "log2"]
+        assert requests_mock.request_history[0].json() == {"commit": 0, "data": {}}
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    def test_run_script_no_result_data(self, mocked_sleep, requests_mock):
+        """It should raise a Netbox script error if can't get the script output."""
+        self.mocked_api().extras.scripts.get.return_value.url = SCRIPT_URL
+        requests_mock.post(SCRIPT_URL, json={"result": {"url": SCRIPT_URL}})
+        requests_mock.get(SCRIPT_URL, json={"data": None})
+        with pytest.raises(NetboxScriptError, match="Failed to get Netbox script results from "):
+            self.netbox.run_script(name="test_script", commit=True, params={})
+        assert mocked_sleep.called
+
+    def test_run_script_post_timeout(self, requests_mock):
+        """It should raise a Netbox script error if can't start the script."""
+        self.mocked_api().extras.scripts.get.return_value.url = SCRIPT_URL
+        requests_mock.post(SCRIPT_URL, exc=requests.exceptions.HTTPError)
+        with pytest.raises(NetboxScriptError, match="Failed to start Netbox script test_script"):
+            self.netbox.run_script(name="test_script", commit=True, params={})
 
 
 class TestNetboxServer:

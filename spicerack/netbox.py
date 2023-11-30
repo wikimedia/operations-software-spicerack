@@ -1,10 +1,12 @@
 """Netbox module."""
 import logging
-from typing import Union
+from typing import Any, Union
 
 import pynetbox
+from requests.exceptions import RequestException
 from wmflib.requests import http_session
 
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 
 MANAGEMENT_IFACE_NAME: str = "mgmt"
@@ -24,6 +26,10 @@ class NetboxAPIError(NetboxError):
 
 class NetboxHostNotFoundError(NetboxError):
     """Raised when a host is not found for an operation."""
+
+
+class NetboxScriptError(NetboxError):
+    """Raised when a Netbox script doesn't run properly."""
 
 
 class Netbox:
@@ -113,6 +119,54 @@ class Netbox:
             server = self._get_virtual_machine(hostname)
 
         return NetboxServer(api=self._api, server=server, dry_run=self._dry_run)
+
+    def run_script(self, name: str, *, commit: bool = False, params: dict[str, Any]) -> list:
+        """Run a Netbox script and wait for its output.
+
+        Arguments:
+            name: Full name of the script to run (eg. import_server_facts.ImportPuppetDB).
+            commit: save the script actions in the Netbox DB.
+            params: script parameters (passed as POST data).
+
+        Returns:
+            The script execution logs in a list format.
+
+        Raises:
+            spicerack.netbox.NetboxScriptError: If the script coudn't be ran or its result fetched.
+
+        """
+        # Apparently pynetbox doesn't allow to execute a Netbox script
+        url = self._api.extras.scripts.get(name).url
+        headers = {"Authorization": f"Token {self._api.token}"}
+        if self._dry_run and commit:
+            logger.info("Forcing commit = False as running in DRY-RUN")
+            commit = False
+        data = {"data": params, "commit": int(commit)}
+
+        script_http_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=(5.0, 30.0))
+
+        @retry(tries=30, backoff_mode="constant", exceptions=(ValueError, RequestException))
+        def _poll_netbox_job(url: str) -> list:
+            """Poll Netbox to get the result of the script run."""
+            result = script_http_session.get(url, headers=headers)
+            result.raise_for_status()
+            data = result.json()["data"]
+            if data is None:
+                raise ValueError(f"No data from job result {url}")
+            return data["log"]
+
+        result = None
+        try:
+            result = script_http_session.post(url, headers=headers, json=data)
+            result.raise_for_status()
+            logger.debug("Started Netbox script %s, waiting for results.", name)
+        except RequestException as e:
+            raise NetboxScriptError(f"Failed to start Netbox script {name}") from e
+        job_url = result.json()["result"]["url"]
+        try:
+            return _poll_netbox_job(job_url)
+        except (ValueError, RequestException) as e:
+            raise NetboxScriptError(f"Failed to get Netbox script results from {job_url}") from e
 
 
 class NetboxServer:
