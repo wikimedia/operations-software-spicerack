@@ -1,6 +1,7 @@
 """Ganeti Module test."""
 
 import json
+from ipaddress import IPv4Address
 from unittest import mock
 
 import pytest
@@ -43,7 +44,8 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
 
         # Populate mock with default values
         self.netbox.api.virtualization.cluster_groups.get.return_value.custom_fields = {
-            "ip_address": {"address": "10.0.0.1/24"}
+            "ip_address": {"address": "10.0.0.1/24"},
+            "routed": True,
         }
         self.netbox.api.ipam.ip_addresses.get.return_value.dns_name = TEST_CLUSTERS[self.cluster]
         self.netbox.api.virtualization.virtual_machines.get.return_value.cluster.group.name = self.cluster
@@ -83,7 +85,8 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
     def test_rapi_clusters_ok(self, cluster):
         """Ganeti.rapi() should return a GanetiRAPI object."""
         self.netbox.api.virtualization.cluster_groups.get.return_value.custom_fields = {
-            "ip_address": {"address": "10.0.0.1/24"}
+            "ip_address": {"address": "10.0.0.1/24"},
+            "routed": False,
         }
         self.netbox.api.ipam.ip_addresses.get.return_value.dns_name = TEST_CLUSTERS[cluster]
         assert isinstance(self.ganeti.rapi(cluster), ganeti.GanetiRAPI)
@@ -96,16 +99,19 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
 
     def test_rapi_clusters_no_ip_address(self):
         """If the cluster has no IP address in Netbox it should raise a GanetiError."""
-        self.netbox.api.virtualization.cluster_groups.get.return_value.custom_fields = {"ip_addresses": None}
+        self.netbox.api.virtualization.cluster_groups.get.return_value.custom_fields = {
+            "ip_addresses": None,
+            "routed": True,
+        }
         with pytest.raises(ganeti.GanetiError, match="Virtualization cluster group sitea has no IP address"):
             self.ganeti.rapi("sitea")
 
     @pytest.mark.parametrize(
         "address",
         (
-            {"ip_address": {}},
-            {"ip_address": {"address": None}},
-            {"ip_address": {"address": ""}},
+            {"ip_address": {}, "routed": True},
+            {"ip_address": {"address": None}, "routed": True},
+            {"ip_address": {"address": ""}, "routed": True},
         ),
     )
     def test_rapi_clusters_no_address(self, address):
@@ -117,7 +123,8 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
     def test_rapi_clusters_address_not_found(self):
         """If the IP address of the cluster group cannot be found in Netbox it should raise a GanetiError."""
         self.netbox.api.virtualization.cluster_groups.get.return_value.custom_fields = {
-            "ip_address": {"address": "10.0.0.1/24"}
+            "ip_address": {"address": "10.0.0.1/24"},
+            "routed": True,
         }
         self.netbox.api.ipam.ip_addresses.get.return_value = None
         with pytest.raises(
@@ -125,11 +132,22 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         ):
             self.ganeti.rapi("sitea")
 
+    def test_routed_not_found(self):
+        """If the cluster group routed custom field isn't True or False it should raise a GanetiError."""
+        self.netbox.api.virtualization.cluster_groups.get.return_value.custom_fields = {
+            "ip_address": {"address": "10.0.0.1/24"}
+        }
+        with pytest.raises(
+            ganeti.GanetiError, match="Virtualization cluster group sitea doesn't have the 'routed' custom field set."
+        ):
+            self.ganeti.rapi("sitea")
+
     @pytest.mark.parametrize("dns_name", (None, ""))
     def test_rapi_clusters_address_no_dns_name(self, dns_name):
         """If the IP address of the cluster group doesn't have a DNS name it should raise a GanetiError."""
         self.netbox.api.virtualization.cluster_groups.get.return_value.custom_fields = {
-            "ip_address": {"address": "10.0.0.1/24"}
+            "ip_address": {"address": "10.0.0.1/24"},
+            "routed": True,
         }
         self.netbox.api.ipam.ip_addresses.get.return_value.dns_name = dns_name
         with pytest.raises(
@@ -282,7 +300,14 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
             f"gnt-instance remove --shutdown-timeout={timeout} --force test.example.com"
         )
 
-    def test_instance_add_ok(self, requests_mock):
+    @pytest.mark.parametrize(
+        "net, net_value",
+        (
+            ("private", "0:link=private"),
+            (IPv4Address("192.0.2.1"), "0:ip=192.0.2.1"),
+        ),
+    )
+    def test_instance_add_ok(self, requests_mock, net, net_value):
         """It should issue the remove command on the master host."""
         self._set_requests_mock_for_instance(requests_mock)
         requests_mock.get(self.base_url + "/info", text=self.info)
@@ -295,10 +320,10 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         ]
         self.remote.query.return_value.run_sync.return_value = iter(results)
 
-        instance.add(group="row_A", vcpus=2, memory=3.1, disk=4, link="private")
+        instance.add(group="row_A", vcpus=2, memory=3.1, disk=4, net=net)
 
         self.remote.query.return_value.run_sync.assert_called_once_with(
-            "gnt-instance add -t drbd -I hail --net 0:link=private --hypervisor-parameters=kvm:boot_order=network "
+            f"gnt-instance add -t drbd -I hail --net {net_value} --hypervisor-parameters=kvm:boot_order=network "
             "-o debootstrap+default --no-install --no-wait-for-sync -g row_A -B vcpus=2,memory=3174m --disk 0:size=4g "
             "test.example.com",
             print_output=True,
@@ -308,20 +333,28 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         "kwargs, exc_message",
         (
             (
-                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": 1, "link": "invalid"},
+                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": 1, "net": "invalid"},
                 r"Invalid link 'invalid', expected one of: \('public', 'private', 'analytics', 'sandbox'\)",
             ),
             (
-                {"group": "row_A", "vcpus": -1, "memory": 1, "disk": 1, "link": "private"},
+                {"group": "row_A", "vcpus": -1, "memory": 1, "disk": 1, "net": "private"},
                 r"Invalid value '-1' for vcpus, expected positive integer.",
             ),
             (
-                {"group": "row_A", "vcpus": 1, "memory": -1, "disk": 1, "link": "private"},
+                {"group": "row_A", "vcpus": 1, "memory": -1, "disk": 1, "net": "private"},
                 r"Invalid value '-1' for memory, expected positive integer.",
             ),
             (
-                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "link": "private"},
+                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "net": "private"},
                 r"Invalid value '-1' for disk, expected positive integer.",
+            ),
+            (
+                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "net": IPv4Address("192.0.2.1")},
+                r"Invalid value '-1' for disk, expected positive integer.",
+            ),
+            (
+                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "net": 1},
+                r"'1' must be an IPv4Address or one of: \('public', 'private', 'analytics', 'sandbox'\).",
             ),
         ),
     )
