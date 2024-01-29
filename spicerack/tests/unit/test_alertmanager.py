@@ -47,7 +47,7 @@ class TestAlertmanager:
         """It should issue a silence with a given duration."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
         with mock.patch("spicerack.alertmanager.datetime") as dt_mock:
-            dt_mock.utcnow.return_value = datetime(2022, 6, 6, 10, 00, 00, tzinfo=timezone.utc)
+            dt_mock.now.return_value = datetime(2022, 6, 6, 10, 00, 00, tzinfo=timezone.utc)
             self.alertmanager.downtime(self.reason, matchers=self.matchers, duration=timedelta(hours=6))
         request_json = self.requests_mock.last_request.json()
         assert request_json["startsAt"] == "2022-06-06T10:00:00+00:00"
@@ -195,7 +195,17 @@ class TestAlertmanagerHosts:
         """It should issue a silence with a given duration."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
         with mock.patch("spicerack.alertmanager.datetime") as dt_mock:
-            dt_mock.utcnow.return_value = datetime(2022, 6, 6, 10, 00, 00, tzinfo=timezone.utc)
+            dt_mock.now.return_value = datetime(2022, 6, 6, 10, 00, 00, tzinfo=timezone.utc)
+            self.am_hosts.downtime(self.reason, duration=timedelta(hours=6))
+        request_json = self.requests_mock.last_request.json()
+        assert request_json["startsAt"] == "2022-06-06T10:00:00+00:00"
+        assert request_json["endsAt"] == "2022-06-06T16:00:00+00:00"
+
+    def test_add_silence_duration_timezone(self):
+        """It should issue a silence with a given duration when on a non-UTC timezone."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        with mock.patch("spicerack.alertmanager.datetime") as dt_mock:
+            dt_mock.now.return_value = datetime(2022, 6, 6, 12, 00, 00, tzinfo=timezone(timedelta(hours=2)))
             self.am_hosts.downtime(self.reason, duration=timedelta(hours=6))
         request_json = self.requests_mock.last_request.json()
         assert request_json["startsAt"] == "2022-06-06T10:00:00+00:00"

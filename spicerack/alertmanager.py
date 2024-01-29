@@ -140,7 +140,9 @@ class Alertmanager:
             raise AlertmanagerError("No matchers provided.")
 
         # Swagger API format for startsAt/endsAt is 'date-time' which includes a timezone.
-        start = datetime.utcnow().astimezone(tz=timezone.utc)
+        # Using astimezone() assumes that the given datetime is in local time, thus use
+        # now() and not utcnow() as that will get converted to UTC anyways.
+        start = datetime.now().astimezone(tz=timezone.utc)
         end = start + duration
         payload = {
             "matchers": list(matchers),

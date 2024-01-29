@@ -2,6 +2,7 @@
 
 import logging
 from dataclasses import dataclass
+from ipaddress import IPv4Address
 from typing import Optional, Union
 
 from requests.auth import HTTPBasicAuth
@@ -33,12 +34,14 @@ class GanetiCluster:
         name: the Ganeti cluster short name, equivalent to the Netbox cluster group name.
         fqdn: the FQDN of the Ganeti cluster VIP.
         rapi: the Ganeti RAPI endpoint URL to connect to.
+        routed: Whether the cluster's network is in routed mode or switched mode.
 
     """
 
     name: str
     fqdn: str
     rapi: str
+    routed: bool
 
 
 @dataclass(frozen=True)
@@ -233,7 +236,9 @@ class GntInstance:
         )
         self._master.run_sync(f"gnt-instance remove --shutdown-timeout={shutdown_timeout} --force {self._instance}")
 
-    def add(self, *, group: str, vcpus: int, memory: Union[int, float], disk: int, link: str) -> None:
+    def add(
+        self, *, group: str, vcpus: int, memory: Union[int, float], disk: int, net: Union[str, IPv4Address]
+    ) -> None:
         """Create the VM for the instance in the Ganeti cluster with the specified characteristic.
 
         Arguments:
@@ -241,7 +246,7 @@ class GntInstance:
             vcpus: the number of virtual CPUs to assign to the instance.
             memory: the amount of RAM to assign to the instance in gigabytes.
             disk: the amount of disk to assign to the instance in gigabytes.
-            link: the type of network link to use, one of :py:const:`spicerack.ganeti.INSTANCE_LINKS`.
+            net: either the IP or the type of network link to use (from :py:const:`spicerack.ganeti.INSTANCE_LINKS`).
 
         Raises:
             spicerack.ganeti.GanetiError: on parameter validation error.
@@ -250,8 +255,14 @@ class GntInstance:
             This action requires few minutes, inform the user about the waiting time when using this method.
 
         """
-        if link not in INSTANCE_LINKS:
-            raise GanetiError(f"Invalid link '{link}', expected one of: {INSTANCE_LINKS}")
+        if isinstance(net, str):
+            if net not in INSTANCE_LINKS:
+                raise GanetiError(f"Invalid link '{net}', expected one of: {INSTANCE_LINKS}")
+            net_option = f"0:link={net}"
+        elif isinstance(net, IPv4Address):
+            net_option = f"0:ip={net}"
+        else:
+            raise GanetiError(f"'{net}' must be an IPv4Address or one of: {INSTANCE_LINKS}.")
 
         local_vars = locals()
         for var_label in ("vcpus", "memory", "disk"):
@@ -265,7 +276,7 @@ class GntInstance:
             "gnt-instance add"
             " -t drbd"
             " -I hail"
-            f" --net 0:link={link}"
+            f" --net {net_option}"
             " --hypervisor-parameters=kvm:boot_order=network"
             " -o debootstrap+default"
             " --no-install"
@@ -278,7 +289,7 @@ class GntInstance:
 
         logger.info(
             (
-                "Creating VM %s in cluster %s with group=%s vcpus=%d memory=%dGB disk=%dGB link=%s. "
+                "Creating VM %s in cluster %s with group=%s vcpus=%d memory=%dGB disk=%dGB net=%s. "
                 "This may take a few minutes."
             ),
             self._instance,
@@ -287,7 +298,7 @@ class GntInstance:
             vcpus,
             memory,
             disk,
-            link,
+            net,
         )
 
         results = self._master.run_sync(command, print_output=True)
@@ -333,6 +344,10 @@ class Ganeti:
         if address_field is None:
             raise GanetiError(f"Virtualization cluster group {name} has no IP address.")
 
+        routed = cluster_group.custom_fields.get("routed")
+        if routed is None:
+            raise GanetiError(f"Virtualization cluster group {name} doesn't have the 'routed' custom field set.")
+
         address = address_field.get("address")
         if not address:  # Covers also the case it's an empty string
             raise GanetiError(f"Virtualization cluster group {name} IP address has no address.")
@@ -345,7 +360,7 @@ class Ganeti:
             raise GanetiError(f"Virtualization cluster group {name}'s IP address {address} has no DNS name.")
 
         return GanetiCluster(
-            name=name, fqdn=ip_address.dns_name, rapi=RAPI_URL_FORMAT.format(cluster=ip_address.dns_name)
+            name=name, fqdn=ip_address.dns_name, rapi=RAPI_URL_FORMAT.format(cluster=ip_address.dns_name), routed=routed
         )
 
     def get_group(self, name: str, *, cluster: str) -> GanetiGroup:
