@@ -1,6 +1,24 @@
 Spicerack Changelog
 -------------------
 
+`v8.3.0`_ (2024-01-29)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* ganeti: add support for routed Ganeti (`T300152`_).
+
+Bug fixes
+"""""""""
+
+* alertmanager: fix timezone bug when run from a non-UTC computer (`T347490`_).
+
+Miscellanea
+"""""""""""
+
+* setup.py: add missing classifier for Python 3.11.
+
 `v8.2.0`_ (2023-11-22)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2735,6 +2753,7 @@ New features
 .. _`T291681`: https://phabricator.wikimedia.org/T291681
 .. _`T293209`: https://phabricator.wikimedia.org/T293209
 .. _`T299123`: https://phabricator.wikimedia.org/T299123
+.. _`T300152`: https://phabricator.wikimedia.org/T300152
 .. _`T300879`: https://phabricator.wikimedia.org/T300879
 .. _`T304434`: https://phabricator.wikimedia.org/T304434
 .. _`T306661`: https://phabricator.wikimedia.org/T306661
@@ -2752,6 +2771,7 @@ New features
 .. _`T335855`: https://phabricator.wikimedia.org/T335855
 .. _`T341973`: https://phabricator.wikimedia.org/T341973
 .. _`T346134`: https://phabricator.wikimedia.org/T346134
+.. _`T347490`: https://phabricator.wikimedia.org/T347490
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2866,3 +2886,4 @@ New features
 .. _`v8.0.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.0.3
 .. _`v8.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.1.0
 .. _`v8.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.2.0
+.. _`v8.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.3.0
