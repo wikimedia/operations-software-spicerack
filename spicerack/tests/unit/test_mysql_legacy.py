@@ -1,4 +1,5 @@
 """MysqlLegacy module tests."""
+
 import logging
 from datetime import datetime
 from unittest import mock
