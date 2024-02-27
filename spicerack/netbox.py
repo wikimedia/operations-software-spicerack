@@ -1,10 +1,13 @@
 """Netbox module."""
 import logging
-from typing import Union
+from ipaddress import IPv4Interface, IPv6Interface, ip_interface
+from typing import Any, Optional, Union
 
 import pynetbox
+from requests.exceptions import RequestException
 from wmflib.requests import http_session
 
+from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 
 MANAGEMENT_IFACE_NAME: str = "mgmt"
@@ -24,6 +27,10 @@ class NetboxAPIError(NetboxError):
 
 class NetboxHostNotFoundError(NetboxError):
     """Raised when a host is not found for an operation."""
+
+
+class NetboxScriptError(NetboxError):
+    """Raised when a Netbox script doesn't run properly."""
 
 
 class Netbox:
@@ -113,6 +120,54 @@ class Netbox:
             server = self._get_virtual_machine(hostname)
 
         return NetboxServer(api=self._api, server=server, dry_run=self._dry_run)
+
+    def run_script(self, name: str, *, commit: bool = False, params: dict[str, Any]) -> list:
+        """Run a Netbox script and wait for its output.
+
+        Arguments:
+            name: Full name of the script to run (eg. import_server_facts.ImportPuppetDB).
+            commit: save the script actions in the Netbox DB.
+            params: script parameters (passed as POST data).
+
+        Returns:
+            The script execution logs in a list format.
+
+        Raises:
+            spicerack.netbox.NetboxScriptError: If the script coudn't be ran or its result fetched.
+
+        """
+        # Apparently pynetbox doesn't allow to execute a Netbox script
+        url = self._api.extras.scripts.get(name).url
+        headers = {"Authorization": f"Token {self._api.token}"}
+        if self._dry_run and commit:
+            logger.info("Forcing commit = False as running in DRY-RUN")
+            commit = False
+        data = {"data": params, "commit": int(commit)}
+
+        script_http_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=(5.0, 30.0))
+
+        @retry(tries=30, backoff_mode="constant", exceptions=(ValueError, RequestException))
+        def _poll_netbox_job(url: str) -> list:
+            """Poll Netbox to get the result of the script run."""
+            result = script_http_session.get(url, headers=headers)
+            result.raise_for_status()
+            data = result.json()["data"]
+            if data is None:
+                raise ValueError(f"No data from job result {url}")
+            return data["log"]
+
+        result = None
+        try:
+            result = script_http_session.post(url, headers=headers, json=data)
+            result.raise_for_status()
+            logger.debug("Started Netbox script %s, waiting for results.", name)
+        except RequestException as e:
+            raise NetboxScriptError(f"Failed to start Netbox script {name}") from e
+        job_url = result.json()["result"]["url"]
+        try:
+            return _poll_netbox_job(job_url)
+        except (ValueError, RequestException) as e:
+            raise NetboxScriptError(f"Failed to get Netbox script results from {job_url}") from e
 
 
 class NetboxServer:
@@ -217,6 +272,172 @@ class NetboxServer:
         self._server.status = value
         self._server.save()
         logger.debug("Updated Netbox status from %s to %s for device %s", current, new, self._server.name)
+
+    def _set_primary_ip(self, value: Union[str, IPv4Interface, IPv6Interface], version: int) -> None:
+        """Abstraction function to set a v4 or v6 IP on a host.
+
+        Arguments:
+            value: an IPv4 or IPv6 IP in CIDR notation.
+
+        Raises:
+            spicerack.netbox.NetboxError: if the provided IP is not valid.
+
+        """
+        try:
+            ip = ip_interface(value)
+        except ValueError as exc:
+            raise NetboxError(f"{value} is not a valid IP in the CIDR notation.") from exc
+        if ip.version != version:
+            raise NetboxError(f"{value} is not an IPv{version}")
+        primary_ip = getattr(self._server, f"primary_ip{ip.version}")
+        if not primary_ip:
+            raise NetboxError(f"No existing primary IPv{version} for {self._server.name}.")
+        current = primary_ip.address
+        if self._api.ipam.ip_addresses.count(address=str(ip)):
+            raise NetboxError(f"{ip} is already in use.")
+        if self._dry_run:
+            logger.info(
+                "Skipping Netbox primary IPv%d change from %s to %s for device %s in DRY-RUN.",
+                ip.version,
+                current,
+                value,
+                self._server.name,
+            )
+            return
+
+        primary_ip.address = str(ip)
+        primary_ip.save()
+        logger.debug(
+            "Updated Netbox primary IPv%d from %s to %s for device %s",
+            ip.version,
+            current,
+            value,
+            self._server.name,
+        )
+
+    @property
+    def primary_ip4_address(self) -> Optional[IPv4Interface]:
+        """Get and set the server primary IPv4 address.
+
+        And not the Netbox ipam.IpAddresses object.
+
+        Arguments:
+            value: the new IPv4 (CIDR) to be set.
+
+        """
+        if self._server.primary_ip4:
+            return IPv4Interface(self._server.primary_ip4.address)
+        return None
+
+    @primary_ip4_address.setter
+    def primary_ip4_address(self, value: Union[str, IPv4Interface]) -> None:
+        """Set the server primary IPv4 address. See the getter docstring for info.
+
+        And not the Netbox ipam.IpAddresses object.
+
+        Arguments:
+            value: the new IPv4 (CIDR) to be set.
+
+        """
+        self._set_primary_ip(value, 4)
+
+    @property
+    def primary_ip6_address(self) -> Optional[IPv6Interface]:
+        """Get and set the server primary IPv6 address.
+
+        And not the Netbox ipam.IpAddresses object.
+
+        Arguments:
+            value: the new IPv6 (CIDR) to be set.
+
+        """
+        if self._server.primary_ip6:
+            return IPv6Interface(self._server.primary_ip6.address)
+        return None
+
+    @primary_ip6_address.setter
+    def primary_ip6_address(self, value: Union[str, IPv6Interface]) -> None:
+        """Set the server primary IPv6 address. See the getter docstring for info.
+
+        And not the Netbox ipam.IpAddresses object.
+
+        Arguments:
+            value: the new IPv6 (CIDR) to be set.
+
+        """
+        self._set_primary_ip(value, 6)
+
+    def _find_primary_switch_iface(self) -> pynetbox.core.response.Record:
+        """Returns the switch side interface connected to the device's primary interface.
+
+        Returns:
+            A Netbox interface object of the switch side connected to the device's primary interface.
+
+        Raises:
+            spicerack.netbox.NetboxError: if used on a virtual device,
+              the device primary interface is not connected, or the primary IP is not linked to an interface.
+
+        """
+        # TODO: in the future find another way than requiring a primary IP to find the primary interface
+        if self.virtual:
+            raise NetboxError("Server is a virtual machine, can't return a switch interface.")
+        primary_ip = self._server.primary_ip
+        if not primary_ip:
+            raise NetboxError("No primary IP, needed to find the primary interface.")
+        netbox_iface = primary_ip.assigned_object
+        if not netbox_iface:
+            raise NetboxError("Primary IP not assigned to an interface.")
+        netbox_switch_iface = netbox_iface.connected_endpoint
+        if not netbox_switch_iface:
+            raise NetboxError("Primary interface not connected.")
+        return netbox_switch_iface
+
+    @property
+    def access_vlan(self) -> str:
+        """Get and set the server access vlan.
+
+        Can be done only on physical devices, requires the device to have a primary IP.
+
+        Arguments:
+            value: the name of the vlan to be set.
+
+        """
+        netbox_switch_iface = self._find_primary_switch_iface()
+        if netbox_switch_iface.untagged_vlan:
+            return netbox_switch_iface.untagged_vlan.name
+        return ""
+
+    @access_vlan.setter
+    def access_vlan(self, value: str) -> None:
+        """Set the device access vlan. See the getter docstring for info.
+
+        Arguments:
+            value: the name of the access vlan to be set.
+
+        Raises:
+            spicerack.netbox.NetboxError: if used on a virtual device,
+              the device primary interface is not connected or the vlan doesn't exist.
+
+        """
+        netbox_switch_iface = self._find_primary_switch_iface()
+        new_vlan = self._api.ipam.vlans.get(name=value, status="active")
+        if not new_vlan:
+            raise NetboxError(f"Failed to find an active VLAN with name {value}")
+
+        current = netbox_switch_iface.untagged_vlan.name if netbox_switch_iface.untagged_vlan else "NOT SET"
+        if self._dry_run:
+            logger.info(
+                "Skipping Netbox update of switchport access vlan from %s to %s for device %s in DRY-RUN.",
+                current,
+                value,
+                self._server.name,
+            )
+            return
+        netbox_switch_iface.untagged_vlan = new_vlan
+        netbox_switch_iface.save()
+        logger.debug(
+            "Updated Netbox switchport access vlan from %s to %s for device %s", current, value, self._server.name
+        )
 
     @property
     def fqdn(self) -> str:

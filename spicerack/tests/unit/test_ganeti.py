@@ -1,7 +1,7 @@
 """Ganeti Module test."""
 
 import json
-from ipaddress import IPv4Address
+from ipaddress import IPv4Address, IPv6Address
 from unittest import mock
 
 import pytest
@@ -301,13 +301,18 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         )
 
     @pytest.mark.parametrize(
-        "net, net_value",
+        "net, net_value, ip6, kvm_extra",
         (
-            ("private", "0:link=private"),
-            (IPv4Address("192.0.2.1"), "0:ip=192.0.2.1"),
+            ("private", "0:link=private", IPv6Address("2001::1"), ""),
+            (
+                IPv4Address("192.0.2.1"),
+                "0:ip=192.0.2.1",
+                IPv6Address("2001::1"),
+                ',kvm_extra="-fw_cfg name=opt/ip\\,string=192.0.2.1 -fw_cfg name=opt/ip6\\,string=2001::1"',
+            ),
         ),
     )
-    def test_instance_add_ok(self, requests_mock, net, net_value):
+    def test_instance_add_ok(self, requests_mock, net, net_value, ip6, kvm_extra):
         """It should issue the remove command on the master host."""
         self._set_requests_mock_for_instance(requests_mock)
         requests_mock.get(self.base_url + "/info", text=self.info)
@@ -320,10 +325,11 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         ]
         self.remote.query.return_value.run_sync.return_value = iter(results)
 
-        instance.add(group="row_A", vcpus=2, memory=3.1, disk=4, net=net)
+        instance.add(group="row_A", vcpus=2, memory=3.1, disk=4, net=net, ip6=ip6)
 
         self.remote.query.return_value.run_sync.assert_called_once_with(
-            f"gnt-instance add -t drbd -I hail --net {net_value} --hypervisor-parameters=kvm:boot_order=network "
+            f"gnt-instance add -t drbd -I hail --net {net_value} "
+            f"--hypervisor-parameters=kvm:boot_order=network{kvm_extra} "
             "-o debootstrap+default --no-install --no-wait-for-sync -g row_A -B vcpus=2,memory=3174m --disk 0:size=4g "
             "test.example.com",
             print_output=True,
@@ -333,28 +339,60 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         "kwargs, exc_message",
         (
             (
-                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": 1, "net": "invalid"},
+                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": 1, "net": "invalid", "ip6": IPv6Address("2001::1")},
                 r"Invalid link 'invalid', expected one of: \('public', 'private', 'analytics', 'sandbox'\)",
             ),
             (
-                {"group": "row_A", "vcpus": -1, "memory": 1, "disk": 1, "net": "private"},
+                {
+                    "group": "row_A",
+                    "vcpus": -1,
+                    "memory": 1,
+                    "disk": 1,
+                    "net": "private",
+                    "ip6": IPv6Address("2001::1"),
+                },
                 r"Invalid value '-1' for vcpus, expected positive integer.",
             ),
             (
-                {"group": "row_A", "vcpus": 1, "memory": -1, "disk": 1, "net": "private"},
+                {
+                    "group": "row_A",
+                    "vcpus": 1,
+                    "memory": -1,
+                    "disk": 1,
+                    "net": "private",
+                    "ip6": IPv6Address("2001::1"),
+                },
                 r"Invalid value '-1' for memory, expected positive integer.",
             ),
             (
-                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "net": "private"},
+                {
+                    "group": "row_A",
+                    "vcpus": 1,
+                    "memory": 1,
+                    "disk": -1,
+                    "net": "private",
+                    "ip6": IPv6Address("2001::1"),
+                },
                 r"Invalid value '-1' for disk, expected positive integer.",
             ),
             (
-                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "net": IPv4Address("192.0.2.1")},
+                {
+                    "group": "row_A",
+                    "vcpus": 1,
+                    "memory": 1,
+                    "disk": -1,
+                    "net": IPv4Address("192.0.2.1"),
+                    "ip6": IPv6Address("2001::1"),
+                },
                 r"Invalid value '-1' for disk, expected positive integer.",
             ),
             (
-                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "net": 1},
+                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "net": 1, "ip6": IPv6Address("2001::1")},
                 r"'1' must be an IPv4Address or one of: \('public', 'private', 'analytics', 'sandbox'\).",
+            ),
+            (
+                {"group": "row_A", "vcpus": 1, "memory": 1, "disk": -1, "net": "private", "ip6": "invalid"},
+                r"'invalid' must be an IPv6Address object.",
             ),
         ),
     )

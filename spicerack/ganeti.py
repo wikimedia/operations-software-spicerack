@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from ipaddress import IPv4Address
+from ipaddress import IPv4Address, IPv6Address
 from typing import Optional, Union
 
 from requests.auth import HTTPBasicAuth
@@ -237,7 +237,14 @@ class GntInstance:
         self._master.run_sync(f"gnt-instance remove --shutdown-timeout={shutdown_timeout} --force {self._instance}")
 
     def add(
-        self, *, group: str, vcpus: int, memory: Union[int, float], disk: int, net: Union[str, IPv4Address]
+        self,
+        *,
+        group: str,
+        vcpus: int,
+        memory: Union[int, float],
+        disk: int,
+        net: Union[str, IPv4Address],
+        ip6: IPv6Address,
     ) -> None:
         """Create the VM for the instance in the Ganeti cluster with the specified characteristic.
 
@@ -247,6 +254,7 @@ class GntInstance:
             memory: the amount of RAM to assign to the instance in gigabytes.
             disk: the amount of disk to assign to the instance in gigabytes.
             net: either the IP or the type of network link to use (from :py:const:`spicerack.ganeti.INSTANCE_LINKS`).
+            ip6: the IPv6 assigned to the VM.
 
         Raises:
             spicerack.ganeti.GanetiError: on parameter validation error.
@@ -255,14 +263,19 @@ class GntInstance:
             This action requires few minutes, inform the user about the waiting time when using this method.
 
         """
+        kvm_extra = ""
         if isinstance(net, str):
             if net not in INSTANCE_LINKS:
                 raise GanetiError(f"Invalid link '{net}', expected one of: {INSTANCE_LINKS}")
             net_option = f"0:link={net}"
         elif isinstance(net, IPv4Address):
             net_option = f"0:ip={net}"
+            kvm_extra = f',kvm_extra="-fw_cfg name=opt/ip\\,string={net} -fw_cfg name=opt/ip6\\,string={ip6}"'
         else:
             raise GanetiError(f"'{net}' must be an IPv4Address or one of: {INSTANCE_LINKS}.")
+
+        if not isinstance(ip6, IPv6Address):
+            raise GanetiError(f"'{ip6}' must be an IPv6Address object.")
 
         local_vars = locals()
         for var_label in ("vcpus", "memory", "disk"):
@@ -277,7 +290,7 @@ class GntInstance:
             " -t drbd"
             " -I hail"
             f" --net {net_option}"
-            " --hypervisor-parameters=kvm:boot_order=network"
+            f" --hypervisor-parameters=kvm:boot_order=network{kvm_extra}"
             " -o debootstrap+default"
             " --no-install"
             " --no-wait-for-sync"

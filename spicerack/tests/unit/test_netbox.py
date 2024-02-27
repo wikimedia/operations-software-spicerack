@@ -1,14 +1,24 @@
 """Netbox module tests."""
 
+from ipaddress import IPv4Interface, IPv6Interface
 from unittest import mock
 
 import pynetbox
 import pytest
+import requests
 
-from spicerack.netbox import Netbox, NetboxAPIError, NetboxError, NetboxHostNotFoundError, NetboxServer
+from spicerack.netbox import (
+    Netbox,
+    NetboxAPIError,
+    NetboxError,
+    NetboxHostNotFoundError,
+    NetboxScriptError,
+    NetboxServer,
+)
 
 NETBOX_URL = "https://example.com/"
 NETBOX_TOKEN = "secret_token"
+SCRIPT_URL = f"{NETBOX_URL}api/script/"
 
 
 def _request_error():
@@ -29,7 +39,10 @@ def _base_netbox_host(name):
     host.serialize.return_value = {"name": name}
     host.save.return_value = True
     host.primary_ip4.dns_name = f"{name}.example.com"
+    host.primary_ip4.address = "10.0.0.1/22"
     host.primary_ip6.dns_name = f"{name}.example.com"
+    host.primary_ip6.address = "2620:0:861:103:10::1/64"
+    host.primary_ip.assigned_object.connected_endpoint.untagged_vlan.name = "test_vlan"
 
     dict_repr = {
         "name": name,
@@ -45,7 +58,7 @@ def _base_netbox_host(name):
         "primary_ip6": {
             "id": 1,
             "family": 6,
-            "address": "2620:0:861:103:10:0:0:1/64",
+            "address": "2620:0:861:103:10::1/64",
             "dns_name": host.primary_ip6.dns_name,
         },
         "cluster": host.cluster,
@@ -127,6 +140,33 @@ class TestNetbox:
         self.mocked_api().virtualization.virtual_machines.get.return_value = None
         with pytest.raises(NetboxHostNotFoundError):
             self.netbox.get_server("inexistent")
+
+    def test_run_script_ok(self, requests_mock):
+        """It should returns the script logs exposed by the server."""
+        data = {"data": {"log": ["log1", "log2"]}}
+        self.mocked_api().extras.scripts.get.return_value.url = SCRIPT_URL
+        requests_mock.post(SCRIPT_URL, json={"result": {"url": SCRIPT_URL}})
+        requests_mock.get(SCRIPT_URL, json=data)
+        run_script = self.netbox_dry_run.run_script(name="test_script", commit=True, params={})
+        assert run_script == ["log1", "log2"]
+        assert requests_mock.request_history[0].json() == {"commit": 0, "data": {}}
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    def test_run_script_no_result_data(self, mocked_sleep, requests_mock):
+        """It should raise a Netbox script error if can't get the script output."""
+        self.mocked_api().extras.scripts.get.return_value.url = SCRIPT_URL
+        requests_mock.post(SCRIPT_URL, json={"result": {"url": SCRIPT_URL}})
+        requests_mock.get(SCRIPT_URL, json={"data": None})
+        with pytest.raises(NetboxScriptError, match="Failed to get Netbox script results from "):
+            self.netbox.run_script(name="test_script", commit=True, params={})
+        assert mocked_sleep.called
+
+    def test_run_script_post_timeout(self, requests_mock):
+        """It should raise a Netbox script error if can't start the script."""
+        self.mocked_api().extras.scripts.get.return_value.url = SCRIPT_URL
+        requests_mock.post(SCRIPT_URL, exc=requests.exceptions.HTTPError)
+        with pytest.raises(NetboxScriptError, match="Failed to start Netbox script test_script"):
+            self.netbox.run_script(name="test_script", commit=True, params={})
 
 
 class TestNetboxServer:
@@ -245,3 +285,114 @@ class TestNetboxServer:
         assert as_dict["cluster"] == {"id": 1, "name": "testcluster"}
         assert as_dict["is_virtual"]
         assert as_dict["name"] == "virtual"
+
+    def test_access_vlan_getter_ok(self):
+        """It should return the access vlan of the device."""
+        assert self.physical_server.access_vlan == "test_vlan"
+
+    def test_access_vlan_getter_no_primary_ip(self):
+        """It should raise a NetboxError if no primary IP is set."""
+        self.netbox_host.primary_ip = None
+        with pytest.raises(NetboxError, match="No primary IP, needed to find the primary interface."):
+            self.physical_server.access_vlan  # pylint: disable=pointless-statement
+
+    def test_access_vlan_getter_primary_ip_not_assigned(self):
+        """It should raise a NetboxError if the primary IP is not assigned to an interface."""
+        self.netbox_host.primary_ip.assigned_object = None
+        with pytest.raises(NetboxError, match="Primary IP not assigned to an interface."):
+            self.physical_server.access_vlan  # pylint: disable=pointless-statement
+
+    def test_access_vlan_getter_primary_interface_not_connected(self):
+        """It should raise a NetboxError if the primary interface not connected."""
+        self.netbox_host.primary_ip.assigned_object.connected_endpoint = None
+        with pytest.raises(NetboxError, match="Primary interface not connected."):
+            self.physical_server.access_vlan  # pylint: disable=pointless-statement
+
+    def test_access_vlan_getter_switch_interface_no_vlan(self):
+        """It should return an empty string."""
+        self.netbox_host.primary_ip.assigned_object.connected_endpoint.untagged_vlan = None
+        assert self.physical_server.access_vlan == ""
+
+    def test_access_vlan_getter_virtual(self):
+        """It should raise a NetboxError if trying to get the access vlan on a virtual machine."""
+        with pytest.raises(NetboxError, match="Server is a virtual machine, can't return a switch interface."):
+            self.virtual_server.access_vlan  # pylint: disable=pointless-statement
+
+    def test_access_vlan_setter_ok(self):
+        """It should set the access vlan."""
+        self.physical_server.access_vlan = "set_test_vlan"
+        assert self.netbox_host.save.called_once_with()
+
+    def test_access_vlan_setter_not_found(self):
+        """It should raise a NetboxError if trying to set an non active vlan."""
+        self.mocked_api.ipam.vlans.get.return_value = None
+        with pytest.raises(NetboxError, match="Failed to find an active VLAN with name set_test_vlan"):
+            self.physical_server.access_vlan = "set_test_vlan"
+
+    def test_access_vlan_setter_dry_run(self):
+        """It should skip setting the access vlan of the server to its new value in dry-run mode."""
+        physical_server = NetboxServer(api=self.mocked_api, server=self.netbox_host, dry_run=True)
+        physical_server.access_vlan = "set_test_vlan"
+        self.netbox_host.save.assert_not_called()
+        assert self.physical_server.access_vlan == "test_vlan"
+
+    def test_primary_ip4_address_getter_ok(self):
+        """It should return the primary IPv4 address of the device."""
+        assert self.physical_server.primary_ip4_address == IPv4Interface("10.0.0.1/22")
+
+    def test_primary_ip4_address_getter_none_ok(self):
+        """It should return None."""
+        self.netbox_host.primary_ip4 = None
+        assert self.physical_server.primary_ip4_address is None
+
+    def test_primary_ip4_address_setter_ok(self):
+        """It should set the primary IPv4 address (and no CIDR means /32)."""
+        self.mocked_api.ipam.ip_addresses.count.return_value = 0
+        self.physical_server.primary_ip4_address = "192.0.2.1"
+        assert self.netbox_host.save.called_once_with()
+        assert self.physical_server.primary_ip4_address == IPv4Interface("192.0.2.1/32")
+
+    def test_primary_ip4_address_setter_not_valid(self):
+        """It should raise a NetboxError if trying to set the v4 IP to an invalid value."""
+        with pytest.raises(NetboxError, match="foo is not a valid IP in the CIDR notation."):
+            self.physical_server.primary_ip4_address = "foo"
+
+    def test_set_primary_ip_wrong_version(self):
+        """It should raise a NetboxError if trying to set the v4 IP to an invalid value."""
+        with pytest.raises(NetboxError, match="192.0.2.1/32 is not an IPv6"):
+            self.physical_server.primary_ip6_address = "192.0.2.1/32"
+
+    def test_primary_ip4_address_setter_existing(self):
+        """It should raise a NetboxError if trying to set a v4 IP already in use."""
+        self.mocked_api.ipam.ip_addresses.count.return_value = 1
+        with pytest.raises(NetboxError, match="192.0.2.1/32 is already in use."):
+            self.physical_server.primary_ip4_address = "192.0.2.1/32"
+
+    def test_primary_ip6_address_getter_ok(self):
+        """It should return the primary IPv6 address of the device."""
+        assert self.physical_server.primary_ip6_address == IPv6Interface("2620:0:861:103:10::1/64")
+
+    def test_primary_ip6_address_getter_none_ok(self):
+        """It should return None."""
+        self.netbox_host.primary_ip6 = None
+        assert self.physical_server.primary_ip6_address is None
+
+    def test_primary_ip6_address_setter_ok(self):
+        """It should set the primary IPv6 address."""
+        self.mocked_api.ipam.ip_addresses.count.return_value = 0
+        self.physical_server.primary_ip6_address = "2001:db8::1/32"
+        assert self.netbox_host.save.called_once_with()
+
+    def test_primary_ip6_address_setter_dry_run(self):
+        """It should skip setting the primary IPv6 address."""
+        self.mocked_api.ipam.ip_addresses.count.return_value = 0
+        physical_server = NetboxServer(api=self.mocked_api, server=self.netbox_host, dry_run=True)
+        physical_server.primary_ip6_address = "2001:db8::1/32"
+        assert self.physical_server.primary_ip6_address == IPv6Interface("2620:0:861:103:10::1/64")
+        self.netbox_host.save.assert_not_called()
+
+    def test_primary_ip4_address_getter_no_primary_ip(self):
+        """It should raise a NetboxError if it tries to set the address to a device without primary IP."""
+        self.netbox_host.primary_ip4 = None
+        with pytest.raises(NetboxError, match="No existing primary IPv4 for physical."):
+            self.physical_server.primary_ip4_address = "192.0.2.1/32"
