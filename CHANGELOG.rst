@@ -1,6 +1,20 @@
 Spicerack Changelog
 -------------------
 
+`v8.4.0`_ (2024-02-27)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* netbox: allow to execute a Netbox script and retrieve the results.
+* netbox: add getter/setter for primary IPs and access vlan.
+
+Minor improvements
+""""""""""""""""""
+
+* ganeti: pass the v4 and v6 IPs to the VM as ``fw_cfg`` in the create command.
+
 `v8.3.0`_ (2024-01-29)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2887,3 +2901,4 @@ New features
 .. _`v8.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.1.0
 .. _`v8.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.2.0
 .. _`v8.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.3.0
+.. _`v8.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.4.0
