@@ -220,6 +220,58 @@ class NetboxServer:
         return not hasattr(self._server, "rack")
 
     @property
+    def name(self) -> str:
+        """Get the server name. Set the server name, primary IP DNS name, management IP DNS name.
+
+        Modifying its value can be done only on physical devices.
+
+        Arguments:
+            new: the new name for the host.
+
+        Raises:
+            spicerack.netbox.NetboxError: if trying to set it on a virtual device or there is an issue renaming.
+
+        """
+        return self._server.name
+
+    @name.setter
+    def name(self, new: str) -> None:
+        """Get and set the server name. See the getter docstring for info.
+
+        Arguments:
+            new: the new name for the host.
+
+        Raises:
+            spicerack.netbox.NetboxError: if trying to set it on a virtual device or there is an issue renaming.
+
+        """
+        if self.virtual:
+            raise NetboxError(
+                f"Server {self._server.name} is a virtual machine, chaging the name is only for physical servers."
+            )
+
+        current = self._server.name
+        if current == new:
+            logger.debug("Current name is already %s", current)
+            return
+        if self._dry_run:
+            logger.info("Skipping Netbox name change from %s to %s in DRY-RUN.", current, new)
+            return
+
+        self._server.name = new
+        if self._server.save():
+            logger.debug("Updated Netbox name from %s to %s", current, new)
+        else:
+            # See https://github.com/netbox-community/pynetbox/issues/586
+            raise NetboxError(f"Name change for {current} didn't get applied by Netbox.")
+
+        # Update the FQDNs
+        if self.fqdn:
+            self.fqdn = new + "." + self.fqdn.split(".", 1)[1]
+        if self.mgmt_fqdn:
+            self.mgmt_fqdn = new + "." + self.mgmt_fqdn.split(".", 1)[1]
+
+    @property
     def status(self) -> str:
         """Get and set the server status.
 
@@ -441,7 +493,14 @@ class NetboxServer:
 
     @property
     def fqdn(self) -> str:
-        """Return the FQDN of the device.
+        """Get and set the device primary IPs FQDN if one is already set.
+
+        Notes:
+            If the FQDN for any of the primary IPs is not set it will not be updated.
+            This is to prevent setting a IPv6 AAAA record by accident.
+
+        Arguments:
+            value: the new FQDN for the host.
 
         Raises:
             spicerack.netbox.NetboxError: if the server has no FQDN defined in Netbox.
@@ -455,9 +514,43 @@ class NetboxServer:
 
         raise NetboxError(f"Server {self._server.name} does not have any primary IP with a DNS name set.")
 
+    @fqdn.setter
+    def fqdn(self, value: str) -> None:
+        """Get and set the device primary IPs FQDN if one is already set.
+
+        Notes:
+            If the FQDN for any of the primary IPs is not set it will not be updated.
+            This is to prevent setting a IPv6 AAAA record by accident.
+
+        Arguments:
+            value: the new FQDN for the host.
+
+        Raises:
+            spicerack.netbox.NetboxError: if trying to set it on a virtual device
+                                          or if the server has no FQDN defined in Netbox.
+
+        """
+        if self.virtual:
+            raise NetboxError(
+                f"Server {self._server.name} is a virtual machine, changing the FQDN is only for physical servers."
+            )
+        for attr_name in ("primary_ip4", "primary_ip6"):
+            address = getattr(self._server, attr_name)
+            if address is not None and address.dns_name:
+                if address.dns_name == value:
+                    logger.debug("Current dns_name is already %s", value)
+                    continue
+                address.dns_name = value
+                if not address.save():
+                    raise NetboxError(f"Spicerack was not able to update the {attr_name} FQDN for {self._server.name}.")
+                logger.debug("Updated %s dns_name to %s", attr_name, value)
+
     @property
     def mgmt_fqdn(self) -> str:
-        """Return the management FQDN of the device.
+        """Get and set the management FQDN of the device.
+
+        Arguments:
+            value: the new FQDN for the host.
 
         Raises:
             spicerack.netbox.NetboxError: for virtual servers or the server has no management FQDN defined in Netbox.
@@ -477,6 +570,35 @@ class NetboxServer:
             return self._cached_mgmt_fqdn
 
         raise NetboxError(f"Server {self._server.name} has no management interface with a DNS name set.")
+
+    @mgmt_fqdn.setter
+    def mgmt_fqdn(self, value: str) -> None:
+        """Get and set the management FQDN of the device.
+
+        Arguments:
+            value: the new FQDN for the host.
+
+        Raises:
+            spicerack.netbox.NetboxError: if trying to set it on a virtual device or can't find the management IP.
+
+        """
+        if self.virtual:
+            raise NetboxError(
+                f"Server {self._server.name} is a virtual machine, "
+                "changing the mgmt FQDN is only for physical servers."
+            )
+        address = self._api.ipam.ip_addresses.get(device=self._server.name, interface=MANAGEMENT_IFACE_NAME)
+        # TODO: see the getter TODO
+        if address is not None:
+            if address.dns_name == value:
+                self._cached_mgmt_fqdn = value
+                logger.debug("Current dns_name is already %s", value)
+                return
+            address.dns_name = value
+            if not address.save():
+                raise NetboxError(f"Spicerack was not able to update the mgmt_fqdn for {self._server.name}.")
+            self._cached_mgmt_fqdn = value
+            logger.debug("Updated mgmt FQDN to %s", value)
 
     @property
     def asset_tag_fqdn(self) -> str:

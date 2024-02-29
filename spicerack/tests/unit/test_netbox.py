@@ -250,6 +250,32 @@ class TestNetboxServer:
         with pytest.raises(NetboxError, match="Server physical does not have any primary IP with a DNS name set"):
             self.physical_server.fqdn  # pylint: disable=pointless-statement
 
+    def test_fqdn_setter_virtual(self):
+        """It should raise a NetboxError if trying to change the FQDN of a VM."""
+        with pytest.raises(NetboxError, match="changing the FQDN is only for physical servers"):
+            self.virtual_server.fqdn = "foo.wikimedia.org"
+
+    def test_fqdn_setter_ok(self):
+        """It should set the new FQDN as expected."""
+        self.physical_server.fqdn = "foo.wikimedia.org"
+        assert self.netbox_host.save.called_once_with()
+        assert self.physical_server.fqdn == "foo.wikimedia.org"
+
+    def test_fqdn_setter_identical(self):
+        """It shouldn' try to change the v4 FQDN."""
+        self.netbox_host.primary_ip6.dns_name = "foo.example.com"
+        self.physical_server.fqdn = "physical.example.com"
+        self.netbox_host.primary_ip4.save.assert_not_called()
+        self.netbox_host.primary_ip6.save.assert_called_once_with()
+
+    def test_fqdn_setter_v6_only(self):
+        """It should set the new FQDN as expected."""
+        self.netbox_host.primary_ip4.dns_name = ""
+        self.physical_server.fqdn = "foo.wikimedia.org"
+        self.netbox_host.primary_ip6.save.assert_called_once_with()
+        self.netbox_host.primary_ip4.save.assert_not_called()
+        assert self.physical_server.fqdn == "foo.wikimedia.org"
+
     def test_mgmt_fqdn_getter(self):
         """It should return the management FQDN of the device and cache it."""
         assert self.physical_server.mgmt_fqdn == "physical.mgmt.local"
@@ -268,6 +294,17 @@ class TestNetboxServer:
             NetboxError, match="Server virtual is a virtual machine, does not have a management address"
         ):
             self.virtual_server.mgmt_fqdn  # pylint: disable=pointless-statement
+
+    def test_mgmt_fqdn_setter_virtual(self):
+        """It should raise a NetboxError if trying to change the FQDN of a VM."""
+        with pytest.raises(NetboxError, match="changing the mgmt FQDN is only for physical servers"):
+            self.virtual_server.mgmt_fqdn = "foo.wikimedia.org"
+
+    def test_mgmt_fqdn_setter_ok(self):
+        """It should set the new mgmt FQDN as expected."""
+        self.physical_server.mgmt_fqdn = "foo.wikimedia.org"
+        assert self.netbox_host.save.called_once_with()
+        assert self.physical_server.mgmt_fqdn == "foo.wikimedia.org"
 
     def test_asset_tag_fqdn_getter(self):
         """It should return the management FQDN of the asset tag of the device."""
@@ -397,3 +434,31 @@ class TestNetboxServer:
         self.netbox_host.primary_ip4 = None
         with pytest.raises(NetboxError, match="No existing primary IPv4 for physical."):
             self.physical_server.primary_ip4_address = "192.0.2.1/32"
+
+    def test_name_getter_ok(self):
+        """It should return the name of the device."""
+        assert self.physical_server.name == "physical"
+
+    def test_name_setter_virtual(self):
+        """It should raise a NetboxError if trying to change the name of a VM."""
+        with pytest.raises(NetboxError, match="chaging the name is only for physical servers"):
+            self.virtual_server.name = "foo"
+
+    def test_name_setter_identical(self):
+        """It should not try to change the name if the old name is the same as the new one."""
+        self.physical_server.name = "physical"
+        self.netbox_host.save.assert_not_called()
+
+    def test_name_setter_dry_run(self):
+        """It should not try to change the name if in dry-run mode."""
+        physical_server = NetboxServer(api=self.mocked_api, server=self.netbox_host, dry_run=True)
+        physical_server.name = "new_name"
+        self.netbox_host.save.assert_not_called()
+        assert self.physical_server.name == "physical"
+
+    def test_name_setter_ok(self):
+        """It should set the new name as expected."""
+        self.physical_server.name = "new_name"
+        assert self.physical_server.name == "new_name"
+        assert self.physical_server.fqdn == "new_name.example.com"
+        assert self.physical_server.mgmt_fqdn == "new_name.mgmt.local"
