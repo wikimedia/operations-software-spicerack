@@ -76,7 +76,7 @@ class Kubernetes:
 class KubernetesApiFactory:
     """Provides kubernetes object classes easy access to the API."""
 
-    API_CLASSES: dict[str, Any] = {"core": client.CoreV1Api}
+    API_CLASSES: dict[str, Any] = {"core": client.CoreV1Api, "batch": client.BatchV1Api}
     """The different kubernetes APIs supported."""
     CONFIG_BASE: str = "/etc/kubernetes"
     """The base path for the kubernetes clusters configurations files."""
@@ -123,6 +123,16 @@ class KubernetesApiFactory:
         """
         conf = self.configuration(user)
         return self.API_CLASSES["core"](client.ApiClient(configuration=conf))
+
+    def batch(self, *, user: str = "admin") -> kubernetes.client.BatchV1Api:
+        """Return an instance of the batch api correctly configured.
+
+        Arguments:
+            user: the user to use for authentication.
+
+        """
+        conf = self.configuration(user)
+        return self.API_CLASSES["batch"](client.ApiClient(configuration=conf))
 
     def _config_file_path(self, user: str) -> Path:
         """Returns the path on the configuration file for the given cluster and user."""

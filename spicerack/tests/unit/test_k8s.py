@@ -209,6 +209,11 @@ class TestKubernetesApiFactory:
         self._api.configuration = mock.MagicMock(return_value=kubernetes.client.Configuration())
         assert isinstance(self._api.core(), kubernetes.client.CoreV1Api)
 
+    def test_batch(self):
+        """Get the batch api interface."""
+        self._api.configuration = mock.MagicMock(return_value=kubernetes.client.Configuration())
+        assert isinstance(self._api.batch(), kubernetes.client.BatchV1Api)
+
 
 class TestKubernetesNode(KubeTestBase):
     """Test the KubernetesNode class."""
