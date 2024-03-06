@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v8.4.1`_ (2024-03-06)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* k8s: add getter for the Batch API.
+
 `v8.4.0`_ (2024-02-27)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2902,3 +2910,4 @@ New features
 .. _`v8.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.2.0
 .. _`v8.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.3.0
 .. _`v8.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.4.0
+.. _`v8.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.4.1
