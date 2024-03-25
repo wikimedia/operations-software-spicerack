@@ -19,11 +19,6 @@ logger = logging.getLogger(__name__)
 MatchersType = Sequence[dict[str, Union[str, int, float, bool]]]
 PORT_REGEX: str = r"(\..+)?(:[0-9]+)?"
 """The regular expression used to match FQDNs and port numbers in the instance labels."""
-ALERTMANAGER_URLS: tuple[str, str] = (
-    "http://alertmanager-eqiad.wikimedia.org",
-    "http://alertmanager-codfw.wikimedia.org",
-)
-"""All the alertmanager instances to contact."""
 
 
 class Alertmanager:
@@ -32,6 +27,7 @@ class Alertmanager:
     def __init__(
         self,
         *,
+        alertmanager_urls: Sequence[str],
         dry_run: bool = True,
     ) -> None:
         """Initialize the instance.
@@ -40,9 +36,16 @@ class Alertmanager:
         `alertmanager_urls`.
 
         Arguments:
+            alertmanager_urls: list of Alertmanager instances to connect to.
             dry_run: whether this is a DRY-RUN.
 
+        Raises:
+            spicerack.alertmanager.AlertmanagerError: if `alertmanager_urls` is empty.
+
         """
+        if not alertmanager_urls:
+            raise AlertmanagerError("At least one alertmanager URL is required.")
+
         # Alertmanager API returns HTTP 500 (Internal Server Error) on some requests with a valid JSON response
         # For example when trying to delete a silence that doesn't exist or has already been deleted or is expired
         # Do not retry on 500 and accept it's first response.
@@ -51,7 +54,7 @@ class Alertmanager:
             timeout=2,
             retry_codes=tuple(i for i in DEFAULT_RETRY_STATUS_CODES if i != 500),
         )
-        self._alertmanager_urls = ALERTMANAGER_URLS
+        self._alertmanager_urls = alertmanager_urls
         self._dry_run = dry_run
 
     def _api_request(self, method: str, path: str, json: Optional[Mapping] = None) -> Response:
@@ -183,6 +186,31 @@ class Alertmanager:
             else:
                 raise
 
+    def hosts(
+        self,
+        target_hosts: TypeHosts,
+        *,
+        verbatim_hosts: bool = False,
+    ) -> "AlertmanagerHosts":
+        """Returns an AlertmanagerHosts instance for the specified hosts.
+
+        Arguments:
+            target_hosts: the target hosts either as a NodeSet instance or a sequence of strings.
+            verbatim_hosts: if :py:data:`True` use the hosts passed verbatim as is, if instead
+                :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
+                be used in Alertmanager.
+
+        Raises:
+            spicerack.alertmanager.AlertmanagerError: if no target hosts are provided.
+
+        """
+        return AlertmanagerHosts(
+            target_hosts=target_hosts,
+            verbatim_hosts=verbatim_hosts,
+            alertmanager_urls=self._alertmanager_urls,
+            dry_run=self._dry_run,
+        )
+
 
 class AlertmanagerHosts(Alertmanager):
     """Operate on Alertmanager for a list of hosts via its APIs."""
@@ -192,6 +220,7 @@ class AlertmanagerHosts(Alertmanager):
         target_hosts: TypeHosts,
         *,
         verbatim_hosts: bool = False,
+        alertmanager_urls: Sequence[str],
         dry_run: bool = True,
     ) -> None:
         """Initialize the instance.
@@ -201,13 +230,14 @@ class AlertmanagerHosts(Alertmanager):
             verbatim_hosts: if :py:data:`True` use the hosts passed verbatim as is, if instead
                 :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
                 be used in Alertmanager.
+            alertmanager_urls: list of Alertmanager instances to connect to.
             dry_run: whether this is a DRY-RUN.
 
         Raises:
             spicerack.alertmanager.AlertmanagerError: if no target hosts are provided.
 
         """
-        super().__init__(dry_run=dry_run)
+        super().__init__(alertmanager_urls=alertmanager_urls, dry_run=dry_run)
         if not verbatim_hosts:
             target_hosts = [target_host.split(".")[0] for target_host in target_hosts]
 

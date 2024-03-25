@@ -25,7 +25,9 @@ class TestAlerting:
         set_mocked_icinga_host_output(self.mocked_icinga_host, "/var/lib/icinga/rw/icinga.cmd")
         self.icinga_hosts = icinga.IcingaHosts(self.mocked_icinga_host, self.hosts)
 
-        self.am_hosts = alertmanager.AlertmanagerHosts(self.hosts)
+        self.am_hosts = alertmanager.AlertmanagerHosts(
+            self.hosts, alertmanager_urls=["https://alertmanager-eqiad.wikimedia.example"]
+        )
         self.requests_mock = requests_mock
 
         self.alerting_hosts = alerting.AlertingHosts(self.am_hosts, self.icinga_hosts)

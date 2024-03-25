@@ -5,7 +5,7 @@ from unittest import mock
 import pytest
 from wmflib.config import load_yaml_config
 
-from spicerack import service
+from spicerack import Alertmanager, service
 from spicerack.administrative import Reason
 from spicerack.dnsdisc import DiscoveryError
 from spicerack.tests import get_fixture_path
@@ -28,7 +28,10 @@ class TestCatalog:
         self.authdns_servers = load_yaml_config(get_fixture_path("discovery", "authdns.yaml"))
 
         catalog = load_yaml_config(get_fixture_path("service", "service.yaml"))
-        self.catalog = service.Catalog(catalog, confctl=self.mocked_confctl, authdns_servers=self.authdns_servers)
+        alertmanager = Alertmanager(alertmanager_urls=("https://alertmanager-eqiad.wikimedia.example",))
+        self.catalog = service.Catalog(
+            catalog, alertmanager=alertmanager, confctl=self.mocked_confctl, authdns_servers=self.authdns_servers
+        )
 
     def test_init(self):
         """It should instantiate a Catalog instance properly."""
@@ -66,8 +69,13 @@ class TestService:
         self.authdns_servers = load_yaml_config(get_fixture_path("discovery", "authdns.yaml"))
 
         catalog = load_yaml_config(get_fixture_path("service", "service.yaml"))
+        alertmanager = Alertmanager(alertmanager_urls=("https://alertmanager-eqiad.wikimedia.example",), dry_run=False)
         self.catalog = service.Catalog(
-            catalog, confctl=self.mocked_confctl, authdns_servers=self.authdns_servers, dry_run=False
+            catalog,
+            alertmanager=alertmanager,
+            confctl=self.mocked_confctl,
+            authdns_servers=self.authdns_servers,
+            dry_run=False,
         )
 
         self.service1 = self.catalog.get("service1")

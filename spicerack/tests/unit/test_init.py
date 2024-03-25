@@ -10,6 +10,7 @@ import pytest
 from git import Repo
 from requests import Session
 from wmflib.actions import ActionsDict
+from wmflib.config import load_yaml_config
 from wmflib.dns import Dns
 from wmflib.phabricator import Phabricator
 from wmflib.prometheus import Prometheus, Thanos
@@ -101,8 +102,6 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
         EtcdctlController,
     )
     assert isinstance(spicerack.kafka(), Kafka)
-    assert isinstance(spicerack.alertmanager_hosts(["host1", "host2"]), AlertmanagerHosts)
-    assert isinstance(spicerack.alertmanager(), Alertmanager)
     service_catalog = spicerack.service_catalog()
     assert isinstance(service_catalog, Catalog)
     assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
@@ -315,6 +314,50 @@ def test_spicerack_alerting(mocked_command_file, mocked_remote_query, mocked_dns
     assert spicerack.icinga_master_host.hosts == "icinga-server.example.com"
     assert isinstance(spicerack.alerting_hosts(["host1", "host2"]), AlertingHosts)
     mocked_hostname.assert_called_once_with()
+
+
+@pytest.mark.parametrize("am_instance", (None, "production", "metricsinfra-eqiad1"))
+def test_spicerack_alertmanager(am_instance):
+    """An instance of Spicerack should allow to get an Alertmanager instance."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    config = load_yaml_config(spicerack.config_dir / "alertmanager" / "config.yaml")
+    urls = config.get("instances").get(am_instance if am_instance else config.get("default_instance")).get("urls")
+
+    instance = spicerack.alertmanager(instance_name=am_instance)
+
+    assert isinstance(instance, Alertmanager)
+    assert instance._alertmanager_urls == urls  # pylint: disable=protected-access
+
+    hosts_instance = spicerack.alertmanager_hosts(["host1", "host2"], instance_name=am_instance)
+    assert isinstance(hosts_instance, AlertmanagerHosts)
+    assert hosts_instance._alertmanager_urls == urls  # pylint: disable=protected-access
+
+
+def test_spicerack_alertmanager_invalid_instance():
+    """An instance of Spicerack should throw an error when given a nonexistent Alertmanager instance name."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    with pytest.raises(SpicerackError):
+        spicerack.alertmanager("nonexistent")
+
+
+@pytest.mark.parametrize("am_instance", ("hosts-missing", "hosts-empty"))
+def test_spicerack_alertmanager_instance_without_hosts(am_instance):
+    """An instance of Spicerack should throw an error when given an Alertmanager instance with no hosts."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    with pytest.raises(SpicerackError):
+        spicerack.alertmanager(am_instance)
+
+
+@mock.patch("spicerack.load_yaml_config")
+def test_spicerack_alertmanager_no_default_instance(mocked_load_yaml_config):
+    """An instance of Spicerack should throw an error when trying to access a non-configured default instance."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    mocked_load_yaml_config.return_value = {"instances": {"nondefault": {"urls": ["https://alertmanager.example"]}}}
+
+    with pytest.raises(SpicerackError):
+        spicerack.alertmanager()
 
 
 @pytest.mark.parametrize("ttl", (None, 3600))

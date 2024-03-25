@@ -10,7 +10,7 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Optional, Union
 
 from spicerack.administrative import Reason
-from spicerack.alertmanager import AlertmanagerHosts, MatchersType
+from spicerack.alertmanager import Alertmanager, AlertmanagerHosts, MatchersType
 from spicerack.confctl import ConftoolEntity
 from spicerack.decorators import retry, set_tries
 from spicerack.dnsdisc import Discovery, DiscoveryError
@@ -532,12 +532,19 @@ class Catalog:
     """
 
     def __init__(
-        self, catalog: dict, *, confctl: ConftoolEntity, authdns_servers: dict[str, str], dry_run: bool = True
+        self,
+        catalog: dict,
+        *,
+        alertmanager: Alertmanager,
+        confctl: ConftoolEntity,
+        authdns_servers: dict[str, str],
+        dry_run: bool = True,
     ):
         """Initialize the instance.
 
         Args:
             catalog: the content of Puppet's ``hieradata/common/service.yaml``.
+            alertmanager: the alertmanager instance to interact with.
             confctl: the instance to interact with confctl.
             authdns_servers: a dictionary where keys are the hostnames and values are the IPs of the authoritative
                 nameservers to be used.
@@ -545,6 +552,7 @@ class Catalog:
 
         """
         self._catalog = catalog
+        self._alertmanager = alertmanager
         self._confctl = confctl
         self._authdns_servers = authdns_servers
         self._dry_run = dry_run
@@ -583,9 +591,7 @@ class Catalog:
         params = deepcopy(self._catalog[name])
         params["name"] = name
         params["ip"] = ServiceIPs(data=params["ip"])
-        params["_alertmanager"] = AlertmanagerHosts(
-            [f"{name}:{params['port']}"], verbatim_hosts=True, dry_run=self._dry_run
-        )
+        params["_alertmanager"] = self._alertmanager.hosts([f"{name}:{params['port']}"], verbatim_hosts=True)
         params["_dry_run"] = self._dry_run
         if "discovery" in params:
             discovery = []

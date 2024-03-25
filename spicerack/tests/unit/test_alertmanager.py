@@ -10,6 +10,11 @@ from cumin import nodeset
 from spicerack import alertmanager
 from spicerack.administrative import Reason
 
+ALERTMANAGER_URLS: tuple[str, str] = (
+    "http://alertmanager-eqiad.wikimedia.example",
+    "http://alertmanager-codfw.wikimedia.example",
+)
+
 
 class TestAlertmanager:
     """Tests for the Alertmanager class."""
@@ -22,8 +27,8 @@ class TestAlertmanager:
             {"name": "site", "value": "dc1", "isRegex": False},
             {"name": "label1", "value": "value1", "isRegex": False},
         ]
-        self.alertmanager = alertmanager.Alertmanager(dry_run=False)
-        self.am_dry_run = alertmanager.Alertmanager(dry_run=True)
+        self.alertmanager = alertmanager.Alertmanager(alertmanager_urls=ALERTMANAGER_URLS, dry_run=False)
+        self.am_dry_run = alertmanager.Alertmanager(alertmanager_urls=ALERTMANAGER_URLS, dry_run=True)
         self.requests_mock = requests_mock
         self.reason = Reason("test", "user", "host")
 
@@ -32,7 +37,7 @@ class TestAlertmanager:
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
         response = self.alertmanager.downtime(self.reason, matchers=self.matchers)
         assert response == "foobar"
-        assert self.requests_mock.last_request.hostname == "alertmanager-eqiad.wikimedia.org"
+        assert self.requests_mock.last_request.hostname == "alertmanager-eqiad.wikimedia.example"
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == self.matchers
         assert request_json["comment"] == "test - user@host"
@@ -124,11 +129,10 @@ class TestAlertmanager:
 
     def test_fallback_on_error(self):
         """It should fallback to the next Alertmanager on error."""
-        ams = alertmanager.ALERTMANAGER_URLS
-        self.requests_mock.post(f"{ams[0]}/api/v2/silences", exc=requests.exceptions.ConnectionError)
-        self.requests_mock.post(f"{ams[1]}/api/v2/silences", json={"silenceID": "foobar"})
+        self.requests_mock.post(f"{ALERTMANAGER_URLS[0]}/api/v2/silences", exc=requests.exceptions.ConnectionError)
+        self.requests_mock.post(f"{ALERTMANAGER_URLS[1]}/api/v2/silences", json={"silenceID": "foobar"})
         assert "foobar" == self.alertmanager.downtime(self.reason, matchers=self.matchers)
-        assert self.requests_mock.last_request.hostname == "alertmanager-codfw.wikimedia.org"
+        assert self.requests_mock.last_request.hostname == "alertmanager-codfw.wikimedia.example"
 
 
 class TestAlertmanagerHosts:
@@ -138,8 +142,12 @@ class TestAlertmanagerHosts:
     def setup_method(self, requests_mock):
         """Initialize the test instance."""
         # pylint: disable=attribute-defined-outside-init
-        self.am_hosts = alertmanager.AlertmanagerHosts(["host1", "host2"], dry_run=False)
-        self.am_hosts_dry_run = alertmanager.AlertmanagerHosts(["host1", "host2"], dry_run=True)
+        self.am_hosts = alertmanager.AlertmanagerHosts(
+            ["host1", "host2"], alertmanager_urls=ALERTMANAGER_URLS, dry_run=False
+        )
+        self.am_hosts_dry_run = alertmanager.AlertmanagerHosts(
+            ["host1", "host2"], alertmanager_urls=ALERTMANAGER_URLS, dry_run=True
+        )
         self.requests_mock = requests_mock
         self.reason = Reason("test", "user", "host")
 
@@ -155,10 +163,10 @@ class TestAlertmanagerHosts:
     def test_add_silence_basic(self, hosts, regex):
         """It should issue a silence with all defaults."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
-        am_hosts = alertmanager.AlertmanagerHosts(hosts, dry_run=False)
+        am_hosts = alertmanager.AlertmanagerHosts(hosts, alertmanager_urls=ALERTMANAGER_URLS, dry_run=False)
         response = am_hosts.downtime(self.reason)
         assert response == "foobar"
-        assert self.requests_mock.last_request.hostname == "alertmanager-eqiad.wikimedia.org"
+        assert self.requests_mock.last_request.hostname == "alertmanager-eqiad.wikimedia.example"
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
             {"name": "instance", "value": regex, "isRegex": True},
@@ -184,7 +192,9 @@ class TestAlertmanagerHosts:
     def test_add_silence_port_included(self):
         """It should issue a silence with the specific port and not any port in the matcher."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
-        am_hosts = alertmanager.AlertmanagerHosts(["host1:1234", "host2:5678"], dry_run=False)
+        am_hosts = alertmanager.AlertmanagerHosts(
+            ["host1:1234", "host2:5678"], alertmanager_urls=ALERTMANAGER_URLS, dry_run=False
+        )
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
@@ -222,7 +232,10 @@ class TestAlertmanagerHosts:
         """It should issue silences for verbatim hosts."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
         am_hosts = alertmanager.AlertmanagerHosts(
-            ["host1.foo.bar", "host2.bar.baz:1234"], verbatim_hosts=True, dry_run=False
+            ["host1.foo.bar", "host2.bar.baz:1234"],
+            verbatim_hosts=True,
+            alertmanager_urls=ALERTMANAGER_URLS,
+            dry_run=False,
         )
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
@@ -237,7 +250,9 @@ class TestAlertmanagerHosts:
     def test_nodeset_hosts(self):
         """It should expand NodeSet hosts."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
-        am_hosts = alertmanager.AlertmanagerHosts(nodeset("host[1-2]"), verbatim_hosts=True, dry_run=False)
+        am_hosts = alertmanager.AlertmanagerHosts(
+            nodeset("host[1-2]"), verbatim_hosts=True, alertmanager_urls=ALERTMANAGER_URLS, dry_run=False
+        )
         am_hosts.downtime(self.reason)
         request_json = self.requests_mock.last_request.json()
         assert request_json["matchers"] == [
@@ -247,7 +262,7 @@ class TestAlertmanagerHosts:
     def test_empty_target_hosts(self):
         """It should error with empty hosts."""
         with pytest.raises(alertmanager.AlertmanagerError):
-            alertmanager.AlertmanagerHosts([""])
+            alertmanager.AlertmanagerHosts([""], alertmanager_urls=ALERTMANAGER_URLS)
 
     def test_downtimed(self):
         """It should issue a silence and then delete it."""

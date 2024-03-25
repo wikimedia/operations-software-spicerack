@@ -674,7 +674,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         # TODO: generalize when support for additional vendors will be added.
         return RedfishDell(hostname, ip_interface(netbox_ip), username, password, dry_run=self._dry_run)
 
-    def alertmanager_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertmanagerHosts:
+    def alertmanager_hosts(
+        self, target_hosts: TypeHosts, *, instance_name: str = "", verbatim_hosts: bool = False
+    ) -> AlertmanagerHosts:
         """Get an AlertmanagerHosts instance.
 
         Note:
@@ -683,21 +685,36 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         Arguments:
             target_hosts: the target hosts either as a NodeSet instance or a sequence of strings.
+            instance_name: the Alertmanager instance defined in the alertmanager/config.yaml config file to interact
+                with
             verbatim_hosts: if :py:data:`True` use the hosts passed verbatim as is, if instead :py:data:`False`, the
                 default, consider the given target hosts as FQDNs and extract their hostnames to be used in Icinga.
 
         """
-        return AlertmanagerHosts(target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run)
+        return self.alertmanager(instance_name=instance_name).hosts(target_hosts, verbatim_hosts=verbatim_hosts)
 
-    def alertmanager(self) -> Alertmanager:
+    def alertmanager(self, instance_name: str = "") -> Alertmanager:
         """Get an Alertmanager instance.
 
+        Arguments:
+            instance_name: the Alertmanager instance defined in the alertmanager/config.yaml config file to interact
+                with
         Note:
             To interact with Alertmanager alerts attached to an ``instance`` use
             :py:meth:`spicerack.Spicerack.alertmanager_hosts` instead.
 
         """
-        return Alertmanager(dry_run=self._dry_run)
+        configuration = load_yaml_config(self._spicerack_config_dir / "alertmanager" / "config.yaml")
+        if not instance_name:
+            instance_name = configuration.get("default_instance", "")
+        if not instance_name:
+            raise SpicerackError("An alertmanager instance name must be specified when no default is set in config")
+
+        instance = configuration.get("instances", {}).get(instance_name)
+        if not instance:
+            raise SpicerackError(f"No such alertmanager instance '{instance_name}' found in config")
+
+        return Alertmanager(alertmanager_urls=instance.get("urls", []), dry_run=self._dry_run)
 
     def alerting_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertingHosts:
         """Get an AlertingHosts instance.
@@ -718,7 +735,11 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         if self._service_catalog is None:
             config = load_yaml_config(self._spicerack_config_dir / "service" / "service.yaml")
             self._service_catalog = Catalog(
-                config, confctl=self.confctl("discovery"), authdns_servers=self.authdns_servers, dry_run=self._dry_run
+                config,
+                alertmanager=self.alertmanager(),
+                confctl=self.confctl("discovery"),
+                authdns_servers=self.authdns_servers,
+                dry_run=self._dry_run,
             )
 
         return self._service_catalog

@@ -1,0 +1,13 @@
+instances:
+  production:
+    urls:
+      - https://alertmanager-eqiad.wikimedia.example
+      - https://alertmanager-codfw.wikimedia.example
+  metricsinfra-eqiad1:
+    urls:
+      - https://metricsinfra-alertmanager-eqiad1.wmcloud.example
+  hosts-missing: {}
+  hosts-empty:
+    urls: []
+
+default_instance: production
