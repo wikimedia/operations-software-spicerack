@@ -134,14 +134,12 @@ class TestKubernetes(KubeTestBase):
         k.api = self._api
         return k
 
-    @staticmethod
-    def test_initialize_api():
+    def test_initialize_api(self):
         """Values are passed to the api correctly."""
         k = k8s.Kubernetes("group", "cluster")
         assert k.api.cluster == "cluster"
 
-    @staticmethod
-    def test_initialize_dry_run(kube):
+    def test_initialize_dry_run(self, kube):
         """Dry run is initialized correctly."""
         assert kube.dry_run is False
         assert k8s.Kubernetes("group", "cluster", dry_run=True).dry_run is True
@@ -255,15 +253,13 @@ class TestKubernetesNode(KubeTestBase):
         with pytest.raises(k8s.KubernetesError):
             k8s.KubernetesNode("fqdn", self._api, init_obj=n)
 
-    @staticmethod
     @pytest.mark.parametrize("label,expected", [("schedulable", True), ("unschedulable", False)])
-    def test_is_schedulable(node, expected):
+    def test_is_schedulable(self, node, expected):
         """Is the node schedulable or not."""
         assert node.is_schedulable() is expected
 
-    @staticmethod
     @pytest.mark.parametrize("label,expected", [("schedulable", "node1"), ("unschedulable", "node2")])
-    def test_name(node, expected):
+    def test_name(self, node, expected):
         """Test fetching the node name."""
         assert node.name == expected
 
@@ -439,12 +435,11 @@ class TestKubernetesNode(KubeTestBase):
             node.drain()
         self._coreapi.list_pod_for_all_namespaces.assert_called_with(field_selector="spec.nodeName=node2")
 
-    @staticmethod
     @pytest.mark.parametrize(
         "label,expected",
         [("schedulable", []), ("tainted", [V1Taint(effect="NoExecute", key="dedicated", value="kask")])],
     )
-    def test_taints(node, expected):
+    def test_taints(self, node, expected):
         """Test fetching taints."""
         assert node.taints == expected
 
@@ -465,39 +460,34 @@ class TestKubernetesPod(KubeTestBase):
 
         return k8s.KubernetesPod(ns, name, self._api, dry_run=False, init_obj=_pod)
 
-    @staticmethod
     @pytest.mark.parametrize("label,expected", [("orphaned", None), ("invalid_ref", None), ("daemonset", "DaemonSet")])
-    def test_controller(pod, expected):
+    def test_controller(self, pod, expected):
         """The output of pod.controller."""
         if expected is None:
             assert pod.controller is None
         else:
             assert pod.controller.kind == expected
 
-    @staticmethod
     @pytest.mark.parametrize("label, expected", [("daemonset", True), ("replicaset", False), ("invalid_ref", False)])
-    def test_is_daemonset(pod, expected):
+    def test_is_daemonset(self, pod, expected):
         """Detecting a daemonset."""
         assert pod.is_daemonset() is expected
 
-    @staticmethod
     @pytest.mark.parametrize("label, expected", [("finished", True), ("replicaset", False), ("invalid_ref", False)])
-    def test_is_terminated(pod, expected):
+    def test_is_terminated(self, pod, expected):
         """Detecting a terminated pod."""
         assert pod.is_terminated() is expected
 
-    @staticmethod
     @pytest.mark.parametrize("label, expected", [("mirror", True), ("orphaned", False)])
-    def test_is_mirror(pod, expected):
+    def test_is_mirror(self, pod, expected):
         """Detecting mirror pods."""
         assert pod.is_mirror() is expected
 
-    @staticmethod
     @pytest.mark.parametrize(
         "label,expected",
         [("daemonset", False), ("replicaset", True), ("orphaned", False), ("finished", True), ("mirror", False)],
     )
-    def test_is_evictable(pod, expected):
+    def test_is_evictable(self, pod, expected):
         """Is the pod evictable."""
         assert pod.is_evictable() is expected
 
