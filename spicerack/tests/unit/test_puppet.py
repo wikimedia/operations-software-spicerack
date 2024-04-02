@@ -26,6 +26,7 @@ PUPPET_SERVER_CA_CERT_METADATA_REQUESTED = (
     b'"fingerprints":{"default":"00:AA","SHA1":"11:BB","SHA256": "00:AA","SHA512":"22:CC"},'
     b'"dns_alt_names":["DNS:service.example.com"]}]}'
 )
+PUPPET_SERVER_CA_CERT_METADATA_MISSING = b'{"missing": ["test.example.org"]}'
 PUPPET_CA_CERT_METADATA_SIGNED = (
     b'[{"name":"test.example.com","state":"signed","fingerprint":"00:AA",'
     b'"fingerprints":{"default":"00:AA","SHA1":"11:BB","SHA256": "00:AA","SHA512":"22:CC"},'
@@ -565,12 +566,36 @@ class TestPuppetServer:
             "puppet node clean test.example.com", "puppet node deactivate test.example.com", print_progress_bars=False
         )
 
-    def test_destroy(self):
+    def test_destroy_ok(self):
         """It should delete the certificate of the host in the Puppet CA."""
+        results = [
+            (
+                nodeset("puppetserver.example.com"),
+                MsgTreeElem(PUPPET_SERVER_CA_CERT_METADATA_SIGNED, parent=MsgTreeElem()),
+            )
+        ]
+        self.mocked_server_host.run_sync.return_value = iter(results)
+
         self.puppet_server.destroy("test.example.com")
-        self.mocked_server_host.run_sync.assert_called_once_with(
+        self.mocked_server_host.run_sync.assert_called_with(
             "puppetserver ca clean --certname test.example.com", print_progress_bars=False
         )
+
+    def test_destroy_missing(self):
+        """It should not do anything if the certificate of the host in the Puppet CA is alredy missing."""
+        results = [
+            (
+                nodeset("puppetserver.example.com"),
+                MsgTreeElem(PUPPET_SERVER_CA_CERT_METADATA_MISSING, parent=MsgTreeElem()),
+            )
+        ]
+        self.mocked_server_host.run_sync.return_value = iter(results)
+
+        self.puppet_server.destroy("test.example.com")
+
+        for call in self.mocked_server_host.mock_calls:
+            if call.args and "ca clean" in call.args[0]:
+                raise RuntimeError(f"Expected ca clean to not be called, got: {call}")
 
     def test_verify_ok(self):
         """It should verify that the host has a signed certificate in the Puppet CA."""
