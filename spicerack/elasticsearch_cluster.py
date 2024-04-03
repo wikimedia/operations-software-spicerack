@@ -8,7 +8,6 @@ from math import floor
 from random import shuffle
 from typing import Optional
 
-import curator
 from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
 from urllib3.exceptions import HTTPError
 from wmflib.prometheus import Prometheus
@@ -456,40 +455,16 @@ class ElasticsearchCluster:
     def _stop_replication(self) -> None:
         """Stops cluster replication."""
         logger.info("stop replication - %s", self)
-        self._do_cluster_routing(
-            curator.ClusterRouting(
-                self._elasticsearch,
-                routing_type="allocation",
-                setting="enable",
-                value="primaries",
-                wait_for_completion=False,
+        if not self._dry_run:
+            self._elasticsearch.cluster.put_settings(
+                body={"persistent": {"cluster.routing.allocation.enable": "primaries"}}
             )
-        )
 
     def _start_replication(self) -> None:
         """Starts cluster replication."""
         logger.info("start replication - %s", self)
-        self._do_cluster_routing(
-            curator.ClusterRouting(
-                self._elasticsearch,
-                routing_type="allocation",
-                setting="enable",
-                value="all",
-                wait_for_completion=False,
-            )
-        )
-
-    def _do_cluster_routing(self, cluster_routing: curator.ClusterRouting) -> None:
-        """Performs cluster routing of shards.
-
-        Arguments:
-            cluster_routing: Curator's cluster routing object.
-
-        """
-        if self._dry_run:
-            cluster_routing.do_dry_run()
-        else:
-            cluster_routing.do_action()
+        if not self._dry_run:
+            self._elasticsearch.cluster.put_settings(body={"persistent": {"cluster.routing.allocation.enable": "all"}})
 
     def check_green(self) -> None:
         """Cluster health status.

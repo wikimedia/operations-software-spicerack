@@ -331,17 +331,17 @@ class TestElasticsearchClusters:
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         with elasticsearch_clusters.stopped_replication():
             self.elasticsearch1.cluster.put_settings.assert_called_with(
-                body={"transient": {"cluster.routing.allocation.enable": "primaries"}}
+                body={"persistent": {"cluster.routing.allocation.enable": "primaries"}}
             )
             self.elasticsearch2.cluster.put_settings.assert_called_with(
-                body={"transient": {"cluster.routing.allocation.enable": "primaries"}}
+                body={"persistent": {"cluster.routing.allocation.enable": "primaries"}}
             )
 
         self.elasticsearch1.cluster.put_settings.assert_called_with(
-            body={"transient": {"cluster.routing.allocation.enable": "all"}}
+            body={"persistent": {"cluster.routing.allocation.enable": "all"}}
         )
         self.elasticsearch2.cluster.put_settings.assert_called_with(
-            body={"transient": {"cluster.routing.allocation.enable": "all"}}
+            body={"persistent": {"cluster.routing.allocation.enable": "all"}}
         )
 
     def test_frozen_writes_write_to_index(self):
