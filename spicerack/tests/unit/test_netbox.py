@@ -106,7 +106,8 @@ class TestNetbox:
 
     def test_netbox_api(self):
         """An instance of Netbox should instantiate the Netbox API and expose it via the api property."""
-        self.mocked_api.called_once_with(NETBOX_URL, token=NETBOX_TOKEN)
+        call = mock.call(NETBOX_URL, token=NETBOX_TOKEN, threading=True)
+        assert self.mocked_api.mock_calls == [call, call]
         assert self.netbox.api == self.mocked_api()
 
     def test_get_server_fail_device(self):
@@ -209,7 +210,7 @@ class TestNetboxServer:
     def test_status_setter_ok(self):
         """It should set the status of the server to its new value, if it's an allowed transition."""
         self.physical_server.status = "failed"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.save.assert_called_once_with()
 
     def test_status_setter_virtual(self):
         """It should raise a NetboxError if trying to set the status on a virtual machine."""
@@ -321,7 +322,7 @@ class TestNetboxServer:
     def test_access_vlan_setter_ok(self):
         """It should set the access vlan."""
         self.physical_server.access_vlan = "set_test_vlan"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.primary_ip.assigned_object.connected_endpoint.save.assert_called_once_with()
 
     def test_access_vlan_setter_not_found(self):
         """It should raise a NetboxError if trying to set an non active vlan."""
@@ -349,7 +350,7 @@ class TestNetboxServer:
         """It should set the primary IPv4 address (and no CIDR means /32)."""
         self.mocked_api.ipam.ip_addresses.count.return_value = 0
         self.physical_server.primary_ip4_address = "192.0.2.1"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.primary_ip4.save.assert_called_once_with()
         assert self.physical_server.primary_ip4_address == IPv4Interface("192.0.2.1/32")
 
     def test_primary_ip4_address_setter_not_valid(self):
@@ -381,7 +382,7 @@ class TestNetboxServer:
         """It should set the primary IPv6 address."""
         self.mocked_api.ipam.ip_addresses.count.return_value = 0
         self.physical_server.primary_ip6_address = "2001:db8::1/32"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.primary_ip6.save.assert_called_once_with()
 
     def test_primary_ip6_address_setter_dry_run(self):
         """It should skip setting the primary IPv6 address."""

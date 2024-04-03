@@ -583,7 +583,7 @@ class TestRedfish:
         """In dry-run mode should not submit a task and return a dummy location."""
         mock_submit_files.return_value = "/redfish/v1/TaskService/Tasks/JID_1234567890"
         assert self.redfish.upload_file(Path("/foo/test")) == "/redfish/v1/TaskService/Tasks/JID_1234567890"
-        mocked_path_open.called_once_with("rb")
+        mocked_path_open.assert_called_once_with("rb")
 
     @pytest.mark.parametrize("reboot", (True, False))
     @mock.patch("spicerack.redfish.Redfish.submit_files")
@@ -860,11 +860,13 @@ class TestRedfishDell:
         mocked_last_reboot.return_value = datetime.fromisoformat("2022-01-01T00:05:00-00:00")
         self.redfish._generation = generation  # pylint: disable=protected-access
         self.redfish.wait_reboot_since(since)
-        mocked_check_connection.called_once()
-        mocked_last_reboot.called_once_with(since)
+        mocked_check_connection.assert_called_once()
+        mocked_last_reboot.assert_called_once_with()
+        calls = []
         if generation < 14:
-            mocked_sleep.called_once_with(120)
-        mocked_sleep.called_once_with(30)
+            calls.append(mock.call(120))
+        calls.append(mock.call(30))
+        assert mocked_sleep.mock_calls == calls
 
     @pytest.mark.parametrize("generation", (1, 13, 14))
     @mock.patch("spicerack.redfish.time.sleep")
@@ -878,10 +880,17 @@ class TestRedfishDell:
         self.redfish._generation = generation  # pylint: disable=protected-access
         with pytest.raises(redfish.RedfishError, match="no new reboot detected"):
             self.redfish.wait_reboot_since(since)
-        mocked_check_connection.called_once()
-        mocked_last_reboot.called_once_with(since)
+        mocked_check_connection.assert_called_with()
+        assert mocked_check_connection.call_count == 240
+        mocked_last_reboot.assert_called_with()
+        assert mocked_last_reboot.call_count == 240
+        calls = []
         if generation < 14:
-            mocked_sleep.called_once_with(120)
+            calls = [mock.call(120), mock.call(10)] * 239 + [mock.call(120)]
+        else:
+            calls = [mock.call(10)] * 239
+
+        assert mocked_sleep.mock_calls == calls
 
     @pytest.mark.parametrize("allow_new", (False, True))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
