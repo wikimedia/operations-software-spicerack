@@ -8,6 +8,7 @@ from typing import Optional, Union
 
 from cumin import NodeSet, nodeset_fromlist
 from requests import Response
+from requests.auth import AuthBase
 from requests.exceptions import RequestException
 from wmflib.requests import DEFAULT_RETRY_STATUS_CODES, http_session
 
@@ -28,6 +29,7 @@ class Alertmanager:
         self,
         *,
         alertmanager_urls: Sequence[str],
+        http_authentication: Optional[AuthBase] = None,
         http_proxies: Optional[dict[str, str]] = None,
         dry_run: bool = True,
     ) -> None:
@@ -38,6 +40,7 @@ class Alertmanager:
 
         Arguments:
             alertmanager_urls: list of Alertmanager instances to connect to.
+            http_authentication: Requests authentication configuration to use to connect to the Alertmanager instances.
             http_proxies: HTTP proxies in requests format to use to connect to the Alertmanager instances.
             dry_run: whether this is a DRY-RUN.
 
@@ -59,6 +62,9 @@ class Alertmanager:
         self._alertmanager_urls = alertmanager_urls
         self._dry_run = dry_run
 
+        self._http_authentication = http_authentication
+        if http_authentication:
+            self._http_session.auth = http_authentication
         self._http_proxies = http_proxies
         if http_proxies:
             self._http_session.proxies = http_proxies
@@ -214,6 +220,7 @@ class Alertmanager:
             target_hosts=target_hosts,
             verbatim_hosts=verbatim_hosts,
             alertmanager_urls=self._alertmanager_urls,
+            http_authentication=self._http_authentication,
             http_proxies=self._http_proxies,
             dry_run=self._dry_run,
         )
@@ -228,6 +235,7 @@ class AlertmanagerHosts(Alertmanager):
         *,
         verbatim_hosts: bool = False,
         alertmanager_urls: Sequence[str],
+        http_authentication: Optional[AuthBase] = None,
         http_proxies: Optional[dict[str, str]] = None,
         dry_run: bool = True,
     ) -> None:
@@ -239,6 +247,7 @@ class AlertmanagerHosts(Alertmanager):
                 :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
                 be used in Alertmanager.
             alertmanager_urls: list of Alertmanager instances to connect to.
+            http_authentication: Requests authentication configuration to use to connect to the Alertmanager instances.
             http_proxies: HTTP proxies in requests format to use to connect to the Alertmanager instances.
             dry_run: whether this is a DRY-RUN.
 
@@ -246,7 +255,12 @@ class AlertmanagerHosts(Alertmanager):
             spicerack.alertmanager.AlertmanagerError: if no target hosts are provided.
 
         """
-        super().__init__(alertmanager_urls=alertmanager_urls, http_proxies=http_proxies, dry_run=dry_run)
+        super().__init__(
+            alertmanager_urls=alertmanager_urls,
+            http_authentication=http_authentication,
+            http_proxies=http_proxies,
+            dry_run=dry_run,
+        )
         if not verbatim_hosts:
             target_hosts = [target_host.split(".")[0] for target_host in target_hosts]
 

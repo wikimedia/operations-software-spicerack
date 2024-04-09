@@ -6,6 +6,7 @@ from unittest import mock
 import pytest
 import requests
 from cumin import nodeset
+from requests.auth import HTTPBasicAuth
 
 from spicerack import alertmanager
 from spicerack.administrative import Reason
@@ -29,6 +30,11 @@ class TestAlertmanager:
         ]
         self.alertmanager = alertmanager.Alertmanager(alertmanager_urls=ALERTMANAGER_URLS, dry_run=False)
         self.am_dry_run = alertmanager.Alertmanager(alertmanager_urls=ALERTMANAGER_URLS, dry_run=True)
+        self.am_authenticated = alertmanager.Alertmanager(
+            alertmanager_urls=ALERTMANAGER_URLS,
+            dry_run=False,
+            http_authentication=HTTPBasicAuth("spicerack", "example2"),
+        )
         self.requests_mock = requests_mock
         self.reason = Reason("test", "user", "host")
 
@@ -133,6 +139,13 @@ class TestAlertmanager:
         self.requests_mock.post(f"{ALERTMANAGER_URLS[1]}/api/v2/silences", json={"silenceID": "foobar"})
         assert "foobar" == self.alertmanager.downtime(self.reason, matchers=self.matchers)
         assert self.requests_mock.last_request.hostname == "alertmanager-codfw.wikimedia.example"
+
+    def test_uses_http_authentication(self):
+        """It should use the given HTTP authentication configuration."""
+        self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
+        assert "foobar" == self.am_authenticated.downtime(self.reason, matchers=self.matchers)
+        # c3BpY2VyYWNrOmV4YW1wbGUy == base64(spicerack:example2)
+        assert self.requests_mock.last_request.headers["Authorization"] == "Basic c3BpY2VyYWNrOmV4YW1wbGUy"
 
 
 class TestAlertmanagerHosts:

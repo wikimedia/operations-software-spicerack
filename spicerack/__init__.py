@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 from git import Repo
 from pkg_resources import DistributionNotFound, get_distribution
+from requests.auth import HTTPBasicAuth
 from wmflib import requests
 from wmflib.actions import ActionsDict
 from wmflib.config import load_ini_config, load_yaml_config
@@ -714,9 +715,16 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         if not instance:
             raise SpicerackError(f"No such alertmanager instance '{instance_name}' found in config")
 
+        http_authentication = None
+        if "http_username" in instance and "http_password" in instance:
+            http_authentication = HTTPBasicAuth(username=instance["http_username"], password=instance["http_password"])
         http_proxies = self.requests_proxies if instance.get("http_use_proxy") else None
+
         return Alertmanager(
-            alertmanager_urls=instance.get("urls", []), http_proxies=http_proxies, dry_run=self._dry_run
+            alertmanager_urls=instance.get("urls", []),
+            http_authentication=http_authentication,
+            http_proxies=http_proxies,
+            dry_run=self._dry_run,
         )
 
     def alerting_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertingHosts:

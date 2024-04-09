@@ -9,6 +9,7 @@ from unittest import mock
 import pytest
 from git import Repo
 from requests import Session
+from requests.auth import HTTPBasicAuth
 from wmflib.actions import ActionsDict
 from wmflib.config import load_yaml_config
 from wmflib.dns import Dns
@@ -326,17 +327,23 @@ def test_spicerack_alertmanager(am_instance):
     config = load_yaml_config(spicerack.config_dir / "alertmanager" / "config.yaml")
     instance = config.get("instances").get(am_instance if am_instance else config.get("default_instance"))
     urls = instance.get("urls")
+
+    http_authentication = None
+    if "http_username" in instance and "http_password" in instance:
+        http_authentication = HTTPBasicAuth(username=instance["http_username"], password=instance["http_password"])
     http_proxy = "http://webproxy.eqiad.example:8080" if instance.get("http_use_proxy") else None
 
     instance = spicerack.alertmanager(instance_name=am_instance)
 
     assert isinstance(instance, Alertmanager)
     assert instance._alertmanager_urls == urls  # pylint: disable=protected-access
+    assert instance._http_session.auth == http_authentication  # pylint: disable=protected-access
     assert instance._http_session.proxies.get("http") == http_proxy  # pylint: disable=protected-access
 
     hosts_instance = spicerack.alertmanager_hosts(["host1", "host2"], instance_name=am_instance)
     assert isinstance(hosts_instance, AlertmanagerHosts)
     assert hosts_instance._alertmanager_urls == urls  # pylint: disable=protected-access
+    assert hosts_instance._http_session.auth == http_authentication  # pylint: disable=protected-access
     assert hosts_instance._http_session.proxies.get("http") == http_proxy  # pylint: disable=protected-access
 
 
