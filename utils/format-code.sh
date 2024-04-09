@@ -16,4 +16,4 @@ if [[ "${#FILES[@]}" -eq "0" ]]; then
 fi
 
 black "${FILES[@]}"
-isort --apply "${FILES[@]}"
+isort "${FILES[@]}"
