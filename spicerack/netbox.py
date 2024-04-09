@@ -266,10 +266,8 @@ class NetboxServer:
             raise NetboxError(f"Name change for {current} didn't get applied by Netbox.")
 
         # Update the FQDNs
-        if self.fqdn:
-            self.fqdn = new + "." + self.fqdn.split(".", 1)[1]
-        if self.mgmt_fqdn:
-            self.mgmt_fqdn = new + "." + self.mgmt_fqdn.split(".", 1)[1]
+        self.fqdn = new + "." + self.fqdn.split(".", 1)[1]
+        self.mgmt_fqdn = new + "." + self.mgmt_fqdn.split(".", 1)[1]
 
     @property
     def status(self) -> str:

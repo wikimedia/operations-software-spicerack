@@ -276,13 +276,19 @@ class TestNetboxServer:
         self.netbox_host.primary_ip4.save.assert_not_called()
         assert self.physical_server.fqdn == "foo.wikimedia.org"
 
+    def test_fqdn_setter_error(self):
+        """It should raise a NetboxError."""
+        self.netbox_host.primary_ip4.save.return_value = False
+        with pytest.raises(NetboxError, match="Spicerack was not able to update the primary_ip4 FQDN for physical."):
+            self.physical_server.fqdn = "new_name"
+
     def test_mgmt_fqdn_getter(self):
         """It should return the management FQDN of the device and cache it."""
         assert self.physical_server.mgmt_fqdn == "physical.mgmt.local"
         assert self.physical_server.mgmt_fqdn == "physical.mgmt.local"
         self.mocked_api.ipam.ip_addresses.get.assert_called_once_with(device="physical", interface="mgmt")
 
-    def test_mgmt_fqdn_getter_no_mgmt(self):
+    def test_mgmt_fqdn_getter_no_mgmt_fqdn(self):
         """It should raise a NetboxError if the management FQDN is not set."""
         self.mgmt_ip.dns_name = ""
         with pytest.raises(NetboxError, match="Server physical has no management interface with a DNS name set"):
@@ -305,6 +311,24 @@ class TestNetboxServer:
         self.physical_server.mgmt_fqdn = "foo.wikimedia.org"
         assert self.netbox_host.save.called_once_with()
         assert self.physical_server.mgmt_fqdn == "foo.wikimedia.org"
+
+    def test_mgmt_fqdn_setter_identical(self):
+        """It shouldn't try to change the mgmt FQDN."""
+        self.physical_server.mgmt_fqdn = "physical.mgmt.local"
+        self.mocked_api.ipam.ip_addresses.save.assert_not_called()
+
+    def test_mgmt_fqdn_setter_no_mgmt_int(self):
+        """It should silently exit."""
+        self.mocked_api.ipam.ip_addresses.get.return_value = None
+        self.physical_server.mgmt_fqdn = "foo.mgmt.local"
+        with pytest.raises(NetboxError, match="Server physical has no management interface with a DNS name set."):
+            self.physical_server.mgmt_fqdn  # pylint: disable=pointless-statement
+
+    def test_mgmt_fqdn_setter_error(self):
+        """It should raise a NetboxError."""
+        self.mocked_api.ipam.ip_addresses.get.return_value.save.return_value = False
+        with pytest.raises(NetboxError, match="Spicerack was not able to update the mgmt_fqdn for physical."):
+            self.physical_server.mgmt_fqdn = "foo.mgmt.local"
 
     def test_asset_tag_fqdn_getter(self):
         """It should return the management FQDN of the asset tag of the device."""
@@ -462,3 +486,9 @@ class TestNetboxServer:
         assert self.physical_server.name == "new_name"
         assert self.physical_server.fqdn == "new_name.example.com"
         assert self.physical_server.mgmt_fqdn == "new_name.mgmt.local"
+
+    def test_name_setter_error(self):
+        """It should raise a NetboxError."""
+        self.netbox_host.save.return_value = False
+        with pytest.raises(NetboxError, match="Name change for physical didn't get applied by Netbox."):
+            self.physical_server.name = "new_name"
