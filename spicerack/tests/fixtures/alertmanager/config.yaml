@@ -6,6 +6,7 @@ instances:
   metricsinfra-eqiad1:
     urls:
       - https://metricsinfra-alertmanager-eqiad1.wmcloud.example
+    http_use_proxy: true
   hosts-missing: {}
   hosts-empty:
     urls: []

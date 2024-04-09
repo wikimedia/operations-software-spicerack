@@ -28,6 +28,7 @@ class Alertmanager:
         self,
         *,
         alertmanager_urls: Sequence[str],
+        http_proxies: Optional[dict[str, str]] = None,
         dry_run: bool = True,
     ) -> None:
         """Initialize the instance.
@@ -37,6 +38,7 @@ class Alertmanager:
 
         Arguments:
             alertmanager_urls: list of Alertmanager instances to connect to.
+            http_proxies: HTTP proxies in requests format to use to connect to the Alertmanager instances.
             dry_run: whether this is a DRY-RUN.
 
         Raises:
@@ -56,6 +58,10 @@ class Alertmanager:
         )
         self._alertmanager_urls = alertmanager_urls
         self._dry_run = dry_run
+
+        self._http_proxies = http_proxies
+        if http_proxies:
+            self._http_session.proxies = http_proxies
 
     def _api_request(self, method: str, path: str, json: Optional[Mapping] = None) -> Response:
         """Perform an Alertmanager API request on multiple endpoints and return the requests response object.
@@ -208,6 +214,7 @@ class Alertmanager:
             target_hosts=target_hosts,
             verbatim_hosts=verbatim_hosts,
             alertmanager_urls=self._alertmanager_urls,
+            http_proxies=self._http_proxies,
             dry_run=self._dry_run,
         )
 
@@ -221,6 +228,7 @@ class AlertmanagerHosts(Alertmanager):
         *,
         verbatim_hosts: bool = False,
         alertmanager_urls: Sequence[str],
+        http_proxies: Optional[dict[str, str]] = None,
         dry_run: bool = True,
     ) -> None:
         """Initialize the instance.
@@ -231,13 +239,14 @@ class AlertmanagerHosts(Alertmanager):
                 :py:data:`False`, the default, consider the given target hosts as FQDNs and extract their hostnames to
                 be used in Alertmanager.
             alertmanager_urls: list of Alertmanager instances to connect to.
+            http_proxies: HTTP proxies in requests format to use to connect to the Alertmanager instances.
             dry_run: whether this is a DRY-RUN.
 
         Raises:
             spicerack.alertmanager.AlertmanagerError: if no target hosts are provided.
 
         """
-        super().__init__(alertmanager_urls=alertmanager_urls, dry_run=dry_run)
+        super().__init__(alertmanager_urls=alertmanager_urls, http_proxies=http_proxies, dry_run=dry_run)
         if not verbatim_hosts:
             target_hosts = [target_host.split(".")[0] for target_host in target_hosts]
 

@@ -319,19 +319,25 @@ def test_spicerack_alerting(mocked_command_file, mocked_remote_query, mocked_dns
 @pytest.mark.parametrize("am_instance", (None, "production", "metricsinfra-eqiad1"))
 def test_spicerack_alertmanager(am_instance):
     """An instance of Spicerack should allow to get an Alertmanager instance."""
-    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    spicerack = Spicerack(
+        verbose=True, dry_run=False, http_proxy="http://webproxy.eqiad.example:8080", **SPICERACK_TEST_PARAMS
+    )
 
     config = load_yaml_config(spicerack.config_dir / "alertmanager" / "config.yaml")
-    urls = config.get("instances").get(am_instance if am_instance else config.get("default_instance")).get("urls")
+    instance = config.get("instances").get(am_instance if am_instance else config.get("default_instance"))
+    urls = instance.get("urls")
+    http_proxy = "http://webproxy.eqiad.example:8080" if instance.get("http_use_proxy") else None
 
     instance = spicerack.alertmanager(instance_name=am_instance)
 
     assert isinstance(instance, Alertmanager)
     assert instance._alertmanager_urls == urls  # pylint: disable=protected-access
+    assert instance._http_session.proxies.get("http") == http_proxy  # pylint: disable=protected-access
 
     hosts_instance = spicerack.alertmanager_hosts(["host1", "host2"], instance_name=am_instance)
     assert isinstance(hosts_instance, AlertmanagerHosts)
     assert hosts_instance._alertmanager_urls == urls  # pylint: disable=protected-access
+    assert hosts_instance._http_session.proxies.get("http") == http_proxy  # pylint: disable=protected-access
 
 
 def test_spicerack_alertmanager_invalid_instance():

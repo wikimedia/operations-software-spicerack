@@ -714,7 +714,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         if not instance:
             raise SpicerackError(f"No such alertmanager instance '{instance_name}' found in config")
 
-        return Alertmanager(alertmanager_urls=instance.get("urls", []), dry_run=self._dry_run)
+        http_proxies = self.requests_proxies if instance.get("http_use_proxy") else None
+        return Alertmanager(
+            alertmanager_urls=instance.get("urls", []), http_proxies=http_proxies, dry_run=self._dry_run
+        )
 
     def alerting_hosts(self, target_hosts: TypeHosts, *, verbatim_hosts: bool = False) -> AlertingHosts:
         """Get an AlertingHosts instance.
