@@ -415,7 +415,7 @@ class TestIpmi:
         """It should not reset the users password."""
         mocked_run.return_value = CompletedProcess((), 0, stdout=USERLIST_OUTPUT.encode())
         self.ipmi_dry_run.reset_password("root", "a" * 16)
-        mocked_run.called_once_with(IPMITOOL_BASE + ["user", "list", "1"], env=ENV, stdout=PIPE, check=True)
+        mocked_run.assert_called_once_with(IPMITOOL_BASE + ["user", "list", "1"], env=ENV, stdout=PIPE, check=True)
 
     @mock.patch("spicerack.ipmi.run")
     def test_reset_password_fail_command(self, mocked_run):

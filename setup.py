@@ -11,7 +11,6 @@ INSTALL_REQUIRES = [
     "cumin>=3.0.2",
     "dnspython~=2.0.0",
     "elasticsearch>=5.0.0,<7.15.0",
-    "elasticsearch-curator~=5.0",
     "gitpython>=3.1.14",
     "kafka-python>=2.0.1",
     "kubernetes==12.0.*",  # frozen to the version available on debian bullseye
@@ -49,7 +48,7 @@ EXTRAS_REQUIRE = {
         "types-setuptools",
     ],
     "format": [
-        "black<=21.12b0",  # this is needed so that it doesn't confict with curator
+        "black",
         "isort",
     ],
     "prospector": [

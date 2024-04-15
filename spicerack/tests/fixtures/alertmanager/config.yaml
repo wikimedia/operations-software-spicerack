@@ -1,0 +1,16 @@
+instances:
+  production:
+    urls:
+      - https://alertmanager-eqiad.wikimedia.example
+      - https://alertmanager-codfw.wikimedia.example
+  metricsinfra-eqiad1:
+    urls:
+      - https://metricsinfra-alertmanager-eqiad1.wmcloud.example
+    http_use_proxy: true
+    http_username: spicerack
+    http_password: examplepass
+  hosts-missing: {}
+  hosts-empty:
+    urls: []
+
+default_instance: production

@@ -413,13 +413,21 @@ class PuppetServer(RemoteHostsAdapter):
     def destroy(self, hostname: str) -> None:
         """Remove the certificate for the given hostname.
 
-        If there is no certificate to remove it doesn't raise exception as the Puppet CA just outputs
-        'Nothing was deleted'.
+        If there is no certificate to remove it doesn't raise exception.
 
         Arguments:
             hostname: the FQDN of the host for which to remove the certificate.
 
+        Raises:
+            spicerack.remote.RemoteExecutionError: if unable to destroy the certificate.
+
         """
+        try:
+            self.get_certificate_metadata(hostname)
+        except PuppetServerCheckError:
+            logger.info("The certificate for %s does not exist, nothing to do.", hostname)
+            return
+
         self.server_host.run_sync(f"puppetserver ca clean --certname {hostname}", print_progress_bars=False)
 
     def verify(self, hostname: str) -> None:

@@ -106,7 +106,8 @@ class TestNetbox:
 
     def test_netbox_api(self):
         """An instance of Netbox should instantiate the Netbox API and expose it via the api property."""
-        self.mocked_api.called_once_with(NETBOX_URL, token=NETBOX_TOKEN)
+        call = mock.call(NETBOX_URL, token=NETBOX_TOKEN, threading=True)
+        assert self.mocked_api.mock_calls == [call, call]
         assert self.netbox.api == self.mocked_api()
 
     def test_get_server_fail_device(self):
@@ -209,7 +210,7 @@ class TestNetboxServer:
     def test_status_setter_ok(self):
         """It should set the status of the server to its new value, if it's an allowed transition."""
         self.physical_server.status = "failed"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.save.assert_called_once_with()
 
     def test_status_setter_virtual(self):
         """It should raise a NetboxError if trying to set the status on a virtual machine."""
@@ -249,13 +250,45 @@ class TestNetboxServer:
         with pytest.raises(NetboxError, match="Server physical does not have any primary IP with a DNS name set"):
             self.physical_server.fqdn  # pylint: disable=pointless-statement
 
+    def test_fqdn_setter_virtual(self):
+        """It should raise a NetboxError if trying to change the FQDN of a VM."""
+        with pytest.raises(NetboxError, match="changing the FQDN is only for physical servers"):
+            self.virtual_server.fqdn = "foo.wikimedia.org"
+
+    def test_fqdn_setter_ok(self):
+        """It should set the new FQDN as expected."""
+        self.physical_server.fqdn = "foo.wikimedia.org"
+        assert self.netbox_host.save.called_once_with()
+        assert self.physical_server.fqdn == "foo.wikimedia.org"
+
+    def test_fqdn_setter_identical(self):
+        """It shouldn' try to change the v4 FQDN."""
+        self.netbox_host.primary_ip6.dns_name = "foo.example.com"
+        self.physical_server.fqdn = "physical.example.com"
+        self.netbox_host.primary_ip4.save.assert_not_called()
+        self.netbox_host.primary_ip6.save.assert_called_once_with()
+
+    def test_fqdn_setter_v6_only(self):
+        """It should set the new FQDN as expected."""
+        self.netbox_host.primary_ip4.dns_name = ""
+        self.physical_server.fqdn = "foo.wikimedia.org"
+        self.netbox_host.primary_ip6.save.assert_called_once_with()
+        self.netbox_host.primary_ip4.save.assert_not_called()
+        assert self.physical_server.fqdn == "foo.wikimedia.org"
+
+    def test_fqdn_setter_error(self):
+        """It should raise a NetboxError."""
+        self.netbox_host.primary_ip4.save.return_value = False
+        with pytest.raises(NetboxError, match="Spicerack was not able to update the primary_ip4 FQDN for physical."):
+            self.physical_server.fqdn = "new_name"
+
     def test_mgmt_fqdn_getter(self):
         """It should return the management FQDN of the device and cache it."""
         assert self.physical_server.mgmt_fqdn == "physical.mgmt.local"
         assert self.physical_server.mgmt_fqdn == "physical.mgmt.local"
         self.mocked_api.ipam.ip_addresses.get.assert_called_once_with(device="physical", interface="mgmt")
 
-    def test_mgmt_fqdn_getter_no_mgmt(self):
+    def test_mgmt_fqdn_getter_no_mgmt_fqdn(self):
         """It should raise a NetboxError if the management FQDN is not set."""
         self.mgmt_ip.dns_name = ""
         with pytest.raises(NetboxError, match="Server physical has no management interface with a DNS name set"):
@@ -267,6 +300,35 @@ class TestNetboxServer:
             NetboxError, match="Server virtual is a virtual machine, does not have a management address"
         ):
             self.virtual_server.mgmt_fqdn  # pylint: disable=pointless-statement
+
+    def test_mgmt_fqdn_setter_virtual(self):
+        """It should raise a NetboxError if trying to change the FQDN of a VM."""
+        with pytest.raises(NetboxError, match="changing the mgmt FQDN is only for physical servers"):
+            self.virtual_server.mgmt_fqdn = "foo.wikimedia.org"
+
+    def test_mgmt_fqdn_setter_ok(self):
+        """It should set the new mgmt FQDN as expected."""
+        self.physical_server.mgmt_fqdn = "foo.wikimedia.org"
+        assert self.netbox_host.save.called_once_with()
+        assert self.physical_server.mgmt_fqdn == "foo.wikimedia.org"
+
+    def test_mgmt_fqdn_setter_identical(self):
+        """It shouldn't try to change the mgmt FQDN."""
+        self.physical_server.mgmt_fqdn = "physical.mgmt.local"
+        self.mocked_api.ipam.ip_addresses.save.assert_not_called()
+
+    def test_mgmt_fqdn_setter_no_mgmt_int(self):
+        """It should silently exit."""
+        self.mocked_api.ipam.ip_addresses.get.return_value = None
+        self.physical_server.mgmt_fqdn = "foo.mgmt.local"
+        with pytest.raises(NetboxError, match="Server physical has no management interface with a DNS name set."):
+            self.physical_server.mgmt_fqdn  # pylint: disable=pointless-statement
+
+    def test_mgmt_fqdn_setter_error(self):
+        """It should raise a NetboxError."""
+        self.mocked_api.ipam.ip_addresses.get.return_value.save.return_value = False
+        with pytest.raises(NetboxError, match="Spicerack was not able to update the mgmt_fqdn for physical."):
+            self.physical_server.mgmt_fqdn = "foo.mgmt.local"
 
     def test_asset_tag_fqdn_getter(self):
         """It should return the management FQDN of the asset tag of the device."""
@@ -321,7 +383,7 @@ class TestNetboxServer:
     def test_access_vlan_setter_ok(self):
         """It should set the access vlan."""
         self.physical_server.access_vlan = "set_test_vlan"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.primary_ip.assigned_object.connected_endpoint.save.assert_called_once_with()
 
     def test_access_vlan_setter_not_found(self):
         """It should raise a NetboxError if trying to set an non active vlan."""
@@ -349,7 +411,7 @@ class TestNetboxServer:
         """It should set the primary IPv4 address (and no CIDR means /32)."""
         self.mocked_api.ipam.ip_addresses.count.return_value = 0
         self.physical_server.primary_ip4_address = "192.0.2.1"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.primary_ip4.save.assert_called_once_with()
         assert self.physical_server.primary_ip4_address == IPv4Interface("192.0.2.1/32")
 
     def test_primary_ip4_address_setter_not_valid(self):
@@ -381,7 +443,7 @@ class TestNetboxServer:
         """It should set the primary IPv6 address."""
         self.mocked_api.ipam.ip_addresses.count.return_value = 0
         self.physical_server.primary_ip6_address = "2001:db8::1/32"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.primary_ip6.save.assert_called_once_with()
 
     def test_primary_ip6_address_setter_dry_run(self):
         """It should skip setting the primary IPv6 address."""
@@ -396,3 +458,37 @@ class TestNetboxServer:
         self.netbox_host.primary_ip4 = None
         with pytest.raises(NetboxError, match="No existing primary IPv4 for physical."):
             self.physical_server.primary_ip4_address = "192.0.2.1/32"
+
+    def test_name_getter_ok(self):
+        """It should return the name of the device."""
+        assert self.physical_server.name == "physical"
+
+    def test_name_setter_virtual(self):
+        """It should raise a NetboxError if trying to change the name of a VM."""
+        with pytest.raises(NetboxError, match="chaging the name is only for physical servers"):
+            self.virtual_server.name = "foo"
+
+    def test_name_setter_identical(self):
+        """It should not try to change the name if the old name is the same as the new one."""
+        self.physical_server.name = "physical"
+        self.netbox_host.save.assert_not_called()
+
+    def test_name_setter_dry_run(self):
+        """It should not try to change the name if in dry-run mode."""
+        physical_server = NetboxServer(api=self.mocked_api, server=self.netbox_host, dry_run=True)
+        physical_server.name = "new_name"
+        self.netbox_host.save.assert_not_called()
+        assert self.physical_server.name == "physical"
+
+    def test_name_setter_ok(self):
+        """It should set the new name as expected."""
+        self.physical_server.name = "new_name"
+        assert self.physical_server.name == "new_name"
+        assert self.physical_server.fqdn == "new_name.example.com"
+        assert self.physical_server.mgmt_fqdn == "new_name.mgmt.local"
+
+    def test_name_setter_error(self):
+        """It should raise a NetboxError."""
+        self.netbox_host.save.return_value = False
+        with pytest.raises(NetboxError, match="Name change for physical didn't get applied by Netbox."):
+            self.physical_server.name = "new_name"
