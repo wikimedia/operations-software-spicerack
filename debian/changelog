@@ -1,3 +1,10 @@
+spicerack (8.5.0-1) unstable; urgency=medium
+
+  * v8.5.0 upstream release.
+  * Removed dependecy on python3-elasticsearch-curator.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Mon, 15 Apr 2024 10:22:57 -0000
+
 spicerack (8.4.1-1) unstable; urgency=medium
 
   * v8.4.1 upstream release.
