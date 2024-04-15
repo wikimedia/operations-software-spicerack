@@ -1,6 +1,41 @@
 Spicerack Changelog
 -------------------
 
+`v8.5.0`_ (2024-04-15)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* netbox: add functions to get and set the device name.
+* elasticsearch: remove the dependency from elasticsearch-curator making the calls directly via the elasticsearch
+  library (`T345337`_ and `T361647`_).
+* alertmanager: add multi-instance and authentication support (`T360932`_):
+
+  * Add support for multiple alertmanager instances based on a configuration file. One of those instances can be
+    marked as ``default`` which is used when the call to the ``Spicerack.alertmanager()`` or
+    ``Spicerack.alertmanager_hosts()`` API is used without specifying a specific instance or some other API (like
+    ``Service.downtime()``) that does not support multiple instances is used.
+  * Add support for per-instance HTTP basic authentication. The metricsinfra Alertmanager instance will be behind
+    HTTP basic authentication to avoid exposing the read-write API to the entire wikiprod network (via the HTTP
+    proxies). This patch adds support for configuring a username and a password to use on a specific Alertmanager
+    instance.
+
+Bug fixes
+"""""""""
+
+* puppet: make ``PuppetServer.destroy()`` have the same behaviour of ``PuppetMaster.destroy()`` and do not raise an
+  exception if the host certificate is already missing (`T360293`_).
+
+Miscellanea
+"""""""""""
+
+* setup.py: remove dependency elasticsearch-curator not needed anymore and remove upper bound for black linter that
+  was there for incompatibilities with elasticsearch-curator.
+* k8s: Remove use of ``@staticmethod`` in tests.
+* tests: fix typos in tests that were erroneously calling mock methods with the wrong names.
+* utils: remove ``--apply`` from isort's call in format-code, now the default in v5.
+
 `v8.4.1`_ (2024-03-06)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2792,8 +2827,12 @@ New features
 .. _`T330318`: https://phabricator.wikimedia.org/T330318
 .. _`T335855`: https://phabricator.wikimedia.org/T335855
 .. _`T341973`: https://phabricator.wikimedia.org/T341973
+.. _`T345337`: https://phabricator.wikimedia.org/T345337
 .. _`T346134`: https://phabricator.wikimedia.org/T346134
+.. _`T361647`: https://phabricator.wikimedia.org/T361647
 .. _`T347490`: https://phabricator.wikimedia.org/T347490
+.. _`T360293`: https://phabricator.wikimedia.org/T360293
+.. _`T360932`: https://phabricator.wikimedia.org/T360932
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2911,3 +2950,4 @@ New features
 .. _`v8.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.3.0
 .. _`v8.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.4.0
 .. _`v8.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.4.1
+.. _`v8.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.5.0
