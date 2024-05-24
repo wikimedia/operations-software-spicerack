@@ -1,4 +1,5 @@
 """Redfish module."""
+
 import ipaddress
 import json
 import logging
@@ -566,7 +567,7 @@ class Redfish:
 
 
 class DellSCP:
-    """Reprenset a Dell System Configuration Profile configuration as returned by Redfish API."""
+    """Represent a Dell System Configuration Profile configuration as returned by Redfish API."""
 
     def __init__(self, config: dict, target: DellSCPTargetPolicy, *, allow_new_attributes: bool = False):
         """Parse the Redfish API response.
