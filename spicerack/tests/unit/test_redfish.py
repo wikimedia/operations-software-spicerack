@@ -1,4 +1,5 @@
 """Netbox module tests."""
+
 import ipaddress
 import logging
 from copy import deepcopy
@@ -347,7 +348,7 @@ class RedfishTest(redfish.Redfish):
     @property
     def system_manager(self) -> str:
         """Property to return the System manager."""
-        return "/redfish/v1/Systems/Testing_system.1"
+        return "/redfish/v1/Systems/System.Embedded.1"
 
     @property
     def oob_manager(self) -> str:
@@ -363,6 +364,10 @@ class RedfishTest(redfish.Redfish):
     def reboot_message_id(self) -> str:
         """Property to return the Message Id for reboot log entries."""
         return "REBOOT_MSG_ID"
+
+    def get_power_state(self) -> str:
+        """Return the current power state of the device."""
+        return "On"
 
 
 class TestRedfish:
@@ -662,11 +667,6 @@ class TestRedfish:
         with pytest.raises(redfish.RedfishError, match="Got unexpected HTTP 202, expected 200"):
             self.redfish.change_user_password("root", "test1234")
 
-    def test_get_power_state(self):
-        """It should return the current power state of the device."""
-        self.requests_mock.get("/redfish/v1/Chassis/System.Embedded.1", json={"PowerState": "On"})
-        assert self.redfish.get_power_state() == "On"
-
     @pytest.mark.parametrize("action", tuple(redfish.ChassisResetPolicy))
     def test_chassis_reset_ok(self, action):
         """It should perform a chassis reset with the given action."""
@@ -940,6 +940,11 @@ class TestRedfishDell:
         assert result == expected
         assert mocked_sleep.called
 
+    def test_get_power_state(self):
+        """It should return the current power state of the device."""
+        self.requests_mock.get("/redfish/v1/Chassis/System.Embedded.1", json={"PowerState": "On"})
+        assert self.redfish.get_power_state() == "On"
+
 
 class TestRedfishSupermicro:
     """Tests for the RedfishSupermicro class."""
@@ -967,3 +972,8 @@ class TestRedfishSupermicro:
     def test_property_reboot_message_id(self) -> str:
         """Property to return the Message Id for reboot log entries."""
         assert self.redfish.reboot_message_id == "Event.1.0.SystemPowerAction"
+
+    def test_get_power_state(self):
+        """It should return the current power state of the device."""
+        self.requests_mock.get("/redfish/v1/Systems/1", json={"PowerState": "On"})
+        assert self.redfish.get_power_state() == "On"

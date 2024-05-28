@@ -532,10 +532,9 @@ class Redfish:
                 "[%s] %s | Resolution: %s", identifier, message.get("Message", ""), message.get("Resolution", "")
             )
 
+    @abstractmethod
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
-        response = self.request("get", "/redfish/v1/Chassis/System.Embedded.1").json()
-        return response["PowerState"]
 
     def chassis_reset(self, action: ChassisResetPolicy) -> None:
         """Perform a reset of the chassis power status.
@@ -550,7 +549,7 @@ class Redfish:
         logger.info("Resetting chassis power status for %s to %s", self._hostname, action.value)
         response = self.request(
             "post",
-            "/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset",
+            f"{self.system_manager}/Actions/ComputerSystem.Reset",
             json={"ResetType": action.value},
         )
         if response.status_code != 204 and not self._dry_run:
@@ -791,6 +790,11 @@ class RedfishSupermicro(Redfish):
         """String representing the message Id of the reboot."""
         return "Event.1.0.SystemPowerAction"
 
+    def get_power_state(self) -> str:
+        """Return the current power state of the device."""
+        response = self.request("get", self.system_manager).json()
+        return response["PowerState"]
+
 
 class RedfishDell(Redfish):
     """Dell specific Redfish support."""
@@ -944,3 +948,8 @@ class RedfishDell(Redfish):
         task_id = self.submit_task(f"{self.scp_base_uri}.{uri}", data)
 
         return self.poll_task(task_id)
+
+    def get_power_state(self) -> str:
+        """Return the current power state of the device."""
+        response = self.request("get", "/redfish/v1/Chassis/System.Embedded.1").json()
+        return response["PowerState"]
