@@ -1,4 +1,5 @@
 """Initialization tests."""
+
 import logging
 import sys
 from collections import namedtuple
@@ -39,7 +40,7 @@ from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NetboxServer
 from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer
-from spicerack.redfish import RedfishDell
+from spicerack.redfish import RedfishDell, RedfishSupermicro
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteError, RemoteHosts
 from spicerack.reposync import RepoSync
@@ -172,20 +173,37 @@ def test_spicerack_puppet_server(mocked_remote_query, mocked_get_ca_via_srv_reco
     assert mocked_get_ca_via_srv_record.called
 
 
+@pytest.mark.parametrize(
+    "manufacturer, manufacturer_class",
+    (
+        ("dell", RedfishDell),
+        ("supermicro", RedfishSupermicro),
+        ("fancy-but-not-supported-yet", None),
+    ),
+)
 @mock.patch("spicerack.Netbox")
-def test_spicerack_management_consoles(mocked_netbox, monkeypatch):
+def test_spicerack_management_consoles(mocked_netbox, monkeypatch, manufacturer, manufacturer_class):
     """Should instantiate the instances that require the management password."""
     monkeypatch.setenv("MGMT_PASSWORD", "env_password")
     mocked_netbox.return_value.get_server.return_value.virtual = False
     mocked_netbox.return_value.api.ipam.ip_addresses.get.return_value = "10.0.0.1/16"
+    mocked_netbox.return_value.get_server.return_value.as_dict.return_value = {
+        "device_type": {"manufacturer": {"slug": manufacturer}}
+    }
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
     assert spicerack.management_password == "env_password"
     assert isinstance(spicerack.ipmi("test-mgmt.example.com"), Ipmi)
-    assert isinstance(spicerack.redfish("test-mgmt01"), RedfishDell)
-    assert isinstance(spicerack.redfish("test-mgmt01", "root", "other_password"), RedfishDell)
-    assert mocked_netbox.called
+    if manufacturer == "fancy-but-not-supported-yet":
+        with pytest.raises(
+            SpicerackError, match=f"The manufacturer {manufacturer} set in Netbox for test-mgmt01 is not supported."
+        ):
+            spicerack.redfish("test-mgmt01")
+    else:
+        assert isinstance(spicerack.redfish("test-mgmt01"), manufacturer_class)
+        assert isinstance(spicerack.redfish("test-mgmt01", "root", "other_password"), manufacturer_class)
+        assert mocked_netbox.called
 
 
 @mock.patch("spicerack.Netbox")

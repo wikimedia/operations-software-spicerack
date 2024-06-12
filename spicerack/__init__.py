@@ -1,4 +1,5 @@
 """Spicerack package."""
+
 from collections.abc import Callable, Sequence
 from ipaddress import ip_interface
 from logging import Logger, getLogger
@@ -42,7 +43,7 @@ from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import MANAGEMENT_IFACE_NAME, Netbox, NetboxServer
 from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer, get_ca_via_srv_record, get_puppet_ca_hostname
-from spicerack.redfish import Redfish, RedfishDell
+from spicerack.redfish import Redfish, RedfishDell, RedfishSupermicro
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteError, RemoteHosts
 from spicerack.reposync import RepoSync
@@ -667,13 +668,20 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             password = self.management_password
 
         netbox = self.netbox()
-        if netbox.get_server(hostname).virtual:
+        server_metadata = netbox.get_server(hostname)
+        if server_metadata.virtual:
             raise SpicerackError(f"Host {hostname} is not a Physical server, Redfish is not supported.")
 
         netbox_ip = netbox.api.ipam.ip_addresses.get(device=hostname, interface=MANAGEMENT_IFACE_NAME)
 
-        # TODO: generalize when support for additional vendors will be added.
-        return RedfishDell(hostname, ip_interface(netbox_ip), username, password, dry_run=self._dry_run)
+        manufacturer = server_metadata.as_dict()["device_type"]["manufacturer"]["slug"]
+        if manufacturer == "dell":
+            redfish_class: type[Redfish] = RedfishDell
+        elif manufacturer == "supermicro":
+            redfish_class = RedfishSupermicro
+        else:
+            raise SpicerackError(f"The manufacturer {manufacturer} set in Netbox for {hostname} is not supported.")
+        return redfish_class(hostname, ip_interface(netbox_ip), username, password, dry_run=self._dry_run)
 
     def alertmanager_hosts(
         self, target_hosts: TypeHosts, *, instance_name: str = "", verbatim_hosts: bool = False

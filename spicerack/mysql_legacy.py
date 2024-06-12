@@ -1,21 +1,19 @@
-"""MySQL module (legacy).
+"""MySQL shell module."""  # noqa
 
-Todo:
-    replace with a proper MySQL module that uses a Python MySQL client, preferably in a parallel way.
-
-"""
 import logging
+import re
 from collections.abc import Iterator
-from datetime import datetime
-from typing import Optional, Union
+from datetime import datetime, timedelta
+from typing import Any, Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
 from wmflib.constants import CORE_DATACENTERS
+from wmflib.interactive import ask_confirmation
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
-from spicerack.remote import Remote, RemoteHostsAdapter
+from spicerack.remote import Remote, RemoteHosts, RemoteHostsAdapter
 
 REPLICATION_ROLES: tuple[str, ...] = ("master", "slave", "standalone")
 """Valid replication roles."""
@@ -41,8 +39,277 @@ class MysqlLegacyError(SpicerackError):
     """Custom exception class for errors of this module."""
 
 
+class MysqlLegacyReplagError(MysqlLegacyError):
+    """Custom exception class for errors related to replag in this module."""
+
+
+class InstanceBase:
+    """Class to manage Single MariaDB Instances."""
+
+    def __init__(self, host: RemoteHosts) -> None:
+        """Initialize the instance.
+
+        Arguments:
+            host: the RemoteHosts instance that contains this MariaDB SingleInstance.
+
+        """
+        if len(host) > 1:
+            msg = "InstanceBase and InstanceMulti are - yet - meant to be"
+            msg = f"{msg} implemented with a single host in its private host attribute"
+            raise NotImplementedError(msg)
+        self.host: RemoteHosts = host
+        self._primary: str = ""
+        self.mysql: str = "mysql"
+        self.sock: str = "/run/mysqld/mysqld.sock"
+        self.service: str = "mariadb"
+        self.data_dir: str = "/srv/sqldata"
+        self._stop_mysql: str = f"systemctl stop {self.service}"
+        self._start_mysql: str = f"systemctl start {self.service}"
+        self._status_mysql: str = f"systemctl status {self.service}"
+        self._restart_mysql: str = f"systemctl restart {self.service}"
+        self._mysql_clean_data_dir: str = f"rm -rf {self.data_dir}"
+        self._mysql_upgrade: str = "mysql_upgrade --force"
+
+    def run_command(self, command: str) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Execute the command via Remote.
+
+        Arguments:
+            command: the mysql query to be executed. Double quotes must be already escaped.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
+
+        """
+        return self.host.run_sync(command)
+
+    def run_query(self, query: str) -> Any:
+        """Execute the query via Remote.
+
+        Arguments:
+            command: the mysql query to be executed. Double quotes must be already escaped.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
+
+        """
+        return self.host.run_sync(f'{self.mysql} -e "{query}"')
+
+    def stop_slave(self) -> list:
+        """Stops mariadb replication."""
+        return self.run_query("STOP SLAVE;")
+
+    def start_slave(self) -> list:
+        """Starts mariadb replication."""
+        return self.run_query("START SLAVE;")
+
+    def show_slave_status(self) -> dict:
+        """Returns the output of show slave status formatted as a dict."""
+        result = {}
+        rows: int = 0
+        sql = "SHOW SLAVE STATUS\\G"
+        response = self.run_query(sql)
+        for line in list(response)[0][1].message().decode("utf8").splitlines():
+            if "***************************" in line:
+                rows += 1
+                continue
+            if rows > 1:
+                raise NotImplementedError("Multimaster context, not implemented.")
+            key, value = line.split(":", 2)
+            result[key.strip()] = value.strip()
+        return result
+
+    def stop_mysql(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Stops mariadb service."""
+        return self.run_command(self._stop_mysql)
+
+    def status_mysql(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Stops mariadb service."""
+        return self.run_command(self._status_mysql)
+
+    def use_gtid(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Runs SQL to use GTID."""
+        return self.run_command("CHANGE MASTER TO MASTER_USE_GTID=Slave_pos;")  # noqa E702,E231  # ignores ";"
+
+    def start_mysql(self, skip_slave_start: bool = True) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Starts mariadb service."""
+        if not skip_slave_start:
+            # TODO double check that this would be the proper way
+            self.run_command('systemctl set-environment MYSQLD_OPTS=""')
+        return self.run_command(self._start_mysql)
+
+    def restart_mysql(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Restarts mariadb service."""
+        return self.run_command(self._restart_mysql)
+
+    def clean_data_dir(self, no_confirm: bool = False) -> None:
+        """Removes everything contained in the data directory."""
+        if no_confirm:
+            self.run_command(self._mysql_clean_data_dir)
+        else:
+            confmsg = f"This will run {self._mysql_clean_data_dir}, OK?"
+            ask_confirmation(confmsg)
+            self.run_command(self._mysql_clean_data_dir)
+
+    def upgrade(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
+        """Runs the relevant mysql_upgrade command to upgrade the instance content."""
+        return self.run_command(self._mysql_upgrade)
+
+    def get_repl_info(self) -> tuple[str, str]:
+        """Check replication status to send to the target node."""
+        binlog_file: str = ""
+        repl_position: str = ""
+        replication_status = self.show_slave_status()
+        binlog = replication_status["Master_Log_File"]
+        pos = replication_status["Exec_Master_Log_Pos"]
+
+        if not binlog or not pos:
+            logger.error("Cloud not find the replication position aborting")
+            raise RuntimeError
+        binlog_file = binlog[0]
+        repl_position = pos[0]
+        msg = f"binlog_file: {binlog_file}, repl_position: {repl_position}"
+        logger.debug(msg)
+        return binlog_file, repl_position
+
+    @property
+    def primary(self) -> str:
+        """Retrieves the replication source of this cluster."""
+        if not self._primary:
+            try:
+                self._primary = self.show_slave_status()["Master_Host"]
+            except KeyError as e:
+                raise MysqlLegacyError("Unable to retrieve master host") from e
+        return self._primary
+
+    def prep_src_for_cloning(self) -> dict[str, str]:
+        """Helper that prepares source instance to be cloned."""
+        self.stop_slave()
+        binlog_file, repl_position = self.get_repl_info()
+        primary = self.primary
+        self.stop_mysql()
+        return {"binlog_file": binlog_file, "repl_position": repl_position, "primary": primary}
+
+    def set_replication_parameters(
+        self, binlog_file: str, repl_position: str, primary_host: str, user: str, password: str
+    ) -> None:
+        """Sets the replication parameters for the MySQL instance."""
+        sql = (
+            f"CHANGE MASTER TO master_host='{primary_host}', "
+            f"master_port=3306, "
+            f"master_ssl=1, master_log_file='{binlog_file}', "
+            f"master_log_pos={repl_position}, master_user='{user}', "
+            f"master_password='{password}';"  # noqa E702,E231  # ignores ";"
+        )
+        sql = sql.replace('"', '\\"')
+        self.run_query(sql)
+
+    def post_clone_reset_with_slave_stopped(self) -> None:
+        """Prepares the MySQL instance for the first pooling operation."""
+        self.run_command(f"chown -R mysql:mysql {self.data_dir}")
+        self.run_command('systemctl set-environment MYSQLD_OPTS="--skip-slave-start"')
+        self.start_mysql()
+        self.stop_slave()
+        self.run_query("RESET SLAVE ALL;")
+
+    def post_asymmetrical_clone_fix(self, source_instance_data_dir: str, target_instance_data_dir: str) -> None:
+        """Fixes issues after an asymmetrical clone operation."""
+        self.run_command(f"mv {source_instance_data_dir}/* {target_instance_data_dir}")
+        self.run_command(f"chown -R mysql:mysql {self.data_dir}")
+
+    def resume_replication(self) -> None:
+        """Resumes replication on the source MySQL instance."""
+        self.run_command('systemctl set-environment MYSQLD_OPTS="--skip-slave-start"')
+        self.start_mysql()
+        self.upgrade()
+        self.restart_mysql()
+        self.start_slave()
+
+    @retry(
+        tries=480,  # We allow up to 8 hours for replication lag to catch up
+        delay=timedelta(seconds=60),
+        backoff_mode="constant",
+        exceptions=(MysqlLegacyReplagError,),
+    )
+    def wait_for_replication(self) -> None:
+        """Waits for replication to catch up."""
+        replag = self.get_replication()
+        if (replag is None) or (replag > 1.0):
+            raise MysqlLegacyReplagError("Replag is still too high.")
+
+    def get_replication(self) -> float:
+        """Retrieves the current replication lag."""
+        query = (
+            "SELECT greatest(0, TIMESTAMPDIFF(MICROSECOND, max(ts), UTC_TIMESTAMP(6)) - 500000)/1000000"
+            " FROM heartbeat.heartbeat"
+            " ORDER BY ts LIMIT 1;"
+        )
+        query_res = self.run_query(query)
+        query_res = query_res[0][1].message().decode("utf-8")
+        replag = 1000.0
+        for line in query_res.splitlines():
+            if not line.strip():
+                continue
+            count = line.strip()
+            try:
+                count = float(count)
+            except ValueError:
+                continue
+            replag = count
+        return replag
+
+
+class InstanceMulti(InstanceBase):
+    """Class to manage Collocated (aka multiinstances) MariaDB Instances."""
+
+    def __init__(self, host: RemoteHosts, instance_name: str = "") -> None:
+        """Initialize the instance.
+
+        Arguments:
+            host: the RemoteHosts instance that contains this MariaDB MultiInstance.
+            instance_name: The instance name you wish to identify this MultiInstance
+
+        """
+        super().__init__(host=host)
+        self.instance_name = instance_name
+        self.host = host  # noqa
+        self.mysql = f"mysql -S {self.sock}"
+        self.sock = f"/run/mysqld/mysqld.{self.instance_name}.sock"
+        self.data_dir = f"/srv/sqldata.{self.instance_name}"
+        self.service = f"mariadb@{self.instance_name}.service"
+        self.mysql_upgrade = f"mysql_upgrade -S {self.sock} --force"  # noqa
+        # here, noqa skips vulture: unused-attribute 'mysql_upgrade'
+
+
+def convert_instancebase_to_instancemulti(instance: InstanceBase, instance_name: str) -> InstanceMulti:  # noqa
+    """Converts InstanceBase to a named InstanceMulti."""
+    converted_instance = InstanceMulti(host=instance.host, instance_name=instance_name)
+    return converted_instance
+    # here, noqa skips vulture: unused-attribute
+
+
+def convert_instancemulti_to_instancebase(instance: InstanceMulti) -> InstanceBase:  # noqa
+    """Converts InstanceMulti to InstanceBase."""
+    converted_instance = InstanceBase(host=instance.host)
+    return converted_instance
+    # here, noqa skips vulture: unused-attribute
+
+
 class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
-    """Custom RemoteHosts class to execute MySQL queries."""
+    """Custom RemoteHosts class for executing MySQL queries."""
+
+    def __init__(self, remote_hosts: RemoteHosts) -> None:
+        """Initialize the MysqlLegacyRemoteHosts.
+
+        Arguments:
+            remote_hosts: a list of remote hosts on which to operate.
+
+        Raises:
+            spicerack.remote.RemoteError: if no hosts were provided.
+
+        """
+        super().__init__(remote_hosts)
+        # self._remote_hosts = remote_hosts
+        self.instances: list = []  # noqa FIXME
 
     def run_query(  # pylint: disable=too-many-arguments
         self,
@@ -77,10 +344,55 @@ class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
             is_safe=is_safe,
         )
 
+    def list_host_instance(self, grouped: bool = False) -> list[InstanceBase]:
+        """List MariaDB instances on the host.
+
+        Arguments:
+            grouped: whether we want to return a "normal" NodeSet which groups everything
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
+            NotImplementedError: if the replag is not fully caught on.
+
+        """
+        if len(self._remote_hosts) > 1:
+            raise NotImplementedError("""Not implemented. We need to handle a single host at a time in this context.""")
+        if not grouped:
+            return self._list_host_instances_no_serial()
+
+        # TODO see this comment:
+        # https://gerrit.wikimedia.org/r/c/operations/software/spicerack/+/1005531/comment/7af929a5_6d6184d4/
+        # we could use this method to parallelize stuff on instances as well.
+        raise NotImplementedError(
+            """Not implemented. We need to implement parallelization and grouping/degrouping before anything."""
+        )
+
+    def _list_host_instances_no_serial(self) -> list[InstanceBase]:
+        """List MariaDB instances on the host.
+
+        Raises:
+            spicerack.remote.RemoteExecutionError: if the Cumin execution returns a non-zero exit code.
+
+        """
+        maria_multi_re = re.compile(r"mariadb@(\S+).service")
+        # will not list EVERYTHING, but enough.
+        trivial_systemctl_service_list = "systemctl --no-pager list-units 'mariadb*'"
+        mariadb_instances: list[InstanceBase] = []
+        service_list = self._remote_hosts.run_sync(trivial_systemctl_service_list, is_safe=True)
+        for service in list(service_list)[0][1].message().decode("utf8").splitlines():
+            if "mariadb@" in service and maria_multi_re.findall(service) != []:
+                instance_name = maria_multi_re.findall(service)[0]
+                if instance_name is not None:
+                    mariadb_instances.append(InstanceMulti(host=self._remote_hosts, instance_name=instance_name))
+        if len(mariadb_instances) > 0:
+            return mariadb_instances
+        return [InstanceBase(host=self._remote_hosts)]
+
 
 class MysqlLegacy:
     """Class to manage MySQL servers."""
 
+    # FIXME this query could be replaced by the one in _get_replication() as it's the one used in monitoring
     heartbeat_query: str = (
         "SELECT ts FROM heartbeat.heartbeat WHERE datacenter = '{dc}' and shard = '{section}' "
         "ORDER BY ts DESC LIMIT 1"
