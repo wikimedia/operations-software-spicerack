@@ -1,3 +1,9 @@
+spicerack (8.6.0-1) unstable; urgency=medium
+
+  * v8.6.0 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Wed, 12 Jun 2024 15:11:22 -0000
+
 spicerack (8.5.0-1) unstable; urgency=medium
 
   * v8.5.0 upstream release.
