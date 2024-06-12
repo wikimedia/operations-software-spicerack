@@ -1,6 +1,26 @@
 Spicerack Changelog
 -------------------
 
+`v8.6.0`_ (2024-06-12)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* redfish: expand support for Supermicro hosts (`T365372`_):
+
+  * Allow ``RedfishSupermicro`` to be picked up in ``__init__.py`` based on what Netbox returns as manifacturer (and
+    not just default to ``RedfishDell``). Update tests to reflect this new behavior.
+  * Move ``get_power_state()`` to an abstract method, to be implemented in vendor-specific classes. Update also
+    tests to reflect this.
+
+* mysql_legacy: improve support for MariaDB instances on each host (`T343674`_).
+
+Miscellanea
+"""""""""""
+
+* redfish: fix typo in DellSCP's class description.
+
 `v8.5.0`_ (2024-04-15)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2827,12 +2847,14 @@ New features
 .. _`T330318`: https://phabricator.wikimedia.org/T330318
 .. _`T335855`: https://phabricator.wikimedia.org/T335855
 .. _`T341973`: https://phabricator.wikimedia.org/T341973
+.. _`T343674`: https://phabricator.wikimedia.org/T343674
 .. _`T345337`: https://phabricator.wikimedia.org/T345337
 .. _`T346134`: https://phabricator.wikimedia.org/T346134
 .. _`T361647`: https://phabricator.wikimedia.org/T361647
 .. _`T347490`: https://phabricator.wikimedia.org/T347490
 .. _`T360293`: https://phabricator.wikimedia.org/T360293
 .. _`T360932`: https://phabricator.wikimedia.org/T360932
+.. _`T365372`: https://phabricator.wikimedia.org/T365372
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2951,3 +2973,4 @@ New features
 .. _`v8.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.4.0
 .. _`v8.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.4.1
 .. _`v8.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.5.0
+.. _`v8.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.6.0
