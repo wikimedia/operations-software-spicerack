@@ -140,6 +140,11 @@ class Redfish:
     def oob_manager(self) -> str:
         """Property to return the Out of Band manager."""
 
+    @property
+    @abstractmethod
+    def storage_manager(self) -> str:
+        """Property to return the Storage manager."""
+
     def _update_system_info(self) -> None:
         """Property to return a dict of manager metadata."""
         self._system_info = self.request("get", self.system_manager).json()
@@ -781,6 +786,11 @@ class RedfishSupermicro(Redfish):
         return "/redfish/v1/Managers/1"
 
     @property
+    def storage_manager(self) -> str:
+        """String representing the Storage manager."""
+        return "/redfish/v1/Systems/1/Storage"
+
+    @property
     def log_entries(self) -> str:
         """String representing the log entries uri."""
         return "/redfish/v1/Managers/1/LogServices/Log1/Entries"
@@ -824,6 +834,11 @@ class RedfishDell(Redfish):
     def oob_manager(self) -> str:
         """String representing the Out of Band manager key."""
         return "/redfish/v1/Managers/iDRAC.Embedded.1"
+
+    @property
+    def storage_manager(self) -> str:
+        """String representing the Storage manager."""
+        return "/redfish/v1/Systems/System.Embedded.1/Storage"
 
     @property
     def log_entries(self) -> str:

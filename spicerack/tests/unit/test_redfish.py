@@ -356,6 +356,11 @@ class RedfishTest(redfish.Redfish):
         return "/redfish/v1/Managers/Testing_oob.1"
 
     @property
+    def storage_manager(self) -> str:
+        """String representing the Storage manager."""
+        return "/redfish/v1/Storage/Testing_Storage1"
+
+    @property
     def log_entries(self) -> str:
         """String representing the uri for the log entries."""
         return "/redfish/v1/Managers/Testing_oob.1/Logs"
@@ -825,6 +830,10 @@ class TestRedfishDell:
         """It should return the oob_manager."""
         assert self.redfish.oob_manager == "/redfish/v1/Managers/iDRAC.Embedded.1"
 
+    def test_property_storage_manager(self):
+        """It should return the storage_manager."""
+        assert self.redfish.storage_manager == "/redfish/v1/Systems/System.Embedded.1/Storage"
+
     @pytest.mark.parametrize(
         "response, endpoint",
         (
@@ -964,6 +973,10 @@ class TestRedfishSupermicro:
     def test_property_oob_manager(self):
         """It should return the oob_manager."""
         assert self.redfish.oob_manager == "/redfish/v1/Managers/1"
+
+    def test_property_storage_manager(self):
+        """It should return the storage_manager."""
+        assert self.redfish.storage_manager == "/redfish/v1/Systems/1/Storage"
 
     def test_property_log_entries(self) -> str:
         """String representing the uri for the log entries."""
