@@ -345,30 +345,10 @@ def add_accounts_mock_responses(requests_mock):
 class RedfishTest(redfish.Redfish):
     """An inherited class used for testing."""
 
-    @property
-    def system_manager(self) -> str:
-        """Property to return the System manager."""
-        return "/redfish/v1/Systems/System.Embedded.1"
-
-    @property
-    def oob_manager(self) -> str:
-        """String representing the Out of Band manager key."""
-        return "/redfish/v1/Managers/Testing_oob.1"
-
-    @property
-    def storage_manager(self) -> str:
-        """String representing the Storage manager."""
-        return "/redfish/v1/Storage/Testing_Storage1"
-
-    @property
-    def log_entries(self) -> str:
-        """String representing the uri for the log entries."""
-        return "/redfish/v1/Managers/Testing_oob.1/Logs"
-
-    @property
-    def reboot_message_id(self) -> str:
-        """Property to return the Message Id for reboot log entries."""
-        return "REBOOT_MSG_ID"
+    system = "Testing_system.1"
+    manager = "Testing_oob.1"
+    log_service = "Testing_oob.1"
+    reboot_message_id = "REBOOT_MSG_ID"
 
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
@@ -675,12 +655,12 @@ class TestRedfish:
     @pytest.mark.parametrize("action", tuple(redfish.ChassisResetPolicy))
     def test_chassis_reset_ok(self, action):
         """It should perform a chassis reset with the given action."""
-        self.requests_mock.post("/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset", status_code=204)
+        self.requests_mock.post("/redfish/v1/Systems/Testing_system.1/Actions/ComputerSystem.Reset", status_code=204)
         self.redfish.chassis_reset(action)
 
     def test_chassis_reset_raises(self):
         """It should raise a RedfishError if the response code of the chassis reset operation is not 204."""
-        self.requests_mock.post("/redfish/v1/Systems/System.Embedded.1/Actions/ComputerSystem.Reset")
+        self.requests_mock.post("/redfish/v1/Systems/Testing_system.1/Actions/ComputerSystem.Reset")
         with pytest.raises(redfish.RedfishError, match="Got unexpected response HTTP 200, expected HTTP 204"):
             self.redfish.chassis_reset(redfish.ChassisResetPolicy.FORCE_OFF)
 

@@ -86,6 +86,16 @@ class DellSCPTargetPolicy(Enum):
 class Redfish:
     """Manage Redfish operations on a specific device."""
 
+    # Properties to be defined by derived classes.
+    system = ""
+    """The name of the System manager."""
+    manager = ""
+    """The name of the Out of Band manager."""
+    log_service = ""
+    """The name of the Log service."""
+    reboot_message_id = ""
+    """The message ID for a reboot event."""
+
     def __init__(
         self,
         hostname: str,
@@ -131,19 +141,19 @@ class Redfish:
         return f"{self._username}@{self._hostname} ({self._interface.ip})"
 
     @property
-    @abstractmethod
     def system_manager(self) -> str:
         """Property to return the System manager."""
+        return f"/redfish/v1/Systems/{self.system}"
 
     @property
-    @abstractmethod
     def oob_manager(self) -> str:
         """Property to return the Out of Band manager."""
+        return f"/redfish/v1/Managers/{self.manager}"
 
     @property
-    @abstractmethod
     def storage_manager(self) -> str:
         """Property to return the Storage manager."""
+        return f"/redfish/v1/Systems/{self.system}/Storage"
 
     def _update_system_info(self) -> None:
         """Property to return a dict of manager metadata."""
@@ -160,14 +170,9 @@ class Redfish:
         return "/redfish/v1/UpdateService"
 
     @property
-    @abstractmethod
     def log_entries(self) -> str:
         """Property to return the uri for the log entries."""
-
-    @property
-    @abstractmethod
-    def reboot_message_id(self) -> str:
-        """Property to return the Message Id for reboot log entries."""
+        return f"/redfish/v1/Managers/{self.manager}/LogServices/{self.log_service}/Entries"
 
     @property
     def hostname(self) -> str:
@@ -775,30 +780,14 @@ class DellSCP:
 class RedfishSupermicro(Redfish):
     """Redfish class for SuperMicro servers."""
 
-    @property
-    def system_manager(self) -> str:
-        """Property to return the System manager."""
-        return "/redfish/v1/Systems/1"
-
-    @property
-    def oob_manager(self) -> str:
-        """String representing the Out of Band manager key."""
-        return "/redfish/v1/Managers/1"
-
-    @property
-    def storage_manager(self) -> str:
-        """String representing the Storage manager."""
-        return "/redfish/v1/Systems/1/Storage"
-
-    @property
-    def log_entries(self) -> str:
-        """String representing the log entries uri."""
-        return "/redfish/v1/Managers/1/LogServices/Log1/Entries"
-
-    @property
-    def reboot_message_id(self) -> str:
-        """String representing the message Id of the reboot."""
-        return "Event.1.0.SystemPowerAction"
+    system = "1"
+    """The name of the System manager."""
+    manager = "1"
+    """The name of the Out of Band manager."""
+    log_service = "Log1"
+    """The name of the Log service."""
+    reboot_message_id = "Event.1.0.SystemPowerAction"
+    """The message ID for a reboot event."""
 
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
@@ -808,6 +797,15 @@ class RedfishSupermicro(Redfish):
 
 class RedfishDell(Redfish):
     """Dell specific Redfish support."""
+
+    system = "System.Embedded.1"
+    """The name of the System manager."""
+    manager = "iDRAC.Embedded.1"
+    """The name of the Out of Band manager."""
+    log_service = "Lclog"
+    """The name of the Log service."""
+    reboot_message_id = "RAC0182"
+    """The message ID for a reboot event."""
 
     scp_base_uri: str = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
     """The Dell's SCP push base URI."""
@@ -826,31 +824,12 @@ class RedfishDell(Redfish):
         self._generation = 0
 
     @property
-    def system_manager(self) -> str:
-        """Property to return the System manager."""
-        return "/redfish/v1/Systems/System.Embedded.1"
-
-    @property
-    def oob_manager(self) -> str:
-        """String representing the Out of Band manager key."""
-        return "/redfish/v1/Managers/iDRAC.Embedded.1"
-
-    @property
-    def storage_manager(self) -> str:
-        """String representing the Storage manager."""
-        return "/redfish/v1/Systems/System.Embedded.1/Storage"
-
-    @property
     def log_entries(self) -> str:
         """String representing the log entries uri."""
         if self.firmware_version < version.Version("4.10"):
             return "/redfish/v1/Managers/Logs/Lclog"
-        return "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Lclog/Entries"
 
-    @property
-    def reboot_message_id(self) -> str:
-        """String representing the message Id of the reboot."""
-        return "RAC0182"
+        return super().log_entries
 
     @property
     def generation(self) -> int:
