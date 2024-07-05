@@ -83,6 +83,17 @@ class DellSCPTargetPolicy(Enum):
     """Only RAID controller settings."""
 
 
+class RedfishUserRoles(Enum):
+    """Allowed role values for new Redfish users."""
+
+    ADMINISTRATOR = "Administrator"
+    """Administrator user role for Redfish."""
+    OPERATOR = "Operator"
+    """Operator user role for Redfish."""
+    READONLY = "ReadOnly"
+    """ReadOnly user role for Redfish."""
+
+
 class Redfish:
     """Manage Redfish operations on a specific device."""
 
@@ -788,11 +799,31 @@ class RedfishSupermicro(Redfish):
     """The name of the Log service."""
     reboot_message_id = "Event.1.0.SystemPowerAction"
     """The message ID for a reboot event."""
+    account_manager = "AccountService"
+    """The name of the Account Service manager."""
 
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
         response = self.request("get", self.system_manager).json()
         return response["PowerState"]
+
+    def add_account(
+        self, username: str, password: str, role: RedfishUserRoles = RedfishUserRoles.ADMINISTRATOR
+    ) -> None:
+        """Create a new account with username and password.
+
+        Arguments:
+            username: the username to create.
+            password: the password to associate with the user.
+            role: a :py:class:`spicerack.redfish.RedfishUserRoles` value identifying the Redfish Role.
+                  Default is set to Administrator.
+
+        Raises:
+            spicerack.redfish.RedfishError: if unable to create the account.
+
+        """
+        new_user_data = {"UserName": username, "Password": password, "RoleId": role.value, "Enabled": True}
+        self.request("post", f"/redfish/v1/{self.account_manager}/Accounts", json=new_user_data)
 
 
 class RedfishDell(Redfish):

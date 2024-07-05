@@ -45,6 +45,7 @@ pylint:
     # the following two from https://github.com/psf/black/blob/master/docs/compatible_configs.md#pylint
     - C0330  # Wrong hanging indentation
     - C0326  # Bad whitespace
+    - C0302  # Too many lines in the module
   options:
     good-names: handleError  # From logging.Handler, inline disable doesn't work, used in test_log.py
     ignore: vulture_whitelist.py
