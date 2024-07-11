@@ -1,4 +1,5 @@
 """MediaWiki module."""
+
 import logging
 from typing import Any
 
@@ -25,7 +26,9 @@ class MediaWikiCheckError(SpicerackCheckError):
 class MediaWiki:
     """Class to manage MediaWiki-specific resources."""
 
-    _siteinfo_url: str = "https://api.svc.{dc}.wmnet/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
+    _siteinfo_url: str = (
+        "https://mw-api-int.svc.{dc}.wmnet:4446/w/api.php?action=query&meta=siteinfo&format=json&formatversion=2"
+    )
     """The URL of the siteinfo API to be formatted with a specific ``dc``."""
 
     _config_file_base_url: str = "https://mw-misc.discovery.wmnet:30443/conf/"
