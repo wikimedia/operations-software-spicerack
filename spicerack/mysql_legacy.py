@@ -28,10 +28,10 @@ CORE_SECTIONS: tuple[str, ...] = (
     "s7",
     "s8",
     "x1",
-    "es4",
-    "es5",
+    "es6",
+    "es7",
 )
-"""Valid MySQL RW section names (external storage RO sections are not included here)."""
+"""Valid MySQL RW core sections (external storage RO, parser cache, x2 and misc sections are not included here)."""
 
 logger = logging.getLogger(__name__)
 
