@@ -1,6 +1,49 @@
 Spicerack Changelog
 -------------------
 
+`v8.7.0`_ (2024-07-16)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* redfish: add property for storage manager URI (`T365372`_):
+
+  * Add a new property for ``RedfishDell`` and ``RedfishSupermicro``
+    to be used as helper in various cookbook that require the URI
+    path to get Storage Members info.
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: simplify interface of Redfish classes (`T365372`_):
+
+  * Now that we have two implementation we can see the common parts and
+    simplify a bit the hardcoded bits in both derived classes of the
+    Redfish class.
+  * Define only the specific service name, not the whole path in the
+    concrete classes and define the path in the parent class.
+  * Define the service names as class properties instead of instance
+    properties to reduce the number of lines and make it more readable, we
+    don't really need the strictness of inheritance to ensure we add all
+    of them when implementing a new vendor, it's fairly rare.
+
+* mediawiki: update siteinfo URL to use mw-api-int (`T367949`_)
+
+* mysql_legacy: update core sections (`T367496`_):
+
+  * The external storage sections were recently rotated to new ones.
+
+Bug fixes
+"""""""""
+
+* mariadb: bugfixes mysql_legacy (`T367496`_):
+
+  * We introduced a number of bugs in spicerack 8.6.0 that needs to be
+    handled for automation implementations to begin.
+  * Refactored and simplified a bit the new APIs.
+  * Added full test coverage.
+
 `v8.6.0`_ (2024-06-12)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2855,6 +2898,8 @@ New features
 .. _`T360293`: https://phabricator.wikimedia.org/T360293
 .. _`T360932`: https://phabricator.wikimedia.org/T360932
 .. _`T365372`: https://phabricator.wikimedia.org/T365372
+.. _`T367496`: https://phabricator.wikimedia.org/T367496
+.. _`T367949`: https://phabricator.wikimedia.org/T367949
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -2974,3 +3019,4 @@ New features
 .. _`v8.4.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.4.1
 .. _`v8.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.5.0
 .. _`v8.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.6.0
+.. _`v8.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.7.0

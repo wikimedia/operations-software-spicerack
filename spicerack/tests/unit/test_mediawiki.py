@@ -1,4 +1,5 @@
 """MediaWiki module tests."""
+
 import json
 from unittest import mock
 
@@ -19,7 +20,7 @@ class TestMediaWiki:
         self.mocked_remote = mock.MagicMock()
         self.mocked_remote.query.return_value.hosts = ["host1"]
         self.username = "user1"
-        self.siteinfo_url = "https://api.svc.eqiad.wmnet/w/api.php"
+        self.siteinfo_url = "https://mw-api-int.svc.eqiad.wmnet:4446/w/api.php"
         self.siteinfo_rw = {
             "batchcomplete": True,
             "query": {
