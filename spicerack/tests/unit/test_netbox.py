@@ -41,7 +41,7 @@ def _request_error():
     return pynetbox.RequestError(fakestatus)
 
 
-def _base_netbox_obj(name, role_key, additional_properties):
+def _base_netbox_obj(name, additional_properties):
     """Return a simple object to represent a response from Netbox API."""
     dict_obj = {
         "name": name,
@@ -59,14 +59,14 @@ def _base_netbox_obj(name, role_key, additional_properties):
             "address": "2620:0:861:103:10::1/64",
             "dns_name": f"{name}.example.com",
         },
-        role_key: {
+        "role": {
             "id": 1,
             "name": "Server",
             "slug": "server",
         },
     }
     dict_obj["primary_ip"] = dict_obj["primary_ip6"]
-    dict_obj["primary_ip"]["assigned_object"] = {"connected_endpoint": {"untagged_vlan": {"name": "test_vlan"}}}
+    dict_obj["primary_ip"]["assigned_object"] = {"connected_endpoints": [{"untagged_vlan": {"name": "test_vlan"}}]}
     dict_obj.update(additional_properties)
 
     def custom_hook(decoded_dict):
@@ -84,13 +84,13 @@ def _base_netbox_obj(name, role_key, additional_properties):
 @pytest.fixture(name="netbox_host")
 def _netbox_host():
     """Return a mocked Netbox physical device."""
-    return _base_netbox_obj("physical", "device_role", {"rack": {"id": 1, "name": "rack1"}, "cluster": None})
+    return _base_netbox_obj("physical", {"rack": {"id": 1, "name": "rack1"}, "cluster": None})
 
 
 @pytest.fixture(name="netbox_virtual_machine")
 def _netbox_virtual_machine():
     """Return a mocked Netbox virtual machine."""
-    return _base_netbox_obj("virtual", "role", {"cluster": {"id": 1, "name": "testcluster"}})
+    return _base_netbox_obj("virtual", {"cluster": {"id": 1, "name": "testcluster"}})
 
 
 class TestNetbox:
@@ -193,7 +193,7 @@ class TestNetboxServer:
 
     def test_init_not_a_server(self):
         """It should raise a NetboxError if the device doesn't have a server role."""
-        self.netbox_host.device_role.slug = "not-server"
+        self.netbox_host.role.slug = "not-server"
         with pytest.raises(NetboxError, match="has invalid role not-server"):
             NetboxServer(api=self.mocked_api, server=self.netbox_host)
 
@@ -366,13 +366,13 @@ class TestNetboxServer:
 
     def test_access_vlan_getter_primary_interface_not_connected(self):
         """It should raise a NetboxError if the primary interface not connected."""
-        self.netbox_host.primary_ip.assigned_object.connected_endpoint = None
+        self.netbox_host.primary_ip.assigned_object.connected_endpoints = None
         with pytest.raises(NetboxError, match="Primary interface not connected."):
             self.physical_server.access_vlan  # pylint: disable=pointless-statement
 
     def test_access_vlan_getter_switch_interface_no_vlan(self):
         """It should return an empty string."""
-        self.netbox_host.primary_ip.assigned_object.connected_endpoint.untagged_vlan = None
+        self.netbox_host.primary_ip.assigned_object.connected_endpoints[0].untagged_vlan = None
         assert self.physical_server.access_vlan == ""
 
     def test_access_vlan_getter_virtual(self):
@@ -383,7 +383,7 @@ class TestNetboxServer:
     def test_access_vlan_setter_ok(self):
         """It should set the access vlan."""
         self.physical_server.access_vlan = "set_test_vlan"
-        self.netbox_host.primary_ip.assigned_object.connected_endpoint.save.assert_called_once_with()
+        self.netbox_host.primary_ip.assigned_object.connected_endpoints[0].save.assert_called_once_with()
 
     def test_access_vlan_setter_not_found(self):
         """It should raise a NetboxError if trying to set an non active vlan."""

@@ -254,7 +254,8 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_dns, read
     assert spicerack.netbox_master_host.hosts == "netbox-server.example.com"
 
     mocked_pynetbox.reset_mock()
-    mocked_pynetbox.return_value.dcim.devices.get.return_value.device_role.slug = "server"
+    del mocked_pynetbox.return_value.dcim.devices.get.return_value.device_role
+    mocked_pynetbox.return_value.dcim.devices.get.return_value.role.slug = "server"
     assert isinstance(spicerack.netbox_server("host1"), NetboxServer)
 
 
