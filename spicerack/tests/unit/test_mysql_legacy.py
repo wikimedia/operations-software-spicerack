@@ -166,7 +166,8 @@ class TestInstance:
         getattr(self, instance).upgrade()
         suffix = ".instance1" if instance == "multi_instance" else ""
         self.mocked_run_sync.assert_called_once_with(
-            f"/usr/local/bin/mysql_upgrade --socket /run/mysqld/mysqld{suffix}.sock --force", print_output=True
+            f"$(readlink -f /usr/local/bin/mysql_upgrade) --socket /run/mysqld/mysqld{suffix}.sock --force",
+            print_output=True,
         )
 
     def test_get_replication_info_ok(self):
@@ -279,7 +280,9 @@ class TestInstance:
         calls = self.mocked_run_sync.call_args_list
         assert calls[0][0][0].endswith('set-environment MYSQLD_OPTS="--skip-slave-start"')
         assert calls[1][0][0].endswith("systemctl start mariadb.service")
-        assert calls[2][0][0].endswith("mysql_upgrade --socket /run/mysqld/mysqld.sock --force")
+        assert calls[2][0][0].endswith(
+            "$(readlink -f /usr/local/bin/mysql_upgrade) --socket /run/mysqld/mysqld.sock --force"
+        )
         assert calls[3][0][0].endswith("systemctl restart mariadb.service")
         assert calls[4][0][0].endswith('START SLAVE"')
 
