@@ -1,6 +1,22 @@
 Spicerack Changelog
 -------------------
 
+`v8.8.0`_ (2024-07-18)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* netbox: add support for Netbox 4 (`T336275`_).
+
+  * Limited support for cables with multiple terminations per sides:
+    the first termination is the only one considered.
+
+Minor improvements
+""""""""""""""""""
+
+* netbox: refactor tests to be more flexible, and adapt them for Netbox 4.
+
 `v8.7.0`_ (2024-07-16)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2889,6 +2905,7 @@ New features
 .. _`T329773`: https://phabricator.wikimedia.org/T329773
 .. _`T330318`: https://phabricator.wikimedia.org/T330318
 .. _`T335855`: https://phabricator.wikimedia.org/T335855
+.. _`T336275`: https://phabricator.wikimedia.org/T336275
 .. _`T341973`: https://phabricator.wikimedia.org/T341973
 .. _`T343674`: https://phabricator.wikimedia.org/T343674
 .. _`T345337`: https://phabricator.wikimedia.org/T345337
@@ -3020,3 +3037,4 @@ New features
 .. _`v8.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.5.0
 .. _`v8.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.6.0
 .. _`v8.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.7.0
+.. _`v8.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.8.0
