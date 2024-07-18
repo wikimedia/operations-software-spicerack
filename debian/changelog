@@ -1,3 +1,9 @@
+spicerack (8.8.0-1) unstable; urgency=medium
+
+  * v8.8.0 upstream release.
+
+ -- Luca Toscano <ltoscano@wikimedia.org>  Thu, 18 Jul 2024 09:03:13 -0000
+
 spicerack (8.7.0-1) unstable; urgency=medium
 
   * v8.7.0 upstream release.
