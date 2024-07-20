@@ -1,8 +1,6 @@
 # Discovery objects. they will represent a sequence of cluster/service/dc combinations
 discovery:
   path: "discovery"
-  depends:
-    - service
   tags:
     - dnsdisc
   schema:
@@ -15,6 +13,8 @@ discovery:
     ttl:
       type: "int"
       default: 300
+
+# Etcd-based configuration for Mediawiki, read by appservers using EtcdConfig.
 mwconfig:
   path: "mediawiki-config"
   tags:
@@ -22,6 +22,11 @@ mwconfig:
   json_schema:
     base_path: "mediawiki-config"
     rules:
+      dbconfig:
+        # Database instance/group/section configuration.
+        # https://wikitech.wikimedia.org/wiki/Dbctl
+        schema: "dbconfig.schema"
+        selector: "name=dbconfig"
       db_read_only:
         schema: "db_readonly.schema"
         selector: "name=ReadOnly"
@@ -32,3 +37,49 @@ mwconfig:
     val:
       type: "any"
       default: null
+
+# Database instance/group/section configuration.
+# Not read by appservers; manipulated by dbctl and later pushed into mwconfig.
+# https://wikitech.wikimedia.org/wiki/Dbctl
+dbconfig-instance:
+  path: "dbconfig-instance"
+  tags:
+    - datacenter
+  json_schema:
+    base_path: "dbconfig"
+    rules:
+      catchall:
+        selector: 'name=.*'
+        schema: 'instance.schema'
+  schema:
+    host_ip:
+      default: "0.0.0.0"
+    port:
+      default: 3306  # This must be the same as assumed default by Mediawiki!
+    sections:
+      default: {}
+    note:
+      default: ""
+dbconfig-section:
+  path: "dbconfig-section"
+  tags:
+    - datacenter
+  json_schema:
+    base_path: "dbconfig"
+    rules:
+      catchall:
+        selector: 'name=.*'
+        schema: 'section.schema'
+  schema:
+    master:
+      default: "PLACEHOLDER"
+    min_replicas:
+      default: 0
+    readonly:
+      default: false
+    ro_reason:
+      default: "PLACEHOLDER"
+    flavor:
+      default: "regular"
+    omit_replicas_in_mwconfig:
+      default: false
