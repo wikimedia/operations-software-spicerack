@@ -1,11 +1,13 @@
 """Confctl module to abstract Conftool."""
+
 import logging
 import re
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from typing import Union
 
-from conftool import configuration, kvobject, loader
+from conftool import kvobject
+from conftool.cli import ConftoolClient
 from conftool.drivers import BackendError
 
 from spicerack.exceptions import SpicerackError
@@ -35,8 +37,11 @@ class Confctl:
 
         """
         self._dry_run = dry_run
-        self._schema = loader.Schema.from_file(schema)
-        kvobject.KVObject.setup(configuration.get(config))
+        # If DRY-RUN is enabled, we will not write to etcd. This is useful when we want to use more complex
+        # functionalities of Conftool, like the dbconfig extension, without affecting the production data.
+        # While this should work in simple cases, it won't work in more complex cases, like when we need to read
+        # the value of a key that was just written.
+        self._client = ConftoolClient(configfile=config, schemafile=schema, irc_logging=False, read_only=dry_run)
 
     def entity(self, entity_name: str) -> "ConftoolEntity":
         """Get the Conftool specific entity class.
@@ -45,7 +50,7 @@ class Confctl:
             entity_name: the name of the entity..
 
         """
-        return ConftoolEntity(self._schema.entities[entity_name], dry_run=self._dry_run)
+        return ConftoolEntity(self._client.get(entity_name), dry_run=self._dry_run)
 
 
 class ConftoolEntity:
