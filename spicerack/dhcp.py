@@ -7,7 +7,7 @@ import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 from ipaddress import IPv4Address
 from typing import Union
@@ -69,7 +69,9 @@ class DHCPConfOpt82(DHCPConfiguration):
         vlan: the name of the VLAN the host is configured for.
         ttys: which ttyS to use for this host, accepted values are 0 and 1.
         distro: the codename of the Debian distribution to use for the PXE installer.
-        media_type: The media type to use e.g. ``installer``, ``installer-11.0``, ``rescue``.
+        media_type: the media type to use e.g. ``installer``, ``installer-11.0``, ``rescue``.
+        dhcp_filename: the DHCP filename option to set.
+        dhcp_options: a dictionary of DHCP option settings to use.
 
     """
 
@@ -81,14 +83,52 @@ class DHCPConfOpt82(DHCPConfiguration):
     ttys: int
     distro: str
     media_type: str = "installer"
+    dhcp_filename: str = ""
+    dhcp_options: dict[str, str] = field(default_factory=dict)
 
     _template: str = """
     host {s.hostname} {{
         host-identifier option agent.circuit-id "{s.switch_hostname}:{s.switch_iface}:{s.vlan}";
-        fixed-address {s.ipv4};
-        option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-{s.media_type}/";
+        fixed-address {s.ipv4};{s.rendered_dhcp_filename}{s.rendered_dhcp_options}
     }}
     """
+
+    def __post_init__(self) -> None:
+        """According to Python's dataclass API to validate/augment the arguments.
+
+        See Also:
+           https://docs.python.org/3/library/dataclasses.html#post-init-processing
+
+        """
+        if not self.dhcp_options:
+            self.dhcp_options["pxelinux.pathprefix"] = (
+                f"http://apt.wikimedia.org/tftpboot/{self.distro}-{self.media_type}/"
+            )
+
+    @property
+    def rendered_dhcp_filename(self) -> str:
+        """Return the DHCP filename config string.
+
+        Returns:
+            A string representing the DHCP filename config provided.
+
+        """
+        if self.dhcp_filename:
+            return f'\n        filename "{self.dhcp_filename}";'
+        return ""
+
+    @property
+    def rendered_dhcp_options(self) -> str:
+        """Return the DHCP options config strings.
+
+        Returns:
+            A string representing the DHCP options config provided.
+
+        """
+        options = ""
+        for key, value in self.dhcp_options.items():
+            options += f'\n        option {key} "{value}";'
+        return options
 
     @property
     def filename(self) -> str:
@@ -107,6 +147,8 @@ class DHCPConfMac(DHCPConfiguration):
         ttys: which ttyS to use for this host, accepted values are 0 and 1.
         distro: the codename of the Debian distribution to use for the PXE installer.
         media_type: The media type to use e.g. installer, installer-11.0, rescue
+        dhcp_filename: the DHCP filename option to set.
+        dhcp_options: a dictionary of DHCP option settings to use.
 
     """
 
@@ -116,12 +158,13 @@ class DHCPConfMac(DHCPConfiguration):
     ttys: int
     distro: str
     media_type: str = "installer"
+    dhcp_filename: str = ""
+    dhcp_options: dict[str, str] = field(default_factory=dict)
 
     _template: str = """
     host {s.hostname} {{
         hardware ethernet {s.mac};
-        fixed-address {s.ipv4};
-        option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/{s.distro}-{s.media_type}/";
+        fixed-address {s.ipv4};{s.rendered_dhcp_filename}{s.rendered_dhcp_options}
     }}
     """
 
@@ -135,6 +178,35 @@ class DHCPConfMac(DHCPConfiguration):
         mac_pattern = r"[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}"
         if re.fullmatch(mac_pattern, self.mac) is None:
             raise DHCPError(f"Invalid MAC address {self.mac}, must match pattern {mac_pattern}.")
+        if not self.dhcp_options:
+            self.dhcp_options["pxelinux.pathprefix"] = (
+                f"http://apt.wikimedia.org/tftpboot/{self.distro}-{self.media_type}/"
+            )
+
+    @property
+    def rendered_dhcp_filename(self) -> str:
+        """Return the DHCP filename config string.
+
+        Returns:
+            A string representing the DHCP filename config provided.
+
+        """
+        if self.dhcp_filename:
+            return f'\n        filename "{self.dhcp_filename}";'
+        return ""
+
+    @property
+    def rendered_dhcp_options(self) -> str:
+        """Return the DHCP options config strings.
+
+        Returns:
+            A string representing the DHCP options config provided.
+
+        """
+        options = ""
+        for key, value in self.dhcp_options.items():
+            options += f'\n        option {key} "{value}";'
+        return options
 
     @property
     def filename(self) -> str:
