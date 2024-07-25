@@ -26,9 +26,13 @@ whitelist_dhcp.DHCPConfOpt82.switch_iface
 whitelist_dhcp.DHCPConfOpt82.vlan
 whitelist_dhcp.DHCPConfOpt82.distro
 whitelist_dhcp.DHCPConfOpt82.media_type
+whitelist_dhcp.DHCPConfOpt82.rendered_dhcp_options
+whitelist_dhcp.DHCPConfOpt82.rendered_dhcp_filename
 whitelist_dhcp.DHCPConfMac.ipv4
 whitelist_dhcp.DHCPConfMac.distro
 whitelist_dhcp.DHCPConfMac.media_type
+whitelist_dhcp.DHCPConfMac.rendered_dhcp_options
+whitelist_dhcp.DHCPConfMac.rendered_dhcp_filename
 whitelist_dhcp.DHCPConfMgmt.ipv4
 
 whitelist_dnsdisc = Whitelist()

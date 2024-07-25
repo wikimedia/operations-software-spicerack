@@ -1,4 +1,5 @@
 """DHCP Module Tests."""
+
 import base64
 import re
 from hashlib import sha256
@@ -110,6 +111,34 @@ configuration_generator_data = (
         ),
         "ttyS0-115200/testhost0.conf",
     ),
+    # - dhcp_filename and dhcp_options arguments should be rendered.
+    (
+        dhcp.DHCPConfOpt82,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "switch_hostname": "asw2-d-eqiad",
+            "switch_iface": "ge-0/0/0",
+            "vlan": 1021,
+            "ttys": 0,
+            "distro": "buster",
+            "dhcp_filename": "pxelinux",
+            "dhcp_options": {
+                "pxelinux.pathprefix": "/srv/tftpboot/buster-installer/",
+                "pxelinux.test2": "someoption",
+            },
+        },
+        (
+            "\nhost testhost0 {\n"
+            '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
+            "    fixed-address 10.0.0.1;\n"
+            '    filename "pxelinux";\n'
+            '    option pxelinux.pathprefix "/srv/tftpboot/buster-installer/";\n'
+            '    option pxelinux.test2 "someoption";\n'
+            "}\n"
+        ),
+        "ttyS0-115200/testhost0.conf",
+    ),
     # DHCPConfMac tests
     # - basic check of functionality
     (
@@ -165,6 +194,32 @@ configuration_generator_data = (
             "    hardware ethernet 00:00:00:00:00:01;\n"
             "    fixed-address 10.0.0.1;\n"
             '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/bullseye-installer/";\n'
+            "}\n"
+        ),
+        "ttyS1-115200/testhost0.conf",
+    ),
+    # - dhcp_filename and dhcp_options arguments should be rendered.
+    (
+        dhcp.DHCPConfMac,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "mac": "00:00:00:00:00:01",
+            "ttys": 1,
+            "distro": "bullseye",
+            "dhcp_filename": "pxelinux",
+            "dhcp_options": {
+                "pxelinux.pathprefix": "/srv/tftpboot/buster-installer/",
+                "pxelinux.test2": "someoption",
+            },
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    hardware ethernet 00:00:00:00:00:01;\n"
+            "    fixed-address 10.0.0.1;\n"
+            '    filename "pxelinux";\n'
+            '    option pxelinux.pathprefix "/srv/tftpboot/buster-installer/";\n'
+            '    option pxelinux.test2 "someoption";\n'
             "}\n"
         ),
         "ttyS1-115200/testhost0.conf",

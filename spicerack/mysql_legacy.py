@@ -207,7 +207,8 @@ class Instance:
             The results of the remote upgrade command.
 
         """
-        return self.host.run_sync(f"/usr/local/bin/mysql_upgrade --socket {self._sock} --force", print_output=True)
+        command = f"$(readlink -f /usr/local/bin/mysql_upgrade) --socket {self._sock} --force"
+        return self.host.run_sync(command, print_output=True)
 
     def get_replication_info(self) -> ReplicationInfo:
         """Get the replication information suitable to set a new node's replication.

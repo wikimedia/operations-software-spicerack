@@ -1,6 +1,29 @@
 Spicerack Changelog
 -------------------
 
+`v8.9.0`_ (2024-07-25)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* dhcp: add ``dhcp_filename`` and ``dhcp_options`` for DHCPConfMac and DHCPConfOpt82 (`T363576`_).
+
+  * The DHCP configuration can now be customized with ad-hoc `filename` and
+    DHCP `option` settings.
+
+
+Bug fixes
+"""""""""
+
+* mysql_legacy: fix Instance's upgrade path (`T367496`_)
+
+  * The binary that runs the mysql upgrade needs to run other tools within
+    the same directory and when called with a full path it will try to run
+    them from the same path. But because the mysql_upgrade binary has a
+    chain of symlink, we need to resolve them first before being able to
+    run it with the full path.
+
 `v8.8.0`_ (2024-07-18)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2914,6 +2937,7 @@ New features
 .. _`T347490`: https://phabricator.wikimedia.org/T347490
 .. _`T360293`: https://phabricator.wikimedia.org/T360293
 .. _`T360932`: https://phabricator.wikimedia.org/T360932
+.. _`T363576`: https://phabricator.wikimedia.org/T363576
 .. _`T365372`: https://phabricator.wikimedia.org/T365372
 .. _`T367496`: https://phabricator.wikimedia.org/T367496
 .. _`T367949`: https://phabricator.wikimedia.org/T367949
@@ -3038,3 +3062,4 @@ New features
 .. _`v8.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.6.0
 .. _`v8.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.7.0
 .. _`v8.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.8.0
+.. _`v8.9.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.9.0
