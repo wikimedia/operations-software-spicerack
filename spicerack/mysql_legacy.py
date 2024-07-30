@@ -4,6 +4,7 @@ import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from enum import Enum
 from textwrap import dedent
 from typing import Any, Optional
 
@@ -42,6 +43,23 @@ class MysqlLegacyError(SpicerackError):
 
 class MysqlLegacyReplagError(MysqlLegacyError):
     """Custom exception class for errors related to replag in this module."""
+
+
+# TODO: use StrEnum once on 3.11+
+class MasterUseGTID(Enum):
+    """Describe the possible values for the MASTER_USE_GTID option.
+
+    See Also:
+        https://mariadb.com/kb/en/change-master-to/#master_use_gtid
+
+    """
+
+    CURRENT_POS = "current_pos"
+    """Replicate in GTID mode and use gtid_current_pos as the position to start downloading transactions."""
+    SLAVE_POS = "slave_pos"
+    """Replicate in GTID mode and use gtid_slave_pos as the position to start downloading transactions."""
+    NO = "no"
+    """Don't replicate in GTID mode."""
 
 
 @dataclass
@@ -114,6 +132,52 @@ class Instance:
         except RemoteExecutionError as e:
             raise MysqlLegacyError(f"Failed to run '{query}' on {self.host}") from e
 
+    def run_vertical_query(self, query: str, database: str = "", **kwargs: Any) -> list[dict[str, str]]:
+        r"""Run a query with vertical output (terminating it with ``\G``) and parse its results.
+
+        The ``\G`` at the end of the query is automatically added.
+        Each returned row is converted to a dictionary with keys that are the column names and values that are
+        the column values.
+
+        Warning:
+            The parsing of the output of queries from the CLI, even with vertical format (``\G``), is a very brittle
+            operation that could fail or have misleading data, for example if any of the values queried are
+            multi-lines. This could potentially happen also with a ``SHOW SLAVE STATUS`` query if the replication is
+            broken and the last error contains a newline.
+
+        Arguments:
+            According to :py:meth:`spicerack.mysql_legacy.Instance.run_query`.
+
+        Returns:
+            the parsed query as a list of dictionaries, one per returned row.
+
+        """
+        response = list(self.run_query(rf"{query}\G", database, **kwargs))
+        if not response:
+            return []
+
+        rows = []
+        current: dict[str, str] = {}
+        for line in response[0][1].message().decode("utf8").splitlines():
+            if line.startswith("*" * 20) and f" row {'*' * 20}" in line:  # row separator
+                if current:
+                    rows.append(current)
+                current = {}
+                continue
+
+            try:
+                key, value = line.split(": ", 1)
+            except ValueError:
+                logger.error("Failed to parse into key/value for query '%s' this line: %s", query, line)
+                continue
+
+            current[key.lstrip()] = value
+
+        if current:
+            rows.append(current)
+
+        return rows
+
     def stop_slave(self) -> None:
         """Stops mariadb replication."""
         self.run_query("STOP SLAVE")
@@ -129,27 +193,36 @@ class Instance:
             the current slave status for the instance.
 
         """
-        result = {}
-        rows: int = 0
-        sql = r"SHOW SLAVE STATUS\G"
-        response = list(self.run_query(sql, is_safe=True))
-        if not response:
-            raise MysqlLegacyError("SHOW SLAVE STATUS seems to have been executed on a master.")
+        sql = "SHOW SLAVE STATUS"
+        rows = self.run_vertical_query(sql, is_safe=True)
+        if not rows:
+            raise MysqlLegacyError(f"{sql} seems to have been executed on a master.")
 
-        for line in response[0][1].message().decode("utf8").splitlines():
-            if "***************************" in line:
-                rows += 1
-                continue
-            if rows > 1:
-                raise NotImplementedError("Multisource setup are not implemented.")
+        if len(rows) > 1:
+            raise NotImplementedError(f"Multisource setup are not implemented. Got {len(rows)} rows.")
 
-            key, value = line.split(":", 2)
-            result[key.strip()] = value.strip()
-        return result
+        return rows[0]  # Only one row at this point
 
-    def use_gtid(self) -> None:
-        """Runs SQL to use GTID."""
-        self.run_query("CHANGE MASTER TO MASTER_USE_GTID=Slave_pos")
+    def show_master_status(self) -> dict:
+        """Returns the output of show master status formatted as a dict.
+
+        Returns:
+            the current master status for the instance.
+
+        """
+        sql = "SHOW MASTER STATUS"
+        rows = self.run_vertical_query(sql, is_safe=True)
+        if not rows:
+            raise MysqlLegacyError(f"{sql} seems to have been executed on a host with binlog disabled.")
+
+        return rows[0]  # SHOW MASTER STATUS can return at most one row
+
+    def master_use_gtid(self, setting: MasterUseGTID) -> None:
+        """Runs MASTER_USE_GTID with the given value."""
+        if not isinstance(setting, MasterUseGTID):
+            raise MysqlLegacyError(f"Only instances of MasterUseGTID are accepted, got: {type(setting)}")
+
+        self.run_query(f"CHANGE MASTER TO MASTER_USE_GTID={setting.value}")
 
     def stop_mysql(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Stops mariadb service.
