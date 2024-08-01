@@ -16,6 +16,10 @@ from spicerack.tests.unit.test_remote import mock_cumin
 
 EQIAD_CORE_MASTERS_QUERY = "db10[01-11]"
 CODFW_CORE_MASTERS_QUERY = "db20[01-11]"
+VERTICAL_QUERY_NEWLINE = """*************************** 1. row ***************************
+test: line with
+a newline
+"""
 
 
 class TestInstance:
@@ -70,13 +74,45 @@ class TestInstance:
             print_output=False,
         )
 
+    def test_run_vertical_query_ok(self):
+        """It should return the current slave status of the database."""
+        status = get_fixture_path("mysql_legacy", "single_show_slave_status.out").read_text()
+        self.mocked_run_sync.return_value = [
+            (nodeset("single1"), MsgTreeElem("".join((status, status)).encode(), parent=MsgTreeElem()))
+        ]
+        rows = self.single_instance.run_vertical_query("SELECT")  # dummy query
+        self.mocked_run_sync.assert_called_once_with(
+            r'/usr/local/bin/mysql --socket /run/mysqld/mysqld.sock --batch --execute "SELECT\G"',
+            print_progress_bars=False,
+            print_output=False,
+        )
+        assert len(rows) == 2
+        assert rows[0]["Seconds_Behind_Master"] == rows[1]["Seconds_Behind_Master"] == "0"
+
+    def test_run_vertical_query_empty(self):
+        """It should return an empty list. This should not happen in real life."""
+        response = "*************************** 1. row ***************************\n".encode()
+        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(response, parent=MsgTreeElem()))]
+        rows = self.single_instance.run_vertical_query("SELECT")  # dummy query
+        assert rows == []  # pylint: disable=use-implicit-booleaness-not-comparison
+
+    def test_run_vertical_query_parse_error(self, caplog):
+        """It should log the skipping of some lines that were not properly parser."""
+        self.mocked_run_sync.return_value = [
+            (nodeset("single1"), MsgTreeElem(VERTICAL_QUERY_NEWLINE.encode(), parent=MsgTreeElem()))
+        ]
+        with caplog.at_level(logging.ERROR):
+            rows = self.single_instance.run_vertical_query("SELECT")  # dummy query
+
+        assert rows == [{"test": "line with"}]
+        assert "Failed to parse into key/value for query 'SELECT' this line: a newline" in caplog.text
+
     @pytest.mark.parametrize("instance", ("single_instance", "multi_instance"))
     @pytest.mark.parametrize(
         "method, expected",
         (
             ("stop_slave", "STOP SLAVE"),
             ("start_slave", "START SLAVE"),
-            ("use_gtid", "CHANGE MASTER TO MASTER_USE_GTID=Slave_pos"),
         ),
     )
     def test_run_method_ok(self, method, expected, instance):
@@ -105,11 +141,11 @@ class TestInstance:
             print_output=False,
         )
 
-    def test_single_show_slave_status_master(self):
+    def test_single_show_slave_status_on_master(self):
         """It should raise a MysqlLegacyError exception if show slave status is called on a master."""
         self.mocked_run_sync.return_value = iter(())
         with pytest.raises(
-            mysql_legacy.MysqlLegacyError, match="SHOW SLAVE STATUS seems to have been executed on a master"
+            mysql_legacy.MysqlLegacyError, match=re.escape("SHOW SLAVE STATUS seems to have been executed on a master")
         ):
             self.single_instance.show_slave_status()
 
@@ -121,6 +157,51 @@ class TestInstance:
         ]
         with pytest.raises(NotImplementedError, match="Multisource setup are not implemented"):
             self.single_instance.show_slave_status()
+
+    def test_single_show_master_status_ok(self):
+        """It should return the current master status of the database."""
+        status = get_fixture_path("mysql_legacy", "single_show_master_status.out").read_text().encode()
+        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(status, parent=MsgTreeElem()))]
+        status = self.single_instance.show_master_status()
+        assert status["File"] == "host2-bin.001234"
+        assert status["Position"] == "123456789"
+
+    def test_single_show_master_status_no_binlog(self):
+        """It should raise a MysqlLegacyError if show master status is run on a host with binlog disabled."""
+        self.mocked_run_sync.return_value = iter(())
+        with pytest.raises(
+            mysql_legacy.MysqlLegacyError,
+            match=re.escape("SHOW MASTER STATUS seems to have been executed on a host with binlog disabled"),
+        ):
+            self.single_instance.show_master_status()
+
+    @pytest.mark.parametrize(
+        "setting, expected",
+        (
+            (mysql_legacy.MasterUseGTID.CURRENT_POS, "current_pos"),
+            (mysql_legacy.MasterUseGTID.SLAVE_POS, "slave_pos"),
+            (mysql_legacy.MasterUseGTID.NO, "no"),
+        ),
+    )
+    def test_master_use_gtid_ok(self, setting, expected):
+        """It should execute MASTER_USE_GTID with the given value."""
+        self.mocked_run_sync.return_value = iter(())
+
+        self.single_instance.master_use_gtid(setting)
+        query = f"CHANGE MASTER TO MASTER_USE_GTID={expected}"
+        self.mocked_run_sync.assert_called_once_with(
+            f'/usr/local/bin/mysql --socket /run/mysqld/mysqld.sock --batch --execute "{query}"',
+            print_progress_bars=False,
+            print_output=False,
+        )
+
+    def test_master_use_gtid_invalid(self):
+        """It should raise MysqlLegacyError if called with an invalid setting."""
+        with pytest.raises(
+            mysql_legacy.MysqlLegacyError,
+            match=re.escape("Only instances of MasterUseGTID are accepted, got: <class 'str'>"),
+        ):
+            self.single_instance.master_use_gtid("invalid")
 
     @pytest.mark.parametrize("instance", ("single_instance", "multi_instance"))
     @pytest.mark.parametrize("method", ("stop", "start", "status", "restart"))

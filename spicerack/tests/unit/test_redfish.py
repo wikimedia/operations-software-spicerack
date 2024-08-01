@@ -52,6 +52,38 @@ ACCOUNT_RESPONSE = {
     },
     "UserName": "username",
 }
+ADD_ACCOUNT_RESPONSE = {
+    "@odata.id": "/redfish/v1/AccountService/Accounts/42",
+    "@odata.type": "#ManagerAccount.v1_8_0.ManagerAccount",
+    "AccountTypes": ["Redfish"],
+    "Description": "User Account",
+    "Enabled": True,
+    "HostBootstrapAccount": False,
+    "Id": "42",
+    "Links": {"Role": {"@odata.id": "/redfish/v1/AccountService/Roles/Administrator"}},
+    "Locked": False,
+    "Name": "User Account",
+    "Password": None,
+    "RoleId": "Administrator",
+    "UserName": "{username}",
+}
+ADD_ACCOUNT_RESPONSE_DUPLICATED_USER = {
+    "error": {
+        "code": "Base.v1_10_3.GeneralError",
+        "message": "A general error has occurred. See ExtendedInfo for more information.",
+        "@Message.ExtendedInfo": [
+            {
+                "MessageId": "Base.1.10.ActionParameterDuplicate",
+                "Severity": "Warning",
+                "Resolution": "Resubmit the action with only one instance of the parameter "
+                "in the request body if the operation failed.",
+                "Message": "The action batman was submitted with more than one value " "for the parameter UserName.",
+                "MessageArgs": ["{username}", "UserName"],
+                "RelatedProperties": ["{username}", "UserName"],
+            }
+        ],
+    }
+}
 DELL_SCP = {
     "SystemConfiguration": {
         "Comments": [{"Comment": "First comment"}],
@@ -611,19 +643,6 @@ class TestRedfish:
 
         mocked_sleep.assert_not_called()
 
-    def test_find_account_ok(self):
-        """It should return the URI of the account with the given username."""
-        add_accounts_mock_responses(self.requests_mock)
-        uri, etag = self.redfish.find_account("root")
-        assert uri == "/redfish/v1/AccountService/Accounts/2"
-        assert etag == "12345-2"
-
-    def test_find_account_raises(self):
-        """It should raise a RedfishError if the user is not found."""
-        add_accounts_mock_responses(self.requests_mock)
-        with pytest.raises(redfish.RedfishError, match="Unable to find account for username nonexistent"):
-            self.redfish.find_account("nonexistent")
-
     @pytest.mark.parametrize("user_id, username, is_current", ((1, "user", False), (2, "root", True)))
     def test_change_user_password_ok(self, user_id, username, is_current):
         """It should change the password for the given user and update the instance auth credentials accordingly."""
@@ -651,6 +670,19 @@ class TestRedfish:
         self.requests_mock.patch("/redfish/v1/AccountService/Accounts/2", status_code=202)
         with pytest.raises(redfish.RedfishError, match="Got unexpected HTTP 202, expected 200"):
             self.redfish.change_user_password("root", "test1234")
+
+    def test_find_account_ok(self):
+        """It should return the URI of the account with the given username."""
+        add_accounts_mock_responses(self.requests_mock)
+        uri, etag = self.redfish.find_account("root")
+        assert uri == "/redfish/v1/AccountService/Accounts/2"
+        assert etag == "12345-2"
+
+    def test_find_account_raises(self):
+        """It should raise a RedfishError if the user is not found."""
+        add_accounts_mock_responses(self.requests_mock)
+        with pytest.raises(redfish.RedfishError, match="Unable to find account for username nonexistent"):
+            self.redfish.find_account("nonexistent")
 
     @pytest.mark.parametrize("action", tuple(redfish.ChassisResetPolicy))
     def test_chassis_reset_ok(self, action):
@@ -970,3 +1002,33 @@ class TestRedfishSupermicro:
         """It should return the current power state of the device."""
         self.requests_mock.get("/redfish/v1/Systems/1", json={"PowerState": "On"})
         assert self.redfish.get_power_state() == "On"
+
+    @pytest.mark.parametrize(
+        "username, password, role",
+        (
+            ("batman", "12345", redfish.RedfishUserRoles.ADMINISTRATOR),
+            ("batman", "12345", redfish.RedfishUserRoles.OPERATOR),
+            ("batman", "12345", redfish.RedfishUserRoles.READONLY),
+        ),
+    )
+    def test_add_account(self, username, password, role):
+        """It should create the new user."""
+        response = deepcopy(ADD_ACCOUNT_RESPONSE)
+        response["UserName"] = response["UserName"].format(username=username)
+        self.requests_mock.post("/redfish/v1/AccountService/Accounts", json=response, status_code=201)
+        self.redfish.add_account(username, password, role)
+
+    def test_add_account_raises(self):
+        """It should raise a RedfishError if the reponse is not HTTP 20X."""
+        response = deepcopy(ADD_ACCOUNT_RESPONSE_DUPLICATED_USER)
+        response["error"]["@Message.ExtendedInfo"][0]["MessageArgs"][0] = response["error"]["@Message.ExtendedInfo"][0][
+            "MessageArgs"
+        ][0].format(username="batman")
+        response["error"]["@Message.ExtendedInfo"][0]["RelatedProperties"][0] = response["error"][
+            "@Message.ExtendedInfo"
+        ][0]["RelatedProperties"][0].format(username="batman")
+        self.requests_mock.post("/redfish/v1/AccountService/Accounts", json=response, status_code=500)
+        with pytest.raises(
+            redfish.RedfishError, match="/redfish/v1/AccountService/Accounts returned HTTP 500 with message"
+        ):
+            self.redfish.add_account("batman", "12345")

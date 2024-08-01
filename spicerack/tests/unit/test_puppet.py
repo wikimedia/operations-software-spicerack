@@ -1,5 +1,5 @@
-# pylint: disable=too-many-lines
 """Puppet module tests."""
+
 import json
 import re
 from collections import namedtuple

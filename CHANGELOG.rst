@@ -1,6 +1,32 @@
 Spicerack Changelog
 -------------------
 
+`v8.10.0`_ (2024-08-01)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* mysql_legacy: Instance class improvements (`T371351`_).
+
+  * Rename `use_gtid()` to `master_use_gtid()` to follow MySQL naming
+    convention. Change its signature to accept a setting parameter to
+    pick which valid value to use.
+  * Introduce a `MasterUseGTID` enum class to represent the valid values
+    that can be used for the MASTER_USE_GTID parameter.
+  * Add a `run_vertical_query()` method to run a query with the vertical
+    output format (\G) and parse its result to a list of dictionaries.
+  * Adapt the other methods that would benefit of the above method to
+    use it.
+
+* redfish: add the add_account function (`T365372`_).
+
+  * Supermicro ships their servers with the BMC admin account set to
+    `ADMIN`, meanwhile we standardized the usage of `root` inside Wikimedia
+    (basically what Dell does by default).
+    Added a new add_account function that uses Redfish to create a new account.
+
+
 `v8.9.0`_ (2024-07-25)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2941,6 +2967,7 @@ New features
 .. _`T365372`: https://phabricator.wikimedia.org/T365372
 .. _`T367496`: https://phabricator.wikimedia.org/T367496
 .. _`T367949`: https://phabricator.wikimedia.org/T367949
+.. _`T371351`: https://phabricator.wikimedia.org/T371351
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3063,3 +3090,4 @@ New features
 .. _`v8.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.7.0
 .. _`v8.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.8.0
 .. _`v8.9.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.9.0
+.. _`v8.10.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.10.0
