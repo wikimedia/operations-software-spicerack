@@ -28,7 +28,6 @@ EXTRAS_REQUIRE = {
     # Test dependencies
     "tests": [
         "bandit>=1.6.2",
-        "flake8>=3.8.4",
         "mypy>=0.812",
         "pytest-cov>=2.10.1",
         "pytest-xdist>=2.2.0",
@@ -46,6 +45,9 @@ EXTRAS_REQUIRE = {
         "types-redis",
         "types-requests",
         "types-setuptools",
+    ],
+    "flake8": [
+        "flake8>=3.8.4",
     ],
     "format": [
         "black",
