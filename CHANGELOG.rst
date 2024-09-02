@@ -1,6 +1,18 @@
 Spicerack Changelog
 -------------------
 
+`v8.12.0`_ (2024-09-02)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Dependencies breaking changes
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+* setup.py: update pynetbox to 7.4 (`T373794`_).
+
+  ** After T371890#10081172 Spicerack fails to build due to pynetbox,
+     since it was upgraded to 7.4
+
+
 `v8.11.0`_ (2024-09-02)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2988,6 +3000,7 @@ New features
 .. _`T367949`: https://phabricator.wikimedia.org/T367949
 .. _`T371351`: https://phabricator.wikimedia.org/T371351
 .. _`T372485`: https://phabricator.wikimedia.org/T372485
+.. _`T373794`: https://phabricator.wikimedia.org/T373794
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3112,3 +3125,4 @@ New features
 .. _`v8.9.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.9.0
 .. _`v8.10.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.10.0
 .. _`v8.11.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.11.0
+.. _`v8.12.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.12.0
