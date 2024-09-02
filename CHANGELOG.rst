@@ -1,6 +1,25 @@
 Spicerack Changelog
 -------------------
 
+`v8.11.0`_ (2024-09-02)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* dhcp: allow empty distro for DHCPConfMac and DHCPConfOpt82 (`T365372`_).
+
+  * Allow "distro" to be empty, so that the correspondent pathprefix
+    config is not rendered. This is useful when we want to add
+    DHCP configs for IP configuration only, like the Supermicro
+    BMC/mgmt interface.
+
+Minor improvements
+""""""""""""""""""
+
+* tox: run less environments on CI (`T372485`_).
+
+
 `v8.10.0`_ (2024-08-01)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2968,6 +2987,7 @@ New features
 .. _`T367496`: https://phabricator.wikimedia.org/T367496
 .. _`T367949`: https://phabricator.wikimedia.org/T367949
 .. _`T371351`: https://phabricator.wikimedia.org/T371351
+.. _`T372485`: https://phabricator.wikimedia.org/T372485
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3091,3 +3111,4 @@ New features
 .. _`v8.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.8.0
 .. _`v8.9.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.9.0
 .. _`v8.10.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.10.0
+.. _`v8.11.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.11.0
