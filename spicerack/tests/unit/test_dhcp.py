@@ -139,6 +139,50 @@ configuration_generator_data = (
         ),
         "ttyS0-115200/testhost0.conf",
     ),
+    # - If distro is empty the default pathprefix config is not rendered.
+    (
+        dhcp.DHCPConfOpt82,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "switch_hostname": "asw2-d-eqiad",
+            "switch_iface": "ge-0/0/0",
+            "vlan": 1021,
+            "ttys": 0,
+            "distro": "",
+            "dhcp_filename": "pxelinux",
+        },
+        (
+            "\nhost testhost0 {\n"
+            '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
+            "    fixed-address 10.0.0.1;\n"
+            '    filename "pxelinux";\n'
+            "}\n"
+        ),
+        "ttyS0-115200/testhost0.conf",
+    ),
+    # - If distro is None the default pathprefix config is not rendered.
+    (
+        dhcp.DHCPConfOpt82,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "switch_hostname": "asw2-d-eqiad",
+            "switch_iface": "ge-0/0/0",
+            "vlan": 1021,
+            "ttys": 0,
+            "distro": None,
+            "dhcp_filename": "pxelinux",
+        },
+        (
+            "\nhost testhost0 {\n"
+            '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
+            "    fixed-address 10.0.0.1;\n"
+            '    filename "pxelinux";\n'
+            "}\n"
+        ),
+        "ttyS0-115200/testhost0.conf",
+    ),
     # DHCPConfMac tests
     # - basic check of functionality
     (
@@ -220,6 +264,46 @@ configuration_generator_data = (
             '    filename "pxelinux";\n'
             '    option pxelinux.pathprefix "/srv/tftpboot/buster-installer/";\n'
             '    option pxelinux.test2 "someoption";\n'
+            "}\n"
+        ),
+        "ttyS1-115200/testhost0.conf",
+    ),
+    # - If distro is empty string, the default pathprefix option is not rendered.
+    (
+        dhcp.DHCPConfMac,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "mac": "00:00:00:00:00:01",
+            "ttys": 1,
+            "distro": "",
+            "dhcp_filename": "pxelinux",
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    hardware ethernet 00:00:00:00:00:01;\n"
+            "    fixed-address 10.0.0.1;\n"
+            '    filename "pxelinux";\n'
+            "}\n"
+        ),
+        "ttyS1-115200/testhost0.conf",
+    ),
+    # - If distro is None string, the default pathprefix option is not rendered.
+    (
+        dhcp.DHCPConfMac,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "mac": "00:00:00:00:00:01",
+            "ttys": 1,
+            "distro": None,
+            "dhcp_filename": "pxelinux",
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    hardware ethernet 00:00:00:00:00:01;\n"
+            "    fixed-address 10.0.0.1;\n"
+            '    filename "pxelinux";\n'
             "}\n"
         ),
         "ttyS1-115200/testhost0.conf",

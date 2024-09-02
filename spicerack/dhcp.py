@@ -68,7 +68,9 @@ class DHCPConfOpt82(DHCPConfiguration):
         switch_iface: the name of the switch interface the host is connected to.
         vlan: the name of the VLAN the host is configured for.
         ttys: which ttyS to use for this host, accepted values are 0 and 1.
-        distro: the codename of the Debian distribution to use for the PXE installer.
+        distro: the codename of the Debian distribution to use for the PXE
+        installer (empty string or None is allowed and removes the related dhcp
+        default options from the config).
         media_type: the media type to use e.g. ``installer``, ``installer-11.0``, ``rescue``.
         dhcp_filename: the DHCP filename option to set.
         dhcp_options: a dictionary of DHCP option settings to use.
@@ -100,7 +102,7 @@ class DHCPConfOpt82(DHCPConfiguration):
            https://docs.python.org/3/library/dataclasses.html#post-init-processing
 
         """
-        if not self.dhcp_options:
+        if not self.dhcp_options and self.distro:
             self.dhcp_options["pxelinux.pathprefix"] = (
                 f"http://apt.wikimedia.org/tftpboot/{self.distro}-{self.media_type}/"
             )
@@ -145,7 +147,9 @@ class DHCPConfMac(DHCPConfiguration):
         ipv4: the IPv4 to be assigned to the host.
         mac: the MAC address of the host's interface.
         ttys: which ttyS to use for this host, accepted values are 0 and 1.
-        distro: the codename of the Debian distribution to use for the PXE installer.
+        distro: the codename of the Debian distribution to use for the PXE
+        installer (empty string or None is allowed and removes the related dhcp
+        default options from the config).
         media_type: The media type to use e.g. installer, installer-11.0, rescue
         dhcp_filename: the DHCP filename option to set.
         dhcp_options: a dictionary of DHCP option settings to use.
@@ -178,7 +182,7 @@ class DHCPConfMac(DHCPConfiguration):
         mac_pattern = r"[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}"
         if re.fullmatch(mac_pattern, self.mac) is None:
             raise DHCPError(f"Invalid MAC address {self.mac}, must match pattern {mac_pattern}.")
-        if not self.dhcp_options:
+        if not self.dhcp_options and self.distro:
             self.dhcp_options["pxelinux.pathprefix"] = (
                 f"http://apt.wikimedia.org/tftpboot/{self.distro}-{self.media_type}/"
             )
