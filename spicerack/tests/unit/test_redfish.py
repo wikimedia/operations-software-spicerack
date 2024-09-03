@@ -362,7 +362,7 @@ del UPDATE_SERVICE_RESPONSE_NO_HTTP_PUSH["HttpPushUri"]
 
 def add_accounts_mock_responses(requests_mock):
     """Setup requests mock URLs and return payloads for all the existing users."""
-    requests_mock.get("/redfish/v1/Managers/Testing_oob.1/Accounts", json=ACCOUNTS_RESPONSE)
+    requests_mock.get("/redfish/v1/AccountService/Accounts", json=ACCOUNTS_RESPONSE)
     users = {"1": "user", "2": "root", "3": "guest"}
     for user_id, username in users.items():
         response = deepcopy(ACCOUNT_RESPONSE)
