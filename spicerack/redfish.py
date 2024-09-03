@@ -552,11 +552,14 @@ class Redfish:
             self._http_session.auth = (self._username, self._password)
             logger.info("Updated current instance password to the new password")
 
-        for message in response.json().get("@Message.ExtendedInfo", []):
-            identifier = " ".join((message.get("MessageId", ""), message.get("Severity", ""))).strip()
-            logger.info(
-                "[%s] %s | Resolution: %s", identifier, message.get("Message", ""), message.get("Resolution", "")
-            )
+        try:
+            for message in response.json().get("@Message.ExtendedInfo", []):
+                identifier = " ".join((message.get("MessageId", ""), message.get("Severity", ""))).strip()
+                logger.info(
+                    "[%s] %s | Resolution: %s", identifier, message.get("Message", ""), message.get("Resolution", "")
+                )
+        except json.JSONDecodeError as e:
+            logger.info("No JSON response after changing the management password, moving on: %s", e)
 
     @abstractmethod
     def get_power_state(self) -> str:
