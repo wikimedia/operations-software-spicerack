@@ -643,20 +643,34 @@ class TestRedfish:
 
         mocked_sleep.assert_not_called()
 
+    @pytest.mark.parametrize(
+        "response, password",
+        (
+            (
+                {
+                    "@Message.ExtendedInfo": [
+                        {
+                            "Message": "Changed password",
+                            "MessageId": "123",
+                            "Severity": "Informational",
+                            "Resolution": "None",
+                        }
+                    ]
+                },
+                "test1234",
+            ),
+            (None, "test12345"),
+        ),
+    )
     @pytest.mark.parametrize("user_id, username, is_current", ((1, "user", False), (2, "root", True)))
-    def test_change_user_password_ok(self, user_id, username, is_current):
+    def test_change_user_password_ok(self, user_id, username, is_current, response, password):
         """It should change the password for the given user and update the instance auth credentials accordingly."""
         self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
         add_accounts_mock_responses(self.requests_mock)
-        response = {
-            "@Message.ExtendedInfo": [
-                {"Message": "Changed password", "MessageId": "123", "Severity": "Informational", "Resolution": "None"}
-            ]
-        }
         self.requests_mock.patch(f"/redfish/v1/AccountService/Accounts/{user_id}", json=response)
 
         current_auth = self.redfish.request("get", "/redfish").request.headers["Authorization"]
-        self.redfish.change_user_password(username, "test1234")
+        self.redfish.change_user_password(username, password)
         new_auth = self.redfish.request("get", "/redfish").request.headers["Authorization"]
 
         if is_current:  # Check that the authorization header changed
