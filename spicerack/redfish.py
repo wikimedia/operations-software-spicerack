@@ -581,9 +581,10 @@ class Redfish:
             f"{self.system_manager}/Actions/ComputerSystem.Reset",
             json={"ResetType": action.value},
         )
-        if response.status_code != 204 and not self._dry_run:
+
+        if response.status_code not in [204, 200] and not self._dry_run:
             raise RedfishError(
-                f"Got unexpected response HTTP {response.status_code}, expected HTTP 204: {response.text}"
+                f"Got unexpected response HTTP {response.status_code}, expected HTTP 200/204: {response.text}"
             )
 
     @staticmethod

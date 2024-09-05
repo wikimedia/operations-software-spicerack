@@ -691,9 +691,9 @@ class TestRedfish:
         self.redfish.chassis_reset(action)
 
     def test_chassis_reset_raises(self):
-        """It should raise a RedfishError if the response code of the chassis reset operation is not 204."""
-        self.requests_mock.post("/redfish/v1/Systems/Testing_system.1/Actions/ComputerSystem.Reset")
-        with pytest.raises(redfish.RedfishError, match="Got unexpected response HTTP 200, expected HTTP 204"):
+        """It should raise a RedfishError if the response code of the chassis reset operation is not 200/204."""
+        self.requests_mock.post("/redfish/v1/Systems/Testing_system.1/Actions/ComputerSystem.Reset", status_code=201)
+        with pytest.raises(redfish.RedfishError, match="Got unexpected response HTTP 201, expected HTTP 200/204"):
             self.redfish.chassis_reset(redfish.ChassisResetPolicy.FORCE_OFF)
 
 
