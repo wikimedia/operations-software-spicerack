@@ -131,6 +131,11 @@ intersphinx_mapping = {
     "kubernetes": ("https://kubernetes.readthedocs.io/en/latest/", None),
 }
 
+# During builds without access to the network (for example, Debian builds)
+# we need to fail fast while trying to connect to the intersphinx_mapping
+# URLs to avoid waiting long times.
+intersphinx_timeout = 10
+
 # Napoleon settings
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False

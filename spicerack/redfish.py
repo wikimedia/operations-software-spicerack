@@ -166,6 +166,11 @@ class Redfish:
         """Property to return the Storage manager."""
         return f"/redfish/v1/Systems/{self.system}/Storage"
 
+    @property
+    def account_manager(self) -> str:
+        """Property to return the Storage manager."""
+        return "/redfish/v1/AccountService"
+
     def _update_system_info(self) -> None:
         """Property to return a dict of manager metadata."""
         self._system_info = self.request("get", self.system_manager).json()
@@ -511,7 +516,7 @@ class Redfish:
             spicerack.redfish.RedfishError: if unable to find the account.
 
         """
-        accounts = self.request("get", f"{self.oob_manager}/Accounts").json()
+        accounts = self.request("get", f"{self.account_manager}/Accounts").json()
         uris = [account["@odata.id"] for account in accounts["Members"]]
         for uri in uris:
             response = self.request("get", uri)
@@ -547,11 +552,14 @@ class Redfish:
             self._http_session.auth = (self._username, self._password)
             logger.info("Updated current instance password to the new password")
 
-        for message in response.json().get("@Message.ExtendedInfo", []):
-            identifier = " ".join((message.get("MessageId", ""), message.get("Severity", ""))).strip()
-            logger.info(
-                "[%s] %s | Resolution: %s", identifier, message.get("Message", ""), message.get("Resolution", "")
-            )
+        try:
+            for message in response.json().get("@Message.ExtendedInfo", []):
+                identifier = " ".join((message.get("MessageId", ""), message.get("Severity", ""))).strip()
+                logger.info(
+                    "[%s] %s | Resolution: %s", identifier, message.get("Message", ""), message.get("Resolution", "")
+                )
+        except json.JSONDecodeError as e:
+            logger.info("No JSON response after changing the management password, moving on: %s", e)
 
     @abstractmethod
     def get_power_state(self) -> str:
@@ -573,9 +581,10 @@ class Redfish:
             f"{self.system_manager}/Actions/ComputerSystem.Reset",
             json={"ResetType": action.value},
         )
-        if response.status_code != 204 and not self._dry_run:
+
+        if response.status_code not in [204, 200] and not self._dry_run:
             raise RedfishError(
-                f"Got unexpected response HTTP {response.status_code}, expected HTTP 204: {response.text}"
+                f"Got unexpected response HTTP {response.status_code}, expected HTTP 200/204: {response.text}"
             )
 
     @staticmethod
@@ -799,8 +808,6 @@ class RedfishSupermicro(Redfish):
     """The name of the Log service."""
     reboot_message_id = "Event.1.0.SystemPowerAction"
     """The message ID for a reboot event."""
-    account_manager = "AccountService"
-    """The name of the Account Service manager."""
 
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
@@ -823,7 +830,7 @@ class RedfishSupermicro(Redfish):
 
         """
         new_user_data = {"UserName": username, "Password": password, "RoleId": role.value, "Enabled": True}
-        self.request("post", f"/redfish/v1/{self.account_manager}/Accounts", json=new_user_data)
+        self.request("post", f"{self.account_manager}/Accounts", json=new_user_data)
 
 
 class RedfishDell(Redfish):
