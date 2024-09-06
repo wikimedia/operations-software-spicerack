@@ -1,6 +1,38 @@
 Spicerack Changelog
 -------------------
 
+`v8.13.0`_ (2024-09-06)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* doc: add intersphinx_timeout (`T367410`_).
+
+  * The config should allow to have quicker Debian builds when
+    the network is not available.
+
+* redfish: allow 200 responses in chassis_reset (`T365372`_).
+
+  * On Supermicro nodes, chassis_reset's HTTP call gets a HTTP 200
+    from the BMC, not 204. It seems ok to relax the condition
+    and allow both 204 and 200, without extra logging since
+    the Supermicro's BMC response is not useful.
+
+* redfish: catch no-json-responses in change_user_password (`T365372`_).
+
+  * The Supermicro's Redfish implementation works the same as Dell's
+    in change_user_password, except for the fact that no JSON response
+    is returned.
+
+* redfish: introduce the AccountManager URI for DELL (`T365372`_).
+
+  * From various tests it seems that the /redfish/v1/AccountService
+    URI works on DELL too, but only for "read-only", namely getting
+    accounts' info. Refactor a bit the redfish class and the find_account()
+    method to take this into account.
+
+
 `v8.12.0`_ (2024-09-02)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2996,6 +3028,7 @@ New features
 .. _`T360932`: https://phabricator.wikimedia.org/T360932
 .. _`T363576`: https://phabricator.wikimedia.org/T363576
 .. _`T365372`: https://phabricator.wikimedia.org/T365372
+.. _`T367410`: https://phabricator.wikimedia.org/T367410
 .. _`T367496`: https://phabricator.wikimedia.org/T367496
 .. _`T367949`: https://phabricator.wikimedia.org/T367949
 .. _`T371351`: https://phabricator.wikimedia.org/T371351
@@ -3126,3 +3159,4 @@ New features
 .. _`v8.10.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.10.0
 .. _`v8.11.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.11.0
 .. _`v8.12.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.12.0
+.. _`v8.13.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.13.0
