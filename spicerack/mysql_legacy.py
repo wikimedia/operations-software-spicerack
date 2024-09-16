@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from textwrap import dedent
+from time import sleep
 from typing import Any, Optional
 
 from ClusterShell.MsgTree import MsgTreeElem
@@ -183,8 +184,9 @@ class Instance:
         self.run_query("STOP SLAVE")
 
     def start_slave(self) -> None:
-        """Starts mariadb replication."""
+        """Starts mariadb replication and sleeps for 1 second afterwards."""
         self.run_query("START SLAVE")
+        sleep(1)
 
     def show_slave_status(self) -> dict:
         """Returns the output of show slave status formatted as a dict.
@@ -217,7 +219,7 @@ class Instance:
 
         return rows[0]  # SHOW MASTER STATUS can return at most one row
 
-    def master_use_gtid(self, setting: MasterUseGTID) -> None:
+    def set_master_use_gtid(self, setting: MasterUseGTID) -> None:
         """Runs MASTER_USE_GTID with the given value."""
         if not isinstance(setting, MasterUseGTID):
             raise MysqlLegacyError(f"Only instances of MasterUseGTID are accepted, got: {type(setting)}")

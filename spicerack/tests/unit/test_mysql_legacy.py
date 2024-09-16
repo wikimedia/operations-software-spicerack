@@ -115,7 +115,8 @@ class TestInstance:
             ("start_slave", "START SLAVE"),
         ),
     )
-    def test_run_method_ok(self, method, expected, instance):
+    @mock.patch("spicerack.mysql_legacy.sleep", return_value=None)
+    def test_run_method_ok(self, mocked_sleep, method, expected, instance):
         """It should run the method called and execute the related query."""
         self.mocked_run_sync.return_value = iter(())
 
@@ -126,6 +127,7 @@ class TestInstance:
             print_progress_bars=False,
             print_output=False,
         )
+        assert mocked_sleep.called == (method == "start_slave")
 
     def test_single_show_slave_status_ok(self):
         """It should return the current slave status of the database."""
@@ -183,11 +185,11 @@ class TestInstance:
             (mysql_legacy.MasterUseGTID.NO, "no"),
         ),
     )
-    def test_master_use_gtid_ok(self, setting, expected):
+    def test_set_master_use_gtid_ok(self, setting, expected):
         """It should execute MASTER_USE_GTID with the given value."""
         self.mocked_run_sync.return_value = iter(())
 
-        self.single_instance.master_use_gtid(setting)
+        self.single_instance.set_master_use_gtid(setting)
         query = f"CHANGE MASTER TO MASTER_USE_GTID={expected}"
         self.mocked_run_sync.assert_called_once_with(
             f'/usr/local/bin/mysql --socket /run/mysqld/mysqld.sock --batch --execute "{query}"',
@@ -195,13 +197,13 @@ class TestInstance:
             print_output=False,
         )
 
-    def test_master_use_gtid_invalid(self):
+    def test_set_master_use_gtid_invalid(self):
         """It should raise MysqlLegacyError if called with an invalid setting."""
         with pytest.raises(
             mysql_legacy.MysqlLegacyError,
             match=re.escape("Only instances of MasterUseGTID are accepted, got: <class 'str'>"),
         ):
-            self.single_instance.master_use_gtid("invalid")
+            self.single_instance.set_master_use_gtid("invalid")
 
     @pytest.mark.parametrize("instance", ("single_instance", "multi_instance"))
     @pytest.mark.parametrize("method", ("stop", "start", "status", "restart"))
