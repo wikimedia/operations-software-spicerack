@@ -1,6 +1,16 @@
 Spicerack Changelog
 -------------------
 
+`v8.13.1`_ (2024-09-17)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* mysql_legacy: Add a 1 second sleep after ``start_slave()`` to ensure that a subsequent call to
+  ``show_slave_status()`` would be reliable. Rename ``master_use_gtid()`` to ``set_master_use_gtid()`` for better
+  clarity of the RW nature of it.
+
 `v8.13.0`_ (2024-09-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3160,3 +3170,4 @@ New features
 .. _`v8.11.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.11.0
 .. _`v8.12.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.12.0
 .. _`v8.13.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.13.0
+.. _`v8.13.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.13.1
