@@ -206,8 +206,7 @@ class NetboxServer:
         self._dry_run = dry_run
         self._cached_mgmt_fqdn = ""  # Cache the management interface as it would require an API call each time
 
-        # TODO cleanup after Netbox 4 upgrade
-        role = (server.device_role if hasattr(server, "device_role") else server.role).slug
+        role = server.role.slug
         if role != SERVER_ROLE_SLUG:
             raise NetboxError(f"Object of type {type(server)} has invalid role {role}, only server is allowed")
 
@@ -439,19 +438,12 @@ class NetboxServer:
         netbox_iface = primary_ip.assigned_object
         if not netbox_iface:
             raise NetboxError("Primary IP not assigned to an interface.")
-        # Netbox 3 backward compatibility
-        if hasattr(netbox_iface, "connected_endpoint"):
-            netbox_iface_endpoints = netbox_iface.connected_endpoint
-        else:
-            netbox_iface_endpoints = netbox_iface.connected_endpoints
+        netbox_iface_endpoints = netbox_iface.connected_endpoints
         if not netbox_iface_endpoints:
             raise NetboxError("Primary interface not connected.")
         # Using connected_endpoints[0] to mimic pre-Netbox 3.3 behavior, when a cable only had one termination
         # per side. To be revisited if we start using the multi-termination feature.
-        # TODO cleanup after Netbox 4 upgrade
-        if isinstance(netbox_iface_endpoints, list):
-            return netbox_iface_endpoints[0]
-        return netbox_iface_endpoints
+        return netbox_iface_endpoints[0]
 
     @property
     def access_vlan(self) -> str:
