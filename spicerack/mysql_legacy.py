@@ -21,19 +21,21 @@ from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts, RemoteHo
 REPLICATION_ROLES: tuple[str, ...] = ("master", "slave", "standalone")
 """Valid replication roles."""
 CORE_SECTIONS: tuple[str, ...] = (
-    "s1",
-    "s2",
-    "s3",
-    "s4",
-    "s5",
     "s6",
+    "s5",
+    "s2",
     "s7",
+    "s3",
     "s8",
+    "s4",
+    "s1",
     "x1",
     "es6",
     "es7",
 )
-"""Valid MySQL RW core sections (external storage RO, parser cache, x2 and misc sections are not included here)."""
+"""Valid MySQL RW core sections (external storage RO, parser cache, x2 and misc sections are not included here).
+They are ordered from less impactful if anything goes wrong to most impactful.
+"""
 
 logger = logging.getLogger(__name__)
 
