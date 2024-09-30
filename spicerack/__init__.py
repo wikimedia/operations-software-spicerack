@@ -25,6 +25,7 @@ from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
 from spicerack.apt import AptGetHosts
 from spicerack.confctl import Confctl, ConftoolEntity
+from spicerack.dbctl import Dbctl
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
@@ -360,6 +361,10 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             )
 
         return self._confctl.entity(entity_name)
+
+    def dbctl(self) -> Dbctl:
+        """Get a Dbctl instance to interact with dbctl."""
+        return Dbctl(config=self._conftool_config, schema=self._conftool_schema, dry_run=self._dry_run)
 
     def dhcp(self, datacenter: str) -> DHCP:
         """Return a DHCP configuration manager for the specified datacenter.

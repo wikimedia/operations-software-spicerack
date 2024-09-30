@@ -23,6 +23,7 @@ from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
 from spicerack.apt import AptGetHosts
 from spicerack.confctl import ConftoolEntity
+from spicerack.dbctl import Dbctl
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
@@ -77,6 +78,7 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert isinstance(spicerack.remote(installer=True), Remote)
     assert isinstance(spicerack.confctl("discovery"), ConftoolEntity)
     assert isinstance(spicerack.confctl("mwconfig"), ConftoolEntity)
+    assert isinstance(spicerack.dbctl(), Dbctl)
     assert isinstance(spicerack.dns(), Dns)
     assert isinstance(spicerack.discovery("discovery-record"), Discovery)
     assert isinstance(spicerack.kubernetes("group", "cluster"), Kubernetes)

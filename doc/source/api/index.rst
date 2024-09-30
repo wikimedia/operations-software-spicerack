@@ -18,6 +18,7 @@ Spicerack Python API autodoc.
    spicerack.confctl
    spicerack.constants
    spicerack.cookbook
+   spicerack.dbctl
    spicerack.debmonitor
    spicerack.decorators
    spicerack.dhcp

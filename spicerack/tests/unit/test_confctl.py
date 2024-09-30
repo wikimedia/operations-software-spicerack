@@ -1,7 +1,9 @@
 """Confctl module tests."""
+
 from unittest import mock
 
 import pytest
+from conftool import configuration
 from conftool.tests.unit import MockBackend
 
 from spicerack import confctl
@@ -16,12 +18,12 @@ class TestConfctl:
         # pylint: disable=attribute-defined-outside-init
         self.conftool_backend = MockBackend({})
         confctl.kvobject.KVObject.backend = self.conftool_backend
-        confctl.kvobject.KVObject.config = confctl.configuration.Config(driver="")
-        config = get_fixture_path("confctl", "config.yaml")
-        schema = get_fixture_path("confctl", "schema.yaml")
+        confctl.kvobject.KVObject.config = configuration.Config(driver="")
+        self.config = get_fixture_path("confctl", "config.yaml")
+        self.schema = get_fixture_path("confctl", "schema.yaml")
         with mock.patch("spicerack.confctl.kvobject.KVObject.setup"):
-            self.confctl = confctl.Confctl(config=config, schema=schema, dry_run=False)
-            self.entity = self.confctl._schema.entities["discovery"]  # pylint: disable=protected-access
+            self.confctl = confctl.Confctl(config=self.config, schema=self.schema, dry_run=False)
+            self.entity = self.confctl.entity("discovery")._entity  # pylint: disable=protected-access
 
         self.entity.query = mock.MagicMock(return_value=[self.entity("test", "dnsdisc")])
         self.discovery = confctl.ConftoolEntity(self.entity, dry_run=False)
@@ -37,6 +39,20 @@ class TestConfctl:
                 setattr(obj, k, v)
             entities.append(obj)
         return entities
+
+    @pytest.mark.parametrize("dry_run", (True, False, None))
+    @mock.patch("spicerack.confctl.ConftoolClient")
+    def test_init(self, mocked_client, dry_run):
+        """It should initialize the ConftoolClient with the correct read_only parameter based on dry_run status."""
+        kwargs = {}
+        if dry_run is not None:
+            kwargs["dry_run"] = dry_run
+            expected = dry_run
+        else:
+            expected = True
+
+        confctl.Confctl(config=self.config, schema=self.schema, **kwargs)
+        assert mocked_client.call_args.kwargs["read_only"] == expected
 
     def test_get_existing(self):
         """Calling get() should return the object matched by the tags."""

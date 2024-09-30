@@ -1,6 +1,39 @@
 Spicerack Changelog
 -------------------
 
+`v8.14.0`_ (2024-09-30)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* dbctl: add new module to interact with dbctl (`T362893`_).
+
+  * Add a new spicerack accessor to get a ``Dbctl`` instance.
+  * From the ``Dbctl`` instance allow to access the dbctl libraries for ``Instance``, ``Section`` and ``DbConfig``
+    (mediawiki config).
+  * Dry-run support is ensured via the parent ``Confctl`` class that sets the ``read_only`` argument to the
+    ``ConftoolClient`` instance accordingly.
+
+Minor improvements
+""""""""""""""""""
+
+* confctl: add native support for RO in conftool
+
+  * The spicerack interface to Conftool via the ``ConftoolEntity`` class does honor dry-run itself, although conftool
+    was not having a dry-run support.
+  * With recent contool development we can now use ``ConftoolClient`` to initialize it and this interface allows to
+    set a ``read_only`` parameter.
+  * The ``ConftoolClient`` interface abstracts the setup of the conftool client from the caller, in place of the to-be
+    deprecated ``kvobject.KVObject.setup`` method.
+  * Use the ``read_only`` parameter when in dry-run mode, both for safety reasons and also to enable using more complex
+    conftool operations, such as the ones offered by the dbconfig extension.
+
+Miscellanea
+"""""""""""
+
+* netbox: removed Netbox 3 backward compatibility, all existing Netbox instances are 4+.
+
 `v8.13.1`_ (2024-09-17)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3036,6 +3069,7 @@ New features
 .. _`T347490`: https://phabricator.wikimedia.org/T347490
 .. _`T360293`: https://phabricator.wikimedia.org/T360293
 .. _`T360932`: https://phabricator.wikimedia.org/T360932
+.. _`T362893`: https://phabricator.wikimedia.org/T362893
 .. _`T363576`: https://phabricator.wikimedia.org/T363576
 .. _`T365372`: https://phabricator.wikimedia.org/T365372
 .. _`T367410`: https://phabricator.wikimedia.org/T367410
@@ -3171,3 +3205,4 @@ New features
 .. _`v8.12.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.12.0
 .. _`v8.13.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.13.0
 .. _`v8.13.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.13.1
+.. _`v8.14.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.14.0

@@ -1,0 +1,4 @@
+dbctl
+=====
+
+.. automodule:: spicerack.dbctl
