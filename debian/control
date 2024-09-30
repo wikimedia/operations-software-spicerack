@@ -9,6 +9,7 @@ Build-Depends:
   dh-python (>= 3.20190308~),
   python3-all (>= 3.9),
   python3-conftool,
+  python3-conftool-dbctl,
   python3-dnspython,
   python3-elasticsearch,
   python3-etcd,

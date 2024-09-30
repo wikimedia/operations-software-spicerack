@@ -1,6 +1,7 @@
 spicerack (8.14.0-1) unstable; urgency=medium
 
   * v8.14.0 upstream release.
+  * Add python3-conftool-dbctl as build dependency.
 
  -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Mon, 30 Sep 2024 09:27:00 -0000
 
