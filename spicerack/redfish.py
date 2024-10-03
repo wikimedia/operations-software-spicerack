@@ -106,6 +106,10 @@ class Redfish:
     """The name of the Log service."""
     reboot_message_id = ""
     """The message ID for a reboot event."""
+    boot_mode_attribute = ""
+    """The boot mode key in the Bios attributes."""
+    http_boot_target = ""
+    """The value to the BootSourceOverrideTarget key for HTTP boot."""
 
     def __init__(
         self,
@@ -565,6 +569,35 @@ class Redfish:
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
 
+    @property
+    def is_uefi(self) -> bool:
+        """Return weather the host is legacy BIOS or UEFI."""
+        response = self.request("get", f"{self.system_manager}/Bios").json()
+        return "efi" in response["Attributes"].get(self.boot_mode_attribute, "").lower()
+
+    def force_http_boot_once(self) -> None:
+        """Force the host to boot over UEFI HTTP at the next reboot.
+
+        Raises:
+            spicerack.redfish.RedfishError: if unable to perform the config change or not UEFI host.
+
+        """
+        if not self.is_uefi:
+            raise RedfishError("HTTP boot is only possible for UEFI hosts.")
+        logger.info("Setting the next boot to UEFI HTTP for %s", self._hostname)
+        efi_http_boot = {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": self.http_boot_target,
+                "BootSourceOverrideMode": "UEFI",
+            }
+        }
+        self.request(
+            "patch",
+            self.system_manager,
+            json=efi_http_boot,
+        )
+
     def chassis_reset(self, action: ChassisResetPolicy) -> None:
         """Perform a reset of the chassis power status.
 
@@ -808,6 +841,10 @@ class RedfishSupermicro(Redfish):
     """The name of the Log service."""
     reboot_message_id = "Event.1.0.SystemPowerAction"
     """The message ID for a reboot event."""
+    boot_mode_attribute = "BootModeSelect"
+    """The boot mode key in the Bios attributes."""
+    http_boot_target = "Pxe"
+    """The value to the BootSourceOverrideTarget key for HTTP boot."""
 
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
@@ -844,6 +881,10 @@ class RedfishDell(Redfish):
     """The name of the Log service."""
     reboot_message_id = "RAC0182"
     """The message ID for a reboot event."""
+    boot_mode_attribute = "BootMode"
+    """The boot mode key in the Bios attributes."""
+    http_boot_target = "UefiHttp"
+    """The value to the BootSourceOverrideTarget key for HTTP boot."""
 
     scp_base_uri: str = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
     """The Dell's SCP push base URI."""

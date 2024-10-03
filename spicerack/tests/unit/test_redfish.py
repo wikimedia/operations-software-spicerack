@@ -381,6 +381,8 @@ class RedfishTest(redfish.Redfish):
     manager = "Testing_oob.1"
     log_service = "Testing_oob.1"
     reboot_message_id = "REBOOT_MSG_ID"
+    boot_mode_attribute = "BootMode"
+    http_boot_target = "UefiHttp"
 
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
@@ -710,6 +712,27 @@ class TestRedfish:
         with pytest.raises(redfish.RedfishError, match="Got unexpected response HTTP 201, expected HTTP 200/204"):
             self.redfish.chassis_reset(redfish.ChassisResetPolicy.FORCE_OFF)
 
+    def test_force_http_boot_once_ok(self):
+        """It should change the HTTP boot mode."""
+        self.requests_mock.get("/redfish/v1/Systems/Testing_system.1/Bios", json={"Attributes": {"BootMode": "UEFI"}})
+        self.requests_mock.patch("/redfish/v1/Systems/Testing_system.1", status_code=204)
+        self.redfish.force_http_boot_once()
+        assert self.requests_mock.last_request.method == "PATCH"
+        request_json = self.requests_mock.last_request.json()
+        assert request_json == {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": "UefiHttp",
+                "BootSourceOverrideMode": "UEFI",
+            }
+        }
+
+    def test_force_http_boot_once_raise(self):
+        """It should raise a RedfishError as the BootMode is not UEFI."""
+        self.requests_mock.get("/redfish/v1/Systems/Testing_system.1/Bios", json={"Attributes": {"BootMode": "Legacy"}})
+        with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
+            self.redfish.force_http_boot_once()
+
 
 class TestDellSCP:
     """Tests for the DellSCP class."""
@@ -980,6 +1003,17 @@ class TestRedfishDell:
         self.requests_mock.get("/redfish/v1/Chassis/System.Embedded.1", json={"PowerState": "On"})
         assert self.redfish.get_power_state() == "On"
 
+    def test_property_boot_mode_attribute(self) -> str:
+        """Property to return the boot mode key in the Bios attributes."""
+        assert self.redfish.boot_mode_attribute == "BootMode"
+
+    def test_is_uefi(self):
+        """It should return that the device is not UEFI."""
+        self.requests_mock.get(
+            "/redfish/v1/Systems/System.Embedded.1/Bios", json={"Attributes": {"BootMode": "Legacy"}}
+        )
+        assert self.redfish.is_uefi is False
+
 
 class TestRedfishSupermicro:
     """Tests for the RedfishSupermicro class."""
@@ -1046,3 +1080,12 @@ class TestRedfishSupermicro:
             redfish.RedfishError, match="/redfish/v1/AccountService/Accounts returned HTTP 500 with message"
         ):
             self.redfish.add_account("batman", "12345")
+
+    def test_property_boot_mode_attribute(self) -> str:
+        """Property to return the boot mode key in the Bios attributes."""
+        assert self.redfish.boot_mode_attribute == "BootModeSelect"
+
+    def test_is_uefi(self):
+        """It should return the device is UEFI."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
+        assert self.redfish.is_uefi is True
