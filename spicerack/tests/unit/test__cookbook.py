@@ -1,4 +1,5 @@
 """Cookbook module tests."""
+
 import logging
 import shutil
 from pathlib import Path
@@ -497,7 +498,7 @@ class TestCookbookCollection:
             ),
         ),
     )
-    def test_main_execute_cookbook(  # pylint: disable=too-many-arguments
+    def test_main_execute_cookbook(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self, tmpdir, caplog, module, messages, absent_messages, code, args
     ):
         """Calling main with the given cookbook and args should execute it."""
@@ -711,7 +712,7 @@ class TestCookbookCollection:
     @mock.patch("builtins.input")
     def test_cookbooks_main_menu(
         self, mocked_input, mocked_tty, tty, answer, output, capsys, tmpdir
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         """Calling main() with a menu should show the menu and allow to interact with it."""
         mocked_tty.return_value = tty
         mocked_input.side_effect = answer

@@ -68,7 +68,7 @@ except DistributionNotFound:  # pragma: no cover - this should never happen duri
 class Spicerack:  # pylint: disable=too-many-instance-attributes
     """Spicerack service locator."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
         verbose: bool = False,

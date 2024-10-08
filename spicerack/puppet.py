@@ -191,6 +191,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
     def run(  # pylint: disable=too-many-arguments
         self,
+        *,
         timeout: int = 300,
         enable_reason: Optional[Reason] = None,
         quiet: bool = False,

@@ -1,4 +1,5 @@
 """Log module."""
+
 import logging
 from pathlib import Path
 from typing import Optional
@@ -34,6 +35,7 @@ def setup_logging(
     base_path: Path,
     name: str,
     user: str,
+    *,
     dry_run: bool = True,
     host: Optional[str] = None,
     port: int = 0,

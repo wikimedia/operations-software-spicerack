@@ -1,4 +1,5 @@
 """Icinga module."""
+
 import json
 import logging
 import re
@@ -174,7 +175,7 @@ class HostStatus:
     """The Icinga value for a host that is up and running. The other values for the Icinga host state
     are ``DOWN`` and ``UNREACHABLE``."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
         name: str,

@@ -1,4 +1,5 @@
 """Remote module to execute commands on hosts via Cumin."""
+
 import logging
 import math
 import time
@@ -107,7 +108,7 @@ class LBRemoteCluster(RemoteHostsAdapter):
         self._conftool = conftool
         super().__init__(remote_hosts)
 
-    def run(
+    def run(  # pylint: disable=too-many-arguments
         self,
         *commands: Union[str, Command],
         svc_to_depool: Optional[list[str]] = None,
@@ -238,7 +239,12 @@ class LBRemoteCluster(RemoteHostsAdapter):
 
         """
         return self._act_on_services(
-            services, svc_to_depool, "restart", batch_size, batch_sleep=batch_sleep, verbose=verbose
+            services=services,
+            svc_to_depool=svc_to_depool,
+            what="restart",
+            batch_size=batch_size,
+            batch_sleep=batch_sleep,
+            verbose=verbose,
         )
 
     def reload_services(
@@ -268,11 +274,17 @@ class LBRemoteCluster(RemoteHostsAdapter):
 
         """
         return self._act_on_services(
-            services, svc_to_depool, "reload", batch_size, batch_sleep=batch_sleep, verbose=verbose
+            services=services,
+            svc_to_depool=svc_to_depool,
+            what="reload",
+            batch_size=batch_size,
+            batch_sleep=batch_sleep,
+            verbose=verbose,
         )
 
     def _act_on_services(  # pylint: disable=too-many-arguments
         self,
+        *,
         services: list[str],
         svc_to_depool: list[str],
         what: str,
@@ -654,6 +666,7 @@ class RemoteHosts:
     def _execute(  # pylint: disable=too-many-arguments
         self,
         commands: Sequence[Union[str, Command]],
+        *,
         mode: str = "sync",
         success_threshold: float = 1.0,
         batch_size: Optional[Union[int, str]] = None,

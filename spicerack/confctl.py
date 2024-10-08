@@ -85,7 +85,7 @@ class ConftoolEntity:
             selectors[tag] = re.compile(f"^{expr}$")
 
         obj = None
-        for obj in self._entity.query(selectors):
+        for obj in self._entity.query(selectors):  # pylint: disable=use-yield-from; False positive obj is checked
             yield obj
 
         if obj is None:

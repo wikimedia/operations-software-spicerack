@@ -54,7 +54,7 @@ EXTRAS_REQUIRE = {
         "isort",
     ],
     "prospector": [
-        "prospector[with_everything]>=1.1.7,<1.12.0",
+        "prospector[with_everything]==1.12.1",  # Pinned
         "pytest>=6.0.2",
         "requests-mock>=1.7.0",
     ],
