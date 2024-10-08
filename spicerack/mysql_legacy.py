@@ -307,6 +307,16 @@ class Instance:
         return info
 
     @property
+    def data_dir(self) -> str:
+        """Get the data directory of this instance.
+
+        Returns:
+            the data directory path for mariadb for this specific instance.
+
+        """
+        return self._data_dir
+
+    @property
     def primary(self) -> str:
         """Retrieves the replication source of this cluster.
 

@@ -43,6 +43,18 @@ class TestInstance:
             mysql_legacy.Instance(RemoteHosts(self.config, nodeset("host[1-2]")))
 
     @pytest.mark.parametrize(
+        "instance, expected_data_dir",
+        [
+            ("single_instance", "/srv/sqldata"),
+            ("multi_instance", "/srv/sqldata.instance1"),
+        ],
+    )
+    def test_data_dir(self, instance, expected_data_dir):
+        """It should return the correct data directory path for single and multi instances."""
+        test_instance = getattr(self, instance)
+        assert test_instance.data_dir == expected_data_dir
+
+    @pytest.mark.parametrize(
         "query, database, kwargs",
         (
             ("SELECT 1 AS test", "", {}),
