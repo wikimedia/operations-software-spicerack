@@ -119,6 +119,19 @@ class TestInstance:
         assert rows == [{"test": "line with"}]
         assert "Failed to parse into key/value for query 'SELECT' this line: a newline" in caplog.text
 
+    @pytest.mark.parametrize(
+        "output,expected",
+        (
+            (b"ActiveState=active\nSubState=running", True),
+            (b"ActiveState=inactive\nSubState=running", False),
+            (b"ActiveState=active\nSubState=stopped", False),
+        ),
+    )
+    def test_is_running(self, output, expected):
+        """It should return True if the service is active and running."""
+        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(output, parent=MsgTreeElem()))]
+        assert self.single_instance.is_running() is expected
+
     @pytest.mark.parametrize("instance", ("single_instance", "multi_instance"))
     @pytest.mark.parametrize(
         "method, expected",

@@ -181,6 +181,20 @@ class Instance:
 
         return rows
 
+    def is_running(self) -> bool:
+        """Check if the systemd service for the instance is active and running.
+
+        Returns:
+            True if the service is active and running, False otherwise.
+
+        """
+        command = f"/usr/bin/systemctl show -p ActiveState -p SubState {self._service}"
+
+        result = self.host.run_sync(command, is_safe=True)
+        output = list(result)[0][1].message().decode("utf-8").strip()
+
+        return "ActiveState=active" in output and "SubState=running" in output
+
     def stop_slave(self) -> None:
         """Stops mariadb replication."""
         self.run_query("STOP SLAVE")
