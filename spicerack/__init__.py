@@ -23,6 +23,7 @@ from spicerack._log import irc_logger, sal_logger
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
+from spicerack.apiclient import APIClient
 from spicerack.apt import AptGetHosts
 from spicerack.confctl import Confctl, ConftoolEntity
 from spicerack.dbctl import Dbctl
@@ -628,6 +629,25 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         name = f"Spicerack/{__version__} {name}"
         return requests.http_session(name, **kwargs)
+
+    def api_client(self, base_url: str, accept_header: str = "application/json", **kwargs: Any) -> APIClient:
+        """Return a generic APIClient instance with the given base URL and HTTP session based on the parameters.
+
+        Arguments:
+            base_url: the full base URL for the API. It must include the scheme and the domain and can include the
+                API path prefix if there is one.
+            accept_header: an optional HTTP ``Accept`` header to set in the HTTP session. By default a JSON API is
+                assumed.
+            **kwargs: arbitrary keyword arguments passed directly to :py:func:`wmflib.requests.http_session` to
+                customize the HTTP session used for this API.
+
+        Returns:
+            A generic API client instance with DRY-RUN support.
+
+        """
+        session = self.requests_session("APIClient", **kwargs)
+        session.headers.update({"Accept": accept_header})
+        return APIClient(base_url, session, dry_run=self._dry_run)
 
     def etcdctl(self, *, remote_host: RemoteHosts) -> EtcdctlController:
         """Add etcdctl control capabilities to the given RemoteHost.

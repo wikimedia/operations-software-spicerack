@@ -21,6 +21,7 @@ from spicerack import Spicerack
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
+from spicerack.apiclient import APIClient
 from spicerack.apt import AptGetHosts
 from spicerack.confctl import ConftoolEntity
 from spicerack.dbctl import Dbctl
@@ -101,6 +102,7 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert isinstance(spicerack.debmonitor(), Debmonitor)
     assert isinstance(spicerack.ganeti(), Ganeti)
     assert isinstance(spicerack.requests_session("name"), Session)
+    assert isinstance(spicerack.api_client("https://api.example.org/v1"), APIClient)
     assert isinstance(
         spicerack.etcdctl(remote_host=mock.MagicMock(spec_set=RemoteHosts)),
         EtcdctlController,
