@@ -1,4 +1,4 @@
-"""Netbox module tests."""
+"""Redfish module tests."""
 
 import ipaddress
 import logging
@@ -503,43 +503,10 @@ class TestRedfish:
         ]
         assert self.redfish.most_recent_member(data, "date") == {"date": "2022-01-01T00:00:00-00:00"}
 
-    @pytest.mark.parametrize("method", ("get", "head"))
-    def test_request_dry_run_ro(self, method):
-        """It should perform any RO request and return the actual response also in dry_run mode."""
-        self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
-        self.requests_mock.head("/redfish")
-        response = self.redfish_dry_run.request(method, "/redfish")
-        assert response.status_code == 200
-        if method == "get":
-            assert response.json() == {"v1": "/redfish/v1/"}
-
-    @pytest.mark.parametrize("method", ("connect", "delete", "options", "patch", "post", "put", "trace"))
-    def test_request_dry_run_rw(self, method):
-        """It should not perform any RW request and return a dummy successful response in dry-run mode."""
-        response = self.redfish_dry_run.request(method, "/redfish")
-        assert response.status_code == 200
-        assert not response.text
-
-    def test_request_dry_run_fail(self, caplog):
-        """If the request fails in dry-run mode, it should return a dummy successful response."""
-        self.requests_mock.get("/redfish", exc=requests.exceptions.ConnectTimeout)
-        with caplog.at_level(logging.ERROR):
-            response = self.redfish_dry_run.request("get", "/redfish")
-
-        assert response.status_code == 200
-        assert "Failed to perform GET request to https://10.0.0.1/redfish" in caplog.text
-
-    def test_request_ok(self):
-        """It should perform the provided request and return it."""
-        self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
-        response = self.redfish.request("get", "/redfish")
-        assert response.json() == {"v1": "/redfish/v1/"}
-        assert response.status_code == 200
-
     def test_request_response_wrong_status_code(self):
         """It should raise a RedfishError if the request returns an error status code."""
         self.requests_mock.post("/redfish", json={"error": {"code": "1.0", "message": "error"}}, status_code=405)
-        with pytest.raises(redfish.RedfishError, match="POST https://10.0.0.1/redfish returned HTTP 405 with message"):
+        with pytest.raises(redfish.RedfishError, match="POST https://10.0.0.1/redfish returned HTTP 405"):
             self.redfish.request("post", "/redfish", json={"key": "value"})
 
     def test_request_response_raises(self):
@@ -550,7 +517,7 @@ class TestRedfish:
 
     def test_request_invalid_uri(self):
         """It should raise a RedfishError if the URI is invalid."""
-        with pytest.raises(redfish.RedfishError, match="Invalid uri redfish, it must start with a /"):
+        with pytest.raises(redfish.RedfishError, match="Invalid uri 'redfish', it must start with a /"):
             self.redfish.request("get", "redfish")
 
     def test_submit_task_dry_run(self):
@@ -1077,7 +1044,7 @@ class TestRedfishSupermicro:
         ][0]["RelatedProperties"][0].format(username="batman")
         self.requests_mock.post("/redfish/v1/AccountService/Accounts", json=response, status_code=500)
         with pytest.raises(
-            redfish.RedfishError, match="/redfish/v1/AccountService/Accounts returned HTTP 500 with message"
+            redfish.RedfishError, match="POST https://10.0.0.1/redfish/v1/AccountService/Accounts returned HTTP 500"
         ):
             self.redfish.add_account("batman", "12345")
 

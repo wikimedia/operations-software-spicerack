@@ -15,9 +15,9 @@ from typing import Any, Optional, Union
 import urllib3
 from packaging import version
 from requests import Response
-from requests.exceptions import RequestException
 from wmflib.requests import http_session
 
+from spicerack.apiclient import APIClient, APIClientError
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 
@@ -136,11 +136,12 @@ class Redfish:
         self._username = username
         self._password = password
 
-        self._http_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
+        session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
         # TODO: evaluate if we should create an intermediate CA for managament consoles
-        self._http_session.verify = False  # The devices have a self-signed certificate
-        self._http_session.auth = (self._username, self._password)
-        self._http_session.headers.update({"Accept": "application/json"})
+        session.verify = False  # The devices have a self-signed certificate
+        session.auth = (self._username, self._password)
+        session.headers.update({"Accept": "application/json"})
+        self._api_client = APIClient(f"https://{self._interface.ip}", session, dry_run=self._dry_run)
 
         self._upload_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=60 * 30)
         self._upload_session.verify = False  # The devices have a self-signed certificate
@@ -352,41 +353,18 @@ class Redfish:
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
 
-        Arguments:
-            uri: the relative URI to request.
-            method: the HTTP method to use (e.g. "post").
-            **kwargs: arbitrary keyword arguments, to be passed requests.
+        See :py:meth:`spicerack.apiclient.APIClient.request` for the arguments documentation.
 
         Raises:
-            spicerack.redfish.RedfishError: if the response status code is between 400 and 600 or if the given uri
-            does not start with a slash (/) or if the request couldn't be performed.
+            spicerack.apiclient.APIClientResponseError: if the response status code is between 400 and 600.
+            spicerack.redfish.RedfishError: if the given uri does not start with a slash (/) or if the request
+                couldn't be performed.
 
         """
-        if uri[0] != "/":
-            raise RedfishError(f"Invalid uri {uri}, it must start with a /")
-
-        url = f"https://{self._interface.ip}{uri}"
-
-        if self._dry_run and method.lower() not in ("head", "get"):  # RW call
-            logger.info("Would have called %s on %s", method, url)
-            return self._get_dummy_response()
-
         try:
-            response = self._http_session.request(method, url, **kwargs)
-        except RequestException as e:
-            message = f"Failed to perform {method.upper()} request to {url}"
-            if self._dry_run:
-                logger.error("%s: %s", message, e)
-                return self._get_dummy_response()
-
-            raise RedfishError(message) from e
-
-        if not response.ok:
-            raise RedfishError(
-                f"{method.upper()} {url} returned HTTP {response.status_code} with message:\n{response.text}"
-            )
-
-        return response
+            return self._api_client.request(method, uri, **kwargs)
+        except APIClientError as e:
+            raise RedfishError(str(e)) from e
 
     def _parse_submit_task(self, response: Response) -> str:
         """Submit a request that generates a task, return the URI of the submitted task.
@@ -553,7 +531,7 @@ class Redfish:
 
         if self._username == username and not self._dry_run:
             self._password = password
-            self._http_session.auth = (self._username, self._password)
+            self._api_client.http_session.auth = (self._username, self._password)
             logger.info("Updated current instance password to the new password")
 
         try:
@@ -619,13 +597,6 @@ class Redfish:
             raise RedfishError(
                 f"Got unexpected response HTTP {response.status_code}, expected HTTP 200/204: {response.text}"
             )
-
-    @staticmethod
-    def _get_dummy_response() -> Response:
-        """Return a dummy requests's Response to be used in dry-run mode."""
-        response = Response()
-        response.status_code = 200
-        return response
 
 
 class DellSCP:
