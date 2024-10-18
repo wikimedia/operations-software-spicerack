@@ -43,6 +43,7 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import MANAGEMENT_IFACE_NAME, Netbox, NetboxServer
+from spicerack.orchestrator import Orchestrator
 from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer, get_ca_via_srv_record, get_puppet_ca_hostname
 from spicerack.redfish import Redfish, RedfishDell, RedfishSupermicro
@@ -818,6 +819,17 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         """
         return AptGetHosts(remote_hosts)
+
+    def orchestrator(self) -> Orchestrator:
+        """Get an instance to interact with the Orchestrator APIs.
+
+        Returns:
+            the orcestrator instance.
+
+        """
+        session = self.requests_session("Orchestrator")
+        session.headers.update({"Accept": "application/json"})
+        return Orchestrator("https://orchestrator.wikimedia.org/api", session, dry_run=self._dry_run)
 
 
 class SpicerackExtenderBase:
