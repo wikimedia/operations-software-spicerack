@@ -1,7 +1,8 @@
 """MySQL shell module."""
 
 import logging
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
@@ -16,6 +17,7 @@ from wmflib.interactive import ask_confirmation
 
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
+from spicerack.mysql import Mysql
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts, RemoteHostsAdapter
 
 REPLICATION_ROLES: tuple[str, ...] = ("master", "slave", "standalone")
@@ -99,8 +101,9 @@ class Instance:
 
         self.host = host
         self.name = name
+        self._mysql = Mysql(dry_run=host.dry_run)
         self._primary = ""
-        self._mysql = "/usr/local/bin/mysql"
+        self._mysql_bin = "/usr/local/bin/mysql"
 
         if self.name:
             self._sock = f"/run/mysqld/mysqld.{self.name}.sock"
@@ -110,6 +113,43 @@ class Instance:
             self._sock = "/run/mysqld/mysqld.sock"
             self._service = "mariadb.service"
             self._data_dir = "/srv/sqldata"
+
+    @contextmanager
+    def cursor(self, *, read_only: bool = False, **kwargs: Any) -> Generator:
+        """Context manager to get an open connection and cursor against the current instance.
+
+        Examples:
+            ::
+
+                >>> with instance.cursor(database="mydb") as (connection, cursor):
+                >>>     count = cursor.execute("SELECT * FROM mytable WHERE a = %s and b = %s", ("value", 10))
+                >>>     results = cursor.fetchall()
+                >>>
+                >>> count
+                2
+                >>> results
+                [{'a': 'value', 'b': 10, 'c': 1}, {'a': 'value', 'b': 10, 'c': 2}]
+
+        Arguments:
+            read_only: True if this connection should use read-only transactions. Has no effect if in DRY-RUN mode,
+                it forces it to True.
+            **kwargs: See :py:class:`spicerack.mysql.Mysql.connect` for the available arguments and their default
+                values.
+
+        Yields:
+            A two-element tuple with the :py:class:`pymysql.connections.Connection` as first element and the cursor
+            object as second element. The cursor object is one of :py:mod:`pymysql.cursors`.
+
+        Raises:
+            pymysql.err.MySQLError: or any more specific exception that inherits from this one on error.
+
+        """
+        # TODO: make the Instance class be aware of the port to use to connect to mysql, ideally allowing to use the
+        # admin port if needed.
+        kwargs["host"] = str(self.host)
+        with self._mysql.connect(read_only=read_only, **kwargs) as connection:
+            with connection.cursor() as cursor:
+                yield connection, cursor
 
     def run_query(self, query: str, database: str = "", **kwargs: Any) -> Any:
         """Execute the query via Remote.
@@ -127,7 +167,7 @@ class Instance:
             spicerack.remote.RemoteExecutionError: if the query execution via SSH returns a non-zero exit code.
 
         """
-        command = f'{self._mysql} --socket {self._sock} --batch --execute "{query}" {database}'.strip()
+        command = f'{self._mysql_bin} --socket {self._sock} --batch --execute "{query}" {database}'.strip()
         kwargs.setdefault("print_progress_bars", False)
         kwargs.setdefault("print_output", False)
         try:

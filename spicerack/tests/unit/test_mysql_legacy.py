@@ -54,6 +54,19 @@ class TestInstance:
         test_instance = getattr(self, instance)
         assert test_instance.data_dir == expected_data_dir
 
+    @mock.patch("spicerack.mysql.Connection", autospec=True)
+    def test_cursor(self, mocked_pymsql_connection):
+        """It should allow to perform queries on the target instance via the pymysql library."""
+        with self.single_instance.cursor(database="mydatabase") as (connection, cursor):
+            assert connection is mocked_pymsql_connection.return_value
+            assert mocked_pymsql_connection.call_args.kwargs["database"] == "mydatabase"
+            cursor.execute("SELECT * FROM table")
+            cursor.fetchall()
+
+        mocked_cursor = mocked_pymsql_connection.return_value.cursor.return_value.__enter__.return_value
+        mocked_cursor.execute.assert_called_once_with("SELECT * FROM table")
+        mocked_cursor.fetchall.assert_called_once_with()
+
     @pytest.mark.parametrize(
         "query, database, kwargs",
         (
