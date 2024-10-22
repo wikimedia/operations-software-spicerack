@@ -1,17 +1,14 @@
 """MySQL module (native)."""
+
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pymysql.connections import Connection
+from pymysql.cursors import DictCursor
 
 from spicerack.constants import PUPPET_CA_PATH
-from spicerack.exceptions import SpicerackError
-
-
-class MysqlError(SpicerackError):
-    """Custom exception class for errors of this module."""
 
 
 class Mysql:
@@ -32,63 +29,55 @@ class Mysql:
         self._dry_run = dry_run
 
     @contextmanager
-    def connect(
-        self,
-        *,
-        read_only: bool = False,
-        charset: str = "utf8mb4",
-        read_default_file: Optional[str] = "",
-        read_default_group: Optional[str] = None,
-        ssl: Optional[dict] = None,
-        **kwargs: Any
-    ) -> Generator:
+    def connect(self, *, read_only: bool = False, **kwargs: Any) -> Generator:
         """Context-manager for a mysql connection to a remote host.
 
         Caution:
             Read-only support is limited to DML sql operations.
 
         Important:
-            - This does not commit changes, that is the caller's responsibility.
-            - The caller should also take care of rolling back transactions on error
-              as appropriate.
+            * By default autocommit is off and the commit of changes is the caller's responsibility.
+            * The caller should also take care of rolling back transactions on error as appropriate.
 
         Arguments:
             read_only: True if this connection should use read-only transactions. **Note**: This parameter has no
-                effect if DRY-RUN is set.
-            charset: Query charset to use.
-            read_default_file: ``my.cnf``-format file to read from. Defaults to ``~/.my.cnf``. Set to :py:data:`None`
-                to disable.
-            read_default_group: Section of read_default_file to use. If not specified, it will be set based on the
-                target hostname.
-            ssl: SSL configuration to use. Defaults to using the puppet CA. Set to ``{}`` to disable.
-            **kwargs: Options passed directly to :py:class:`pymysql.connections.Connection`.
+                effect if DRY-RUN is set, it will be forces to True.
+            **kwargs: Options passed directly to :py:class:`pymysql.connections.Connection`. If not set some settings
+                will be set to default values:
+
+                    * read_default_file: ``~/.my.cnf``. Set to :py:data:`None` to disable it.
+                    * read_default_group: If not specified, it will be set to ``client`` or ``labsdbclient`` based on
+                      the hostname.
+                    * ssl: uses the puppet CA. Set to ``{}`` to disable.
+                    * cursorclass: :py:class:`pymysql.cursors.DictCursor`
 
         Yields:
             :py:class:`pymysql.connections.Connection`: a context-managed mysql connection.
 
+        Raises:
+            pymysql.err.MySQLError: if unable to create the connection or set the connection to read only.
+
         """
-        # FIXME(kormat): read-only support is limited to DML sql statements.
-        # https://phabricator.wikimedia.org/T254756 is needed to do this better.
-        read_only = read_only or self._dry_run
+        default_group = "client"
+        if kwargs.get("host", "").startswith("clouddb"):
+            default_group = "clientlabsdb"
 
-        if read_default_file == "":
-            read_default_file = str(Path("~/.my.cnf").expanduser())
-        if read_default_file and not read_default_group:
-            read_default_group = "client"
-            if kwargs.get("host", "").startswith("labsdb"):
-                read_default_group += "labsdb"
-        if ssl is None:
-            ssl = {"ca": PUPPET_CA_PATH}
+        params: dict[str, Any] = {
+            "charset": "utf8mb4",
+            "cursorclass": DictCursor,
+            "read_default_file": str(Path("~/.my.cnf").expanduser()),
+            "read_default_group": default_group,
+            "ssl": {"ca": PUPPET_CA_PATH},
+        }
+        params.update(kwargs)
 
-        conn = Connection(
-            charset=charset,
-            read_default_file=read_default_file,
-            read_default_group=read_default_group,
-            ssl=ssl,
-            **kwargs,
-        )
-        if read_only:
+        conn = Connection(**params)
+
+        if read_only or self._dry_run:
+            # FIXME: read-only support is limited to DML sql statements.
+            # https://phabricator.wikimedia.org/T254756 is needed to do this better.
             conn.query("SET SESSION TRANSACTION READ ONLY")
+
         try:
             yield conn
         # Not catching exceptions and rolling back, as that restricts the client code
