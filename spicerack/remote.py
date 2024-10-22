@@ -406,6 +406,11 @@ class RemoteHosts:
         self._use_sudo = use_sudo
 
     @property
+    def dry_run(self) -> bool:
+        """Getter for know if it was instantiated with DRY-RUN or not. Useful for RemoteHostsAdapter instances."""
+        return self._dry_run
+
+    @property
     def hosts(self) -> NodeSet:
         """Returns a copy of the current hosts targeted."""
         return self._hosts.copy()
