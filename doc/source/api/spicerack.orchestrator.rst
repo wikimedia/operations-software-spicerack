@@ -1,0 +1,4 @@
+orchestrator
+============
+
+.. automodule:: spicerack.orchestrator

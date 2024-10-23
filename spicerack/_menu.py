@@ -1,4 +1,5 @@
 """Cookbook internal module."""
+
 import argparse
 import logging
 import shlex
@@ -514,6 +515,7 @@ class TreeItem(BaseItem):
         print(f"#--- {self.verbose_title} args={self.args} ---#")
         self.show()
 
+        # pylint: disable-next=no-member; https://github.com/prospector-dev/prospector/issues/677
         if not sys.stdout.isatty():
             print("Not a tty, exiting.")
             raise StopIteration

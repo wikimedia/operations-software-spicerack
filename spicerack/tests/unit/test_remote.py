@@ -1,4 +1,5 @@
 """Interactive module tests."""
+
 import re
 from datetime import datetime, timedelta
 from unittest import mock
@@ -299,6 +300,19 @@ class TestRemoteHosts:
         """Should raise RemoteError if initialized without hosts."""
         with pytest.raises(remote.RemoteError, match="No hosts provided"):
             remote.RemoteHosts(self.config, nodeset(), dry_run=False)
+
+    def test_dry_run(self):
+        """It should return the current DRY-RUN value of the remote hosts instance."""
+        assert self.remote_hosts.dry_run is False
+        assert self.remote_hosts_dry_run.dry_run is True
+
+    def test_hosts(self):
+        """It should return a copy of the hosts property."""
+        hosts = self.remote_hosts.hosts
+        assert hosts == self.hosts
+        assert hosts is not self.hosts
+        hosts.add("node10")
+        assert hosts != self.remote_hosts.hosts
 
     @pytest.mark.parametrize("func_name", ("run_sync", "run_async"))
     def test_execute(self, func_name):

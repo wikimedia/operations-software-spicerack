@@ -21,6 +21,7 @@ from spicerack import Spicerack
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
+from spicerack.apiclient import APIClient
 from spicerack.apt import AptGetHosts
 from spicerack.confctl import ConftoolEntity
 from spicerack.dbctl import Dbctl
@@ -39,6 +40,7 @@ from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
 from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import Netbox, NetboxServer
+from spicerack.orchestrator import Orchestrator
 from spicerack.peeringdb import PeeringDB
 from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer
 from spicerack.redfish import RedfishDell, RedfishSupermicro
@@ -101,6 +103,7 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert isinstance(spicerack.debmonitor(), Debmonitor)
     assert isinstance(spicerack.ganeti(), Ganeti)
     assert isinstance(spicerack.requests_session("name"), Session)
+    assert isinstance(spicerack.api_client("https://api.example.org/v1"), APIClient)
     assert isinstance(
         spicerack.etcdctl(remote_host=mock.MagicMock(spec_set=RemoteHosts)),
         EtcdctlController,
@@ -110,6 +113,7 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert isinstance(service_catalog, Catalog)
     assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
     assert isinstance(spicerack.apt_get(mock.MagicMock(spec_set=RemoteHosts)), AptGetHosts)
+    assert isinstance(spicerack.orchestrator(), Orchestrator)
     assert isinstance(spicerack.lock(), NoLock)
 
     assert mocked_dns_resolver.Resolver.called

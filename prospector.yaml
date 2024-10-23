@@ -50,7 +50,8 @@ pylint:
     good-names: handleError  # From logging.Handler, inline disable doesn't work, used in test_log.py
     ignore: vulture_whitelist.py
     max-line-length: 120
-    max-args: 6
+    max-args: 7
+    max-positional-arguments: 6
     max-attributes: 14
     max-locals: 16
     include-naming-hint: true

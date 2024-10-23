@@ -73,7 +73,7 @@ class TestAlerting:
     @mock.patch("spicerack.alertmanager.AlertmanagerHosts.remove_downtime")
     def test_downtimed_on_error(
         self, am_rmdt, icinga_rmdt, am_dt, icinga_dt, remove_on_error, remove_downtime_calls
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-positional-arguments
         """It should issue a silence and then delete it even with errors."""
         with pytest.raises(ValueError):
             with self.alerting_hosts.downtimed(self.reason, remove_on_error=remove_on_error):

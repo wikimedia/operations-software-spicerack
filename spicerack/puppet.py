@@ -1,4 +1,5 @@
 """Puppet module."""
+
 import json
 import logging
 from collections.abc import Iterator
@@ -190,6 +191,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
     def run(  # pylint: disable=too-many-arguments
         self,
+        *,
         timeout: int = 300,
         enable_reason: Optional[Reason] = None,
         quiet: bool = False,
@@ -587,15 +589,16 @@ class PuppetServer(RemoteHostsAdapter):
 
         return response
 
-    def hiera_lookup(self, fqdn: str, key: str) -> str:
+    def hiera_lookup(self, fqdn: str, key: str, *, fmt: str = "s") -> str:
         """Lookup a hiera value for a specific host.
 
         Arguments:
             fqdn: the fqdn whose values we are looking up
             key: the hiera key to lookup
+            fmt: how Puppet will render the object: 's' (PSON, default), 'json', 'yaml'
 
         """
-        command = f"puppet lookup --render-as s --compile --node {fqdn} {key} 2>/dev/null"
+        command = f"puppet lookup --render-as {fmt} --compile --node {fqdn} {key} 2>/dev/null"
         result = self.server_host.run_sync(command, is_safe=True, print_output=False, print_progress_bars=False)
         _, output = next(result)
         return output.message().decode()

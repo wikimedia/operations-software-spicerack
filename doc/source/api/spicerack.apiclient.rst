@@ -1,0 +1,4 @@
+apiclient
+=========
+
+.. automodule:: spicerack.apiclient

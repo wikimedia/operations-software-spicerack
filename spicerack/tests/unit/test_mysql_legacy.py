@@ -43,6 +43,31 @@ class TestInstance:
             mysql_legacy.Instance(RemoteHosts(self.config, nodeset("host[1-2]")))
 
     @pytest.mark.parametrize(
+        "instance, expected_data_dir",
+        [
+            ("single_instance", "/srv/sqldata"),
+            ("multi_instance", "/srv/sqldata.instance1"),
+        ],
+    )
+    def test_data_dir(self, instance, expected_data_dir):
+        """It should return the correct data directory path for single and multi instances."""
+        test_instance = getattr(self, instance)
+        assert test_instance.data_dir == expected_data_dir
+
+    @mock.patch("spicerack.mysql.Connection", autospec=True)
+    def test_cursor(self, mocked_pymsql_connection):
+        """It should allow to perform queries on the target instance via the pymysql library."""
+        with self.single_instance.cursor(database="mydatabase") as (connection, cursor):
+            assert connection is mocked_pymsql_connection.return_value
+            assert mocked_pymsql_connection.call_args.kwargs["database"] == "mydatabase"
+            cursor.execute("SELECT * FROM table")
+            cursor.fetchall()
+
+        mocked_cursor = mocked_pymsql_connection.return_value.cursor.return_value.__enter__.return_value
+        mocked_cursor.execute.assert_called_once_with("SELECT * FROM table")
+        mocked_cursor.fetchall.assert_called_once_with()
+
+    @pytest.mark.parametrize(
         "query, database, kwargs",
         (
             ("SELECT 1 AS test", "", {}),
@@ -106,6 +131,19 @@ class TestInstance:
 
         assert rows == [{"test": "line with"}]
         assert "Failed to parse into key/value for query 'SELECT' this line: a newline" in caplog.text
+
+    @pytest.mark.parametrize(
+        "output,expected",
+        (
+            (b"ActiveState=active\nSubState=running", True),
+            (b"ActiveState=inactive\nSubState=running", False),
+            (b"ActiveState=active\nSubState=stopped", False),
+        ),
+    )
+    def test_is_running(self, output, expected):
+        """It should return True if the service is active and running."""
+        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(output, parent=MsgTreeElem()))]
+        assert self.single_instance.is_running() is expected
 
     @pytest.mark.parametrize("instance", ("single_instance", "multi_instance"))
     @pytest.mark.parametrize(

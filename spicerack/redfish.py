@@ -15,9 +15,9 @@ from typing import Any, Optional, Union
 import urllib3
 from packaging import version
 from requests import Response
-from requests.exceptions import RequestException
 from wmflib.requests import http_session
 
+from spicerack.apiclient import APIClient, APIClientError
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 
@@ -106,6 +106,10 @@ class Redfish:
     """The name of the Log service."""
     reboot_message_id = ""
     """The message ID for a reboot event."""
+    boot_mode_attribute = ""
+    """The boot mode key in the Bios attributes."""
+    http_boot_target = ""
+    """The value to the BootSourceOverrideTarget key for HTTP boot."""
 
     def __init__(
         self,
@@ -132,11 +136,12 @@ class Redfish:
         self._username = username
         self._password = password
 
-        self._http_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
+        session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
         # TODO: evaluate if we should create an intermediate CA for managament consoles
-        self._http_session.verify = False  # The devices have a self-signed certificate
-        self._http_session.auth = (self._username, self._password)
-        self._http_session.headers.update({"Accept": "application/json"})
+        session.verify = False  # The devices have a self-signed certificate
+        session.auth = (self._username, self._password)
+        session.headers.update({"Accept": "application/json"})
+        self._api_client = APIClient(f"https://{self._interface.ip}", session, dry_run=self._dry_run)
 
         self._upload_session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=60 * 30)
         self._upload_session.verify = False  # The devices have a self-signed certificate
@@ -348,41 +353,18 @@ class Redfish:
     def request(self, method: str, uri: str, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
 
-        Arguments:
-            uri: the relative URI to request.
-            method: the HTTP method to use (e.g. "post").
-            **kwargs: arbitrary keyword arguments, to be passed requests.
+        See :py:meth:`spicerack.apiclient.APIClient.request` for the arguments documentation.
 
         Raises:
-            spicerack.redfish.RedfishError: if the response status code is between 400 and 600 or if the given uri
-            does not start with a slash (/) or if the request couldn't be performed.
+            spicerack.apiclient.APIClientResponseError: if the response status code is between 400 and 600.
+            spicerack.redfish.RedfishError: if the given uri does not start with a slash (/) or if the request
+                couldn't be performed.
 
         """
-        if uri[0] != "/":
-            raise RedfishError(f"Invalid uri {uri}, it must start with a /")
-
-        url = f"https://{self._interface.ip}{uri}"
-
-        if self._dry_run and method.lower() not in ("head", "get"):  # RW call
-            logger.info("Would have called %s on %s", method, url)
-            return self._get_dummy_response()
-
         try:
-            response = self._http_session.request(method, url, **kwargs)
-        except RequestException as e:
-            message = f"Failed to perform {method.upper()} request to {url}"
-            if self._dry_run:
-                logger.error("%s: %s", message, e)
-                return self._get_dummy_response()
-
-            raise RedfishError(message) from e
-
-        if not response.ok:
-            raise RedfishError(
-                f"{method.upper()} {url} returned HTTP {response.status_code} with message:\n{response.text}"
-            )
-
-        return response
+            return self._api_client.request(method, uri, **kwargs)
+        except APIClientError as e:
+            raise RedfishError(str(e)) from e
 
     def _parse_submit_task(self, response: Response) -> str:
         """Submit a request that generates a task, return the URI of the submitted task.
@@ -549,7 +531,7 @@ class Redfish:
 
         if self._username == username and not self._dry_run:
             self._password = password
-            self._http_session.auth = (self._username, self._password)
+            self._api_client.http_session.auth = (self._username, self._password)
             logger.info("Updated current instance password to the new password")
 
         try:
@@ -564,6 +546,35 @@ class Redfish:
     @abstractmethod
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
+
+    @property
+    def is_uefi(self) -> bool:
+        """Return weather the host is legacy BIOS or UEFI."""
+        response = self.request("get", f"{self.system_manager}/Bios").json()
+        return "efi" in response["Attributes"].get(self.boot_mode_attribute, "").lower()
+
+    def force_http_boot_once(self) -> None:
+        """Force the host to boot over UEFI HTTP at the next reboot.
+
+        Raises:
+            spicerack.redfish.RedfishError: if unable to perform the config change or not UEFI host.
+
+        """
+        if not self.is_uefi:
+            raise RedfishError("HTTP boot is only possible for UEFI hosts.")
+        logger.info("Setting the next boot to UEFI HTTP for %s", self._hostname)
+        efi_http_boot = {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": self.http_boot_target,
+                "BootSourceOverrideMode": "UEFI",
+            }
+        }
+        self.request(
+            "patch",
+            self.system_manager,
+            json=efi_http_boot,
+        )
 
     def chassis_reset(self, action: ChassisResetPolicy) -> None:
         """Perform a reset of the chassis power status.
@@ -586,13 +597,6 @@ class Redfish:
             raise RedfishError(
                 f"Got unexpected response HTTP {response.status_code}, expected HTTP 200/204: {response.text}"
             )
-
-    @staticmethod
-    def _get_dummy_response() -> Response:
-        """Return a dummy requests's Response to be used in dry-run mode."""
-        response = Response()
-        response.status_code = 200
-        return response
 
 
 class DellSCP:
@@ -808,6 +812,10 @@ class RedfishSupermicro(Redfish):
     """The name of the Log service."""
     reboot_message_id = "Event.1.0.SystemPowerAction"
     """The message ID for a reboot event."""
+    boot_mode_attribute = "BootModeSelect"
+    """The boot mode key in the Bios attributes."""
+    http_boot_target = "Pxe"
+    """The value to the BootSourceOverrideTarget key for HTTP boot."""
 
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
@@ -844,6 +852,10 @@ class RedfishDell(Redfish):
     """The name of the Log service."""
     reboot_message_id = "RAC0182"
     """The message ID for a reboot event."""
+    boot_mode_attribute = "BootMode"
+    """The boot mode key in the Bios attributes."""
+    http_boot_target = "UefiHttp"
+    """The value to the BootSourceOverrideTarget key for HTTP boot."""
 
     scp_base_uri: str = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
     """The Dell's SCP push base URI."""
