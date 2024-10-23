@@ -1,6 +1,46 @@
 Spicerack Changelog
 -------------------
 
+`v8.15.0`_ (2024-10-23)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* mysql: refactor this currently unused module to be up to date with the current infrastructure while simplifying it.
+  Because of the unused nature of the module this didn't warrant a major release. Reporting it as breaking here for
+  completeness.
+
+New features
+""""""""""""
+
+* orchestrator: add a new module to interact with Orchestrator's APIs.
+* apiclient: add a generic API client module and related Spicerack accessor.
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: use the new apiclient module.
+* redfish: add UEFI functions to check if a host is setup with UEFI and to boot into UEFI HTTP.
+* puppet: add format option to ``hiera_lookup``.
+* mysql_legacy: add data directory accessor.
+* mysql_legacy: re-order the ``CORE_SECTIONS`` constant from the less impactful to most impactful.
+* mysql_legacy: get systemd status for instance to easily check if the instance is running or not.
+* mysql_legacy: add ``cursor`` method to the ``Instance`` class to get a mysql client connection to the instance.
+* remote: add ``dry_run`` getter for ``RemoteHosts``, useful for ``RemoteHostsAdapter`` implementations.
+
+Bug fixes
+"""""""""
+
+* dhcp: Add option to omit sending filename to a vendor, used for the Debian Installer.
+
+Miscellanea
+"""""""""""
+
+doc: removed deprecated call to ``sphinx_rtd_theme``.
+tox: only install flake8 when running flake8.
+tests: fix issues reported by pylint >3 and pin Prospector.
+
 `v8.14.0`_ (2024-09-30)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -80,7 +120,7 @@ Minor improvements
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Dependencies breaking changes
-"""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""
 
 * setup.py: update pynetbox to 7.4 (`T373794`_).
 
@@ -343,7 +383,7 @@ Bug fixes
 Miscellanea
 """""""""""
 
-* documentation: expand distributed locking docs, add an example of logging when unable to acquire a lock.
+* doc: expand distributed locking docs, add an example of logging when unable to acquire a lock.
 * spicerack: log at debug level some stats of each cookbook execution in a machine-readable format. This can be useful
   to generate some stats of the cookbook executions allowing to split them by exit code too.
 
@@ -421,8 +461,8 @@ Minor improvements
 Miscellanea
 """""""""""
 
-* documentation: add new section for the distributed locking support in the Introduction page.
-* documentation: mark the module interface as deprecated instead of having the class one as preferred, to better
+* doc: add new section for the distributed locking support in the Introduction page.
+* doc: mark the module interface as deprecated instead of having the class one as preferred, to better
   describe the current state.
 * tox.ini: remove optimization for tox <4. Tox 4 will not re-use the environments because of the different names,
   so removing this tox <4 optimization as it's making subsequent runs slower with tox 4+.
@@ -1161,7 +1201,7 @@ Miscellanea
 """""""""""
 
 * tests: fix yaml file indentation.
-* documentation: fix typo.
+* doc: fix typo.
 * setup.py: mark the module as typed so that mypy can type check calls in other tools that are importing this library.
 
 `v2.4.1`_ (2022-04-12)
@@ -1638,7 +1678,7 @@ Miscellanea
 
 * confctl: fix example code in docstring.
 * pylint: fix newly reported issues.
-* docs: add how to contribute section.
+* doc: add how to contribute section.
 
 `v0.0.59`_ (2021-09-09)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -2012,7 +2052,7 @@ Miscellanea
 * tests: temporary force ``mypy`` upper version to avoid a regression in release 0.800.
 * tests: tox, enable python 3.9 support.
 * code style: introduced ``black`` and ``isort`` as autoformatters (`T211750`_).
-* documentation: add a development page to highlight how the code is formatted and how to integrate the code formatters
+* doc: add a development page to highlight how the code is formatted and how to integrate the code formatters
   with an editor/IDE or in the git workflow (`T211750`_).
 * git: allow exclude code auto formatters refactor commit from git blame adding the ``.git-blame-ignore-revs`` file.
 
@@ -2147,7 +2187,7 @@ Miscellanea
 
 * Spicerack now depends on the new ``wmflib`` package.
 * log: adjust the return type of ``FilterOutCumin.filter()`` as required by mypy (upstream documentation incorrect).
-* documentation: refactor and simplify its configuration.
+* doc: refactor and simplify its configuration.
 * pylint: allow ``logger`` as module-scope name given that is used throughout the project so that there is no need for
   a pylint disable comment.
 
@@ -2483,7 +2523,7 @@ Miscellanea
 
 * dns: remove unused type hint ignore comments.
 * remote: fix docstring return type.
-* documentation: updated link to the requests module documentation.
+* doc: updated link to the requests module documentation.
 * docstrings: fix pep257 reported errors.
 * mypy: Get rid of no longer needed ``# type: ignore`` annotations that are now detected automatically by ``mypy``.
 
@@ -2543,7 +2583,7 @@ Bug Fixes
   * In order to build on Debian Stretch without backported packages, relax a bit the urllib3 dependency as the only
     goal for to specify it is to avoid conflicts with the latest version.
 
-* documentations: fix Sphinx configuration:
+* doc: fix Sphinx configuration:
 
   * In order to avoid issues while building the Debian package on Stretch where Sphinx ``1.4.9`` is available, change
     configuration to:
@@ -2659,7 +2699,7 @@ Miscellanea
 
 * Add Python type hints and mypy check, not for variables and properties as we're still supporting Python 3.5.
 * setup.py: revert commit 3d7ab9b that forced the ``urllib3`` version installed as it's not needed anymore.
-* tests/docs: unify usage of ``example.com`` domain.
+* tests/doc: unify usage of ``example.com`` domain.
 
 `v0.0.20`_ (2019-03-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -2783,7 +2823,7 @@ Minor improvements
 """"""""""""""""""
 
 * decorators: improve tests.
-* documentation: fine-tune generated documentation.
+* doc: fine-tune generated documentation.
 
 Bug Fixes
 """""""""
@@ -3206,3 +3246,4 @@ New features
 .. _`v8.13.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.13.0
 .. _`v8.13.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.13.1
 .. _`v8.14.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.14.0
+.. _`v8.15.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.0
