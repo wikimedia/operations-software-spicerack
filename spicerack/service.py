@@ -1,4 +1,5 @@
 """Service module."""
+
 import logging
 from collections import abc
 from collections.abc import Iterator, Sequence
@@ -323,7 +324,7 @@ class ServiceLVS:
     """
 
     conftool: ServiceLVSConftool
-    depool_threshold: str
+    depool_threshold: float
     enabled: bool
     lvs_class: str
     monitors: Optional[dict[str, dict]] = None  # Optional field in puppet

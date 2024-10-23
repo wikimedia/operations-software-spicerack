@@ -1,6 +1,15 @@
 Spicerack Changelog
 -------------------
 
+`v8.15.1`_ (2024-10-23)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* orchestrator: fix bug with older requests that doesn't have the ``JSONDecodeError`` exception.
+* service: change ``depool_threshold`` field to float following Puppet related change.
+
 `v8.15.0`_ (2024-10-23)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3247,3 +3256,4 @@ New features
 .. _`v8.13.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.13.1
 .. _`v8.14.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.14.0
 .. _`v8.15.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.0
+.. _`v8.15.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.1

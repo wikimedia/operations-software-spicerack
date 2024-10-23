@@ -1,10 +1,16 @@
 """Generic API client module."""
 
 import logging
-from typing import Any
+from typing import Any, Type, Union
 
 from requests import Response
-from requests.exceptions import JSONDecodeError
+
+try:  # JSONDecodeError present since requests 2.27.0, bullseye has 2.25.1
+    from requests.exceptions import JSONDecodeError
+
+    CompatJSONDecodeError: Union[Type[ValueError], Type[JSONDecodeError]] = JSONDecodeError
+except ImportError:
+    CompatJSONDecodeError = ValueError
 
 from spicerack.apiclient import APIClient, APIClientResponseError
 from spicerack.exceptions import SpicerackError
@@ -40,7 +46,7 @@ class Orchestrator(APIClient):
                 message = f"[{response['Code']}] {response['Message']}"
                 if response["Details"]:
                     message += f" {response['Details']}"
-            except JSONDecodeError:  # but also responds text on other errors like 404
+            except CompatJSONDecodeError:  # but also responds text on other errors like 404
                 message = f"{e.response.text}"
 
             raise OrchestratorError(message) from e

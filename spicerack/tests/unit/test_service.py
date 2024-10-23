@@ -1,4 +1,5 @@
 """Service Module Tests."""
+
 from ipaddress import ip_address
 from unittest import mock
 
@@ -132,7 +133,7 @@ class TestService:
             (("encryption",), True),
             (("ip", "all"), [ip_address("10.2.1.1"), ip_address("10.2.2.1")]),
             (("ip", "sites"), ["codfw", "eqiad"]),
-            (("lvs", "depool_threshold"), ".5"),
+            (("lvs", "depool_threshold"), 0.5),
             (("lvs", "enabled"), True),
             (("lvs", "lvs_class"), "low-traffic"),
             (("lvs", "bgp"), True),
