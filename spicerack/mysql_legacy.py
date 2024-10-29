@@ -12,6 +12,7 @@ from typing import Any, Optional
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
+from cumin.transports import Command
 from wmflib.constants import CORE_DATACENTERS
 from wmflib.interactive import ask_confirmation
 
@@ -295,10 +296,10 @@ class Instance:
         """Stops mariadb service.
 
         Returns:
-            The results of the remote status command.
+            The results of the remote status command. It does not raise on exit codes different from zero.
 
         """
-        return self.host.run_sync(f"/usr/bin/systemctl status {self._service}", is_safe=True)
+        return self.host.run_sync(Command(f"/usr/bin/systemctl status {self._service}", ok_codes=[]), is_safe=True)
 
     def start_mysql(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Starts mariadb service.

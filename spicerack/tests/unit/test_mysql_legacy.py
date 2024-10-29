@@ -8,6 +8,7 @@ from unittest import mock
 import pytest
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, nodeset
+from cumin.transports import Command
 
 from spicerack import mysql_legacy
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
@@ -256,7 +257,10 @@ class TestInstance:
         if method == "start":
             kwargs["print_output"] = True
 
-        self.mocked_run_sync.assert_called_once_with(f"/usr/bin/systemctl {method} mariadb{suffix}.service", **kwargs)
+        command = f"/usr/bin/systemctl {method} mariadb{suffix}.service"
+        if method == "status":
+            command = Command(command, ok_codes=[])
+        self.mocked_run_sync.assert_called_once_with(command, **kwargs)
 
     @pytest.mark.parametrize(
         "instance, path",
