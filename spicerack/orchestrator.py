@@ -1,4 +1,4 @@
-"""Generic API client module."""
+"""Orchestrator API module."""
 
 import logging
 from typing import Any, Type, Union
