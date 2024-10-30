@@ -91,6 +91,16 @@ class RemoteHostsAdapter:
         """Get the number of target hosts in this instance."""
         return len(self._remote_hosts)
 
+    @property
+    def remote_hosts(self) -> "RemoteHosts":
+        """Getter for the remote_hosts property.
+
+        Returns:
+            The instance to run commands on the underlying remote hosts.
+
+        """
+        return self._remote_hosts
+
 
 class LBRemoteCluster(RemoteHostsAdapter):
     """Class usable to operate on a cluster of servers with pooling/depooling logic in conftool."""
