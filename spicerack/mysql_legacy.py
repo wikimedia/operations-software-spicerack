@@ -374,6 +374,16 @@ class Instance:
         return self._data_dir
 
     @property
+    def socket(self) -> str:
+        """Getter for the socket path of the instance.
+
+        Returns:
+            the instance specific socket path to use.
+
+        """
+        return self._sock
+
+    @property
     def primary(self) -> str:
         """Retrieves the replication source of this cluster.
 

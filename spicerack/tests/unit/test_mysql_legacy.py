@@ -44,16 +44,26 @@ class TestInstance:
             mysql_legacy.Instance(RemoteHosts(self.config, nodeset("host[1-2]")))
 
     @pytest.mark.parametrize(
-        "instance, expected_data_dir",
+        "instance, expected",
         [
             ("single_instance", "/srv/sqldata"),
             ("multi_instance", "/srv/sqldata.instance1"),
         ],
     )
-    def test_data_dir(self, instance, expected_data_dir):
+    def test_data_dir(self, instance, expected):
         """It should return the correct data directory path for single and multi instances."""
-        test_instance = getattr(self, instance)
-        assert test_instance.data_dir == expected_data_dir
+        assert getattr(self, instance).data_dir == expected
+
+    @pytest.mark.parametrize(
+        "instance, expected",
+        [
+            ("single_instance", "/run/mysqld/mysqld.sock"),
+            ("multi_instance", "/run/mysqld/mysqld.instance1.sock"),
+        ],
+    )
+    def test_socket(self, instance, expected):
+        """It should return the correct socket path for single and multi instances."""
+        assert getattr(self, instance).socket == expected
 
     @mock.patch("spicerack.mysql.Connection", autospec=True)
     def test_cursor(self, mocked_pymsql_connection):
