@@ -5,14 +5,15 @@ from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal
 from enum import Enum
-from textwrap import dedent
 from time import sleep
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
 from cumin.transports import Command
+from pymysql.cursors import DictCursor
 from wmflib.constants import CORE_DATACENTERS
 from wmflib.interactive import ask_confirmation
 
@@ -116,15 +117,27 @@ class Instance:
             self._data_dir = "/srv/sqldata"
 
     @contextmanager
-    def cursor(self, *, read_only: bool = False, **kwargs: Any) -> Generator:
+    def cursor(self, **kwargs: Any) -> Generator:
         """Context manager to get an open connection and cursor against the current instance.
 
         Examples:
-            ::
+            * Iterate directly the cursor
+              ::
+
+                >>> with instance.cursor(database="mydb") as (connection, cursor):
+                >>>     count = cursor.execute("SELECT * FROM mytable WHERE a = %s and b = %s", ("value", 10))
+                >>>     for row in cursor:
+                >>>         # example row: {'a': 'value', 'b': 10, 'c': 1}
+                >>>
+                >>>     instance.check_warnings(cursor)
+
+            * Get all the results
+              ::
 
                 >>> with instance.cursor(database="mydb") as (connection, cursor):
                 >>>     count = cursor.execute("SELECT * FROM mytable WHERE a = %s and b = %s", ("value", 10))
                 >>>     results = cursor.fetchall()
+                >>>     instance.check_warnings(cursor)
                 >>>
                 >>> count
                 2
@@ -132,10 +145,8 @@ class Instance:
                 [{'a': 'value', 'b': 10, 'c': 1}, {'a': 'value', 'b': 10, 'c': 2}]
 
         Arguments:
-            read_only: True if this connection should use read-only transactions. Has no effect if in DRY-RUN mode,
-                it forces it to True.
-            **kwargs: See :py:class:`spicerack.mysql.Mysql.connect` for the available arguments and their default
-                values.
+            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql.Mysql.connect` method. See
+                its documentation for the available arguments and their default values.
 
         Yields:
             A two-element tuple with the :py:class:`pymysql.connections.Connection` as first element and the cursor
@@ -148,9 +159,117 @@ class Instance:
         # TODO: make the Instance class be aware of the port to use to connect to mysql, ideally allowing to use the
         # admin port if needed.
         kwargs["host"] = str(self.host)
-        with self._mysql.connect(read_only=read_only, **kwargs) as connection:
+        with self._mysql.connect(**kwargs) as connection:
             with connection.cursor() as cursor:
                 yield connection, cursor
+
+    def check_warnings(self, cursor: DictCursor) -> None:
+        """It will check if there is any warning in the cursor for the last query and ask the user what to do.
+
+        If any warning is found they will be logged to console and logfile and the user will be prompted what to do.
+
+        Arguments:
+            cursor: the cursor object with which the last query was made.
+
+        """
+        num_warnings = cursor.execute("SHOW WARNINGS")
+        if not num_warnings:
+            return
+
+        warnings = cursor.fetchall()
+        for warning in warnings:
+            logger.warning("[%s] %s: %s", warning["Level"], warning["Code"], warning["Message"])
+
+        ask_confirmation("The above warnings were raised during the last query, do you want to proceed anyway?")
+
+    def execute(
+        self,
+        query: str,
+        query_parameters: Union[None, tuple, list, dict] = None,
+        **kwargs: Any,
+    ) -> int:
+        """Execute a query that returns no data without giving access to the connection or cursor objects.
+
+        Note:
+            If any warning is issued by the database they will be logged and the user prompted what to do.
+
+        Examples:
+            ::
+
+                >>> query = "INSERT INTO mytable VALUES (%s(a), %s(b))"
+                >>> params = {"a": "value", "b": 10}
+                >>> num_rows = instance.execute(query, params, database="mydb")
+
+        Arguments:
+            query: the query to execute, with eventual placeholders (``%s`` or ``%s(name)``).
+            query_parameters: the query parameters to inject into the query, a :py:class:`tuple` or :py:class:`list` in
+                case ``%s`` placeholders were used or a :py:class:`dict` in case ``%s(name)`` placeholders were used.
+                Leave the default value :py:data:`None` if there are no placeholders in the query.
+            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql.Mysql.connect` method. See
+                its documentation for the available arguments and their default values.
+
+        Returns:
+            the number of affected rows.
+
+        Raises:
+            spicerack.mysql_legacy.MysqlLegacyError: if the query returned more than one row.
+            pymysql.err.MySQLError: on query errors.
+
+        """
+        with self.cursor(**kwargs) as (_connection, cursor):
+            num_rows = cursor.execute(query, query_parameters)
+            self.check_warnings(cursor)
+            return num_rows
+
+    def fetch_one_row(
+        self,
+        query: str,
+        query_parameters: Union[None, tuple, list, dict] = None,
+        **kwargs: Any,
+    ) -> Optional[dict]:
+        """Execute the given query and returns one row. It sets the connection as read only.
+
+        Note:
+            If any warning is issued by the database they will be logged and the user prompted what to do.
+
+        Examples:
+            ::
+
+                >>> query = "SELECT * FROM mytable WHERE a = %s(a) and b = %s(b)"
+                >>> params = {"a": "value", "b": 10}
+                >>> row = instance.fetch_one_row(query, params, database="mydb")
+                >>> row
+                {'a': 'value', 'b': 10, 'c': 1}
+
+        Arguments:
+            query: the query to execute, with eventual placeholders (``%s`` or ``%s(name)``).
+            query_parameters: the query parameters to inject into the query, a :py:class:`tuple` or :py:class:`list` in
+                case ``%s`` placeholders were used or a :py:class:`dict` in case ``%s(name)`` placeholders were used.
+                Leave the default value :py:data:`None` if there are no placeholders in the query.
+            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql.Mysql.connect` method. See
+                its documentation for the available arguments and their default values.
+
+        Returns:
+            the fetched row or :py:data:`None` if the query returned no rows.
+
+        Raises:
+            spicerack.mysql_legacy.MysqlLegacyError: if the query returned more than one row.
+            pymysql.err.MySQLError: on query errors.
+
+        """
+        kwargs["read_only"] = kwargs.get("read_only", True)  # Set RO to true unless explicitly specified
+        with self.cursor(**kwargs) as (_connection, cursor):
+            num_rows = cursor.execute(query, query_parameters)
+            if num_rows != 1:
+                self.check_warnings(cursor)
+                if num_rows == 0:
+                    return None
+
+                raise MysqlLegacyError(f"Expected query to return zero or one row, got {num_rows} instead.")
+
+            row = cursor.fetchone()
+            self.check_warnings(cursor)
+            return row
 
     def run_query(self, query: str, database: str = "", **kwargs: Any) -> Any:
         """Execute the query via Remote.
@@ -238,11 +357,11 @@ class Instance:
 
     def stop_slave(self) -> None:
         """Stops mariadb replication."""
-        self.run_query("STOP SLAVE")
+        self.execute("STOP SLAVE")
 
     def start_slave(self) -> None:
         """Starts mariadb replication and sleeps for 1 second afterwards."""
-        self.run_query("START SLAVE")
+        self.execute("START SLAVE")
         sleep(1)
 
     def show_slave_status(self) -> dict:
@@ -252,15 +371,16 @@ class Instance:
             the current slave status for the instance.
 
         """
-        sql = "SHOW SLAVE STATUS"
-        rows = self.run_vertical_query(sql, is_safe=True)
-        if not rows:
-            raise MysqlLegacyError(f"{sql} seems to have been executed on a master.")
+        query = "SHOW SLAVE STATUS"
+        with self.cursor() as (_connection, cursor):
+            num_rows = cursor.execute(query)
+            if not num_rows:
+                raise MysqlLegacyError(f"{query} seems to have been executed on a master.")
 
-        if len(rows) > 1:
-            raise NotImplementedError(f"Multisource setup are not implemented. Got {len(rows)} rows.")
+            if num_rows > 1:
+                raise NotImplementedError(f"Multisource setup are not implemented. Got {num_rows} rows.")
 
-        return rows[0]  # Only one row at this point
+            return cursor.fetchone()
 
     def show_master_status(self) -> dict:
         """Returns the output of show master status formatted as a dict.
@@ -269,19 +389,19 @@ class Instance:
             the current master status for the instance.
 
         """
-        sql = "SHOW MASTER STATUS"
-        rows = self.run_vertical_query(sql, is_safe=True)
-        if not rows:
-            raise MysqlLegacyError(f"{sql} seems to have been executed on a host with binlog disabled.")
+        query = "SHOW MASTER STATUS"
+        status = self.fetch_one_row(query)
+        if status is None:
+            raise MysqlLegacyError(f"{query} seems to have been executed on a host with binlog disabled.")
 
-        return rows[0]  # SHOW MASTER STATUS can return at most one row
+        return status
 
     def set_master_use_gtid(self, setting: MasterUseGTID) -> None:
         """Runs MASTER_USE_GTID with the given value."""
         if not isinstance(setting, MasterUseGTID):
             raise MysqlLegacyError(f"Only instances of MasterUseGTID are accepted, got: {type(setting)}")
 
-        self.run_query(f"CHANGE MASTER TO MASTER_USE_GTID={setting.value}")
+        self.execute("CHANGE MASTER TO MASTER_USE_GTID=%s", [setting.value])
 
     def stop_mysql(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Stops mariadb service.
@@ -414,16 +534,25 @@ class Instance:
 
     def set_replication_parameters(self, *, replication_info: ReplicationInfo, user: str, password: str) -> None:
         """Sets the replication parameters for the MySQL instance."""
-        query = f"""
-            CHANGE MASTER TO master_host='{replication_info.primary}',
-            master_port={replication_info.port},
-            master_ssl=1,
-            master_log_file='{replication_info.binlog}',
-            master_log_pos={replication_info.position},
-            master_user='{user}',
-            master_password='{password}'
-        """
-        self.run_query(dedent(query).strip())
+        self.execute(
+            (
+                "CHANGE MASTER TO master_host=%s(primary), "
+                "master_port=%s(port), "
+                "master_ssl=1, "
+                "master_log_file=%s(binlog), "
+                "master_log_pos=%s(position), "
+                "master_user=%s(user), "
+                "master_password=%s(password)"
+            ),
+            {
+                "primary": replication_info.primary,
+                "port": replication_info.port,
+                "binlog": replication_info.binlog,
+                "position": replication_info.position,
+                "user": user,
+                "password": password,
+            },
+        )
 
     def post_clone_reset_with_slave_stopped(self) -> None:
         """Prepares the MySQL instance for the first pooling operation."""
@@ -433,7 +562,7 @@ class Instance:
         )
         self.start_mysql()
         self.stop_slave()
-        self.run_query("RESET SLAVE ALL")
+        self.execute("RESET SLAVE ALL")
 
     def resume_replication(self) -> None:
         """Resumes replication on the source MySQL instance."""
@@ -449,7 +578,7 @@ class Instance:
         backoff_mode="constant",
         exceptions=(MysqlLegacyReplagError,),
     )
-    def wait_for_replication(self, threshold: float = 1.0) -> None:
+    def wait_for_replication(self, threshold: Union[float, Decimal] = Decimal("1.0")) -> None:
         """Waits for replication to catch up.
 
         Arguments:
@@ -464,7 +593,7 @@ class Instance:
         if replag > threshold:
             raise MysqlLegacyReplagError(f"Replication lag higher than the threshold ({threshold}s): {replag}s")
 
-    def replication_lag(self) -> float:
+    def replication_lag(self) -> Decimal:
         """Retrieves the current replication lag.
 
         Returns:
@@ -474,22 +603,18 @@ class Instance:
             spicerack.mysql_legacy.MysqlLegacyError: if no lag information is present or unable to parse the it.
 
         """
-        query = """
-            SELECT greatest(0, TIMESTAMPDIFF(MICROSECOND, max(ts), UTC_TIMESTAMP(6)) - 500000)/1000000 AS lag
-            FROM heartbeat.heartbeat
-            ORDER BY ts LIMIT 1
-        """
-        query = dedent(query).strip()
-        query_res = list(self.run_query(query, is_safe=True))
-        if not query_res:
-            raise MysqlLegacyError("Got no output from the replication lag query")
+        query = (
+            "SELECT greatest(0, TIMESTAMPDIFF(MICROSECOND, max(ts), UTC_TIMESTAMP(6)) - 500000)/1000000 AS lag "
+            "FROM heartbeat ORDER BY ts LIMIT 1"
+        )
+        row = self.fetch_one_row(query, database="heartbeat")
+        if row is None:
+            raise MysqlLegacyError("The replication lag query returned no data")
 
-        output = ""
-        try:
-            output = query_res[0][1].message().decode("utf-8").splitlines()
-            return float(output[1])
-        except (IndexError, ValueError) as e:
-            raise MysqlLegacyError(f"Unable to parse replication lag from: {output}") from e
+        if not row["lag"]:
+            raise MysqlLegacyError(f"Unable to get lag information from: {row}")
+
+        return row["lag"]
 
 
 class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
