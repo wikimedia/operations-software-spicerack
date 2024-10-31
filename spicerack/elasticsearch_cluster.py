@@ -1,4 +1,5 @@
 """ElasticsearchCluster module."""
+
 import logging
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, Sequence
@@ -86,10 +87,6 @@ class ElasticsearchHosts(RemoteHostsAdapter):
         super().__init__(remote_hosts)
         self._nodes = nodes
         self._dry_run = dry_run
-
-    def get_remote_hosts(self) -> RemoteHosts:
-        """Returns the elasticsearch remote hosts instance."""
-        return self._remote_hosts
 
     def start_elasticsearch(self) -> None:
         """Starts all elasticsearch instances."""
@@ -386,7 +383,7 @@ class ElasticsearchClusters:
             logger.debug("Prom query %s returned queue_results of %s", query, queue_results)
 
             # If any of the partitions are non-empty, raise an error
-            for (topic, partition, queue_size) in queue_results:
+            for topic, partition, queue_size in queue_results:
                 if queue_size > 0:
                     raise ElasticsearchClusterCheckError(
                         f"Write queue not empty (had value of {queue_size}) for partition {partition} of topic {topic}."

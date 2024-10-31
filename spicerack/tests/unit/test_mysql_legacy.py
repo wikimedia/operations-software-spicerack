@@ -8,6 +8,7 @@ from unittest import mock
 import pytest
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, nodeset
+from cumin.transports import Command
 
 from spicerack import mysql_legacy
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
@@ -43,16 +44,26 @@ class TestInstance:
             mysql_legacy.Instance(RemoteHosts(self.config, nodeset("host[1-2]")))
 
     @pytest.mark.parametrize(
-        "instance, expected_data_dir",
+        "instance, expected",
         [
             ("single_instance", "/srv/sqldata"),
             ("multi_instance", "/srv/sqldata.instance1"),
         ],
     )
-    def test_data_dir(self, instance, expected_data_dir):
+    def test_data_dir(self, instance, expected):
         """It should return the correct data directory path for single and multi instances."""
-        test_instance = getattr(self, instance)
-        assert test_instance.data_dir == expected_data_dir
+        assert getattr(self, instance).data_dir == expected
+
+    @pytest.mark.parametrize(
+        "instance, expected",
+        [
+            ("single_instance", "/run/mysqld/mysqld.sock"),
+            ("multi_instance", "/run/mysqld/mysqld.instance1.sock"),
+        ],
+    )
+    def test_socket(self, instance, expected):
+        """It should return the correct socket path for single and multi instances."""
+        assert getattr(self, instance).socket == expected
 
     @mock.patch("spicerack.mysql.Connection", autospec=True)
     def test_cursor(self, mocked_pymsql_connection):
@@ -256,7 +267,10 @@ class TestInstance:
         if method == "start":
             kwargs["print_output"] = True
 
-        self.mocked_run_sync.assert_called_once_with(f"/usr/bin/systemctl {method} mariadb{suffix}.service", **kwargs)
+        command = f"/usr/bin/systemctl {method} mariadb{suffix}.service"
+        if method == "status":
+            command = Command(command, ok_codes=[])
+        self.mocked_run_sync.assert_called_once_with(command, **kwargs)
 
     @pytest.mark.parametrize(
         "instance, path",
@@ -394,7 +408,8 @@ class TestInstance:
         assert calls[2][0][0].endswith('STOP SLAVE"')
         assert calls[3][0][0].endswith('RESET SLAVE ALL"')
 
-    def test_resume_replication(self):
+    @mock.patch("spicerack.mysql_legacy.sleep", return_value=None)
+    def test_resume_replication(self, mocked_sleep):
         """It should start mysql, upgrade it, restart it and resume the replication."""
         self.mocked_run_sync.side_effect = [[(nodeset("single1"), iter(()))]] * 5
         self.single_instance.resume_replication()
@@ -406,6 +421,7 @@ class TestInstance:
         )
         assert calls[3][0][0].endswith("systemctl restart mariadb.service")
         assert calls[4][0][0].endswith('START SLAVE"')
+        mocked_sleep.assert_called_once_with(1)
 
     @pytest.mark.parametrize("threshold", (0, 0.1234, 0.5))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
@@ -496,44 +512,35 @@ class TestMysqlLegacyRemoteHosts:
 
     def test_list_host_instances_no_instance(self):
         """It should return an empty list if there are no instances on the host."""
-        self.mocked_run_sync.return_value = iter(())
+        self.mocked_run_sync.side_effect = [
+            [],  # Empty ls result
+            RemoteExecutionError(retcode=1, message="error", results=iter(())),  # Empty grep result
+        ]
         instances = self.mysql_remote_host.list_hosts_instances()
-        assert instances == []  # pylint: disable=use-implicit-booleaness-not-comparison
+        assert isinstance(instances, list)
+        assert not instances
 
     def test_list_host_instances_single(self):
         """It should return a list with just one Instance object for the single instance."""
-        service = b"mariadb.service loaded active running mariadb database server"
-        self.mocked_run_sync.return_value = [(nodeset("host1"), MsgTreeElem(service, parent=MsgTreeElem()))]
+        self.mocked_run_sync.side_effect = [[], []]  # Empty ls and successful grep -q
         instances = self.mysql_remote_host.list_hosts_instances()
         assert len(instances) == 1
         assert isinstance(instances[0], mysql_legacy.Instance)
         assert str(instances[0].host) == "host1"
         assert instances[0].name == ""
-        self.mocked_run_sync.assert_called_once_with(
-            "/usr/bin/systemctl --no-pager --type=service --plain --no-legend  list-units 'mariadb*'",
-            is_safe=True,
-            print_progress_bars=False,
-            print_output=False,
-        )
 
     def test_list_host_instances_multi(self):
         """It should return a list with all the instances of a multi-instance host."""
-        services = b"\n".join(
-            [
-                b"mariadb@s1.service loaded active running mariadb database server",
-                b"mariadb@s2.service loaded active running mariadb database server",
-                b"mariadb-spurious.service loaded active running mariadb database server",
-            ]
-        )
-        self.mocked_run_sync.return_value = [(nodeset("host1"), MsgTreeElem(services, parent=MsgTreeElem()))]
+        configs = b"instance1.cnf\ninstance2.cnf"
+        self.mocked_run_sync.return_value = [(nodeset("host1"), MsgTreeElem(configs, parent=MsgTreeElem()))]
         instances = self.mysql_remote_host.list_hosts_instances()
         assert len(instances) == 2
         for instance in instances:
             assert isinstance(instance, mysql_legacy.Instance)
             assert str(instance.host) == "host1"
 
-        assert instances[0].name == "s1"
-        assert instances[1].name == "s2"
+        assert instances[0].name == "instance1"
+        assert instances[1].name == "instance2"
 
     def test_list_host_instances_not_single_host(self):
         """It should raise a NotImplementedError if the MysqlLegacyRemoteHosts instance has multiple hosts."""

@@ -555,10 +555,6 @@ class TestPuppetServer:
         ):
             puppet.PuppetServer(self.mocked_server_host)
 
-    def test_server_host(self):
-        """It should return the master host RemoteHosts instance."""
-        assert self.puppet_server.server_host is self.mocked_server_host
-
     def test_delete(self):
         """It should delete the host from Puppet master and PuppetDB."""
         self.puppet_server.delete("test.example.com")
@@ -915,10 +911,6 @@ class TestPuppetMaster:
         self.mocked_master_host = mock.MagicMock(spec_set=RemoteHosts)
         self.mocked_master_host.__len__.return_value = 1
         self.puppet_master = puppet.PuppetMaster(self.mocked_master_host)
-
-    def test_master_host(self):
-        """It should return the master host RemoteHosts instance."""
-        assert self.puppet_master.master_host is self.mocked_master_host
 
     def test_destroy(self):
         """It should delete the certificate of the host in the Puppet CA."""

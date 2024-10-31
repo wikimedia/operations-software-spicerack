@@ -12,6 +12,7 @@ from typing import Any, Optional
 
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import NodeSet
+from cumin.transports import Command
 from wmflib.constants import CORE_DATACENTERS
 from wmflib.interactive import ask_confirmation
 
@@ -295,10 +296,10 @@ class Instance:
         """Stops mariadb service.
 
         Returns:
-            The results of the remote status command.
+            The results of the remote status command. It does not raise on exit codes different from zero.
 
         """
-        return self.host.run_sync(f"/usr/bin/systemctl status {self._service}", is_safe=True)
+        return self.host.run_sync(Command(f"/usr/bin/systemctl status {self._service}", ok_codes=[]), is_safe=True)
 
     def start_mysql(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Starts mariadb service.
@@ -371,6 +372,16 @@ class Instance:
 
         """
         return self._data_dir
+
+    @property
+    def socket(self) -> str:
+        """Getter for the socket path of the instance.
+
+        Returns:
+            the instance specific socket path to use.
+
+        """
+        return self._sock
 
     @property
     def primary(self) -> str:
@@ -533,22 +544,32 @@ class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
 
         """
         instances: list[Instance] = []
-        command = "/usr/bin/systemctl --no-pager --type=service --plain --no-legend  list-units 'mariadb*'"
-        service_list = list(
-            self._remote_hosts.run_sync(command, is_safe=True, print_progress_bars=False, print_output=False)
+
+        # First check for multi-instance configs
+        conf_files = list(
+            self._remote_hosts.run_sync(
+                # Exclude non-readable directories to avoid spurious error messages, select only .cnf files and
+                # print their name without the path.
+                r'/usr/bin/find /etc ! -readable -prune -o -path "/etc/mysql/mysqld.conf.d/*.cnf" -printf "%f\n"',
+                is_safe=True,
+                print_output=False,
+                print_progress_bars=False,
+            )
         )
-        if not service_list:
-            return instances
-
-        services = service_list[0][1].message().decode("utf8").splitlines()
-        if len(services) == 1 and services[0].split()[0] == "mariadb.service":
-            instances.append(Instance(self._remote_hosts))
-            return instances
-
-        for service in services:
-            service_name = service.split()[0]
-            if service_name.startswith("mariadb@") and service_name.endswith(".service"):
-                instances.append(Instance(self._remote_hosts, name=service_name[8:-8]))
+        if conf_files:  # Multi-instance
+            for conf_file in conf_files[0][1].message().decode().splitlines():
+                instances.append(Instance(self._remote_hosts, name=conf_file[:-4]))  # Remove .cnf extensio
+        else:  # Check for single instance
+            try:
+                self._remote_hosts.run_sync(
+                    r"/usr/bin/grep -q '^\[mysqld\]$' '/etc/my.cnf'",
+                    is_safe=True,
+                    print_output=False,
+                    print_progress_bars=False,
+                )
+                instances.append(Instance(self._remote_hosts))
+            except RemoteExecutionError:  # No my.cnf or no mysqld section found - no instances present
+                pass
 
         return instances
 

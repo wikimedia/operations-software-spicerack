@@ -827,7 +827,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             the orcestrator instance.
 
         """
-        session = self.requests_session("Orchestrator")
+        # Do not retry on 500 as Orchestrator returns 500 with a JSON for missing objects
+        retry_codes = tuple(i for i in requests.DEFAULT_RETRY_STATUS_CODES if i != 500)
+        session = self.requests_session("Orchestrator", retry_codes=retry_codes)
         session.headers.update({"Accept": "application/json"})
         return Orchestrator("https://orchestrator.wikimedia.org/api", session, dry_run=self._dry_run)
 

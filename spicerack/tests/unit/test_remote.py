@@ -48,15 +48,20 @@ class TestRemoteHostsAdapter:
         # pylint: disable=attribute-defined-outside-init
         config = get_fixture_path("remote", "config.yaml")
         self.hosts = nodeset("host[1-9]")
-        self.remote_hosts = remote.RemoteHostsAdapter(remote.RemoteHosts(config, self.hosts, dry_run=False))
+        self.remote_hosts = remote.RemoteHosts(config, self.hosts, dry_run=False)
+        self.adapter = remote.RemoteHostsAdapter(self.remote_hosts)
 
     def test_str(self):
         """The str() of an instance should return the string representation of the target hosts."""
-        assert str(self.remote_hosts) == str(self.hosts)
+        assert str(self.adapter) == str(self.hosts)
 
     def test_len(self):
         """The len() of an instance should return the number of target hosts."""
-        assert len(self.remote_hosts) == len(self.hosts)
+        assert len(self.adapter) == len(self.hosts)
+
+    def test_remote_hosts(self):
+        """It should give access to the underlying remote_hosts instance."""
+        assert self.adapter.remote_hosts is self.remote_hosts
 
 
 class TestLBRemoteCluster:

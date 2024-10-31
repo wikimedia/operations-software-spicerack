@@ -394,11 +394,6 @@ class PuppetServer(RemoteHostsAdapter):
             )
         super().__init__(server_host)
 
-    @property
-    def server_host(self) -> RemoteHosts:
-        """Accessor for the server_host property."""
-        return self._remote_hosts
-
     def delete(self, hostname: str) -> None:
         """Remove the host from the Puppet server and PuppetDB.
 
@@ -410,7 +405,7 @@ class PuppetServer(RemoteHostsAdapter):
 
         """
         commands = [f"puppet node {action} {hostname}" for action in ("clean", "deactivate")]
-        self.server_host.run_sync(*commands, print_progress_bars=False)
+        self._remote_hosts.run_sync(*commands, print_progress_bars=False)
 
     def destroy(self, hostname: str) -> None:
         """Remove the certificate for the given hostname.
@@ -430,7 +425,7 @@ class PuppetServer(RemoteHostsAdapter):
             logger.info("The certificate for %s does not exist, nothing to do.", hostname)
             return
 
-        self.server_host.run_sync(f"puppetserver ca clean --certname {hostname}", print_progress_bars=False)
+        self._remote_hosts.run_sync(f"puppetserver ca clean --certname {hostname}", print_progress_bars=False)
 
     def verify(self, hostname: str) -> None:
         """Verify that there is a valid certificate signed by the Puppet CA for the given hostname.
@@ -469,7 +464,7 @@ class PuppetServer(RemoteHostsAdapter):
 
         logger.info("Signing CSR for %s with fingerprint %s", hostname, fingerprint)
         command = f"puppetserver ca sign --certname {hostname}"
-        executed = self.server_host.run_sync(command, print_output=False, print_progress_bars=False)
+        executed = self._remote_hosts.run_sync(command, print_output=False, print_progress_bars=False)
 
         cert = self.get_certificate_metadata(hostname)
         if cert["state"] != PuppetServer.PUPPET_CERT_STATE_SIGNED:
@@ -567,7 +562,7 @@ class PuppetServer(RemoteHostsAdapter):
         """
         return_code = 0
         try:
-            command_results = self.server_host.run_sync(
+            command_results = self._remote_hosts.run_sync(
                 command, is_safe=True, print_output=False, print_progress_bars=False
             )
         except RemoteExecutionError as e:
@@ -599,18 +594,13 @@ class PuppetServer(RemoteHostsAdapter):
 
         """
         command = f"puppet lookup --render-as {fmt} --compile --node {fqdn} {key} 2>/dev/null"
-        result = self.server_host.run_sync(command, is_safe=True, print_output=False, print_progress_bars=False)
+        result = self._remote_hosts.run_sync(command, is_safe=True, print_output=False, print_progress_bars=False)
         _, output = next(result)
         return output.message().decode()
 
 
 class PuppetMaster(PuppetServer):
     """Class to manage nodes and certificates on a Puppet master and Puppet CA server."""
-
-    @property
-    def master_host(self) -> RemoteHosts:
-        """Accessor for the master_host property."""
-        return self.server_host
 
     def destroy(self, hostname: str) -> None:
         """Remove the certificate for the given hostname.
@@ -622,7 +612,7 @@ class PuppetMaster(PuppetServer):
             hostname: the FQDN of the host for which to remove the certificate.
 
         """
-        self.server_host.run_sync(
+        self._remote_hosts.run_sync(
             f"puppet ca --disable_warnings deprecations destroy {hostname}", print_progress_bars=False
         )
 
@@ -667,7 +657,7 @@ class PuppetMaster(PuppetServer):
 
         command = f"puppet cert --disable_warnings deprecations sign {hostname}"
         logger.info("Signing CSR for %s with fingerprint %s", hostname, fingerprint)
-        executed = self.server_host.run_sync(command, print_output=False, print_progress_bars=False)
+        executed = self._remote_hosts.run_sync(command, print_output=False, print_progress_bars=False)
 
         cert = self.get_certificate_metadata(hostname)
         if cert["state"] != PuppetMaster.PUPPET_CERT_STATE_SIGNED:
