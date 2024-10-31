@@ -1,6 +1,35 @@
 Spicerack Changelog
 -------------------
 
+`v8.15.2`_ (2024-10-31)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* elasticsearch: removed ``ElasticsearchHosts.get_remote_hosts()`` getter, superseded by the new
+  ``RemoteHostsAdapter.remote_hosts()``.
+* puppet: removed ``PuppetServer.server_host()`` and ``PuppetMaster.master_host()`` getters, superseeded by the new
+  ``RemoteHostsAdapter.remote_hosts()``.
+* Because of the very low usage of the above methods this didn't warrant a major release. Reporting it as breaking
+  here for completeness, their usage will be fixed right after releasing this version.
+
+Minor improvements
+""""""""""""""""""
+
+* remote: add ``remote_hosts`` getter to the ``RemoteHostsAdapter`` to ease the use from clients. This also removes
+  one-off getter from other classes in the ``puppet`` and ``elasticsearch_cluster`` modules.
+
+Bug fixes
+"""""""""
+
+* orchestrator: do not retry on 500s as orchestrator tends to reply to non-existing objects with a 500 with a JSON
+  response, do not retry the request.
+* mysql_legacy: accept any exit code for systemctl status to prevent having ``RemoteExecutionError`` exceptions.
+* mysql_legacy: add getter for the ``Instance``'s ``socket`` property.
+* mysql_legacy: fix ``list_host_instances()`` detection of single and multi-instances independently of the status of
+  the systemd unit.
+
 `v8.15.1`_ (2024-10-23)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3257,3 +3286,4 @@ New features
 .. _`v8.14.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.14.0
 .. _`v8.15.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.0
 .. _`v8.15.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.1
+.. _`v8.15.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.2
