@@ -11,8 +11,10 @@ import pytest
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, nodeset
 from cumin.transports import Command
+from pymysql.cursors import DictCursor
 
 from spicerack import mysql_legacy
+from spicerack.constants import PUPPET_CA_PATH
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
 from spicerack.tests import get_fixture_path
 from spicerack.tests.unit.test_remote import mock_cumin
@@ -29,7 +31,7 @@ MASTER_STATUS = {"Binlog_Do_DB": "", "Binlog_Ignore_DB": "", "File": "host1-bin.
 class TestInstance:
     """Test class for the Instance class."""
 
-    @mock.patch("spicerack.mysql_legacy.Mysql", autospec=True)
+    @mock.patch("spicerack.mysql_legacy.MysqlClient", autospec=True)
     def setup_method(self, _, mocked_pymysql_connection):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
@@ -837,3 +839,81 @@ class TestMysqlLegacy:
             self.mysql.check_core_masters_heartbeats("eqiad", "codfw", {"s1": datetime.utcnow()})
 
         assert mocked_sleep.called
+
+
+class TestMysqlClient:
+    """MysqlClient class tests."""
+
+    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    def test_connect_default(self, mocked_pymsql_connection):
+        """It should call pymysql with the correct parameters."""
+        my = mysql_legacy.MysqlClient(dry_run=False)
+        with my.connect() as conn:
+            assert conn == mocked_pymsql_connection.return_value
+            call_args = mocked_pymsql_connection.call_args.kwargs
+            # Ensure close is not called before context manager exits
+            conn.close.assert_not_called()  # pylint: disable=maybe-no-member
+
+        conn.close.assert_called_once_with()  # pylint: disable=maybe-no-member
+
+        # Ensure the default args were passed
+        if call_args.get("host") == "clouddb1001":
+            assert call_args["read_default_group"] == "clientlabsdb"
+        else:
+            assert call_args["read_default_group"] == "client"
+
+        assert call_args["charset"] == "utf8mb4"
+        assert call_args["cursorclass"] == DictCursor
+        assert call_args["read_default_file"].endswith("/.my.cnf")
+        assert call_args["ssl"] == {"ca": PUPPET_CA_PATH}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        (
+            {"host": "db9999"},
+            {"charset": "ascii"},
+            {"charset": ""},
+            {"read_default_file": "/my.cnf"},
+            {"read_default_file": None, "read_default_group": None},
+            {"read_default_group": "client_test"},
+            {"host": "clouddb1001"},
+            {"ssl": {}},
+            {"ssl": {1: 3}},
+        ),
+    )
+    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    def test_connect(self, mocked_pymsql_connection, kwargs):
+        """It should call pymysql with the correct parameters."""
+        my = mysql_legacy.MysqlClient(dry_run=False)
+        with my.connect(**kwargs) as conn:
+            assert conn == mocked_pymsql_connection.return_value
+            call_args = mocked_pymsql_connection.call_args.kwargs
+            # Ensure close is not called before context manager exits
+            conn.close.assert_not_called()  # pylint: disable=maybe-no-member
+
+        conn.close.assert_called_once_with()  # pylint: disable=maybe-no-member
+        # Ensure the args we passed were passed along
+        for key, value in kwargs.items():
+            assert call_args[key] == value
+
+    @pytest.mark.parametrize(
+        "dry_run, read_only, transaction_ro",
+        (
+            (False, False, False),
+            (False, True, True),
+            (True, False, True),
+            (True, True, True),
+        ),
+    )
+    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    def test_connect_read_only(self, mocked_pymsql_connection, dry_run, read_only, transaction_ro):
+        """It should start a read-only transaction if either dry-run or read-only are set."""
+        my = mysql_legacy.MysqlClient(dry_run=dry_run)
+        with my.connect(read_only=read_only) as conn:
+            assert conn == mocked_pymsql_connection.return_value
+            execute = conn.cursor.return_value.__enter__.return_value.execute  # pylint: disable=no-member
+            print(mocked_pymsql_connection.mock_calls)
+            if transaction_ro:
+                execute.assert_called_once_with("SET SESSION TRANSACTION READ ONLY")
+            else:
+                execute.assert_not_called()
