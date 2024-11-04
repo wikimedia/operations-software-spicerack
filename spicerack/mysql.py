@@ -76,7 +76,8 @@ class Mysql:
         if read_only or self._dry_run:
             # FIXME: read-only support is limited to DML sql statements.
             # https://phabricator.wikimedia.org/T254756 is needed to do this better.
-            conn.query("SET SESSION TRANSACTION READ ONLY")
+            with conn.cursor() as cursor:
+                _ = cursor.execute("SET SESSION TRANSACTION READ ONLY")
 
         try:
             yield conn

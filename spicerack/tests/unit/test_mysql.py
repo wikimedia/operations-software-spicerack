@@ -79,9 +79,9 @@ class TestMysql:
         my = mysql.Mysql(dry_run=dry_run)
         with my.connect(read_only=read_only) as conn:
             assert conn == mocked_pymsql_connection.return_value
+            execute = conn.cursor.return_value.__enter__.return_value.execute  # pylint: disable=no-member
+            print(mocked_pymsql_connection.mock_calls)
             if transaction_ro:
-                conn.query.assert_called_once_with(  # pylint: disable=maybe-no-member
-                    "SET SESSION TRANSACTION READ ONLY"
-                )
+                execute.assert_called_once_with("SET SESSION TRANSACTION READ ONLY")
             else:
-                conn.query.assert_not_called()  # pylint: disable=maybe-no-member
+                execute.assert_not_called()
