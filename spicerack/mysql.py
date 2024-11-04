@@ -46,11 +46,11 @@ They are ordered from less impactful if anything goes wrong to most impactful.
 logger = logging.getLogger(__name__)
 
 
-class MysqlLegacyError(SpicerackError):
+class MysqlError(SpicerackError):
     """Custom exception class for errors of this module."""
 
 
-class MysqlLegacyReplagError(MysqlLegacyError):
+class MysqlReplagError(MysqlError):
     """Custom exception class for errors related to replag in this module."""
 
 
@@ -236,7 +236,7 @@ class Instance:
                 [{'a': 'value', 'b': 10, 'c': 1}, {'a': 'value', 'b': 10, 'c': 2}]
 
         Arguments:
-            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql_legacy.MysqlClient.connect`
+            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql.MysqlClient.connect`
                 method. See its documentation for the available arguments and their default values.
 
         Yields:
@@ -304,14 +304,14 @@ class Instance:
             is_safe: set to :py:data:`True` if the query can be safely run also in DRY-RUN mode. By default all queries
                 are considered unsafe. If :py:data:`False` the query will not be run in DRY-RUN mode and the return
                 value will be 0.
-            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql_legacy.MysqlClient.connect`
+            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql.MysqlClient.connect`
                 method. See its documentation for the available arguments and their default values.
 
         Returns:
             the number of affected rows.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: if the query returned more than one row.
+            spicerack.mysql.MysqlError: if the query returned more than one row.
             pymysql.err.MySQLError: on query errors.
 
         """
@@ -354,14 +354,14 @@ class Instance:
             query_parameters: the query parameters to inject into the query, a :py:class:`tuple` or :py:class:`list` in
                 case ``%s`` placeholders were used or a :py:class:`dict` in case ``%s(name)`` placeholders were used.
                 Leave the default value :py:data:`None` if there are no placeholders in the query.
-            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql_legacy.MysqlClient.connect`
+            **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql.MysqlClient.connect`
                 method. See its documentation for the available arguments and their default values.
 
         Returns:
             the fetched row or :py:data:`None` if the query returned no rows.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: if the query returned more than one row.
+            spicerack.mysql.MysqlError: if the query returned more than one row.
             pymysql.err.MySQLError: on query errors.
 
         """
@@ -373,7 +373,7 @@ class Instance:
                 if num_rows == 0:
                     return None
 
-                raise MysqlLegacyError(f"Expected query to return zero or one row, got {num_rows} instead.")
+                raise MysqlError(f"Expected query to return zero or one row, got {num_rows} instead.")
 
             row = cursor.fetchone()
             self.check_warnings(cursor)
@@ -401,7 +401,7 @@ class Instance:
         try:
             return self.host.run_sync(command, **kwargs)
         except RemoteExecutionError as e:
-            raise MysqlLegacyError(f"Failed to run '{query}' on {self.host}") from e
+            raise MysqlError(f"Failed to run '{query}' on {self.host}") from e
 
     def run_vertical_query(self, query: str, database: str = "", **kwargs: Any) -> list[dict[str, str]]:
         r"""Run a query with vertical output (terminating it with ``\G``) and parse its results.
@@ -417,7 +417,7 @@ class Instance:
             broken and the last error contains a newline.
 
         Arguments:
-            According to :py:meth:`spicerack.mysql_legacy.Instance.run_query`.
+            According to :py:meth:`spicerack.mysql.Instance.run_query`.
 
         Returns:
             the parsed query as a list of dictionaries, one per returned row.
@@ -483,7 +483,7 @@ class Instance:
         with self.cursor() as (_connection, cursor):
             num_rows = cursor.execute(query)
             if not num_rows:
-                raise MysqlLegacyError(f"{query} seems to have been executed on a master.")
+                raise MysqlError(f"{query} seems to have been executed on a master.")
 
             if num_rows > 1:
                 raise NotImplementedError(f"Multisource setup are not implemented. Got {num_rows} rows.")
@@ -500,14 +500,14 @@ class Instance:
         query = "SHOW MASTER STATUS"
         status = self.fetch_one_row(query)
         if status is None:
-            raise MysqlLegacyError(f"{query} seems to have been executed on a host with binlog disabled.")
+            raise MysqlError(f"{query} seems to have been executed on a host with binlog disabled.")
 
         return status
 
     def set_master_use_gtid(self, setting: MasterUseGTID) -> None:
         """Runs MASTER_USE_GTID with the given value."""
         if not isinstance(setting, MasterUseGTID):
-            raise MysqlLegacyError(f"Only instances of MasterUseGTID are accepted, got: {type(setting)}")
+            raise MysqlError(f"Only instances of MasterUseGTID are accepted, got: {type(setting)}")
 
         # Not using placeholder replacements ad MariaDB requires it to be a syntax word and raises if it's quoted
         self.execute(f"CHANGE MASTER TO MASTER_USE_GTID={setting.value}")
@@ -587,7 +587,7 @@ class Instance:
             port=int(replication_status.get("Master_Port", -1)),
         )
         if not (info.primary and info.binlog and info.position > -1 and info.port > -1):
-            raise MysqlLegacyError(f"Could not find the replication position: {info}")
+            raise MysqlError(f"Could not find the replication position: {info}")
 
         logger.debug("Replication info for %s: %s", self.host, info)
         return info
@@ -617,14 +617,14 @@ class Instance:
         """Retrieves the replication source of this cluster.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: if unable to find the master host of the current instance.
+            spicerack.mysql.MysqlError: if unable to find the master host of the current instance.
 
         """
         if not self._primary:
             try:
                 self._primary = self.show_slave_status()["Master_Host"]
-            except (KeyError, MysqlLegacyError) as e:
-                raise MysqlLegacyError("Unable to retrieve master host") from e
+            except (KeyError, MysqlError) as e:
+                raise MysqlError("Unable to retrieve master host") from e
 
         return self._primary
 
@@ -685,7 +685,7 @@ class Instance:
         tries=480,  # We allow up to 8 hours for replication lag to catch up
         delay=timedelta(seconds=60),
         backoff_mode="constant",
-        exceptions=(MysqlLegacyReplagError,),
+        exceptions=(MysqlReplagError,),
     )
     def wait_for_replication(self, threshold: Union[float, Decimal] = Decimal("1.0")) -> None:
         """Waits for replication to catch up.
@@ -694,13 +694,13 @@ class Instance:
             threshold: the replication lag threshold in seconds under which the replication is considered in sync.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyReplagError: if the replication lag is still too high after all the
+            spicerack.mysql.MysqlReplagError: if the replication lag is still too high after all the
                 retries.
 
         """
         replag = self.replication_lag()
         if replag > threshold:
-            raise MysqlLegacyReplagError(f"Replication lag higher than the threshold ({threshold}s): {replag}s")
+            raise MysqlReplagError(f"Replication lag higher than the threshold ({threshold}s): {replag}s")
 
     def replication_lag(self) -> Decimal:
         """Retrieves the current replication lag.
@@ -709,7 +709,7 @@ class Instance:
             The replication lag in seconds.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: if no lag information is present or unable to parse the it.
+            spicerack.mysql.MysqlError: if no lag information is present or unable to parse the it.
 
         """
         query = (
@@ -718,15 +718,15 @@ class Instance:
         )
         row = self.fetch_one_row(query, database="heartbeat")
         if row is None:
-            raise MysqlLegacyError("The replication lag query returned no data")
+            raise MysqlError("The replication lag query returned no data")
 
         if "lag" not in row or row["lag"] is None:
-            raise MysqlLegacyError(f"Unable to get lag information from: {row}")
+            raise MysqlError(f"Unable to get lag information from: {row}")
 
         return row["lag"]
 
 
-class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
+class MysqlRemoteHosts(RemoteHostsAdapter):
     """Custom RemoteHosts class for executing MySQL queries."""
 
     # TODO merge this method with Instance.run_query()
@@ -808,7 +808,7 @@ class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
         return instances
 
 
-class MysqlLegacy:
+class Mysql:
     """Class to manage MySQL servers."""
 
     # FIXME this query could be replaced by the one in _get_replication() as it's the one used in monitoring
@@ -829,14 +829,14 @@ class MysqlLegacy:
         self._remote = remote
         self._dry_run = dry_run
 
-    def get_dbs(self, query: str) -> MysqlLegacyRemoteHosts:
-        """Get a MysqlLegacyRemoteHosts instance for the matching hosts.
+    def get_dbs(self, query: str) -> MysqlRemoteHosts:
+        """Get a MysqlRemoteHosts instance for the matching hosts.
 
         Arguments:
             query: the Remote query to use to fetch the DB hosts.
 
         """
-        return MysqlLegacyRemoteHosts(self._remote.query(query))
+        return MysqlRemoteHosts(self._remote.query(query))
 
     def get_core_dbs(
         self,
@@ -845,20 +845,20 @@ class MysqlLegacy:
         section: Optional[str] = None,
         replication_role: Optional[str] = None,
         excludes: tuple[str, ...] = (),
-    ) -> MysqlLegacyRemoteHosts:
+    ) -> MysqlRemoteHosts:
         """Get an instance to operated on the core databases matching the parameters.
 
         Arguments:
             datacenter: the name of the datacenter to filter for, accepted values are those specified in
                 :py:data:`spicerack.constants.CORE_DATACENTERS`.
             replication_role: the repication role to filter for, accepted values are those specified in
-                :py:data:`spicerack.mysql_legacy.REPLICATION_ROLES`.
+                :py:data:`spicerack.mysql.REPLICATION_ROLES`.
             section: a specific section to filter for, accepted values are those specified in
-                :py:data:`spicerack.mysql_legacy.CORE_SECTIONS`.
+                :py:data:`spicerack.mysql.CORE_SECTIONS`.
             excludes: sections to exclude from getting.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: on invalid data or unexpected matching hosts.
+            spicerack.mysql.MysqlError: on invalid data or unexpected matching hosts.
 
         """
         query_parts = ["A:db-core"]
@@ -868,36 +868,36 @@ class MysqlLegacy:
         if datacenter is not None:
             dc_multipler = 1
             if datacenter not in CORE_DATACENTERS:
-                raise MysqlLegacyError(f"Got invalid datacenter {datacenter}, accepted values are: {CORE_DATACENTERS}")
+                raise MysqlError(f"Got invalid datacenter {datacenter}, accepted values are: {CORE_DATACENTERS}")
 
             query_parts.append("A:" + datacenter)
 
         for exclude in excludes:
             if exclude not in CORE_SECTIONS:
-                raise MysqlLegacyError(f"Got invalid excludes {exclude}, accepted values are: {CORE_SECTIONS}")
+                raise MysqlError(f"Got invalid excludes {exclude}, accepted values are: {CORE_SECTIONS}")
             section_multiplier -= 1
             query_parts.append(f"not A:db-section-{exclude}")
 
         if section is not None:
             section_multiplier = 1
             if section not in CORE_SECTIONS:
-                raise MysqlLegacyError(f"Got invalid section {section}, accepted values are: {CORE_SECTIONS}")
+                raise MysqlError(f"Got invalid section {section}, accepted values are: {CORE_SECTIONS}")
 
             query_parts.append(f"A:db-section-{section}")
 
         if replication_role is not None:
             if replication_role not in REPLICATION_ROLES:
-                raise MysqlLegacyError(
+                raise MysqlError(
                     f"Got invalid replication_role {replication_role}, accepted values are: {REPLICATION_ROLES}"
                 )
 
             query_parts.append(f"A:db-role-{replication_role}")
 
-        mysql_hosts = MysqlLegacyRemoteHosts(self._remote.query(" and ".join(query_parts)))
+        mysql_hosts = MysqlRemoteHosts(self._remote.query(" and ".join(query_parts)))
 
         # Sanity check of matched hosts in case of master selection
         if replication_role == "master" and len(mysql_hosts) != dc_multipler * section_multiplier:
-            raise MysqlLegacyError(f"Matched {len(mysql_hosts)} masters, expected {dc_multipler * section_multiplier}")
+            raise MysqlError(f"Matched {len(mysql_hosts)} masters, expected {dc_multipler * section_multiplier}")
 
         return mysql_hosts
 
@@ -909,7 +909,7 @@ class MysqlLegacy:
 
         Raises:
             spicerack.remote.RemoteExecutionError: on Remote failures.
-            spicerack.mysql_legacy.MysqlLegacyError: on failing to verify the modified value.
+            spicerack.mysql.MysqlError: on failing to verify the modified value.
 
         """
         logger.debug("Setting core DB masters in %s to be read-only", datacenter)
@@ -925,7 +925,7 @@ class MysqlLegacy:
 
         Raises:
             spicerack.remote.RemoteExecutionError: on Remote failures.
-            spicerack.mysql_legacy.MysqlLegacyError: on failing to verify the modified value.
+            spicerack.mysql.MysqlError: on failing to verify the modified value.
 
         """
         logger.debug("Setting core DB masters in %s to be read-write", datacenter)
@@ -941,7 +941,7 @@ class MysqlLegacy:
             is_read_only: whether the read-only mode should be set or not.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: on failure.
+            spicerack.mysql.MysqlError: on failure.
 
         """
         logger.debug(
@@ -965,9 +965,7 @@ class MysqlLegacy:
                 failed = True
 
         if failed and not self._dry_run:
-            raise MysqlLegacyError(
-                f"Verification failed that core DB masters in {datacenter} have read-only={is_read_only}"
-            )
+            raise MysqlError(f"Verification failed that core DB masters in {datacenter} have read-only={is_read_only}")
 
     def check_core_masters_in_sync(self, dc_from: str, dc_to: str) -> None:
         """Check that all core masters in dc_to are in sync with the core masters in dc_from.
@@ -998,13 +996,13 @@ class MysqlLegacy:
                 {'s1': datetime.datetime(2018, 1, 2, 11, 22, 33, 123456)}
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime.
+            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
 
         """
         heartbeats = {}
         for section in CORE_SECTIONS:
             core_dbs = self.get_core_dbs(datacenter=datacenter, section=section, replication_role="master")
-            heartbeats[section] = MysqlLegacy._get_heartbeat(core_dbs, section, heartbeat_dc)
+            heartbeats[section] = Mysql._get_heartbeat(core_dbs, section, heartbeat_dc)
 
         return heartbeats
 
@@ -1020,13 +1018,13 @@ class MysqlLegacy:
                 :py:class:`datetime.datetime` for each core section as values.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime.
+            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
 
         """
         for section, heartbeat in heartbeats.items():
             self._check_core_master_in_sync(datacenter, heartbeat_dc, section, heartbeat)
 
-    @retry(exceptions=(MysqlLegacyError,))
+    @retry(exceptions=(MysqlError,))
     def _check_core_master_in_sync(
         self,
         datacenter: str,
@@ -1044,12 +1042,12 @@ class MysqlLegacy:
                 with it.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime
+            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime
                 or not yet in sync.
 
         """
         core_dbs = self.get_core_dbs(datacenter=datacenter, section=section, replication_role="master")
-        local_heartbeat = MysqlLegacy._get_heartbeat(core_dbs, section, heartbeat_dc)
+        local_heartbeat = Mysql._get_heartbeat(core_dbs, section, heartbeat_dc)
 
         # The check requires that local_heartbeat is stricly greater than parent_heartbeat because heartbeat writes also
         # when the DB is in read-only mode and has a granularity of 1s (as of 2018-09), meaning that an event could have
@@ -1057,13 +1055,13 @@ class MysqlLegacy:
         # have been replicated, hence checking the next heartbeat to ensure they are in sync.
         if local_heartbeat <= parent_heartbeat:
             delta = (local_heartbeat - parent_heartbeat).total_seconds()
-            raise MysqlLegacyError(
+            raise MysqlError(
                 f"Heartbeat from master {core_dbs} for section {section} not yet in sync: "
                 f"{local_heartbeat} <= {parent_heartbeat} (delta={delta})"
             )
 
     @staticmethod
-    def _get_heartbeat(mysql_hosts: MysqlLegacyRemoteHosts, section: str, heartbeat_dc: str) -> datetime:
+    def _get_heartbeat(mysql_hosts: MysqlRemoteHosts, section: str, heartbeat_dc: str) -> datetime:
         """Get the heartbeat from the remote host for a given DC.
 
         Arguments:
@@ -1072,10 +1070,10 @@ class MysqlLegacy:
             heartbeat_dc: the name of the datacenter for which to filter the heartbeat query.
 
         Raises:
-            spicerack.mysql_legacy.MysqlLegacyError: on failure to gather the heartbeat or convert it into a datetime.
+            spicerack.mysql.MysqlError: on failure to gather the heartbeat or convert it into a datetime.
 
         """
-        query = MysqlLegacy.heartbeat_query.format(dc=heartbeat_dc, section=section)
+        query = Mysql.heartbeat_query.format(dc=heartbeat_dc, section=section)
 
         for _, output in mysql_hosts.run_query(query, is_safe=True):
             try:
@@ -1083,8 +1081,8 @@ class MysqlLegacy:
                 heartbeat = datetime.strptime(heartbeat_str, "%Y-%m-%dT%H:%M:%S.%f")
                 break
             except (TypeError, ValueError) as e:
-                raise MysqlLegacyError(f"Unable to convert heartbeat '{heartbeat_str}' into datetime") from e
+                raise MysqlError(f"Unable to convert heartbeat '{heartbeat_str}' into datetime") from e
         else:
-            raise MysqlLegacyError(f"Unable to get heartbeat from master {mysql_hosts} for section {section}")
+            raise MysqlError(f"Unable to get heartbeat from master {mysql_hosts} for section {section}")
 
         return heartbeat

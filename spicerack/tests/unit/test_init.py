@@ -37,7 +37,7 @@ from spicerack.k8s import Kubernetes
 from spicerack.kafka import Kafka
 from spicerack.locking import Lock, NoLock
 from spicerack.mediawiki import MediaWiki
-from spicerack.mysql_legacy import MysqlLegacy
+from spicerack.mysql import Mysql
 from spicerack.netbox import Netbox, NetboxServer
 from spicerack.orchestrator import Orchestrator
 from spicerack.peeringdb import PeeringDB
@@ -84,7 +84,7 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert isinstance(spicerack.discovery("discovery-record"), Discovery)
     assert isinstance(spicerack.kubernetes("group", "cluster"), Kubernetes)
     assert isinstance(spicerack.mediawiki(), MediaWiki)
-    assert isinstance(spicerack.mysql_legacy(), MysqlLegacy)
+    assert isinstance(spicerack.mysql(), Mysql)
     assert isinstance(spicerack.redis_cluster("cluster"), RedisCluster)
     assert isinstance(
         spicerack.elasticsearch_clusters("search_eqiad", ("some_core_dc",)),

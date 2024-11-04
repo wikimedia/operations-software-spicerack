@@ -1,0 +1,4 @@
+mysql
+=====
+
+.. automodule:: spicerack.mysql

@@ -1,4 +1,4 @@
-"""MysqlLegacy module tests."""
+"""Mysql module tests."""
 
 import json
 import logging
@@ -13,7 +13,7 @@ from cumin import Config, nodeset
 from cumin.transports import Command
 from pymysql.cursors import DictCursor
 
-from spicerack import mysql_legacy
+from spicerack import mysql
 from spicerack.constants import PUPPET_CA_PATH
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
 from spicerack.tests import get_fixture_path
@@ -31,7 +31,7 @@ MASTER_STATUS = {"Binlog_Do_DB": "", "Binlog_Ignore_DB": "", "File": "host1-bin.
 class TestInstance:
     """Test class for the Instance class."""
 
-    @mock.patch("spicerack.mysql_legacy.MysqlClient", autospec=True)
+    @mock.patch("spicerack.mysql.MysqlClient", autospec=True)
     def setup_method(self, _, mocked_pymysql_connection):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
@@ -46,14 +46,14 @@ class TestInstance:
         single.run_sync = self.mocked_run_sync
         multi = RemoteHosts(self.config, nodeset("multi1"), dry_run=False)
         multi.run_sync = self.mocked_run_sync
-        self.single_instance = mysql_legacy.Instance(single)
-        self.multi_instance = mysql_legacy.Instance(multi, name="instance1")
-        self.single_instance_dry_run = mysql_legacy.Instance(single_dry_run)
+        self.single_instance = mysql.Instance(single)
+        self.multi_instance = mysql.Instance(multi, name="instance1")
+        self.single_instance_dry_run = mysql.Instance(single_dry_run)
 
     def test_init_raise(self):
         """It should raise a NotImplementedError exception if more than one host is passed to the constructor."""
         with pytest.raises(NotImplementedError, match="Only single hosts are currently supported"):
-            mysql_legacy.Instance(RemoteHosts(self.config, nodeset("host[1-2]")))
+            mysql.Instance(RemoteHosts(self.config, nodeset("host[1-2]")))
 
     @pytest.mark.parametrize(
         "instance, expected",
@@ -105,7 +105,7 @@ class TestInstance:
 
         self.mocked_cursor.execute.assert_called_with("SHOW WARNINGS")
 
-    @mock.patch("spicerack.mysql_legacy.ask_confirmation")
+    @mock.patch("spicerack.mysql.ask_confirmation")
     def test_check_warnings_present(self, mocked_ask_confirmation, caplog):
         """It should log the warnings and ask the operator what to do if there are warnings."""
         self.mocked_cursor.execute.side_effect = [0, 1]
@@ -165,11 +165,9 @@ class TestInstance:
         self.mocked_cursor.fetchone.assert_not_called()
 
     def test_fetch_one_row_too_many(self):
-        """It should raise a MysqlLegacyError if more than one row is returned."""
+        """It should raise a MysqlError if more than one row is returned."""
         self.mocked_cursor.execute.side_effect = [3, 0]
-        with pytest.raises(
-            mysql_legacy.MysqlLegacyError, match="Expected query to return zero or one row, got 3 instead"
-        ):
+        with pytest.raises(mysql.MysqlError, match="Expected query to return zero or one row, got 3 instead"):
             self.single_instance.fetch_one_row("SELECT * FROM mytable", database="mydb")
         self.mocked_cursor.execute.assert_has_calls(
             [mock.call("SELECT * FROM mytable", None), mock.call("SHOW WARNINGS")]
@@ -197,9 +195,9 @@ class TestInstance:
         )
 
     def test_multi_query_raise(self):
-        """It should raise a MysqlLegacyError exception if the query execution fails."""
+        """It should raise a MysqlError exception if the query execution fails."""
         self.mocked_run_sync.side_effect = RemoteExecutionError(retcode=1, message="error", results=iter(()))
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Failed to run 'invalid' on multi1"):
+        with pytest.raises(mysql.MysqlError, match="Failed to run 'invalid' on multi1"):
             self.multi_instance.run_query("invalid")
 
         self.mocked_run_sync.assert_called_once_with(
@@ -210,7 +208,7 @@ class TestInstance:
 
     def test_run_vertical_query_ok(self):
         """It should return the current slave status of the database."""
-        status = get_fixture_path("mysql_legacy", "single_show_slave_status.out").read_text()
+        status = get_fixture_path("mysql", "single_show_slave_status.out").read_text()
         self.mocked_run_sync.return_value = [
             (nodeset("single1"), MsgTreeElem("".join((status, status)).encode(), parent=MsgTreeElem()))
         ]
@@ -268,7 +266,7 @@ class TestInstance:
             ("start_slave", "START SLAVE"),
         ),
     )
-    @mock.patch("spicerack.mysql_legacy.sleep", return_value=None)
+    @mock.patch("spicerack.mysql.sleep", return_value=None)
     def test_run_stop_start_slave_ok(self, mocked_sleep, method, expected, instance):
         """It should run the method called and execute the related query."""
         self.mocked_cursor.execute.return_value = 0
@@ -278,7 +276,7 @@ class TestInstance:
 
     def test_single_show_slave_status_ok(self):
         """It should return the current slave status of the database."""
-        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        mocked_status = json.loads(get_fixture_path("mysql", "single_show_slave_status.json").read_text())
         self.mocked_cursor.execute.return_value = 1
         self.mocked_cursor.fetchone.return_value = mocked_status
 
@@ -290,18 +288,18 @@ class TestInstance:
         self.mocked_cursor.fetchone.assert_called_once_with()
 
     def test_single_show_slave_status_on_master(self):
-        """It should raise a MysqlLegacyError exception if show slave status is called on a master."""
+        """It should raise a MysqlError exception if show slave status is called on a master."""
         self.mocked_cursor.execute.return_value = 0
 
         with pytest.raises(
-            mysql_legacy.MysqlLegacyError, match=re.escape("SHOW SLAVE STATUS seems to have been executed on a master")
+            mysql.MysqlError, match=re.escape("SHOW SLAVE STATUS seems to have been executed on a master")
         ):
             self.single_instance.show_slave_status()
 
         self.mocked_cursor.fetchone.assert_not_called()
 
     def test_single_show_slave_status_multisource(self):
-        """It should raise a MysqlLegacyError exception if show slave status is called on a multisource instance."""
+        """It should raise a MysqlError exception if show slave status is called on a multisource instance."""
         self.mocked_cursor.execute.return_value = 2
         with pytest.raises(NotImplementedError, match="Multisource setup are not implemented"):
             self.single_instance.show_slave_status()
@@ -321,10 +319,10 @@ class TestInstance:
         self.mocked_cursor.fetchone.assert_called_once_with()
 
     def test_single_show_master_status_no_binlog(self):
-        """It should raise a MysqlLegacyError if show master status is run on a host with binlog disabled."""
+        """It should raise a MysqlError if show master status is run on a host with binlog disabled."""
         self.mocked_cursor.execute.return_value = 0
         with pytest.raises(
-            mysql_legacy.MysqlLegacyError,
+            mysql.MysqlError,
             match=re.escape("SHOW MASTER STATUS seems to have been executed on a host with binlog disabled"),
         ):
             self.single_instance.show_master_status()
@@ -335,9 +333,9 @@ class TestInstance:
     @pytest.mark.parametrize(
         "setting, expected",
         (
-            (mysql_legacy.MasterUseGTID.CURRENT_POS, "current_pos"),
-            (mysql_legacy.MasterUseGTID.SLAVE_POS, "slave_pos"),
-            (mysql_legacy.MasterUseGTID.NO, "no"),
+            (mysql.MasterUseGTID.CURRENT_POS, "current_pos"),
+            (mysql.MasterUseGTID.SLAVE_POS, "slave_pos"),
+            (mysql.MasterUseGTID.NO, "no"),
         ),
     )
     def test_set_master_use_gtid_ok(self, setting, expected):
@@ -347,9 +345,9 @@ class TestInstance:
         self.mocked_cursor.execute.assert_any_call(f"CHANGE MASTER TO MASTER_USE_GTID={expected}", None)
 
     def test_set_master_use_gtid_invalid(self):
-        """It should raise MysqlLegacyError if called with an invalid setting."""
+        """It should raise MysqlError if called with an invalid setting."""
         with pytest.raises(
-            mysql_legacy.MysqlLegacyError,
+            mysql.MysqlError,
             match=re.escape("Only instances of MasterUseGTID are accepted, got: <class 'str'>"),
         ):
             self.single_instance.set_master_use_gtid("invalid")
@@ -380,7 +378,7 @@ class TestInstance:
         ),
     )
     @pytest.mark.parametrize("skip_confirmation", (False, True))
-    @mock.patch("spicerack.mysql_legacy.ask_confirmation")
+    @mock.patch("spicerack.mysql.ask_confirmation")
     def test_clean_data_dir(self, mocked_ask_confirmation, skip_confirmation, instance, path):
         """It should delete the data directory."""
         self.mocked_run_sync.return_value = iter(())
@@ -407,7 +405,7 @@ class TestInstance:
 
     def test_get_replication_info_ok(self):
         """It should return a ReplicationInfo instance with the proper data."""
-        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        mocked_status = json.loads(get_fixture_path("mysql", "single_show_slave_status.json").read_text())
         self.mocked_cursor.execute.return_value = 1
         self.mocked_cursor.fetchone.return_value = mocked_status
 
@@ -420,13 +418,13 @@ class TestInstance:
         self.mocked_cursor.fetchone.assert_called_once_with()
 
     def test_get_replication_info_raise(self):
-        """It should raise a MysqlLegacyError if unable to get the replication information."""
-        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        """It should raise a MysqlError if unable to get the replication information."""
+        mocked_status = json.loads(get_fixture_path("mysql", "single_show_slave_status.json").read_text())
         del mocked_status["Master_Host"]  # Make it invalid
         self.mocked_cursor.execute.return_value = 1
         self.mocked_cursor.fetchone.return_value = mocked_status
 
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Could not find the replication position"):
+        with pytest.raises(mysql.MysqlError, match="Could not find the replication position"):
             self.single_instance.get_replication_info()
 
         self.mocked_cursor.execute.assert_called_once_with("SHOW SLAVE STATUS")
@@ -434,7 +432,7 @@ class TestInstance:
 
     def test_primary_ok(self):
         """It should return the hostname of the primary host for this host."""
-        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        mocked_status = json.loads(get_fixture_path("mysql", "single_show_slave_status.json").read_text())
         self.mocked_cursor.execute.return_value = 1
         self.mocked_cursor.fetchone.return_value = mocked_status
 
@@ -448,13 +446,13 @@ class TestInstance:
 
     @pytest.mark.parametrize("no_content", (False, True))
     def test_primary_raise(self, no_content):
-        """It should raise a MysqlLegacyError if there is no primary or is run on a master."""
-        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        """It should raise a MysqlError if there is no primary or is run on a master."""
+        mocked_status = json.loads(get_fixture_path("mysql", "single_show_slave_status.json").read_text())
         del mocked_status["Master_Host"]  # Make it invalid
         self.mocked_cursor.execute.return_value = 0 if no_content else 1
         self.mocked_cursor.fetchone.return_value = None if no_content else mocked_status
 
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Unable to retrieve master host"):
+        with pytest.raises(mysql.MysqlError, match="Unable to retrieve master host"):
             self.single_instance.primary  # pylint: disable=pointless-statement
 
         if not no_content:
@@ -462,7 +460,7 @@ class TestInstance:
 
     def test_prep_src_for_cloning(self):
         """It should run the preparation commands before cloning."""
-        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        mocked_status = json.loads(get_fixture_path("mysql", "single_show_slave_status.json").read_text())
         self.mocked_cursor.execute.side_effect = [0, 0, 1, 0]
         self.mocked_cursor.fetchone.return_value = mocked_status
         self.mocked_run_sync.return_value = [(nodeset("single1"), iter(()))]
@@ -477,7 +475,7 @@ class TestInstance:
 
     def test_set_replication_parameters(self):
         """It should set the replication to the given parameters."""
-        info = mysql_legacy.ReplicationInfo(
+        info = mysql.ReplicationInfo(
             primary="host1.example.org", binlog="host1-bin.001234", position=123456782, port=3306
         )
         self.mocked_cursor.execute.return_value = 0
@@ -522,7 +520,7 @@ class TestInstance:
         self.mocked_cursor.execute.assert_any_call("STOP SLAVE", None)
         self.mocked_cursor.execute.assert_any_call("RESET SLAVE ALL", None)
 
-    @mock.patch("spicerack.mysql_legacy.sleep", return_value=None)
+    @mock.patch("spicerack.mysql.sleep", return_value=None)
     def test_resume_replication(self, mocked_sleep):
         """It should start mysql, upgrade it, restart it and resume the replication."""
         self.mocked_run_sync.side_effect = [[(nodeset("single1"), iter(()))]] * 4
@@ -571,12 +569,12 @@ class TestInstance:
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_replication_fail(self, mocked_sleep):
-        """If the replication is not in sync within the timeout it should raise a MysqlLegacyReplagError exception."""
+        """If the replication is not in sync within the timeout it should raise a MysqlReplagError exception."""
         self.mocked_cursor.execute.side_effect = [1, 0] * 480
         self.mocked_cursor.fetchone.side_effect = [{"lag": Decimal("1.2345")}] * 480
 
         with pytest.raises(
-            mysql_legacy.MysqlLegacyReplagError,
+            mysql.MysqlReplagError,
             match=re.escape("Replication lag higher than the threshold (1.0s): 1.2345s"),
         ):
             self.single_instance.wait_for_replication()
@@ -591,9 +589,9 @@ class TestInstance:
         assert "TIMESTAMPDIFF" in self.mocked_cursor.execute.call_args_list[0].args[0]
 
     def test_replication_lag_no_data(self):
-        """It should raise a MysqlLegacyError if the query returns no rows."""
+        """It should raise a MysqlError if the query returns no rows."""
         self.mocked_cursor.execute.return_value = 0
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="The replication lag query returned no data"):
+        with pytest.raises(mysql.MysqlError, match="The replication lag query returned no data"):
             self.single_instance.replication_lag()
 
         self.mocked_cursor.fetchone.assert_not_called()
@@ -606,19 +604,19 @@ class TestInstance:
         ),
     )
     def test_replication_lag_no_lag(self, row):
-        """It should raise a MysqlLegacyError if the returned lag is None."""
+        """It should raise a MysqlLegacyError if the returned lag is None or invalid."""
         self.mocked_cursor.execute.side_effect = [1, 0]
         self.mocked_cursor.fetchone.return_value = row
         error_message = f"Unable to get lag information from: {row}"
 
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match=re.escape(error_message)):
+        with pytest.raises(mysql.MysqlError, match=re.escape(error_message)):
             self.single_instance.replication_lag()
 
         self.mocked_cursor.fetchone.assert_called_once_with()
 
 
-class TestMysqlLegacyRemoteHosts:
-    """Test class for the MysqlLegacyRemoteHosts class."""
+class TestMysqlRemoteHosts:
+    """Test class for the MysqlRemoteHosts class."""
 
     def setup_method(self):
         """Setup the test environment."""
@@ -628,11 +626,11 @@ class TestMysqlLegacyRemoteHosts:
 
         remote_hosts = RemoteHosts(self.config, nodeset("host[1-9]"), dry_run=False)
         remote_hosts.run_sync = self.mocked_run_sync
-        self.mysql_remote_hosts = mysql_legacy.MysqlLegacyRemoteHosts(remote_hosts)
+        self.mysql_remote_hosts = mysql.MysqlRemoteHosts(remote_hosts)
 
         remote_host = RemoteHosts(self.config, nodeset("host1"), dry_run=False)
         remote_host.run_sync = self.mocked_run_sync
-        self.mysql_remote_host = mysql_legacy.MysqlLegacyRemoteHosts(remote_host)
+        self.mysql_remote_host = mysql.MysqlRemoteHosts(remote_host)
 
     def test_run_query(self):
         """Calling run_query() should run the given query in the target hosts."""
@@ -660,7 +658,7 @@ class TestMysqlLegacyRemoteHosts:
         self.mocked_run_sync.side_effect = [[], []]  # Empty ls and successful grep -q
         instances = self.mysql_remote_host.list_hosts_instances()
         assert len(instances) == 1
-        assert isinstance(instances[0], mysql_legacy.Instance)
+        assert isinstance(instances[0], mysql.Instance)
         assert str(instances[0].host) == "host1"
         assert instances[0].name == ""
 
@@ -671,14 +669,14 @@ class TestMysqlLegacyRemoteHosts:
         instances = self.mysql_remote_host.list_hosts_instances()
         assert len(instances) == 2
         for instance in instances:
-            assert isinstance(instance, mysql_legacy.Instance)
+            assert isinstance(instance, mysql.Instance)
             assert str(instance.host) == "host1"
 
         assert instances[0].name == "instance1"
         assert instances[1].name == "instance2"
 
     def test_list_host_instances_not_single_host(self):
-        """It should raise a NotImplementedError if the MysqlLegacyRemoteHosts instance has multiple hosts."""
+        """It should raise a NotImplementedError if the MysqlRemoteHosts instance has multiple hosts."""
         with pytest.raises(NotImplementedError, match="Only single host are supported at this time"):
             self.mysql_remote_hosts.list_hosts_instances()
 
@@ -688,20 +686,20 @@ class TestMysqlLegacyRemoteHosts:
             self.mysql_remote_host.list_hosts_instances(group=True)
 
 
-class TestMysqlLegacy:
-    """MysqlLegacy class tests."""
+class TestMysql:
+    """Mysql class tests."""
 
     @mock.patch("spicerack.remote.transports", autospec=True)
     def setup_method(self, _, mocked_transports):
-        """Initialize the test environment for MysqlLegacy."""
+        """Initialize the test environment for Mysql."""
         # pylint: disable=attribute-defined-outside-init
         self.config = Config(get_fixture_path("remote", "config.yaml"))
         self.mocked_transports = mocked_transports
         self.mocked_remote = mock.MagicMock(spec_set=Remote)
-        self.mysql = mysql_legacy.MysqlLegacy(self.mocked_remote, dry_run=False)
+        self.mysql = mysql.Mysql(self.mocked_remote, dry_run=False)
 
     def test_get_dbs(self):
-        """It should return and instance of MysqlLegacyRemoteHosts for the matching hosts."""
+        """It should return and instance of MysqlRemoteHosts for the matching hosts."""
         self.mysql.get_dbs("query")
         self.mocked_remote.query.assert_called_once_with("query")
 
@@ -763,18 +761,18 @@ class TestMysqlLegacy:
         ),
     )
     def test_get_core_dbs_fail(self, kwargs):
-        """It should raise MysqlLegacyError if called with invalid parameters."""
+        """It should raise MysqlError if called with invalid parameters."""
         key = list(kwargs.keys())[0]
         message = f"Got invalid {key}"
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match=message):
+        with pytest.raises(mysql.MysqlError, match=message):
             self.mysql.get_core_dbs(**kwargs)
 
         assert not self.mocked_remote.query.called
 
     def test_get_core_dbs_fail_sanity_check(self):
-        """It should raise MysqlLegacyError if matching an invalid number of hosts when looking for masters."""
+        """It should raise MysqlError if matching an invalid number of hosts when looking for masters."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db1001"))
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Matched 1 masters, expected 11"):
+        with pytest.raises(mysql.MysqlError, match="Matched 1 masters, expected 11"):
             self.mysql.get_core_dbs(datacenter="eqiad", replication_role="master")
 
         assert self.mocked_remote.query.called
@@ -798,7 +796,7 @@ class TestMysqlLegacy:
         assert "SELECT @@global.read_only" in caplog.text
 
     def test_verify_core_masters_readonly_fail(self):
-        """Should raise MysqlLegacyError if some masters do not have the intended read-only value."""
+        """Should raise MysqlError if some masters do not have the intended read-only value."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db10[01-11]"))
         mock_cumin(
             self.mocked_transports,
@@ -806,7 +804,7 @@ class TestMysqlLegacy:
             retvals=[[("db1001", b"0"), ("db10[02-11]", b"1")]],
         )
         with pytest.raises(
-            mysql_legacy.MysqlLegacyError,
+            mysql.MysqlError,
             match="Verification failed that core DB masters",
         ):
             self.mysql.verify_core_masters_readonly("eqiad", True)
@@ -824,16 +822,16 @@ class TestMysqlLegacy:
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_core_masters_in_sync_fail_heartbeat(self, mocked_sleep):
-        """Should raise MysqlLegacyError if unable to get the heartbeat from the current master."""
+        """Should raise MysqlError if unable to get the heartbeat from the current master."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db1001"))
         mock_cumin(self.mocked_transports, 0, retvals=[])
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Unable to get heartbeat from master"):
+        with pytest.raises(mysql.MysqlError, match="Unable to get heartbeat from master"):
             self.mysql.check_core_masters_in_sync("eqiad", "codfw")
         assert not mocked_sleep.called
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_core_masters_in_sync_not_in_sync(self, mocked_sleep):
-        """Should raise MysqlLegacyError if a master is not in sync with the one in the other DC."""
+        """Should raise MysqlError if a master is not in sync with the one in the other DC."""
         hosts = nodeset(EQIAD_CORE_MASTERS_QUERY)
         self.mocked_remote.query.side_effect = [RemoteHosts(self.config, nodeset(host)) for host in hosts] + [
             RemoteHosts(self.config, nodeset("db1001"))
@@ -842,7 +840,7 @@ class TestMysqlLegacy:
         retvals += [[("db1001", b"2018-09-06T10:00:00.000000")]] * 3  # 3 failed retries of second heartbeat
         mock_cumin(self.mocked_transports, 0, retvals=retvals)
         with pytest.raises(
-            mysql_legacy.MysqlLegacyError,
+            mysql.MysqlError,
             match=r"Heartbeat from master db1001 for section .* not yet in sync",
         ):
             self.mysql.check_core_masters_in_sync("eqiad", "codfw")
@@ -850,22 +848,22 @@ class TestMysqlLegacy:
         assert mocked_sleep.called
 
     def test_get_core_masters_heartbeats_wrong_data(self):
-        """Should raise MysqlLegacyError if unable to convert the heartbeat into a datetime."""
+        """Should raise MysqlError if unable to convert the heartbeat into a datetime."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db1001"))
         mock_cumin(
             self.mocked_transports,
             0,
             retvals=[[("db1001", b"2018-09-06-10:00:00.000000")]],
         )
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Unable to convert heartbeat"):
+        with pytest.raises(mysql.MysqlError, match="Unable to convert heartbeat"):
             self.mysql.get_core_masters_heartbeats("eqiad", "codfw")
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_check_core_masters_heartbeats_fail(self, mocked_sleep):
-        """Should raise MysqlLegacyError if unable to get the heartbeat from the master."""
+        """Should raise MysqlError if unable to get the heartbeat from the master."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db1001"))
         mock_cumin(self.mocked_transports, 0, retvals=[])
-        with pytest.raises(mysql_legacy.MysqlLegacyError, match="Unable to get heartbeat from master"):
+        with pytest.raises(mysql.MysqlError, match="Unable to get heartbeat from master"):
             self.mysql.check_core_masters_heartbeats("eqiad", "codfw", {"s1": datetime.utcnow()})
 
         assert mocked_sleep.called
@@ -874,10 +872,10 @@ class TestMysqlLegacy:
 class TestMysqlClient:
     """MysqlClient class tests."""
 
-    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    @mock.patch("spicerack.mysql.Connection", autospec=True)
     def test_connect_default(self, mocked_pymsql_connection):
         """It should call pymysql with the correct parameters."""
-        my = mysql_legacy.MysqlClient(dry_run=False)
+        my = mysql.MysqlClient(dry_run=False)
         with my.connect() as conn:
             assert conn == mocked_pymsql_connection.return_value
             call_args = mocked_pymsql_connection.call_args.kwargs
@@ -911,10 +909,10 @@ class TestMysqlClient:
             {"ssl": {1: 3}},
         ),
     )
-    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    @mock.patch("spicerack.mysql.Connection", autospec=True)
     def test_connect(self, mocked_pymsql_connection, kwargs):
         """It should call pymysql with the correct parameters."""
-        my = mysql_legacy.MysqlClient(dry_run=False)
+        my = mysql.MysqlClient(dry_run=False)
         with my.connect(**kwargs) as conn:
             assert conn == mocked_pymsql_connection.return_value
             call_args = mocked_pymsql_connection.call_args.kwargs
@@ -935,10 +933,10 @@ class TestMysqlClient:
             (True, True, True),
         ),
     )
-    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    @mock.patch("spicerack.mysql.Connection", autospec=True)
     def test_connect_read_only(self, mocked_pymsql_connection, dry_run, read_only, transaction_ro):
         """It should start a read-only transaction if either dry-run or read-only are set."""
-        my = mysql_legacy.MysqlClient(dry_run=dry_run)
+        my = mysql.MysqlClient(dry_run=dry_run)
         with my.connect(read_only=read_only) as conn:
             assert conn == mocked_pymsql_connection.return_value
             execute = conn.cursor.return_value.__enter__.return_value.execute  # pylint: disable=no-member
