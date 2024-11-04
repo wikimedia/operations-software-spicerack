@@ -34,7 +34,6 @@ Spicerack Python API autodoc.
    spicerack.kafka
    spicerack.locking
    spicerack.mediawiki
-   spicerack.mysql
    spicerack.mysql_legacy
    spicerack.netbox
    spicerack.orchestrator
