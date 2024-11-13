@@ -1,16 +1,20 @@
 """MysqlLegacy module tests."""
 
+import json
 import logging
 import re
 from datetime import datetime
+from decimal import Decimal
 from unittest import mock
 
 import pytest
 from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, nodeset
 from cumin.transports import Command
+from pymysql.cursors import DictCursor
 
 from spicerack import mysql_legacy
+from spicerack.constants import PUPPET_CA_PATH
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
 from spicerack.tests import get_fixture_path
 from spicerack.tests.unit.test_remote import mock_cumin
@@ -21,14 +25,21 @@ VERTICAL_QUERY_NEWLINE = """*************************** 1. row *****************
 test: line with
 a newline
 """
+MASTER_STATUS = {"Binlog_Do_DB": "", "Binlog_Ignore_DB": "", "File": "host1-bin.001234", "Position": 123456782}
 
 
 class TestInstance:
     """Test class for the Instance class."""
 
-    def setup_method(self):
+    @mock.patch("spicerack.mysql_legacy.MysqlClient", autospec=True)
+    def setup_method(self, _, mocked_pymysql_connection):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
+        self.mocked_pymysql = mocked_pymysql_connection.return_value
+        self.mocked_cursor = (
+            self.mocked_pymysql.connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value
+        )
+        # self.mocked_cursor = self.mocked_pymysql.return_value.cursor.return_value.__enter__.return_value
         self.mocked_run_sync = mock.Mock()
         self.config = Config(get_fixture_path("remote", "config.yaml"))
         single = RemoteHosts(self.config, nodeset("single1"), dry_run=False)
@@ -65,18 +76,80 @@ class TestInstance:
         """It should return the correct socket path for single and multi instances."""
         assert getattr(self, instance).socket == expected
 
-    @mock.patch("spicerack.mysql.Connection", autospec=True)
-    def test_cursor(self, mocked_pymsql_connection):
+    def test_cursor(self):
         """It should allow to perform queries on the target instance via the pymysql library."""
         with self.single_instance.cursor(database="mydatabase") as (connection, cursor):
-            assert connection is mocked_pymsql_connection.return_value
-            assert mocked_pymsql_connection.call_args.kwargs["database"] == "mydatabase"
+            assert connection is self.mocked_pymysql.connect.return_value.__enter__.return_value
+            assert self.mocked_pymysql.connect.call_args.kwargs["database"] == "mydatabase"
             cursor.execute("SELECT * FROM table")
             cursor.fetchall()
 
-        mocked_cursor = mocked_pymsql_connection.return_value.cursor.return_value.__enter__.return_value
-        mocked_cursor.execute.assert_called_once_with("SELECT * FROM table")
-        mocked_cursor.fetchall.assert_called_once_with()
+        self.mocked_cursor.execute.assert_called_once_with("SELECT * FROM table")
+        self.mocked_cursor.fetchall.assert_called_once_with()
+
+    def test_check_warnings_absent(self):
+        """It should just return if there are no warnings."""
+        self.mocked_cursor.execute.return_value = 0
+        with self.single_instance.cursor() as (_connection, cursor):
+            cursor.execute("SELECT 1")
+            self.single_instance.check_warnings(cursor)
+
+        self.mocked_cursor.execute.assert_called_with("SHOW WARNINGS")
+
+    @mock.patch("spicerack.mysql_legacy.ask_confirmation")
+    def test_check_warnings_present(self, mocked_ask_confirmation, caplog):
+        """It should log the warnings and ask the operator what to do if there are warnings."""
+        self.mocked_cursor.execute.side_effect = [0, 1]
+        self.mocked_cursor.fetchall.return_value = [{"Level": "Warning", "Code": 123, "Message": "Some error"}]
+
+        with caplog.at_level(logging.WARNING):
+            with self.single_instance.cursor() as (_connection, cursor):
+                cursor.execute("SELECT 1")
+                self.single_instance.check_warnings(cursor)
+
+        self.mocked_cursor.execute.assert_called_with("SHOW WARNINGS")
+        mocked_ask_confirmation.assert_called_once_with(
+            "The above warnings were raised during the last query, do you want to proceed anyway?"
+        )
+        assert "[Warning] 123: Some error" in caplog.text
+
+    def test_execute(self):
+        """It should execute a query within a cursor context just returning the number of affected rows."""
+        self.mocked_cursor.execute.side_effect = [2, 0]
+        num_rows = self.single_instance.execute("RESET SLAVE ALL")
+        assert num_rows == 2
+        self.mocked_cursor.execute.assert_has_calls([mock.call("RESET SLAVE ALL", None), mock.call("SHOW WARNINGS")])
+
+    def test_fetch_one_row_ok(self):
+        """It should return the row, checking for warnings."""
+        self.mocked_cursor.execute.side_effect = [1, 0]
+        self.mocked_cursor.fetchone.return_value = {"value": 1}
+        row = self.single_instance.fetch_one_row("SELECT 1 AS value")
+        assert row == {"value": 1}
+        self.mocked_cursor.execute.assert_has_calls([mock.call("SELECT 1 AS value", None), mock.call("SHOW WARNINGS")])
+        self.mocked_cursor.fetchone.assert_called_once_with()
+
+    def test_fetch_one_row_empty(self):
+        """It should return None if no rows are returned."""
+        self.mocked_cursor.execute.return_value = 0
+        row = self.single_instance.fetch_one_row("SELECT * FROM mytable", database="mydb")
+        assert row is None
+        self.mocked_cursor.execute.assert_has_calls(
+            [mock.call("SELECT * FROM mytable", None), mock.call("SHOW WARNINGS")]
+        )
+        self.mocked_cursor.fetchone.assert_not_called()
+
+    def test_fetch_one_row_too_many(self):
+        """It should raise a MysqlLegacyError if more than one row is returned."""
+        self.mocked_cursor.execute.side_effect = [3, 0]
+        with pytest.raises(
+            mysql_legacy.MysqlLegacyError, match="Expected query to return zero or one row, got 3 instead"
+        ):
+            self.single_instance.fetch_one_row("SELECT * FROM mytable", database="mydb")
+        self.mocked_cursor.execute.assert_has_calls(
+            [mock.call("SELECT * FROM mytable", None), mock.call("SHOW WARNINGS")]
+        )
+        self.mocked_cursor.fetchone.assert_not_called()
 
     @pytest.mark.parametrize(
         "query, database, kwargs",
@@ -125,6 +198,12 @@ class TestInstance:
         assert len(rows) == 2
         assert rows[0]["Seconds_Behind_Master"] == rows[1]["Seconds_Behind_Master"] == "0"
 
+    def test_run_vertical_query_no_reponse(self):
+        """It should return an empty list. This should not happen in real life."""
+        self.mocked_run_sync.return_value = []
+        rows = self.single_instance.run_vertical_query("SELECT")  # dummy query
+        assert rows == []  # pylint: disable=use-implicit-booleaness-not-comparison
+
     def test_run_vertical_query_empty(self):
         """It should return an empty list. This should not happen in real life."""
         response = "*************************** 1. row ***************************\n".encode()
@@ -165,66 +244,68 @@ class TestInstance:
         ),
     )
     @mock.patch("spicerack.mysql_legacy.sleep", return_value=None)
-    def test_run_method_ok(self, mocked_sleep, method, expected, instance):
+    def test_run_stop_start_slave_ok(self, mocked_sleep, method, expected, instance):
         """It should run the method called and execute the related query."""
-        self.mocked_run_sync.return_value = iter(())
-
+        self.mocked_cursor.execute.return_value = 0
         getattr(getattr(self, instance), method)()
-        suffix = ".instance1" if instance == "multi_instance" else ""
-        self.mocked_run_sync.assert_called_once_with(
-            f'/usr/local/bin/mysql --socket /run/mysqld/mysqld{suffix}.sock --batch --execute "{expected}"',
-            print_progress_bars=False,
-            print_output=False,
-        )
+        self.mocked_cursor.execute.assert_any_call(expected, None)
         assert mocked_sleep.called == (method == "start_slave")
 
     def test_single_show_slave_status_ok(self):
         """It should return the current slave status of the database."""
-        status = get_fixture_path("mysql_legacy", "single_show_slave_status.out").read_text().encode()
-        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(status, parent=MsgTreeElem()))]
+        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        self.mocked_cursor.execute.return_value = 1
+        self.mocked_cursor.fetchone.return_value = mocked_status
+
         status = self.single_instance.show_slave_status()
         assert status["Master_Host"] == "host1.example.org"
-        assert status["Seconds_Behind_Master"] == "0"
-        self.mocked_run_sync.assert_called_once_with(
-            r'/usr/local/bin/mysql --socket /run/mysqld/mysqld.sock --batch --execute "SHOW SLAVE STATUS\G"',
-            is_safe=True,
-            print_progress_bars=False,
-            print_output=False,
-        )
+        assert status["Seconds_Behind_Master"] == 0
+        assert status == mocked_status
+        self.mocked_cursor.execute.assert_called_once_with("SHOW SLAVE STATUS")
+        self.mocked_cursor.fetchone.assert_called_once_with()
 
     def test_single_show_slave_status_on_master(self):
         """It should raise a MysqlLegacyError exception if show slave status is called on a master."""
-        self.mocked_run_sync.return_value = iter(())
+        self.mocked_cursor.execute.return_value = 0
+
         with pytest.raises(
             mysql_legacy.MysqlLegacyError, match=re.escape("SHOW SLAVE STATUS seems to have been executed on a master")
         ):
             self.single_instance.show_slave_status()
 
+        self.mocked_cursor.fetchone.assert_not_called()
+
     def test_single_show_slave_status_multisource(self):
         """It should raise a MysqlLegacyError exception if show slave status is called on a multisource instance."""
-        status = get_fixture_path("mysql_legacy", "single_show_slave_status.out").read_text()
-        self.mocked_run_sync.return_value = [
-            (nodeset("single1"), MsgTreeElem("".join((status, status)).encode(), parent=MsgTreeElem()))
-        ]
+        self.mocked_cursor.execute.return_value = 2
         with pytest.raises(NotImplementedError, match="Multisource setup are not implemented"):
             self.single_instance.show_slave_status()
 
+        self.mocked_cursor.fetchone.assert_not_called()
+
     def test_single_show_master_status_ok(self):
         """It should return the current master status of the database."""
-        status = get_fixture_path("mysql_legacy", "single_show_master_status.out").read_text().encode()
-        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(status, parent=MsgTreeElem()))]
+        self.mocked_cursor.execute.side_effect = [1, 0]
+        self.mocked_cursor.fetchone.return_value = MASTER_STATUS
+
         status = self.single_instance.show_master_status()
-        assert status["File"] == "host2-bin.001234"
-        assert status["Position"] == "123456789"
+
+        assert status["File"] == "host1-bin.001234"
+        assert status["Position"] == 123456782
+        self.mocked_cursor.execute.assert_has_calls([mock.call("SHOW MASTER STATUS", None), mock.call("SHOW WARNINGS")])
+        self.mocked_cursor.fetchone.assert_called_once_with()
 
     def test_single_show_master_status_no_binlog(self):
         """It should raise a MysqlLegacyError if show master status is run on a host with binlog disabled."""
-        self.mocked_run_sync.return_value = iter(())
+        self.mocked_cursor.execute.return_value = 0
         with pytest.raises(
             mysql_legacy.MysqlLegacyError,
             match=re.escape("SHOW MASTER STATUS seems to have been executed on a host with binlog disabled"),
         ):
             self.single_instance.show_master_status()
+
+        self.mocked_cursor.execute.assert_has_calls([mock.call("SHOW MASTER STATUS", None), mock.call("SHOW WARNINGS")])
+        self.mocked_cursor.fetchone.assert_not_called()
 
     @pytest.mark.parametrize(
         "setting, expected",
@@ -236,15 +317,10 @@ class TestInstance:
     )
     def test_set_master_use_gtid_ok(self, setting, expected):
         """It should execute MASTER_USE_GTID with the given value."""
-        self.mocked_run_sync.return_value = iter(())
-
+        self.mocked_cursor.execute.return_value = 0
         self.single_instance.set_master_use_gtid(setting)
-        query = f"CHANGE MASTER TO MASTER_USE_GTID={expected}"
-        self.mocked_run_sync.assert_called_once_with(
-            f'/usr/local/bin/mysql --socket /run/mysqld/mysqld.sock --batch --execute "{query}"',
-            print_progress_bars=False,
-            print_output=False,
-        )
+        query = "CHANGE MASTER TO MASTER_USE_GTID=%s"
+        self.mocked_cursor.execute.assert_any_call(query, [expected])
 
     def test_set_master_use_gtid_invalid(self):
         """It should raise MysqlLegacyError if called with an invalid setting."""
@@ -307,112 +383,129 @@ class TestInstance:
 
     def test_get_replication_info_ok(self):
         """It should return a ReplicationInfo instance with the proper data."""
-        status = get_fixture_path("mysql_legacy", "single_show_slave_status.out").read_text().encode()
-        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(status, parent=MsgTreeElem()))]
+        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        self.mocked_cursor.execute.return_value = 1
+        self.mocked_cursor.fetchone.return_value = mocked_status
+
         info = self.single_instance.get_replication_info()
-        self.mocked_run_sync.assert_called_once_with(
-            r'/usr/local/bin/mysql --socket /run/mysqld/mysqld.sock --batch --execute "SHOW SLAVE STATUS\G"',
-            is_safe=True,
-            print_progress_bars=False,
-            print_output=False,
-        )
+
         assert info.primary == "host1.example.org"
         assert info.binlog == "host1-bin.001234"
         assert info.position == 123456782
+        self.mocked_cursor.execute.assert_called_once_with("SHOW SLAVE STATUS")
+        self.mocked_cursor.fetchone.assert_called_once_with()
 
     def test_get_replication_info_raise(self):
         """It should raise a MysqlLegacyError if unable to get the replication information."""
-        status = (
-            get_fixture_path("mysql_legacy", "single_show_slave_status.out")
-            .read_text()
-            .replace("Master_Host", "Master_Host_Invalid")
-        )
-        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(status.encode(), parent=MsgTreeElem()))]
+        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        del mocked_status["Master_Host"]  # Make it invalid
+        self.mocked_cursor.execute.return_value = 1
+        self.mocked_cursor.fetchone.return_value = mocked_status
+
         with pytest.raises(mysql_legacy.MysqlLegacyError, match="Could not find the replication position"):
             self.single_instance.get_replication_info()
 
+        self.mocked_cursor.execute.assert_called_once_with("SHOW SLAVE STATUS")
+        self.mocked_cursor.fetchone.assert_called_once_with()
+
     def test_primary_ok(self):
         """It should return the hostname of the primary host for this host."""
-        status = get_fixture_path("mysql_legacy", "single_show_slave_status.out").read_text().encode()
-        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(status, parent=MsgTreeElem()))]
+        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        self.mocked_cursor.execute.return_value = 1
+        self.mocked_cursor.fetchone.return_value = mocked_status
+
         assert self.single_instance.primary == "host1.example.org"
-        self.mocked_run_sync.assert_called_once()
+
+        self.mocked_cursor.execute.assert_called_once_with("SHOW SLAVE STATUS")
         # Ensure the caching of the result works
         self.single_instance.primary  # pylint: disable=pointless-statement
-        self.mocked_run_sync.assert_called_once()
+        assert self.mocked_cursor.execute.call_count == 1
+        assert self.mocked_cursor.fetchone.call_count == 1
 
     @pytest.mark.parametrize("no_content", (False, True))
     def test_primary_raise(self, no_content):
         """It should raise a MysqlLegacyError if there is no primary or is run on a master."""
-        if no_content:
-            self.mocked_run_sync.return_value = iter(())
-        else:
-            status = (
-                get_fixture_path("mysql_legacy", "single_show_slave_status.out")
-                .read_text()
-                .replace("Master_Host", "Master_Host_Invalid")
-            )
-            self.mocked_run_sync.return_value = [
-                (nodeset("single1"), MsgTreeElem(status.encode(), parent=MsgTreeElem()))
-            ]
+        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        del mocked_status["Master_Host"]  # Make it invalid
+        self.mocked_cursor.execute.return_value = 0 if no_content else 1
+        self.mocked_cursor.fetchone.return_value = None if no_content else mocked_status
 
         with pytest.raises(mysql_legacy.MysqlLegacyError, match="Unable to retrieve master host"):
             self.single_instance.primary  # pylint: disable=pointless-statement
 
+        if not no_content:
+            self.mocked_cursor.fetchone.assert_called_once_with()
+
     def test_prep_src_for_cloning(self):
         """It should run the preparation commands before cloning."""
-        status = get_fixture_path("mysql_legacy", "single_show_slave_status.out").read_text().encode()
-        node = nodeset("single1")
-        self.mocked_run_sync.side_effect = [
-            [(node, iter(()))],
-            [(node, MsgTreeElem(status, parent=MsgTreeElem()))],
-            [(node, iter(()))],
-        ]
+        mocked_status = json.loads(get_fixture_path("mysql_legacy", "single_show_slave_status.json").read_text())
+        self.mocked_cursor.execute.side_effect = [0, 0, 1, 0]
+        self.mocked_cursor.fetchone.return_value = mocked_status
+        self.mocked_run_sync.return_value = [(nodeset("single1"), iter(()))]
+
         info = self.single_instance.prep_src_for_cloning()
+
         assert info.primary == "host1.example.org"
-        calls = self.mocked_run_sync.call_args_list
-        assert calls[0][0][0].endswith('STOP SLAVE"')
-        assert calls[1][0][0].endswith(r'SHOW SLAVE STATUS\G"')
-        assert calls[2][0][0] == "/usr/bin/systemctl stop mariadb.service"
+        self.mocked_run_sync.assert_called_once_with("/usr/bin/systemctl stop mariadb.service")
+        self.mocked_cursor.execute.assert_any_call("STOP SLAVE", None)
+        self.mocked_cursor.execute.assert_any_call("SHOW SLAVE STATUS")
+        self.mocked_cursor.fetchone.assert_called_once_with()
 
     def test_set_replication_parameters(self):
         """It should set the replication to the given parameters."""
-        status = get_fixture_path("mysql_legacy", "single_show_slave_status.out").read_text().encode()
-        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(status, parent=MsgTreeElem()))]
-        info = self.single_instance.get_replication_info()
-        self.mocked_run_sync.reset_mock()
+        info = mysql_legacy.ReplicationInfo(
+            primary="host1.example.org", binlog="host1-bin.001234", position=123456782, port=3306
+        )
+        self.mocked_cursor.execute.return_value = 0
 
         self.multi_instance.set_replication_parameters(replication_info=info, user="user", password="dummy")
 
-        query = self.mocked_run_sync.call_args[0][0]
+        call_args = self.mocked_cursor.execute.call_args_list[0].args
         for part in (
             "CHANGE MASTER TO",
-            "master_host='host1.example.org'",
-            "master_port=3306",
+            "master_host=%s(primary)",
+            "master_port=%s(port)",
             "master_ssl=1",
-            "master_log_file='host1-bin.001234'",
-            "master_log_pos=123456782",
-            "master_user='user'",
-            "password='dummy'",
+            "master_log_file=%s(binlog)",
+            "master_log_pos=%s(position)",
+            "master_user=%s(user)",
+            "password=%s(password)",
         ):
-            assert part in query
+            assert part in call_args[0]
+
+        expected = {
+            "primary": "host1.example.org",
+            "port": 3306,
+            "binlog": "host1-bin.001234",
+            "position": 123456782,
+            "user": "user",
+            "password": "dummy",
+        }
+        for key, value in expected.items():
+            assert call_args[1][key] == value
 
     def test_post_clone_reset_with_slave_stopped(self):
         """It should start mysql with slave stopped and reset all slave information."""
-        self.mocked_run_sync.side_effect = [[(nodeset("single1"), iter(()))]] * 5
+        self.mocked_run_sync.side_effect = [[(nodeset("single1"), iter(()))]] * 3
+        self.mocked_cursor.execute.return_value = 0
+
         self.single_instance.post_clone_reset_with_slave_stopped()
+
         calls = self.mocked_run_sync.call_args_list
         assert calls[0][0][0].endswith("chown -R mysql:mysql /srv/sqldata")
         assert calls[0][0][1].endswith('set-environment MYSQLD_OPTS="--skip-slave-start"')
         assert calls[1][0][0].endswith("systemctl start mariadb.service")
-        assert calls[2][0][0].endswith('STOP SLAVE"')
-        assert calls[3][0][0].endswith('RESET SLAVE ALL"')
+        self.mocked_cursor.execute.assert_any_call("STOP SLAVE", None)
+        self.mocked_cursor.execute.assert_any_call("RESET SLAVE ALL", None)
 
     @mock.patch("spicerack.mysql_legacy.sleep", return_value=None)
     def test_resume_replication(self, mocked_sleep):
         """It should start mysql, upgrade it, restart it and resume the replication."""
-        self.mocked_run_sync.side_effect = [[(nodeset("single1"), iter(()))]] * 5
+        self.mocked_run_sync.side_effect = [[(nodeset("single1"), iter(()))]] * 4
+        self.mocked_cursor.execute.return_value = 0
+
         self.single_instance.resume_replication()
+
         calls = self.mocked_run_sync.call_args_list
         assert calls[0][0][0].endswith('set-environment MYSQLD_OPTS="--skip-slave-start"')
         assert calls[1][0][0].endswith("systemctl start mariadb.service")
@@ -420,40 +513,47 @@ class TestInstance:
             "$(readlink -f /usr/local/bin/mysql_upgrade) --socket /run/mysqld/mysqld.sock --force"
         )
         assert calls[3][0][0].endswith("systemctl restart mariadb.service")
-        assert calls[4][0][0].endswith('START SLAVE"')
+        self.mocked_cursor.execute.assert_any_call("START SLAVE", None)
         mocked_sleep.assert_called_once_with(1)
 
-    @pytest.mark.parametrize("threshold", (0, 0.1234, 0.5))
+    @pytest.mark.parametrize("threshold", (0, Decimal("0.1234"), 0.5))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_replication_already_ok(self, mocked_sleep, threshold):
         """If the replication is already in sync it should return immediately."""
-        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(b"lag\n0.1234", parent=MsgTreeElem()))]
+        self.mocked_cursor.execute.side_effect = [1, 0]
+        self.mocked_cursor.fetchone.return_value = {"lag": Decimal("0.1234")}
         if threshold:
             self.single_instance.wait_for_replication(threshold)
         else:
             threshold = 1.0
             self.multi_instance.wait_for_replication()
 
+        assert self.mocked_cursor.execute.call_count == 2
+        assert self.mocked_pymysql.connect.call_args.kwargs["database"] == "heartbeat"
+        self.mocked_cursor.fetchone.assert_called_once_with()
         mocked_sleep.assert_not_called()
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_replication_sleep_ok(self, mocked_sleep):
         """If the replication is not yet in sync it should wait until it gets in sync, within the timeout."""
-        results = [[(nodeset("single1"), MsgTreeElem(b"lag\n1.1234", parent=MsgTreeElem()))]] * 5
-        results.append([(nodeset("single1"), MsgTreeElem(b"lag\n0.1234", parent=MsgTreeElem()))])
-        self.mocked_run_sync.side_effect = results
+        self.mocked_cursor.execute.side_effect = [1, 0] * 6
+        lags = [{"lag": Decimal("1.2345")}] * 5
+        lags.append({"lag": Decimal("0.1234")})
+        self.mocked_cursor.fetchone.side_effect = lags
+
         self.single_instance.wait_for_replication()
+
         assert mocked_sleep.call_count == 5
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_replication_fail(self, mocked_sleep):
         """If the replication is not in sync within the timeout it should raise a MysqlLegacyReplagError exception."""
-        self.mocked_run_sync.side_effect = [
-            [(nodeset("single1"), MsgTreeElem(b"lag\n1.1234", parent=MsgTreeElem()))]
-        ] * 480
+        self.mocked_cursor.execute.side_effect = [1, 0] * 480
+        self.mocked_cursor.fetchone.side_effect = [{"lag": Decimal("1.2345")}] * 480
+
         with pytest.raises(
             mysql_legacy.MysqlLegacyReplagError,
-            match=re.escape("Replication lag higher than the threshold (1.0s): 1.1234s"),
+            match=re.escape("Replication lag higher than the threshold (1.0s): 1.2345s"),
         ):
             self.single_instance.wait_for_replication()
 
@@ -461,25 +561,30 @@ class TestInstance:
 
     def test_replication_lag_ok(self):
         """It should return the current replication lag as float."""
-        self.mocked_run_sync.return_value = [(nodeset("single1"), MsgTreeElem(b"lag\n0.1234", parent=MsgTreeElem()))]
-        assert self.single_instance.replication_lag() == pytest.approx(0.1234)
+        self.mocked_cursor.execute.side_effect = [1, 0]
+        self.mocked_cursor.fetchone.return_value = {"lag": Decimal("0.1234")}
+        assert self.single_instance.replication_lag() == Decimal("0.1234")
+        assert "TIMESTAMPDIFF" in self.mocked_cursor.execute.call_args_list[0].args[0]
 
-    @pytest.mark.parametrize(
-        "results, error_message",
-        (
-            (None, "Got no output from the replication lag query"),
-            (MsgTreeElem(b"invalid", parent=MsgTreeElem()), "Unable to parse replication lag from: ['invalid']"),
-            (
-                MsgTreeElem(b"invalid\nnot-a-float", parent=MsgTreeElem()),
-                "Unable to parse replication lag from: ['invalid', 'not-a-float']",
-            ),
-        ),
-    )
-    def test_replication_lag_fail(self, results, error_message):
-        """It should raise a MysqlLegacyError if there is no output or the output cannot be parsed as lag."""
-        self.mocked_run_sync.return_value = [(nodeset("single1"), results)] if results is not None else []
+    def test_replication_lag_no_data(self):
+        """It should raise a MysqlLegacyError if the query returns no rows."""
+        self.mocked_cursor.execute.return_value = 0
+        with pytest.raises(mysql_legacy.MysqlLegacyError, match="The replication lag query returned no data"):
+            self.single_instance.replication_lag()
+
+        self.mocked_cursor.fetchone.assert_not_called()
+
+    def test_replication_lag_no_lag(self):
+        """It should raise a MysqlLegacyError if the returned lag is None."""
+        self.mocked_cursor.execute.side_effect = [1, 0]
+        row = {"lag": None}
+        self.mocked_cursor.fetchone.return_value = row
+        error_message = f"Unable to get lag information from: {row}"
+
         with pytest.raises(mysql_legacy.MysqlLegacyError, match=re.escape(error_message)):
             self.single_instance.replication_lag()
+
+        self.mocked_cursor.fetchone.assert_called_once_with()
 
 
 class TestMysqlLegacyRemoteHosts:
@@ -734,3 +839,81 @@ class TestMysqlLegacy:
             self.mysql.check_core_masters_heartbeats("eqiad", "codfw", {"s1": datetime.utcnow()})
 
         assert mocked_sleep.called
+
+
+class TestMysqlClient:
+    """MysqlClient class tests."""
+
+    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    def test_connect_default(self, mocked_pymsql_connection):
+        """It should call pymysql with the correct parameters."""
+        my = mysql_legacy.MysqlClient(dry_run=False)
+        with my.connect() as conn:
+            assert conn == mocked_pymsql_connection.return_value
+            call_args = mocked_pymsql_connection.call_args.kwargs
+            # Ensure close is not called before context manager exits
+            conn.close.assert_not_called()  # pylint: disable=maybe-no-member
+
+        conn.close.assert_called_once_with()  # pylint: disable=maybe-no-member
+
+        # Ensure the default args were passed
+        if call_args.get("host") == "clouddb1001":
+            assert call_args["read_default_group"] == "clientlabsdb"
+        else:
+            assert call_args["read_default_group"] == "client"
+
+        assert call_args["charset"] == "utf8mb4"
+        assert call_args["cursorclass"] == DictCursor
+        assert call_args["read_default_file"].endswith("/.my.cnf")
+        assert call_args["ssl"] == {"ca": PUPPET_CA_PATH}
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        (
+            {"host": "db9999"},
+            {"charset": "ascii"},
+            {"charset": ""},
+            {"read_default_file": "/my.cnf"},
+            {"read_default_file": None, "read_default_group": None},
+            {"read_default_group": "client_test"},
+            {"host": "clouddb1001"},
+            {"ssl": {}},
+            {"ssl": {1: 3}},
+        ),
+    )
+    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    def test_connect(self, mocked_pymsql_connection, kwargs):
+        """It should call pymysql with the correct parameters."""
+        my = mysql_legacy.MysqlClient(dry_run=False)
+        with my.connect(**kwargs) as conn:
+            assert conn == mocked_pymsql_connection.return_value
+            call_args = mocked_pymsql_connection.call_args.kwargs
+            # Ensure close is not called before context manager exits
+            conn.close.assert_not_called()  # pylint: disable=maybe-no-member
+
+        conn.close.assert_called_once_with()  # pylint: disable=maybe-no-member
+        # Ensure the args we passed were passed along
+        for key, value in kwargs.items():
+            assert call_args[key] == value
+
+    @pytest.mark.parametrize(
+        "dry_run, read_only, transaction_ro",
+        (
+            (False, False, False),
+            (False, True, True),
+            (True, False, True),
+            (True, True, True),
+        ),
+    )
+    @mock.patch("spicerack.mysql_legacy.Connection", autospec=True)
+    def test_connect_read_only(self, mocked_pymsql_connection, dry_run, read_only, transaction_ro):
+        """It should start a read-only transaction if either dry-run or read-only are set."""
+        my = mysql_legacy.MysqlClient(dry_run=dry_run)
+        with my.connect(read_only=read_only) as conn:
+            assert conn == mocked_pymsql_connection.return_value
+            execute = conn.cursor.return_value.__enter__.return_value.execute  # pylint: disable=no-member
+            print(mocked_pymsql_connection.mock_calls)
+            if transaction_ro:
+                execute.assert_called_once_with("SET SESSION TRANSACTION READ ONLY")
+            else:
+                execute.assert_not_called()

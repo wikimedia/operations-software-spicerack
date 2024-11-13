@@ -1,6 +1,29 @@
 Spicerack Changelog
 -------------------
 
+`v8.16.0`_ (2024-11-13)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* mysql_legacy: add ``MysqlClient`` class as a copy of the ``mysql.Mysql`` class to later merge those two modules
+  together.
+* mysql_legacy: improve pymysql usability adding some new helper methods:
+
+  * ``execute()``: to execute a query that doesn't return anything via pymysql.
+  * ``fetch_one_row()``: to execute a query with pymysql that should return one row and return it.
+  * ``check_warnings()``: to check if in the last statement there was any warning raised and ask the user what to do.
+
+* mysql_legacy: in the ``Instance`` class convert all internal queries to use the new methods to use pymysql instead of 
+  executing queries via ssh.
+
+Bug fixes
+"""""""""
+
+* mysql: remove deprecated call to ``query()`` method of pymysql that is for internal use only. Convert it to a
+  ``cursor().execute()`` call that is the part of the public facing API.
+
 `v8.15.2`_ (2024-10-31)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -75,9 +98,9 @@ Bug fixes
 Miscellanea
 """""""""""
 
-doc: removed deprecated call to ``sphinx_rtd_theme``.
-tox: only install flake8 when running flake8.
-tests: fix issues reported by pylint >3 and pin Prospector.
+* doc: removed deprecated call to ``sphinx_rtd_theme``.
+* tox: only install flake8 when running flake8.
+* tests: fix issues reported by pylint >3 and pin Prospector.
 
 `v8.14.0`_ (2024-09-30)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -3287,3 +3310,4 @@ New features
 .. _`v8.15.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.0
 .. _`v8.15.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.1
 .. _`v8.15.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.2
+.. _`v8.16.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.0
