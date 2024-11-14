@@ -479,7 +479,8 @@ class Instance:
         if not isinstance(setting, MasterUseGTID):
             raise MysqlLegacyError(f"Only instances of MasterUseGTID are accepted, got: {type(setting)}")
 
-        self.execute("CHANGE MASTER TO MASTER_USE_GTID=%s", [setting.value])
+        # Not using placeholder replacements ad MariaDB requires it to be a syntax word and raises if it's quoted
+        self.execute(f"CHANGE MASTER TO MASTER_USE_GTID={setting.value}")
 
     def stop_mysql(self) -> Iterator[tuple[NodeSet, MsgTreeElem]]:
         """Stops mariadb service.
@@ -614,13 +615,13 @@ class Instance:
         """Sets the replication parameters for the MySQL instance."""
         self.execute(
             (
-                "CHANGE MASTER TO master_host=%s(primary), "
-                "master_port=%s(port), "
+                "CHANGE MASTER TO master_host=%(primary)s, "
+                "master_port=%(port)s, "
                 "master_ssl=1, "
-                "master_log_file=%s(binlog), "
-                "master_log_pos=%s(position), "
-                "master_user=%s(user), "
-                "master_password=%s(password)"
+                "master_log_file=%(binlog)s, "
+                "master_log_pos=%(position)s, "
+                "master_user=%(user)s, "
+                "master_password=%(password)s"
             ),
             {
                 "primary": replication_info.primary,
@@ -689,7 +690,7 @@ class Instance:
         if row is None:
             raise MysqlLegacyError("The replication lag query returned no data")
 
-        if not row["lag"]:
+        if "lag" not in row or row["lag"] is None:
             raise MysqlLegacyError(f"Unable to get lag information from: {row}")
 
         return row["lag"]

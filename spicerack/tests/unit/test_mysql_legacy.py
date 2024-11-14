@@ -319,8 +319,7 @@ class TestInstance:
         """It should execute MASTER_USE_GTID with the given value."""
         self.mocked_cursor.execute.return_value = 0
         self.single_instance.set_master_use_gtid(setting)
-        query = "CHANGE MASTER TO MASTER_USE_GTID=%s"
-        self.mocked_cursor.execute.assert_any_call(query, [expected])
+        self.mocked_cursor.execute.assert_any_call(f"CHANGE MASTER TO MASTER_USE_GTID={expected}", None)
 
     def test_set_master_use_gtid_invalid(self):
         """It should raise MysqlLegacyError if called with an invalid setting."""
@@ -463,13 +462,13 @@ class TestInstance:
         call_args = self.mocked_cursor.execute.call_args_list[0].args
         for part in (
             "CHANGE MASTER TO",
-            "master_host=%s(primary)",
-            "master_port=%s(port)",
+            "master_host=%(primary)s",
+            "master_port=%(port)s",
             "master_ssl=1",
-            "master_log_file=%s(binlog)",
-            "master_log_pos=%s(position)",
-            "master_user=%s(user)",
-            "password=%s(password)",
+            "master_log_file=%(binlog)s",
+            "master_log_pos=%(position)s",
+            "master_user=%(user)s",
+            "password=%(password)s",
         ):
             assert part in call_args[0]
 
@@ -574,10 +573,16 @@ class TestInstance:
 
         self.mocked_cursor.fetchone.assert_not_called()
 
-    def test_replication_lag_no_lag(self):
+    @pytest.mark.parametrize(
+        "row",
+        (
+            {"lag": None},
+            {"invalid": Decimal(0.1234)},
+        ),
+    )
+    def test_replication_lag_no_lag(self, row):
         """It should raise a MysqlLegacyError if the returned lag is None."""
         self.mocked_cursor.execute.side_effect = [1, 0]
-        row = {"lag": None}
         self.mocked_cursor.fetchone.return_value = row
         error_message = f"Unable to get lag information from: {row}"
 

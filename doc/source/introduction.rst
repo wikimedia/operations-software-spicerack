@@ -88,7 +88,7 @@ So here is our *runner* class:
 ::
 
     class ServiceRouterRunner(CookbookRunnerBase):
-        def __init__(args, spicerack):
+        def __init__(self, args, spicerack):
             # args here is the result of CookbookBase.argument_parser().parse_args()
             self.service = args.service
             self.datacenter = args.datacenter
