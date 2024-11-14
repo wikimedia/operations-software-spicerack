@@ -1,6 +1,17 @@
 Spicerack Changelog
 -------------------
 
+`v8.16.1`_ (2024-11-14)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Bug fixes
+"""""""""
+
+* mysql_legacy: fix `set_master_use_gtid()` query, its value it's part of the syntax, avoid pymysql quoting it.
+* mysql_legacy: fix query formatting in `set_replication_parameters()`.
+* mysql_legacy: fix check in `replication_lag()` that would raise if the lag is 0.0s.
+* doc: fix example code bug missing a reference to ``self``.
+
 `v8.16.0`_ (2024-11-13)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3311,3 +3322,4 @@ New features
 .. _`v8.15.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.1
 .. _`v8.15.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.2
 .. _`v8.16.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.0
+.. _`v8.16.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.1
