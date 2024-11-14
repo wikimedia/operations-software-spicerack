@@ -292,14 +292,14 @@ class Instance:
         Examples:
             ::
 
-                >>> query = "INSERT INTO mytable VALUES (%s(a), %s(b))"
+                >>> query = "INSERT INTO mytable VALUES (%(a)s, %(b)s)"
                 >>> params = {"a": "value", "b": 10}
                 >>> num_rows = instance.execute(query, params, database="mydb")
 
         Arguments:
-            query: the query to execute, with eventual placeholders (``%s`` or ``%s(name)``).
+            query: the query to execute, with eventual placeholders (``%s`` or ``%(name)s``).
             query_parameters: the query parameters to inject into the query, a :py:class:`tuple` or :py:class:`list` in
-                case ``%s`` placeholders were used or a :py:class:`dict` in case ``%s(name)`` placeholders were used.
+                case ``%s`` placeholders were used or a :py:class:`dict` in case ``%(name)s`` placeholders were used.
                 Leave the default value :py:data:`None` if there are no placeholders in the query.
             is_safe: set to :py:data:`True` if the query can be safely run also in DRY-RUN mode. By default all queries
                 are considered unsafe. If :py:data:`False` the query will not be run in DRY-RUN mode and the return
@@ -330,8 +330,8 @@ class Instance:
         query: str,
         query_parameters: Union[None, tuple, list, dict] = None,
         **kwargs: Any,
-    ) -> Optional[dict]:
-        """Execute the given query and returns one row. It sets the connection as read only.
+    ) -> dict:
+        """Execute the given query and returns one row. It sets the connection as read only unless forced explicitly.
 
         Caution:
             DRY-RUN and read-only support is limited to DML sql operations. By default all queries are considered
@@ -343,16 +343,19 @@ class Instance:
         Examples:
             ::
 
-                >>> query = "SELECT * FROM mytable WHERE a = %s(a) and b = %s(b)"
+                >>> query = "SELECT * FROM mytable WHERE a = %(a)s and b = %(b)s"
                 >>> params = {"a": "value", "b": 10}
                 >>> row = instance.fetch_one_row(query, params, database="mydb")
                 >>> row
                 {'a': 'value', 'b': 10, 'c': 1}
+                >>> row = instance.fetch_one_row("SELECT 1 WHERE 2 > 1", database="mydb")
+                >>> row
+                {}
 
         Arguments:
-            query: the query to execute, with eventual placeholders (``%s`` or ``%s(name)``).
+            query: the query to execute, with eventual placeholders (``%s`` or ``%(name)s``).
             query_parameters: the query parameters to inject into the query, a :py:class:`tuple` or :py:class:`list` in
-                case ``%s`` placeholders were used or a :py:class:`dict` in case ``%s(name)`` placeholders were used.
+                case ``%s`` placeholders were used or a :py:class:`dict` in case ``%(name)s`` placeholders were used.
                 Leave the default value :py:data:`None` if there are no placeholders in the query.
             **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql.MysqlClient.connect`
                 method. See its documentation for the available arguments and their default values.
@@ -371,12 +374,13 @@ class Instance:
             if num_rows != 1:
                 self.check_warnings(cursor)
                 if num_rows == 0:
-                    return None
+                    return {}
 
                 raise MysqlError(f"Expected query to return zero or one row, got {num_rows} instead.")
 
             row = cursor.fetchone()
             self.check_warnings(cursor)
+
             return row
 
     def run_query(self, query: str, database: str = "", **kwargs: Any) -> Any:
@@ -499,7 +503,7 @@ class Instance:
         """
         query = "SHOW MASTER STATUS"
         status = self.fetch_one_row(query)
-        if status is None:
+        if not status:
             raise MysqlError(f"{query} seems to have been executed on a host with binlog disabled.")
 
         return status
@@ -717,7 +721,7 @@ class Instance:
             "FROM heartbeat ORDER BY ts LIMIT 1"
         )
         row = self.fetch_one_row(query, database="heartbeat")
-        if row is None:
+        if not row:
             raise MysqlError("The replication lag query returned no data")
 
         if "lag" not in row or row["lag"] is None:

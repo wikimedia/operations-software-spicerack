@@ -157,10 +157,10 @@ class TestInstance:
     def test_fetch_one_row_empty(self):
         """It should return None if no rows are returned."""
         self.mocked_cursor.execute.return_value = 0
-        row = self.single_instance.fetch_one_row("SELECT * FROM mytable", database="mydb")
-        assert row is None
+        row = self.single_instance.fetch_one_row("SELECT 1 WHERE 2 > 1")
+        assert row == {}
         self.mocked_cursor.execute.assert_has_calls(
-            [mock.call("SELECT * FROM mytable", None), mock.call("SHOW WARNINGS")]
+            [mock.call("SELECT 1 WHERE 2 > 1", None), mock.call("SHOW WARNINGS")]
         )
         self.mocked_cursor.fetchone.assert_not_called()
 
