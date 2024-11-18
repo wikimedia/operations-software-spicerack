@@ -1,6 +1,19 @@
 Spicerack Changelog
 -------------------
 
+`v8.16.2`_ (2024-11-18)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: add response logging for request() to better capture errors that are hard to reproduce.
+
+Bug fixes
+"""""""""
+
+* mysql_legacy: improve DRY-RUN support in execute() and documentation for it on the other methods.
+
 `v8.16.1`_ (2024-11-14)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3323,3 +3336,4 @@ New features
 .. _`v8.15.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.15.2
 .. _`v8.16.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.0
 .. _`v8.16.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.1
+.. _`v8.16.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.2
