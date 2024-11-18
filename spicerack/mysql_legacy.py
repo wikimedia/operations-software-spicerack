@@ -119,7 +119,7 @@ class MysqlClient:
 
         Arguments:
             read_only: True if this connection should use read-only transactions. **Note**: This parameter has no
-                effect if DRY-RUN is set, it will be forces to True.
+                effect if DRY-RUN is set, it will be forced to True.
             **kwargs: Options passed directly to :py:class:`pymysql.connections.Connection`. If not set some settings
                 will be set to default values:
 
@@ -194,9 +194,22 @@ class Instance:
             self._service = "mariadb.service"
             self._data_dir = "/srv/sqldata"
 
+    def __str__(self) -> str:
+        """Return a string representation of the instance.
+
+        Returns:
+            the FQDN and name of the instance, if present.
+
+        """
+        name = self.name if self.name else "single-instance"
+        return f"{self.host} ({name})"
+
     @contextmanager
     def cursor(self, **kwargs: Any) -> Generator:
         """Context manager to get an open connection and cursor against the current instance.
+
+        Caution:
+            DRY-RUN and read-only support is limited to DML sql operations.
 
         Examples:
             * Iterate directly the cursor
@@ -264,9 +277,14 @@ class Instance:
         self,
         query: str,
         query_parameters: Union[None, tuple, list, dict] = None,
+        *,
+        is_safe: bool = False,
         **kwargs: Any,
     ) -> int:
         """Execute a query that returns no data without giving access to the connection or cursor objects.
+
+        Caution:
+            DRY-RUN and read-only support is limited to DML sql operations when ``is_safe`` is set to :py:data:`True`.
 
         Note:
             If any warning is issued by the database they will be logged and the user prompted what to do.
@@ -283,6 +301,9 @@ class Instance:
             query_parameters: the query parameters to inject into the query, a :py:class:`tuple` or :py:class:`list` in
                 case ``%s`` placeholders were used or a :py:class:`dict` in case ``%s(name)`` placeholders were used.
                 Leave the default value :py:data:`None` if there are no placeholders in the query.
+            is_safe: set to :py:data:`True` if the query can be safely run also in DRY-RUN mode. By default all queries
+                are considered unsafe. If :py:data:`False` the query will not be run in DRY-RUN mode and the return
+                value will be 0.
             **kwargs: arbitrary arguments that are passed to the :py:class:`spicerack.mysql_legacy.MysqlClient.connect`
                 method. See its documentation for the available arguments and their default values.
 
@@ -295,6 +316,11 @@ class Instance:
 
         """
         with self.cursor(**kwargs) as (_connection, cursor):
+            if self.host.dry_run and not is_safe:
+                effective_query = cursor.mogrify(query, query_parameters)
+                logger.info("Would have executed on host %s the query: %s", self, effective_query)
+                return 0
+
             num_rows = cursor.execute(query, query_parameters)
             self.check_warnings(cursor)
             return num_rows
@@ -306,6 +332,10 @@ class Instance:
         **kwargs: Any,
     ) -> Optional[dict]:
         """Execute the given query and returns one row. It sets the connection as read only.
+
+        Caution:
+            DRY-RUN and read-only support is limited to DML sql operations. By default all queries are considered
+            read-only due to the nature of the method (retrieve one row).
 
         Note:
             If any warning is issued by the database they will be logged and the user prompted what to do.
@@ -762,7 +792,7 @@ class MysqlLegacyRemoteHosts(RemoteHostsAdapter):
         )
         if conf_files:  # Multi-instance
             for conf_file in conf_files[0][1].message().decode().splitlines():
-                instances.append(Instance(self._remote_hosts, name=conf_file[:-4]))  # Remove .cnf extensio
+                instances.append(Instance(self._remote_hosts, name=conf_file[:-4]))  # Remove .cnf extension
         else:  # Check for single instance
             try:
                 self._remote_hosts.run_sync(
