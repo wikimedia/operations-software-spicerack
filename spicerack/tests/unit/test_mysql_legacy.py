@@ -39,20 +39,29 @@ class TestInstance:
         self.mocked_cursor = (
             self.mocked_pymysql.connect.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value
         )
-        # self.mocked_cursor = self.mocked_pymysql.return_value.cursor.return_value.__enter__.return_value
         self.mocked_run_sync = mock.Mock()
         self.config = Config(get_fixture_path("remote", "config.yaml"))
         single = RemoteHosts(self.config, nodeset("single1"), dry_run=False)
+        single_dry_run = RemoteHosts(self.config, nodeset("single1"))
         single.run_sync = self.mocked_run_sync
         multi = RemoteHosts(self.config, nodeset("multi1"), dry_run=False)
         multi.run_sync = self.mocked_run_sync
         self.single_instance = mysql_legacy.Instance(single)
         self.multi_instance = mysql_legacy.Instance(multi, name="instance1")
+        self.single_instance_dry_run = mysql_legacy.Instance(single_dry_run)
 
     def test_init_raise(self):
         """It should raise a NotImplementedError exception if more than one host is passed to the constructor."""
         with pytest.raises(NotImplementedError, match="Only single hosts are currently supported"):
             mysql_legacy.Instance(RemoteHosts(self.config, nodeset("host[1-2]")))
+
+    @pytest.mark.parametrize(
+        "instance, expected",
+        (("single_instance", "single1 (single-instance)"), ("multi_instance", "multi1 (instance1)")),
+    )
+    def test_str(self, instance, expected):
+        """It should return a string representation of the instance."""
+        assert str(getattr(self, instance)) == expected
 
     @pytest.mark.parametrize(
         "instance, expected",
@@ -113,12 +122,28 @@ class TestInstance:
         )
         assert "[Warning] 123: Some error" in caplog.text
 
-    def test_execute(self):
+    @pytest.mark.parametrize(
+        "instance, is_safe",
+        (
+            ("single_instance", False),
+            ("single_instance", True),
+            ("single_instance_dry_run", True),
+        ),
+    )
+    def test_execute(self, instance, is_safe):
         """It should execute a query within a cursor context just returning the number of affected rows."""
         self.mocked_cursor.execute.side_effect = [2, 0]
-        num_rows = self.single_instance.execute("RESET SLAVE ALL")
+        num_rows = getattr(self, instance).execute("RESET SLAVE ALL", is_safe=is_safe)
         assert num_rows == 2
         self.mocked_cursor.execute.assert_has_calls([mock.call("RESET SLAVE ALL", None), mock.call("SHOW WARNINGS")])
+
+    def test_execute_dry_run_unsafe(self):
+        """It should not execute the query and return 0."""
+        self.mocked_cursor.mogrify.return_value = "RESET SLAVE ALL"
+        num_rows = self.single_instance_dry_run.execute("RESET SLAVE ALL")
+        assert num_rows == 0
+        self.mocked_cursor.mogrify.assert_called_once_with("RESET SLAVE ALL", None)
+        self.mocked_cursor.execute.assert_not_called()
 
     def test_fetch_one_row_ok(self):
         """It should return the row, checking for warnings."""

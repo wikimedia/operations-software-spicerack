@@ -10,14 +10,21 @@ from datetime import datetime, timedelta
 from enum import Enum
 from io import BufferedReader
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Type, Union
 
 import urllib3
 from packaging import version
 from requests import Response
+
+try:  # JSONDecodeError present since requests 2.27.0, bullseye has 2.25.1
+    from requests.exceptions import JSONDecodeError
+
+    CompatJSONDecodeError: Union[Type[ValueError], Type[JSONDecodeError]] = JSONDecodeError
+except ImportError:
+    CompatJSONDecodeError = ValueError
 from wmflib.requests import http_session
 
-from spicerack.apiclient import APIClient, APIClientError
+from spicerack.apiclient import APIClient, APIClientError, APIClientResponseError
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 
@@ -356,13 +363,19 @@ class Redfish:
         See :py:meth:`spicerack.apiclient.APIClient.request` for the arguments documentation.
 
         Raises:
-            spicerack.apiclient.APIClientResponseError: if the response status code is between 400 and 600.
-            spicerack.redfish.RedfishError: if the given uri does not start with a slash (/) or if the request
-                couldn't be performed.
+            spicerack.redfish.RedfishError: if the response status code is
+            between 400 and 600 or if the given uri does not start with a slash
+            (/) or if the request couldn't be performed.
 
         """
         try:
             return self._api_client.request(method, uri, **kwargs)
+        except APIClientResponseError as e:
+            try:
+                logger.error("%s\nResponse payload: %s", e, e.response.json())
+            except CompatJSONDecodeError:
+                logger.error("The response payload does not contain any valid JSON to log.")
+            raise RedfishError(str(e)) from e
         except APIClientError as e:
             raise RedfishError(str(e)) from e
 

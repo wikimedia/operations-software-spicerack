@@ -509,6 +509,12 @@ class TestRedfish:
         with pytest.raises(redfish.RedfishError, match="POST https://10.0.0.1/redfish returned HTTP 405"):
             self.redfish.request("post", "/redfish", json={"key": "value"})
 
+    def test_request_response_wrong_status_code_invalid_json(self):
+        """It should raise a RedfishError if the request returns an error status code and the response is not JSON."""
+        self.requests_mock.post("/redfish", json="this is not valid", status_code=405)
+        with pytest.raises(redfish.RedfishError, match="POST https://10.0.0.1/redfish returned HTTP 405"):
+            self.redfish.request("post", "/redfish", json={"key": "value"})
+
     def test_request_response_raises(self):
         """It should raise a RedfishError if the request failes to be performed."""
         self.requests_mock.get("/redfish", exc=requests.exceptions.ConnectTimeout)
