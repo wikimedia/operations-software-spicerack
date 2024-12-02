@@ -41,7 +41,6 @@ from spicerack.kafka import Kafka
 from spicerack.locking import COOKBOOKS_CUSTOM_PREFIX, SPICERACK_PREFIX, Lock, NoLock, get_lock_instance
 from spicerack.mediawiki import MediaWiki
 from spicerack.mysql import Mysql
-from spicerack.mysql_legacy import MysqlLegacy
 from spicerack.netbox import MANAGEMENT_IFACE_NAME, Netbox, NetboxServer
 from spicerack.orchestrator import Orchestrator
 from spicerack.peeringdb import PeeringDB
@@ -423,11 +422,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
     def mysql(self) -> Mysql:
         """Get a Mysql instance."""
-        return Mysql(dry_run=self._dry_run)
-
-    def mysql_legacy(self) -> MysqlLegacy:
-        """Get a MysqlLegacy instance."""
-        return MysqlLegacy(self.remote(), dry_run=self._dry_run)
+        return Mysql(self.remote(), dry_run=self._dry_run)
 
     def redis_cluster(self, cluster: str) -> RedisCluster:
         """Get a RedisCluster instance.

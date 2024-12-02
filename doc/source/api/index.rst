@@ -35,7 +35,6 @@ Spicerack Python API autodoc.
    spicerack.locking
    spicerack.mediawiki
    spicerack.mysql
-   spicerack.mysql_legacy
    spicerack.netbox
    spicerack.orchestrator
    spicerack.peeringdb

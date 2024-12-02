@@ -1,6 +1,17 @@
 Spicerack Changelog
 -------------------
 
+`v9.0.0`_ (2024-12-02)
+^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* mysql_legacy: rename to ``mysql`` and remove ``Legacy`` from all the class names. This replaces the unused old
+  ``mysql`` module whose functionality has been moved to ``mysql.MysqlClient``
+* mysql: make ``fetch_one_row()`` return always a dict also in case of no rows matching to simplify client's code and
+  mypy checks.
+
 `v8.16.2`_ (2024-11-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3337,3 +3348,4 @@ New features
 .. _`v8.16.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.0
 .. _`v8.16.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.1
 .. _`v8.16.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.2
+.. _`v9.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.0.0
