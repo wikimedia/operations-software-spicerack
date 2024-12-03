@@ -16,103 +16,103 @@ COOKBOOKS_BASE_PATHS = [COOKBOOKS_BASE_PATH]
 COOKBOOKS_BASE_PATHS_MULTI = COOKBOOKS_BASE_PATHS + [Path("spicerack/tests/fixtures/external_cookbook")]
 LIST_COOKBOOKS_ALL = """cookbooks
 |-- class_api
-|   |-- class_api.call_another_cookbook
-|   |-- class_api.example
-|   |-- class_api.get_runner_raise
-|   |-- class_api.lock_args
-|   |-- class_api.multiple.CookbookA
-|   |-- class_api.multiple.CookbookB
-|   |-- class_api.rollback
-|   |-- class_api.rollback_raise
-|   |-- class_api.runtime_description
-|   |-- class_api.runtime_description_raise
-|   `-- class_api.use_external_modules
-|-- cookbook{external_cookbooks}
+|   |-- class_api.call_another_cookbook [team1]
+|   |-- class_api.example [unowned]
+|   |-- class_api.get_runner_raise [unowned]
+|   |-- class_api.lock_args [unowned]
+|   |-- class_api.multiple.CookbookA [team1]
+|   |-- class_api.multiple.CookbookB [team2]
+|   |-- class_api.rollback [unowned]
+|   |-- class_api.rollback_raise [unowned]
+|   |-- class_api.runtime_description [unowned]
+|   |-- class_api.runtime_description_raise [unowned]
+|   `-- class_api.use_external_modules [unowned]
+|-- cookbook [unowned]{external_cookbooks}
 |-- group1
-|   `-- group1.cookbook1
+|   `-- group1.cookbook1 [unowned]
 |-- group2
-|   |-- group2.cookbook2
+|   |-- group2.cookbook2 [team2]
 |   |-- group2.subgroup1
-|   |   `-- group2.subgroup1.cookbook3
-|   `-- group2.zcookbook4
+|   |   `-- group2.subgroup1.cookbook3 [team9]
+|   `-- group2.zcookbook4 [team2]
 |-- group3
-|   |-- group3.argparse_ok
-|   |-- group3.argument_parser_raise_system_exit
-|   |-- group3.get_argument_parser_raise
-|   |-- group3.get_argument_parser_raise_system_exit_str
-|   |-- group3.keyboard_interrupt
-|   |-- group3.non_zero_exit
-|   |-- group3.raise_exception
-|   |-- group3.raise_system_exit_0
-|   |-- group3.raise_system_exit_9
-|   |-- group3.raise_system_exit_str
+|   |-- group3.argparse_ok [team1]
+|   |-- group3.argument_parser_raise_system_exit [team3]
+|   |-- group3.get_argument_parser_raise [team3]
+|   |-- group3.get_argument_parser_raise_system_exit_str [team3]
+|   |-- group3.keyboard_interrupt [team3]
+|   |-- group3.non_zero_exit [team3]
+|   |-- group3.raise_exception [team3]
+|   |-- group3.raise_system_exit_0 [team3]
+|   |-- group3.raise_system_exit_9 [team3]
+|   |-- group3.raise_system_exit_str [team3]
 |   `-- group3.subgroup3
-|       `-- group3.subgroup3.cookbook4
-|-- multiple.CookbookA
-|-- multiple.CookbookB
-`-- root
+|       `-- group3.subgroup3.cookbook4 [team9]
+|-- multiple.CookbookA [team1]
+|-- multiple.CookbookB [team2]
+`-- root [unowned]
 """
 LIST_EXTERNAL_COOKBOOKS = """
-|-- external_cookbook
+|-- external_cookbook [unowned]
 |-- external_group
-|   `-- external_group.cookbook1"""
+|   `-- external_group.cookbook1 [unowned]"""
 LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |-- class_api: Class API Test Cookbooks.
-|   |-- class_api.call_another_cookbook: A cookbook that calls another cookbook.
-|   |-- class_api.example: -
-|   |-- class_api.get_runner_raise: Class API get_runner raise cookbook.
-|   |-- class_api.lock_args: Cookbook that overrides the lock arguments.
-|   |-- class_api.multiple.CookbookA: Multiple cookbook classes.
-|   |-- class_api.multiple.CookbookB: Multiple cookbook classes.
-|   |-- class_api.rollback: Class API rollback cookbook.
-|   |-- class_api.rollback_raise: Class API rollback_raise cookbook.
-|   |-- class_api.runtime_description: Class API cookbook that overrides runtime_description.
-|   |-- class_api.runtime_description_raise: Class API runtime_description raise cookbook.
-|   `-- class_api.use_external_modules: Call a Spicerack extender accessor.
-|-- cookbook: Top level class cookbook.
+|   |-- class_api.call_another_cookbook: A cookbook that calls another cookbook. [team1]
+|   |-- class_api.example: - [unowned]
+|   |-- class_api.get_runner_raise: Class API get_runner raise cookbook. [unowned]
+|   |-- class_api.lock_args: Cookbook that overrides the lock arguments. [unowned]
+|   |-- class_api.multiple.CookbookA: Multiple cookbook classes. [team1]
+|   |-- class_api.multiple.CookbookB: Multiple cookbook classes. [team2]
+|   |-- class_api.rollback: Class API rollback cookbook. [unowned]
+|   |-- class_api.rollback_raise: Class API rollback_raise cookbook. [unowned]
+|   |-- class_api.runtime_description: Class API cookbook that overrides runtime_description. [unowned]
+|   |-- class_api.runtime_description_raise: Class API runtime_description raise cookbook. [unowned]
+|   `-- class_api.use_external_modules: Call a Spicerack extender accessor. [unowned]
+|-- cookbook: Top level class cookbook. [unowned]
 |-- group1: Group1 Test Cookbooks.
-|   `-- group1.cookbook1: Group1 Cookbook1.
+|   `-- group1.cookbook1: Group1 Cookbook1. [unowned]
 |-- group2: -
-|   |-- group2.cookbook2: Group2 Cookbook2.
+|   |-- group2.cookbook2: Group2 Cookbook2. [team2]
 |   |-- group2.subgroup1: -
-|   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3.
-|   `-- group2.zcookbook4: UNKNOWN (unable to detect title)
+|   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3. [team9]
+|   `-- group2.zcookbook4: UNKNOWN (unable to detect title) [team2]
 |-- group3: -
-|   |-- group3.argparse_ok: Group3 argparse_ok.
-|   |-- group3.argument_parser_raise_system_exit: Group3 argument_parser() raise SystemExit.
-|   |-- group3.get_argument_parser_raise: Group3 get argument_parser() raise.
-|   |-- group3.get_argument_parser_raise_system_exit_str: Group3 get argument_parser() raise SystemExit with a string.
-|   |-- group3.keyboard_interrupt: Group3 Raise KeyboardInterrupt.
-|   |-- group3.non_zero_exit: Group3 Non-Zero return code.
-|   |-- group3.raise_exception: Group3 Raise Exception.
-|   |-- group3.raise_system_exit_0: Group3 Raise SystemExit(0).
-|   |-- group3.raise_system_exit_9: Group3 Raise SystemExit(9).
-|   |-- group3.raise_system_exit_str: Group3 Raise SystemExit('message').
+|   |-- group3.argparse_ok: Group3 argparse_ok. [team1]
+|   |-- group3.argument_parser_raise_system_exit: Group3 argument_parser() raise SystemExit. [team3]
+|   |-- group3.get_argument_parser_raise: Group3 get argument_parser() raise. [team3]
+|   |-- group3.get_argument_parser_raise_system_exit_str: Group3 get argument_parser() raise SystemExit(str). [team3]
+|   |-- group3.keyboard_interrupt: Group3 Raise KeyboardInterrupt. [team3]
+|   |-- group3.non_zero_exit: Group3 Non-Zero return code. [team3]
+|   |-- group3.raise_exception: Group3 Raise Exception. [team3]
+|   |-- group3.raise_system_exit_0: Group3 Raise SystemExit(0). [team3]
+|   |-- group3.raise_system_exit_9: Group3 Raise SystemExit(9). [team3]
+|   |-- group3.raise_system_exit_str: Group3 Raise SystemExit('message'). [team3]
 |   `-- group3.subgroup3: -
-|       `-- group3.subgroup3.cookbook4: Group3 Subgroup3 Cookbook4.
-|-- multiple.CookbookA: Multiple cookbook classes.
-|-- multiple.CookbookB: Multiple cookbook classes.
-`-- root: Top level cookbook.
+|       `-- group3.subgroup3.cookbook4: Group3 Subgroup3 Cookbook4. [team9]
+|-- multiple.CookbookA: Multiple cookbook classes. [team1]
+|-- multiple.CookbookB: Multiple cookbook classes. [team2]
+`-- root: Top level cookbook. [unowned]
 """
 LIST_COOKBOOKS_GROUP3 = """cookbooks
 `-- group3
-    |-- group3.argparse_ok
-    |-- group3.argument_parser_raise_system_exit
-    |-- group3.get_argument_parser_raise
-    |-- group3.get_argument_parser_raise_system_exit_str
-    |-- group3.keyboard_interrupt
-    |-- group3.non_zero_exit
-    |-- group3.raise_exception
-    |-- group3.raise_system_exit_0
-    |-- group3.raise_system_exit_9
-    |-- group3.raise_system_exit_str
+    |-- group3.argparse_ok [team1]
+    |-- group3.argument_parser_raise_system_exit [team3]
+    |-- group3.get_argument_parser_raise [team3]
+    |-- group3.get_argument_parser_raise_system_exit_str [team3]
+    |-- group3.keyboard_interrupt [team3]
+    |-- group3.non_zero_exit [team3]
+    |-- group3.raise_exception [team3]
+    |-- group3.raise_system_exit_0 [team3]
+    |-- group3.raise_system_exit_9 [team3]
+    |-- group3.raise_system_exit_str [team3]
     `-- group3.subgroup3
-        `-- group3.subgroup3.cookbook4
+        `-- group3.subgroup3.cookbook4 [team9]
 """
 LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
 `-- group3
     `-- group3.subgroup3
-        `-- group3.subgroup3.cookbook4
+        `-- group3.subgroup3.cookbook4 [team9]
 """
 COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
 [0/11] class_api: Class API Test Cookbooks.

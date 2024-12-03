@@ -32,6 +32,9 @@ class CookbooksModuleInterface:
     __title__: str = ""
     """The cookbook static title."""
 
+    __owner_team__: str = "unowned"
+    """Name of the team owning this cookbook and responsible to keep it up to date."""
+
     MAX_CONCURRENCY: int = CookbookModuleRunnerBase.max_concurrency
     """How many parallel runs of a specific cookbook inheriting from this class are accepted."""
 

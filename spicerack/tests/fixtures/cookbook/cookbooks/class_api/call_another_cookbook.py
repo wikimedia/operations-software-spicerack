@@ -8,6 +8,8 @@ from spicerack.cookbook import CookbookBase, CookbookRunnerBase
 class CallAnotherCookbook(CookbookBase):
     """A cookbook that calls another cookbook."""
 
+    owner_team = "team1"
+
     def argument_parser(self):
         """As defined by the parent class."""
         parser = argparse.ArgumentParser("Argparse")

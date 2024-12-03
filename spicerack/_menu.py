@@ -184,6 +184,11 @@ class CookbookItem(BaseItem):
         """Returns the title of the instance item."""
         return self.instance.title
 
+    @property
+    def owner_team(self) -> str:
+        """Returns the owner_team of the instance item."""
+        return self.instance.owner_team
+
     def run(self) -> int:  # noqa: MC0001
         """Run the cookbook.
 
@@ -313,6 +318,8 @@ class CookbookItem(BaseItem):
 
         # Set a meaningful prog name in the parser for a better help message.
         parser.prog = f"cookbook [GLOBAL_ARGS] {self.full_name}"
+        # Show the cookbook owner in the help epilog message
+        parser.epilog = f"Cookbook owner team: {self.owner_team}"
 
         return self._safe_call(
             parser.parse_args,
@@ -408,6 +415,14 @@ class TreeItem(BaseItem):
 
         return message
 
+    @property
+    def owner_team(self) -> str:
+        """Returns the module __owner_team__ if present or the default unowned value."""
+        try:
+            return self.module.__owner_team__
+        except AttributeError:
+            return cookbook.CookbookBase.owner_team
+
     def append(self, item: BaseItem, add_parent: bool = True) -> None:
         """Append an item to this menu.
 
@@ -494,14 +509,18 @@ class TreeItem(BaseItem):
         for i, key in enumerate(sorted(self.items.keys(), key=lambda x: self.items[x].full_name)):
             is_final = i == len(self.items) - 1
             item = self.items[key]
-            if isinstance(item, TreeItem) and not item.items:
-                continue
+            if isinstance(item, CookbookItem):
+                owner = f" [{item.owner_team}]"
+            else:
+                owner = ""
+                if not item.items:
+                    continue
 
             prefix = self._get_line_prefix(level, cont_levels, is_final)
             if self.spicerack.verbose:
-                line = f"{prefix}{item.full_name}: {item.title}"
+                line = f"{prefix}{item.full_name}: {item.title}{owner}"
             else:
-                line = f"{prefix}{item.full_name}"
+                line = f"{prefix}{item.full_name}{owner}"
 
             lines.append(line)
 

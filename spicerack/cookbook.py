@@ -57,10 +57,17 @@ class CookbookBase(metaclass=ABCMeta):
     The class will be instantiated without any parameter.
     """
 
+    # --- Reserved for Spicerack internal usage
     spicerack_path: str
     """Reserved class property used by Spicerack internally to track the Cookbook's path."""
     spicerack_name: str
     """Reserved class property used by Spicerack internally to track the Cookbook's name."""
+    # ---
+
+    owner_team: str = "unowned"
+    """Name of the team owning this cookbook and responsible to keep it up to date. If unset and any parent package
+    (directory of cookbooks) has the ``__owner_team__`` property set it will inherit it. It shows up when listing
+    cookbooks and in the help message as parser epilog."""
 
     def __init__(self, spicerack: Spicerack):
         """Initialize the instance and store the Spicerack instance into ``self.spicerack``.
