@@ -1,4 +1,5 @@
 """Cookbook internal module."""
+
 import argparse
 import importlib
 import logging

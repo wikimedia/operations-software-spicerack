@@ -1,4 +1,5 @@
 """Decorators module."""
+
 import inspect
 import logging
 from collections.abc import Callable

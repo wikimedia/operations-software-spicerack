@@ -1,4 +1,5 @@
 """Peeringdb module tests."""
+
 import json
 from unittest import mock
 

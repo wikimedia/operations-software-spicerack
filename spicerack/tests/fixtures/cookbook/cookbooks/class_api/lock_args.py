@@ -1,4 +1,5 @@
 """Class API example cookbook with custom lock args."""
+
 import argparse
 
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase, LockArgs

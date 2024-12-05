@@ -1,4 +1,5 @@
 """Debmonitor module tests."""
+
 import pytest
 import requests
 

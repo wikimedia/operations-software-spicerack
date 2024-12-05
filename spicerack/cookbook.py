@@ -1,4 +1,5 @@
 """Cookbook module."""
+
 import argparse
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass

@@ -1,4 +1,5 @@
 """Class API rollback cookbook."""
+
 import argparse
 import logging
 

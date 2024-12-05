@@ -1,4 +1,5 @@
 """Call another cookbook cookbook."""
+
 import argparse
 
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase

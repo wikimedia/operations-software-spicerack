@@ -1,4 +1,5 @@
 """Provides methods to manipulate offsets set for specific consumer groups."""
+
 import logging
 import ssl
 from dataclasses import dataclass

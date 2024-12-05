@@ -1,4 +1,5 @@
 """Multiple cookbook classes."""
+
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase
 
 

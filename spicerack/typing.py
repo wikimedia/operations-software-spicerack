@@ -1,4 +1,5 @@
 """Custom Spicerack type hints."""
+
 from collections.abc import Sequence
 from typing import TypeVar
 

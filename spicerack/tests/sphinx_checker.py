@@ -5,6 +5,7 @@
 - Check that all the listed modules have its own file in the api/ documentation directory.
   Sphinx would raise a warning but not fail in this case.
 """
+
 import argparse
 import sys
 from pathlib import Path

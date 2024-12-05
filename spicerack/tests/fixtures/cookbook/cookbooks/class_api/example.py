@@ -1,4 +1,5 @@
 """Class API example cookbook."""
+
 import argparse
 
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase

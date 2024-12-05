@@ -1,4 +1,5 @@
 """Alertmanager module tests."""
+
 import logging
 from datetime import datetime, timedelta, timezone
 from unittest import mock

@@ -1,4 +1,5 @@
 """Group3 argparse_ok."""
+
 import argparse
 
 __title__ = __doc__

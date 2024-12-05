@@ -1,4 +1,5 @@
 """Interactive module tests."""
+
 import logging
 import uuid
 from pathlib import Path

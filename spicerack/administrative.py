@@ -1,4 +1,5 @@
 """Administrative module."""
+
 from typing import Optional
 
 from spicerack.exceptions import SpicerackError

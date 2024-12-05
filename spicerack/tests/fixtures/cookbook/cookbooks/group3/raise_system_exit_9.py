@@ -1,4 +1,5 @@
 """Group3 Raise SystemExit(9)."""
+
 import sys
 
 __title__ = __doc__

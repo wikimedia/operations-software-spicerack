@@ -1,4 +1,5 @@
 """Alerting module."""
+
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager

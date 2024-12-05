@@ -1,4 +1,5 @@
 """Tests package for Spicerack."""
+
 from pathlib import Path
 
 TESTS_BASE_PATH = Path(__file__).parent.resolve()

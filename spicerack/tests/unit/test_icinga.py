@@ -1,4 +1,5 @@
 """Icinga module tests."""
+
 import logging
 import re
 import shlex

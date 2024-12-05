@@ -1,4 +1,5 @@
 """k8s module tests."""
+
 from http import HTTPStatus
 from unittest import mock
 

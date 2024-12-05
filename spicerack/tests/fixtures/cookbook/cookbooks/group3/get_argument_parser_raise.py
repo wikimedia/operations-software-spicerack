@@ -1,4 +1,5 @@
 """Group3 get argument_parser() raise."""
+
 __title__ = __doc__
 
 

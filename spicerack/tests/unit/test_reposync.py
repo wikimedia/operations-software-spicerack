@@ -1,4 +1,5 @@
 """Reposync module tests."""
+
 import os
 import random
 from unittest import mock

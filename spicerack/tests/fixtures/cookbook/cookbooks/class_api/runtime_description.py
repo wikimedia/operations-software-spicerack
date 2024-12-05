@@ -1,4 +1,5 @@
 """Class API cookbook that overrides runtime_description."""
+
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase
 
 
