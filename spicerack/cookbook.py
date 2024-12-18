@@ -23,6 +23,17 @@ EXCEPTION_RETCODE: int = 99
 """Reserved exit code: a cookbook raised an exception while executing."""
 
 
+class CookbookInitSuccess(Exception):
+    """Custom exception class to interrupt the execution before ``run()`` is called in a successful way.
+
+    If a cookbook raises this exception in its runner's ``__init__()`` method, Spicerack will consider the execution
+    successful, will not print any stack trace and the exit code will be 0.
+    This is useful if the cookbook has some read-only mode where it runs just some checks or gather some data and
+    doesn't want to execute anything. Bailing out early in the ``__init__()`` allows also to skip any logging to SAL.
+    If the exception is raised with any message that message will be logged with INFO level.
+    """
+
+
 class ArgparseFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
     """Custom argparse formatter class for cookbooks.
 

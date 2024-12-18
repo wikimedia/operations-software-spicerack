@@ -19,6 +19,7 @@ LIST_COOKBOOKS_ALL = """cookbooks
 |   |-- class_api.call_another_cookbook [team1]
 |   |-- class_api.example [unowned]
 |   |-- class_api.get_runner_raise [unowned]
+|   |-- class_api.init_abort [team1]
 |   |-- class_api.lock_args [unowned]
 |   |-- class_api.multiple.CookbookA [team1]
 |   |-- class_api.multiple.CookbookB [team2]
@@ -61,6 +62,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |-- class_api.call_another_cookbook: A cookbook that calls another cookbook. [team1]
 |   |-- class_api.example: - [unowned]
 |   |-- class_api.get_runner_raise: Class API get_runner raise cookbook. [unowned]
+|   |-- class_api.init_abort: A cookbook that aborts successfully in its runner's init. [team1]
 |   |-- class_api.lock_args: Cookbook that overrides the lock arguments. [unowned]
 |   |-- class_api.multiple.CookbookA: Multiple cookbook classes. [team1]
 |   |-- class_api.multiple.CookbookB: Multiple cookbook classes. [team2]
@@ -115,7 +117,7 @@ LIST_COOKBOOKS_GROUP3_SUBGROUP3 = """cookbooks
         `-- group3.subgroup3.cookbook4 [team9]
 """
 COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
-[0/11] class_api: Class API Test Cookbooks.
+[0/12] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -127,7 +129,7 @@ q - Quit
 h - Help
 """
 COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
-[0/11] class_api: Class API Test Cookbooks.
+[0/12] class_api: Class API Test Cookbooks.
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
@@ -496,6 +498,20 @@ class TestCookbookCollection:
                 cookbook.ROLLBACK_FAIL_RETCODE,
                 [],
             ),
+            (
+                "class_api.init_abort",
+                [],
+                [],
+                0,
+                [],
+            ),
+            (
+                "class_api.init_abort",
+                ["custom message"],
+                [],
+                0,
+                ["--message", "custom message"],
+            ),
         ),
     )
     def test_main_execute_cookbook(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -621,7 +637,7 @@ class TestCookbookCollection:
         monkeypatch.syspath_prepend(COOKBOOKS_BASE_PATH)
         cookbooks = _cookbook.CookbookCollection(base_dirs=COOKBOOKS_BASE_PATHS, args=[], spicerack=self.spicerack)
         menu = cookbooks.get_item("")
-        assert menu.status == "0/30"
+        assert menu.status == "0/31"
 
     def test_cookbooks_menu_status_done(self, monkeypatch):
         """Calling status on a TreeItem with all tasks completed should return DONE."""

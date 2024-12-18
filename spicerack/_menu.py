@@ -203,6 +203,10 @@ class CookbookItem(BaseItem):
 
         try:
             runner = self.instance.get_runner(args)
+        except cookbook.CookbookInitSuccess as e:
+            if str(e):
+                logger.info(e)
+            return 0
         except BaseException:  # pylint: disable=broad-except
             logger.exception("Exception raised while initializing the Cookbook %s:", self.full_name)
             return cookbook.CLASS_FAIL_INIT_RETCODE
