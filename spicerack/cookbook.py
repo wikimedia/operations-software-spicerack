@@ -174,6 +174,17 @@ class CookbookRunnerBase(metaclass=ABCMeta):
         """
         return LockArgs(suffix="", concurrency=self.max_concurrency, ttl=self.lock_ttl)
 
+    @property
+    def skip_start_sal(self) -> bool:
+        """Dynamically skip the START log to SAL. For fast cookbooks where it's ok to log just their completion.
+
+        Returns:
+            If set to :py:data:`True` Spicerack will skip logging the START of the cookbook to SAL and log to SAL only
+            the end of the cookbook run with the keyword ``DONE`` instead of the usual ``END``.
+
+        """
+        return False
+
     @abstractmethod
     def run(self) -> Optional[int]:
         """Execute the cookbook.

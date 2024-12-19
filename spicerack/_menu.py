@@ -225,10 +225,14 @@ class CookbookItem(BaseItem):
         )
         lock_args = runner.lock_args
         lock_key = f"{self.full_name}:{lock_args.suffix}" if lock_args.suffix else self.full_name
+        skip_start_sal = runner.skip_start_sal
 
         with lock.acquired(lock_key, concurrency=lock_args.concurrency, ttl=lock_args.ttl):
             start_time = datetime.utcnow()
-            _log.log_task_start(" ".join(("Cookbook", self.full_name, description)).strip())
+            _log.log_task_start(
+                skip_start_sal=skip_start_sal,
+                message=" ".join(("Cookbook", self.full_name, description)).strip(),
+            )
             ret = self._run(runner)
 
         logger.debug(
@@ -238,8 +242,9 @@ class CookbookItem(BaseItem):
             (datetime.utcnow() - start_time).total_seconds(),
         )
         _log.log_task_end(
-            self.status,
-            f"Cookbook {self.full_name} (exit_code={ret}) {description}".strip(),
+            skip_start_sal=skip_start_sal,
+            status=self.status,
+            message=f"Cookbook {self.full_name} (exit_code={ret}) {description}".strip(),
         )
 
         return ret

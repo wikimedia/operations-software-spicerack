@@ -106,22 +106,28 @@ def setup_logging(
     logging.getLogger("elasticsearch").setLevel(logging.ERROR)
 
 
-def log_task_start(message: str) -> None:
-    """Log the start of a task both on the logs and IRC.
+def log_task_start(*, skip_start_sal: bool, message: str) -> None:
+    """Log the start of a task on the logs and unless ``skip_start_sal`` is :py:data:`True` also to IRC/SAL.
 
     Arguments:
+        skip_start_sal: whether to skip the IRC/SAL logging for the task start.
         message: the message to be logged.
 
     """
-    sal_logger.info("START - %s", message)
+    if skip_start_sal:
+        root_logger.info("START - %s", message)
+    else:
+        sal_logger.info("START - %s", message)
 
 
-def log_task_end(status: str, message: str) -> None:
-    """Log the start of a task both on the logs and IRC.
+def log_task_end(*, skip_start_sal: bool, status: str, message: str) -> None:
+    """Log the end of a task both on the logs and IRC.
 
     Arguments:
         status: the final status of the task.
         message: the message to be logged.
+        skip_start_sal: whether this is the only log for the task or a regular ``START``/``END`` one.
 
     """
-    sal_logger.info("END (%s) - %s", status, message)
+    prefix = "DONE" if skip_start_sal else "END"
+    sal_logger.info("%s (%s) - %s", prefix, status, message)
