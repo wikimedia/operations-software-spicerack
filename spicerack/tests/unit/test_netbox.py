@@ -45,6 +45,7 @@ def _base_netbox_obj(name, additional_properties):
     """Return a simple object to represent a response from Netbox API."""
     dict_obj = {
         "name": name,
+        "id": 1,
         "asset_tag": "ASSET1234",
         "status": {"value": "active", "label": "Active"},
         "primary_ip4": {
@@ -66,7 +67,11 @@ def _base_netbox_obj(name, additional_properties):
         },
     }
     dict_obj["primary_ip"] = dict_obj["primary_ip6"]
-    dict_obj["primary_ip"]["assigned_object"] = {"connected_endpoints": [{"untagged_vlan": {"name": "test_vlan"}}]}
+    dict_obj["primary_ip"]["assigned_object"] = {
+        "id": 1,
+        "connected_endpoints": [{"untagged_vlan": {"name": "test_vlan"}}],
+        "type": {"value": "10gbase-x-sfpp"},
+    }
     dict_obj.update(additional_properties)
 
     def custom_hook(decoded_dict):
@@ -348,8 +353,17 @@ class TestNetboxServer:
         assert as_dict["is_virtual"]
         assert as_dict["name"] == "virtual"
 
-    def test_access_vlan_getter_ok(self):
+    def test_access_vlan_getter_physical_ok(self):
         """It should return the access vlan of the device."""
+        assert self.physical_server.access_vlan == "test_vlan"
+
+    def test_access_vlan_getter_bridge_ok(self):
+        """It should return the access vlan of the bridge physical port."""
+        real_iface = self.netbox_host.primary_ip.assigned_object
+        self.netbox_host.primary_ip.assigned_object = mock.MagicMock()
+        self.netbox_host.primary_ip.assigned_object.connected_endpoints = None
+        self.netbox_host.primary_ip.assigned_object.type.value = "bridge"
+        self.mocked_api.dcim.interfaces.get.return_value = real_iface
         assert self.physical_server.access_vlan == "test_vlan"
 
     def test_access_vlan_getter_no_primary_ip(self):
@@ -364,9 +378,17 @@ class TestNetboxServer:
         with pytest.raises(NetboxError, match="Primary IP not assigned to an interface."):
             self.physical_server.access_vlan  # pylint: disable=pointless-statement
 
-    def test_access_vlan_getter_primary_interface_not_connected(self):
+    @pytest.mark.parametrize("iface_type", ("10gbase-x-sfpp", "bridge"))
+    def test_access_vlan_getter_primary_interface_not_connected(self, iface_type):
         """It should raise a NetboxError if the primary interface not connected."""
         self.netbox_host.primary_ip.assigned_object.connected_endpoints = None
+        self.netbox_host.primary_ip.assigned_object.type.value = iface_type
+
+        if iface_type == "bridge":
+            real_iface = mock.MagicMock()
+            real_iface.connected_endpoints = None
+            self.mocked_api.dcim.interfaces.get.return_value = real_iface
+
         with pytest.raises(NetboxError, match="Primary interface not connected."):
             self.physical_server.access_vlan  # pylint: disable=pointless-statement
 
