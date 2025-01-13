@@ -43,35 +43,35 @@ class RedfishTaskNotCompletedError(RedfishError):
 class ChassisResetPolicy(Enum):
     """Subset of available Chassis.Reset policies compatible with all supported vendors (at this moment only Dell)."""
 
-    FORCE_OFF: str = "ForceOff"
+    FORCE_OFF = "ForceOff"
     """Turn off the unit immediately (nongraceful shutdown)."""
-    FORCE_RESTART: str = "ForceRestart"
+    FORCE_RESTART = "ForceRestart"
     """Shut down immediately and nongracefully and restart the system."""
-    GRACEFUL_RESTART: str = "GracefulRestart"
+    GRACEFUL_RESTART = "GracefulRestart"
     """Shut down gracefully and power on."""
-    GRACEFUL_SHUTDOWN: str = "GracefulShutdown"
+    GRACEFUL_SHUTDOWN = "GracefulShutdown"
     """Shut down gracefully and power off."""
-    ON: str = "On"
+    ON = "On"
     """Turn on the unit."""
 
 
 class DellSCPRebootPolicy(Enum):
     """Available Dell SCP (Server Configuration Profiles) reboot policies."""
 
-    FORCED: str = "Forced"
+    FORCED = "Forced"
     """Issue an immediate hard reboot without notifying the operating system."""
-    GRACEFUL: str = "Graceful"
+    GRACEFUL = "Graceful"
     """Issue a reboot notifying the operating system."""
-    NO_REBOOT: str = "NoReboot"
+    NO_REBOOT = "NoReboot"
     """Do not reboot right now, the Redfish task will be pending the next reboot to apply the changes."""
 
 
 class DellSCPPowerStatePolicy(Enum):
     """Available Dell SCP (Server Configuration Profiles) final power state after an operation policies."""
 
-    OFF: str = "Off"
+    OFF = "Off"
     """Keep the host powered off after the operation."""
-    ON: str = "On"
+    ON = "On"
     """Turn the host power back on after the operation."""
 
 

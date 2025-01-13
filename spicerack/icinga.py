@@ -31,13 +31,13 @@ logger = logging.getLogger(__name__)
 class IcingaStatus(Enum):
     """String class to represent an Icinga status."""
 
-    OK: int = 0
+    OK = 0
     """Ok status."""
-    WARNING: int = 1
+    WARNING = 1
     """Warning status."""
-    CRITICAL: int = 2
+    CRITICAL = 2
     """Critical status."""
-    UNKNOWN: int = 3
+    UNKNOWN = 3
     """Unknown status."""
 
 
