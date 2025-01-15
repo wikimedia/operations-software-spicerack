@@ -1,4 +1,5 @@
 """Dnsdisc module tests."""
+
 import logging
 from collections import namedtuple
 from ipaddress import ip_address

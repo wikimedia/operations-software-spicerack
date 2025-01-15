@@ -1,4 +1,5 @@
 """Alertmanager module."""
+
 import logging
 import re
 from collections.abc import Iterator, Mapping, Sequence
@@ -343,11 +344,11 @@ class AlertmanagerHosts(Alertmanager):
             if group_port or ":" in host:
                 target_hosts.append(re.escape(host))
             else:
-                target_hosts.append(fr"{re.escape(host)}{PORT_REGEX}")
+                target_hosts.append(rf"{re.escape(host)}{PORT_REGEX}")
 
         target_regex = "|".join(target_hosts)
         target_matchers = list(matchers)
-        target_matchers.append({"name": "instance", "value": fr"^({target_regex}){group_port_regex}$", "isRegex": True})
+        target_matchers.append({"name": "instance", "value": rf"^({target_regex}){group_port_regex}$", "isRegex": True})
         return super().downtime(reason, matchers=target_matchers, duration=duration)
 
 

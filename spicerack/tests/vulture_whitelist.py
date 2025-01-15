@@ -17,6 +17,7 @@ whitelist_ganeti.Ganeti._http_session.auth
 
 whitelist__menu = Whitelist()
 whitelist__menu.CookbookItem._parse_args.parser.prog
+whitelist__menu.CookbookItem._parse_args.parser.epilog
 
 # Needed because of https://github.com/jendrikseipp/vulture/issues/264
 whitelist_dhcp = Whitelist()

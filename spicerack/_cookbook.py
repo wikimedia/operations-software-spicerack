@@ -1,4 +1,5 @@
 """Cookbook internal module."""
+
 import argparse
 import importlib
 import logging
@@ -112,6 +113,11 @@ class CookbookCollection:
                     self.spicerack,
                     self.cookbooks_module_prefix,
                 )
+                # Use the parent owner_team if set
+                default_owner = cookbook.CookbookBase.owner_team
+                if item.owner_team != default_owner and submenu.owner_team == default_owner:
+                    submenu.module.__owner_team__ = item.owner_team
+
                 # When collecting the cookbooks and creating the TreeItem instances, the relation to the parent
                 # menu should be skipped for those intermediate menus created for coherence but that should not be
                 # accessible by the user, like when using a path_filter.
@@ -173,6 +179,11 @@ class CookbookCollection:
             except MenuError as e:
                 logger.error(e)
                 continue
+
+            # Use the parent owner_team if set
+            default_owner = cookbook.CookbookBase.owner_team
+            if menu.owner_team != default_owner and cookbook_item.owner_team == default_owner:
+                cookbook_item.instance.owner_team = menu.owner_team
 
             if self._should_filter(cookbook_item.full_name):
                 continue
@@ -238,7 +249,9 @@ class CookbookCollection:
 
         return classes
 
-    def _convert_module_in_cookbook(self, module: _module_api.CookbooksModuleInterface) -> type[cookbook.CookbookBase]:
+    def _convert_module_in_cookbook(  # noqa: MC0001
+        self, module: _module_api.CookbooksModuleInterface
+    ) -> type[cookbook.CookbookBase]:
         """Convert a module API based cookbook into a class API cookbook.
 
         Arguments:
@@ -254,6 +267,11 @@ class CookbookCollection:
         except AttributeError as e:
             logger.debug("Unable to detect title for module %s: %s", module.__name__, e)
             title = CookbookItem.fallback_title
+
+        try:
+            owner_team = module.__owner_team__
+        except AttributeError:
+            owner_team = cookbook.CookbookBase.owner_team
 
         try:
             run = module.run
@@ -285,6 +303,7 @@ class CookbookCollection:
         attributes = {
             "__module__": module_name,
             "__name__": name,
+            "owner_team": owner_team,
             "spicerack_name": name,
             "spicerack_path": module_name.split(".", 1)[1] if "." in module_name else "",
             "title": title,
@@ -321,8 +340,8 @@ def argument_parser() -> argparse.ArgumentParser:
         "--list",
         action="store_true",
         help=(
-            "List all available cookbooks, if -v/--verbose is set print also their description. If a COOKBOOK is "
-            "also specified, it will be used as a prefix filter."
+            "List all available cookbooks and their owner team, if -v/--verbose is set print also their description. "
+            "If a COOKBOOK is also specified, it will be used as a prefix filter."
         ),
     )
     parser.add_argument(

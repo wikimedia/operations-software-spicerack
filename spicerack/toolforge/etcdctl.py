@@ -1,4 +1,5 @@
 """Wrapper around etcdctl handling parameters and such."""
+
 import logging
 from dataclasses import dataclass
 from enum import Enum, auto

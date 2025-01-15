@@ -1,4 +1,5 @@
 """DNS Discovery module."""
+
 import logging
 from collections import defaultdict
 from collections.abc import Iterator

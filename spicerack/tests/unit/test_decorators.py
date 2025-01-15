@@ -1,4 +1,5 @@
 """Dnsdisc module tests."""
+
 from datetime import timedelta
 from unittest import mock
 

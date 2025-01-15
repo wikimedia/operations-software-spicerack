@@ -1,4 +1,5 @@
 """Toolforge etcdctl module tests."""
+
 from typing import Optional
 from unittest import TestCase, mock
 

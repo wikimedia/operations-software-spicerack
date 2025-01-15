@@ -184,6 +184,11 @@ class CookbookItem(BaseItem):
         """Returns the title of the instance item."""
         return self.instance.title
 
+    @property
+    def owner_team(self) -> str:
+        """Returns the owner_team of the instance item."""
+        return self.instance.owner_team
+
     def run(self) -> int:  # noqa: MC0001
         """Run the cookbook.
 
@@ -198,6 +203,10 @@ class CookbookItem(BaseItem):
 
         try:
             runner = self.instance.get_runner(args)
+        except cookbook.CookbookInitSuccess as e:
+            if str(e):
+                logger.info(e)
+            return 0
         except BaseException:  # pylint: disable=broad-except
             logger.exception("Exception raised while initializing the Cookbook %s:", self.full_name)
             return cookbook.CLASS_FAIL_INIT_RETCODE
@@ -216,10 +225,14 @@ class CookbookItem(BaseItem):
         )
         lock_args = runner.lock_args
         lock_key = f"{self.full_name}:{lock_args.suffix}" if lock_args.suffix else self.full_name
+        skip_start_sal = runner.skip_start_sal
 
         with lock.acquired(lock_key, concurrency=lock_args.concurrency, ttl=lock_args.ttl):
             start_time = datetime.utcnow()
-            _log.log_task_start(" ".join(("Cookbook", self.full_name, description)).strip())
+            _log.log_task_start(
+                skip_start_sal=skip_start_sal,
+                message=" ".join(("Cookbook", self.full_name, description)).strip(),
+            )
             ret = self._run(runner)
 
         logger.debug(
@@ -229,8 +242,9 @@ class CookbookItem(BaseItem):
             (datetime.utcnow() - start_time).total_seconds(),
         )
         _log.log_task_end(
-            self.status,
-            f"Cookbook {self.full_name} (exit_code={ret}) {description}".strip(),
+            skip_start_sal=skip_start_sal,
+            status=self.status,
+            message=f"Cookbook {self.full_name} (exit_code={ret}) {description}".strip(),
         )
 
         return ret
@@ -313,6 +327,8 @@ class CookbookItem(BaseItem):
 
         # Set a meaningful prog name in the parser for a better help message.
         parser.prog = f"cookbook [GLOBAL_ARGS] {self.full_name}"
+        # Show the cookbook owner in the help epilog message
+        parser.epilog = f"Cookbook owner team: {self.owner_team}"
 
         return self._safe_call(
             parser.parse_args,
@@ -408,6 +424,14 @@ class TreeItem(BaseItem):
 
         return message
 
+    @property
+    def owner_team(self) -> str:
+        """Returns the module __owner_team__ if present or the default unowned value."""
+        try:
+            return self.module.__owner_team__
+        except AttributeError:
+            return cookbook.CookbookBase.owner_team
+
     def append(self, item: BaseItem, add_parent: bool = True) -> None:
         """Append an item to this menu.
 
@@ -494,14 +518,18 @@ class TreeItem(BaseItem):
         for i, key in enumerate(sorted(self.items.keys(), key=lambda x: self.items[x].full_name)):
             is_final = i == len(self.items) - 1
             item = self.items[key]
-            if isinstance(item, TreeItem) and not item.items:
-                continue
+            if isinstance(item, CookbookItem):
+                owner = f" [{item.owner_team}]"
+            else:
+                owner = ""
+                if not item.items:
+                    continue
 
             prefix = self._get_line_prefix(level, cont_levels, is_final)
             if self.spicerack.verbose:
-                line = f"{prefix}{item.full_name}: {item.title}"
+                line = f"{prefix}{item.full_name}: {item.title}{owner}"
             else:
-                line = f"{prefix}{item.full_name}"
+                line = f"{prefix}{item.full_name}{owner}"
 
             lines.append(line)
 

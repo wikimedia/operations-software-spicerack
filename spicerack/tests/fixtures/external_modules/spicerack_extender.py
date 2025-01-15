@@ -1,4 +1,5 @@
 """Spicerack extender for the external modules."""
+
 from spicerack_ext.cool_feature import CoolFeature
 
 from spicerack import SpicerackExtenderBase

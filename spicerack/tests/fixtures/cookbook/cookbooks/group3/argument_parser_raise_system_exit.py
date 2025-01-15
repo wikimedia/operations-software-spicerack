@@ -1,4 +1,5 @@
 """Group3 argument_parser() raise SystemExit."""
+
 import argparse
 
 __title__ = __doc__

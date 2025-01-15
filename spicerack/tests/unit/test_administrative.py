@@ -1,4 +1,5 @@
 """Administrative module tests."""
+
 import pytest
 
 from spicerack import administrative

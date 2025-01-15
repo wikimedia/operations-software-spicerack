@@ -1,4 +1,5 @@
 """Puppet module tests."""
+
 from unittest import mock
 
 import pytest

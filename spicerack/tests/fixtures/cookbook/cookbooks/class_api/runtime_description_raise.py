@@ -1,4 +1,5 @@
 """Class API runtime_description raise cookbook."""
+
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase
 
 

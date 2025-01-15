@@ -1,4 +1,5 @@
 """RedisCluster module tests."""
+
 from unittest import mock
 
 import pytest

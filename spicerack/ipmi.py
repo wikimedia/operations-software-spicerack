@@ -4,6 +4,7 @@ Todo:
     replace with pyghmi.
 
 """
+
 import logging
 from datetime import timedelta
 from subprocess import PIPE, CalledProcessError, run

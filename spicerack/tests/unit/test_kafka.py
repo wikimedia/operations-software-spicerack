@@ -1,4 +1,5 @@
 """Kafka Module test."""
+
 from collections import namedtuple
 from typing import Union
 from unittest import mock
@@ -205,8 +206,8 @@ class TestKafka:
         from_consumer_mock.__next__.return_value = SimpleMessage(timestamp=TIMESTAMP, offset=OFFSET)
         from_consumer_mock.committed.return_value = OFFSET
         to_consumer_mock = mock.MagicMock(spec_set=KafkaConsumer)
-        to_consumer_mock.partitions_for_topic.side_effect = (
-            lambda topic: [0] if topic.startswith("eqiad.") or topic.startswith("codfw.") else []
+        to_consumer_mock.partitions_for_topic.side_effect = lambda topic: (
+            [0] if topic.startswith("eqiad.") or topic.startswith("codfw.") else []
         )
         to_consumer_mock.offsets_for_times.side_effect = offset_for_times_answer
         consumer_patch.side_effect = [from_consumer_mock, to_consumer_mock]

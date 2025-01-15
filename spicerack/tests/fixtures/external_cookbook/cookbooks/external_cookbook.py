@@ -1,4 +1,5 @@
 """Top level class external cookbook."""
+
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase
 
 

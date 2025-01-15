@@ -1,4 +1,5 @@
 """Debmonitor module."""
+
 import logging
 
 import requests

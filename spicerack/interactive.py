@@ -1,4 +1,5 @@
 """Interactive module."""
+
 import logging
 import os
 

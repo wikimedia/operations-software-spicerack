@@ -1,4 +1,5 @@
 """Manage updates to automated git repositories."""
+
 import os
 from collections.abc import Generator
 from contextlib import contextmanager

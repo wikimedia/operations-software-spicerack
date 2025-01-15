@@ -2,6 +2,7 @@
 
 Multiline doc that will be cut to one-line in the __title__.
 """
+
 import argparse
 
 __title__ = __doc__

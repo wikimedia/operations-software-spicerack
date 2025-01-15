@@ -1,4 +1,5 @@
 """External Group Cookbook1."""
+
 __title__ = __doc__
 
 

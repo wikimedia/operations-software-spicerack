@@ -1,4 +1,5 @@
 """Cookbook module."""
+
 import argparse
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
@@ -20,6 +21,17 @@ NOT_FOUND_RETCODE: int = 98
 """Reserved exit code: no cookbook was found for the selection."""
 EXCEPTION_RETCODE: int = 99
 """Reserved exit code: a cookbook raised an exception while executing."""
+
+
+class CookbookInitSuccess(Exception):
+    """Custom exception class to interrupt the execution before ``run()`` is called in a successful way.
+
+    If a cookbook raises this exception in its runner's ``__init__()`` method, Spicerack will consider the execution
+    successful, will not print any stack trace and the exit code will be 0.
+    This is useful if the cookbook has some read-only mode where it runs just some checks or gather some data and
+    doesn't want to execute anything. Bailing out early in the ``__init__()`` allows also to skip any logging to SAL.
+    If the exception is raised with any message that message will be logged with INFO level.
+    """
 
 
 class ArgparseFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
@@ -56,10 +68,17 @@ class CookbookBase(metaclass=ABCMeta):
     The class will be instantiated without any parameter.
     """
 
+    # --- Reserved for Spicerack internal usage
     spicerack_path: str
     """Reserved class property used by Spicerack internally to track the Cookbook's path."""
     spicerack_name: str
     """Reserved class property used by Spicerack internally to track the Cookbook's name."""
+    # ---
+
+    owner_team: str = "unowned"
+    """Name of the team owning this cookbook and responsible to keep it up to date. If unset and any parent package
+    (directory of cookbooks) has the ``__owner_team__`` property set it will inherit it. It shows up when listing
+    cookbooks and in the help message as parser epilog."""
 
     def __init__(self, spicerack: Spicerack):
         """Initialize the instance and store the Spicerack instance into ``self.spicerack``.
@@ -154,6 +173,17 @@ class CookbookRunnerBase(metaclass=ABCMeta):
 
         """
         return LockArgs(suffix="", concurrency=self.max_concurrency, ttl=self.lock_ttl)
+
+    @property
+    def skip_start_sal(self) -> bool:
+        """Dynamically skip the START log to SAL. For fast cookbooks where it's ok to log just their completion.
+
+        Returns:
+            If set to :py:data:`True` Spicerack will skip logging the START of the cookbook to SAL and log to SAL only
+            the end of the cookbook run with the keyword ``DONE`` instead of the usual ``END``.
+
+        """
+        return False
 
     @abstractmethod
     def run(self) -> Optional[int]:

@@ -1,4 +1,5 @@
 """Class API rollback_raise cookbook."""
+
 import argparse
 
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase

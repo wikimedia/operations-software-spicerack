@@ -1,4 +1,5 @@
 """Cookbook that uses extended accessors from external modules."""
+
 import sys
 
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase

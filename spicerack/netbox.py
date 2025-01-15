@@ -438,6 +438,14 @@ class NetboxServer:
         netbox_iface = primary_ip.assigned_object
         if not netbox_iface:
             raise NetboxError("Primary IP not assigned to an interface.")
+        # Ganeti hosts have their primary IP connected to a bridge device, so we need to find physical
+        if netbox_iface.type.value == "bridge":
+            netbox_iface = self._api.dcim.interfaces.get(
+                device_id=self._server.id,
+                bridge_id=netbox_iface.id,
+                type__n=("virtual", "lag", "bridge"),
+                mgmt_only=False,
+            )
         netbox_iface_endpoints = netbox_iface.connected_endpoints
         if not netbox_iface_endpoints:
             raise NetboxError("Primary interface not connected.")

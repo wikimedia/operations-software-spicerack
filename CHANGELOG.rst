@@ -1,6 +1,58 @@
 Spicerack Changelog
 -------------------
 
+`v9.1.0`_ (2025-01-15)
+^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* cookbook API: add ``owner_team`` property (`T379258`_):
+
+  * Add an ``owner_team`` property to the cookbook ``CookbookBase`` class API. It defaults to ``"unowned"``.
+  * Add an ``__owner_team__`` module variable to the cookbook deprecated module API. It defaults to ``"unowned"``.
+  * When ``__owner_team__`` is set on an ``__init__.py`` file for a cookbook package (directory of cookbooks) it will
+    apply the ownership to all cookbooks in that package unless they override the ownership themselves.
+  * Use the new property in the cookbook listing with or without the verbose option to show the owner of the cookbook
+    in square brackets.
+  * Inject the cookbook owner in the help message to the parser epilog.
+
+* api: allow to abort a cookbook execution before ``run()`` is called (`T365454`_):
+
+  * If a cookbook raises a ``cookbook.CookbookInitSuccess`` exception in its runner's ``__init__()``, Spicerack will
+    consider the execution successful, will not print any stack trace and the exit code will be ``0``.
+  * This allows to run the cookbook in report/read-only mode in ``__init__()`` and exit successfully without ever
+    running ``run()`` and also without logging to SAL.
+
+* api: allow to skip the ``START`` log to SAL (`T324655`_):
+
+  * Add a ``skip_start_sal`` property to the ``CookbookRunnerBase`` class that defaults to ``False`` to allow to skip
+    the START log to SAL.
+  * This is meant to be used by fast cookbooks that take a short time and for which there is no need for the double
+    logging of ``START`` and ``END``.
+  * When set to ``True`` Spicerack will log the ``START`` line only in the console and the log files but not IRC/SAL.
+    It will also change the word ``END`` for the log at the end of the cookbook in ``DONE``.
+  * This means that normal cookbooks will log:
+        * ``START - ...``
+        * ``END (pass) - ...``
+    while cookbooks that set ``skip_start_sal`` to ``True`` will just log:
+        * ``DONE (pass) - ...``
+  * The property can be set dynamically by the cookbook class, so that the same cookbook can be logged in different
+    ways based on the CLI arguments that might cause the cookbook to be fast or slow.
+
+Bug fixes
+"""""""""
+
+* netbox: support Ganeti setup when looking for the VLAN a host's primary address is part of. This add support to cases
+  where the primary IP is on a bridge interface and will automatically get the VLAN of the physical interface the
+  bridge is part of.
+
+Miscellanea
+"""""""""""
+
+* style: a pass of black on all files to apply more recent black modification to the whole code base at once.
+* style: enum: remove type hints for ``Enum`` classes to follow most recent standards.
+
 `v9.0.0`_ (2024-12-02)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3192,6 +3244,7 @@ New features
 .. _`T319277`: https://phabricator.wikimedia.org/T319277
 .. _`T319401`: https://phabricator.wikimedia.org/T319401
 .. _`T320696`: https://phabricator.wikimedia.org/T320696
+.. _`T324655`: https://phabricator.wikimedia.org/T324655
 .. _`T325168`: https://phabricator.wikimedia.org/T325168
 .. _`T329773`: https://phabricator.wikimedia.org/T329773
 .. _`T330318`: https://phabricator.wikimedia.org/T330318
@@ -3208,12 +3261,14 @@ New features
 .. _`T362893`: https://phabricator.wikimedia.org/T362893
 .. _`T363576`: https://phabricator.wikimedia.org/T363576
 .. _`T365372`: https://phabricator.wikimedia.org/T365372
+.. _`T365454`: https://phabricator.wikimedia.org/T365454
 .. _`T367410`: https://phabricator.wikimedia.org/T367410
 .. _`T367496`: https://phabricator.wikimedia.org/T367496
 .. _`T367949`: https://phabricator.wikimedia.org/T367949
 .. _`T371351`: https://phabricator.wikimedia.org/T371351
 .. _`T372485`: https://phabricator.wikimedia.org/T372485
 .. _`T373794`: https://phabricator.wikimedia.org/T373794
+.. _`T379258`: https://phabricator.wikimedia.org/T379258
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3349,3 +3404,4 @@ New features
 .. _`v8.16.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.1
 .. _`v8.16.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.2
 .. _`v9.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.0.0
+.. _`v9.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.0

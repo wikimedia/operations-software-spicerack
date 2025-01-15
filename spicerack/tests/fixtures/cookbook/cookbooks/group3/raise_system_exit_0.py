@@ -1,4 +1,5 @@
 """Group3 Raise SystemExit(0)."""
+
 __title__ = __doc__
 
 

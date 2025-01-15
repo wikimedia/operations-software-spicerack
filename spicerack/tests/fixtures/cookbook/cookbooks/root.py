@@ -1,4 +1,5 @@
 """Top level cookbook."""
+
 import argparse
 
 __title__ = __doc__

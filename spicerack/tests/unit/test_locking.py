@@ -1,4 +1,5 @@
 """locking module tests."""
+
 import json
 import logging
 import re
