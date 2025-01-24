@@ -19,7 +19,7 @@ class Dbctl(Confctl):
         """
         super().__init__(*args, **kwargs)
         schema = self._client.schema
-        self._mediawiki_config = DbConfig(schema, Instance(schema), Section(schema))
+        self._mediawiki_config = DbConfig(schema, Instance(schema), Section(schema), self._client.configuration.dbctl())
         self._dbconfig_instance = Instance(schema, self._mediawiki_config.check_instance)
         self._dbconfig_section = Section(schema, self._mediawiki_config.check_section)
 
