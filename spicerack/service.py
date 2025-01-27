@@ -319,6 +319,7 @@ class ServiceLVS:
         bgp: whether Pybal advertise the service via BGP or not.
         protocol: the Internet protocol of the service.
         scheduler: the IPVS scheduler used for the service.
+        scheduler_flag: the IPVS scheduler flag used for the service.
         ipip_encapsulation: Whether the realservers receive traffic from the load balancers using IPIP encapsulation
 
     """
@@ -331,6 +332,7 @@ class ServiceLVS:
     bgp: bool = True  # Default value in Puppet.
     protocol: str = "tcp"  # Default value in Puppet.
     scheduler: str = "wrr"  # Default value in Puppet.
+    scheduler_flag: Optional[str] = None  # Default value in Puppet.
     ipip_encapsulation: bool = False  # Default value in Puppet.
 
 
