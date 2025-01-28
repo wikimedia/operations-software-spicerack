@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v9.1.1`_ (2025-01-28)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* service: Add ``scheduler_flag`` field to ``ServiceLVS`` to be in sync with the same addition in Puppet's repo.
+
 `v9.1.0`_ (2025-01-15)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3405,3 +3413,4 @@ New features
 .. _`v8.16.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v8.16.2
 .. _`v9.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.0.0
 .. _`v9.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.0
+.. _`v9.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.1
