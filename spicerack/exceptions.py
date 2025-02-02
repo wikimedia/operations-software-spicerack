@@ -12,3 +12,11 @@ class SpicerackCheckError(SpicerackError):
     write action will not actually change anything and the check will then fail, but should be catchable separately
     from the other potential exceptions that could be raised.
     """
+
+
+class RunCookbookError(SpicerackError):
+    """Exception raised when running :py:meth:`spicerack.Spicerack.run_cookbook`.
+
+    When the method is called setting its ``raises`` argument to :py:data:`True` and the cookbook run exit with a
+    non-zero exit code.
+    """

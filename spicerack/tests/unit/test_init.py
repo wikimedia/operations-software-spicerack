@@ -14,10 +14,12 @@ from requests.auth import HTTPBasicAuth
 from wmflib.actions import ActionsDict
 from wmflib.config import load_yaml_config
 from wmflib.dns import Dns
+from wmflib.interactive import AbortError
 from wmflib.phabricator import Phabricator
 from wmflib.prometheus import Prometheus, Thanos
 
 from spicerack import Spicerack
+from spicerack._cookbook import get_cookbook_callback
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
 from spicerack.alertmanager import Alertmanager, AlertmanagerHosts
@@ -29,7 +31,7 @@ from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
-from spicerack.exceptions import SpicerackError
+from spicerack.exceptions import RunCookbookError, SpicerackError
 from spicerack.ganeti import Ganeti
 from spicerack.icinga import IcingaHosts
 from spicerack.ipmi import Ipmi
@@ -292,6 +294,28 @@ def test_run_cookbook_no_callback():
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
     with pytest.raises(SpicerackError, match="Unable to run other cookbooks, get_cookbook_callback is not set."):
         spicerack.run_cookbook("class_api.example", [])
+
+
+def test_run_cookbook_raise():
+    """It should raise a RunCookbookError if raises is set to True and the cookbook raises an exception."""
+    get_cookbook = get_cookbook_callback([get_fixture_path("cookbook")])
+    spicerack = Spicerack(verbose=True, dry_run=False, get_cookbook_callback=get_cookbook, **SPICERACK_TEST_PARAMS)
+    with pytest.raises(
+        RunCookbookError,
+        match="run_cookbook returned exit code 99 when running cookbook group3.raise_exception with args",
+    ):
+        spicerack.run_cookbook("group3.raise_exception", [], raises=True)
+
+
+@mock.patch("wmflib.interactive.ask_input", return_value="abort")
+def test_run_cookbook_confirm(mocked_ask_input):
+    """It should ask the user confirmation if confirm is set to True and the cookbook raises an exception."""
+    get_cookbook = get_cookbook_callback([get_fixture_path("cookbook")])
+    spicerack = Spicerack(verbose=True, dry_run=False, get_cookbook_callback=get_cookbook, **SPICERACK_TEST_PARAMS)
+    with pytest.raises(AbortError, match="Task manually aborted"):
+        spicerack.run_cookbook("group3.raise_exception", [], confirm=True)
+
+    mocked_ask_input.assert_called_once()
 
 
 @mock.patch("spicerack.Path.is_dir")

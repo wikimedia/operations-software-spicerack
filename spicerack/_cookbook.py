@@ -5,7 +5,7 @@ import importlib
 import logging
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Optional, cast
 
@@ -438,6 +438,34 @@ def _import_extender_class(extender_class_param: str) -> SpicerackExtenderBase:
     raise TypeError(f"Extender class {extender_class_param} is not a subclass of spicerack.SpicerackExtenderBase.")
 
 
+def get_cookbook_callback(
+    cookbooks_base_dirs: list[Path],
+) -> Callable[["Spicerack", str, Sequence[str]], Optional["BaseItem"]]:
+    """Returns the cookbook callback function needed to load a cookbook from another cookbook."""
+
+    def get_cookbook(spicerack: Spicerack, cookbook_path: str, cookbook_args: Sequence[str] = ()) -> Optional[BaseItem]:
+        """Get a cookbook item if it exists.
+
+        Arguments:
+            spicerack: the Spicerack class instance.
+            cookbook_path: the cookbook name/path.
+            cookbook_args: the sequence of CLI arguments to pass to the cookbook.
+
+        Returns:
+            :py:data:`None` if there is no cookbook found, the cookbook item otherwise.
+
+        """
+        cookbooks = CookbookCollection(
+            base_dirs=cookbooks_base_dirs,
+            args=cookbook_args,
+            spicerack=spicerack,
+            path_filter=cookbook_path,
+        )
+        return cookbooks.get_item(cookbook_path)
+
+    return get_cookbook
+
+
 def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
     """Entry point, run the tool.
 
@@ -469,25 +497,8 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
     if config.get("external_modules_dir") is not None:
         sys.path.append(str(Path(config["external_modules_dir"]).expanduser()))
 
-    def get_cookbook(spicerack: Spicerack, cookbook_path: str, cookbook_args: Sequence[str] = ()) -> Optional[BaseItem]:
-        """Run a single cookbook.
-
-        Arguments:
-            argv: a sequence of strings of command line arguments to parse.
-
-        Returns:
-            :py:data:`None` on success, the return code otherwise, zero on success, non-zero on failure.
-
-        """
-        cookbooks = CookbookCollection(
-            base_dirs=cookbooks_base_dirs,
-            args=cookbook_args,
-            spicerack=spicerack,
-            path_filter=cookbook_path,
-        )
-        return cookbooks.get_item(cookbook_path)
-
     params = config.get("instance_params", {})
+    get_cookbook = get_cookbook_callback(cookbooks_base_dirs)
     params.update({"verbose": args.verbose, "dry_run": args.dry_run, "get_cookbook_callback": get_cookbook})
     if "extender_class" in params:
         try:
