@@ -7,7 +7,7 @@ with open("README.rst", "r") as readme:
 
 
 INSTALL_REQUIRES = [
-    "conftool>=3.2.0",
+    "conftool[with-dbctl]>=5.0.0",
     "cumin>=3.0.2",
     "dnspython~=2.0.0",
     "elasticsearch>=5.0.0,<7.15.0",

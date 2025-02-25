@@ -86,7 +86,7 @@ class BaseItem:
         self._status: str
 
     @abstractmethod
-    def run(self) -> Optional[int]:
+    def run(self) -> int:
         """Excecute the item."""
 
     @property

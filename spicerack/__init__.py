@@ -15,7 +15,7 @@ from wmflib import requests
 from wmflib.actions import ActionsDict
 from wmflib.config import load_ini_config, load_yaml_config
 from wmflib.dns import Dns
-from wmflib.interactive import get_username
+from wmflib.interactive import confirm_on_failure, get_username
 from wmflib.phabricator import Phabricator, create_phabricator
 from wmflib.prometheus import Prometheus, Thanos
 
@@ -31,7 +31,7 @@ from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
-from spicerack.exceptions import SpicerackError
+from spicerack.exceptions import RunCookbookError, SpicerackError
 from spicerack.ganeti import Ganeti
 from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
@@ -292,22 +292,32 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         hosts = ",".join(self.authdns_servers.keys())
         return self.remote().query(f"D{{{hosts}}}")
 
-    def run_cookbook(self, cookbook: str, args: Sequence[str] = ()) -> int:
+    def run_cookbook(
+        self, cookbook: str, args: Sequence[str] = (), *, raises: bool = False, confirm: bool = False
+    ) -> int:
         """Run another Cookbook within the current run.
 
         The other Cookbook will be executed with the current setup and will log in the same file of the current
-        Cookbook that is running.
+        Cookbook that is running. This includes the propagation of DRY-RUN mode to the called cookbooks.
 
         Arguments:
             cookbook: the path to the cookbook to execute, either in Spicerack's dot notation or the relative path to
                 the Python file to execute.
             args: an iterable sequence of strings with the Cookbook's argument. The Cookbook will be executed with the
                 same global arguments used for the current run.
+            raises: if set to :py:data:`True` raises a :py:class:`spicerack.exceptions.RunCookbookError` exception in
+                case the cookbook execution returns a non-zero exit code.
+            confirm: if set to :py:data:`True` wraps the call of the cookbook in a
+                :py:func:`wmflib.interactive.confirm_on_failure` call. It automatically sets `raises` to
+                :py:data:`True`.
 
         Returns:
-            The exit code of the Cookbook, 0 if successful, non-zero if not.
+            The exit code of the Cookbook, 0 if successful, non-zero if not, unless ``raises`` is set to
+            :py:data:`True`, in that case it will raise instead.
 
         Raises:
+            spicerack.exceptions.RunCookbookError: if ``raises`` is set to :py:data:`True` and the cookbook execution
+                returns a non-zero exit code.
             spicerack.exceptions.SpicerackError: if the ``get_cookbook_callback`` callback is not set or unable to find
                 the cookbook with the given name.
 
@@ -319,8 +329,32 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         if cookbook_item is None:
             raise SpicerackError(f"Unable to find cookbook {cookbook}")
 
+        def run_cookbook_item() -> int:
+            """Actually run the cookbook.
+
+            Raises:
+                spicerack.exceptions.RunCookbookError: if ``raises`` is set to :py:data:`True` and the cookbook
+                    returned a non-zero exit code.
+
+            Returns:
+                the exit code of the cookbook.
+
+            """
+            exit_code = cookbook_item.run()
+            if (raises or confirm) and exit_code != 0:
+                raise RunCookbookError(
+                    f"run_cookbook returned exit code {exit_code} when running cookbook {cookbook} with args: {args}"
+                )
+
+            return exit_code
+
         logger.debug("Executing cookbook %s with args: %s", cookbook, args)
-        return cookbook_item.run() or 0  # Force the return code to be 0 if the cookbook returns None
+        if confirm:
+            exit_code = confirm_on_failure(run_cookbook_item)
+        else:
+            exit_code = run_cookbook_item()
+
+        return exit_code
 
     def lock(self) -> Union[Lock, NoLock]:
         """Get a Lock instance to acquire custom locks with concurrency and TTL around specific lines of code.
@@ -770,9 +804,19 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             self.icinga_hosts(target_hosts, verbatim_hosts=verbatim_hosts),
         )
 
-    def service_catalog(self) -> Catalog:
-        """Get a Catalog instance that reflects Puppet's service::catalog hieradata variable."""
-        if self._service_catalog is None:
+    def service_catalog(self, *, refresh: bool = False) -> Catalog:
+        """Get a Catalog instance that reflects Puppet's service::catalog hieradata variable.
+
+        The catalog is cached until explicitly refreshed.
+
+        Arguments:
+            refresh: when set to :py:data:`True` forces a refresh of the catalog data from disk and caches the new one.
+
+        Returns:
+            The service catalog data and caches it.
+
+        """
+        if self._service_catalog is None or refresh:
             config = load_yaml_config(self._spicerack_config_dir / "service" / "service.yaml")
             self._service_catalog = Catalog(
                 config,

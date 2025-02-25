@@ -14,6 +14,8 @@ class CallAnotherCookbook(CookbookBase):
         """As defined by the parent class."""
         parser = argparse.ArgumentParser("Argparse")
         parser.add_argument("cookbook", help="The path of the cookbook to execute.")
+        parser.add_argument("--raises", action="store_true", help="Set raises=True in run_cookbook")
+        parser.add_argument("--confirm", action="store_true", help="Set confirm=True in run_cookbook")
         return parser
 
     def get_runner(self, args):
@@ -26,9 +28,9 @@ class ExampleRunner(CookbookRunnerBase):
 
     def __init__(self, args, spicerack):
         """Initialize the instance."""
-        self.cookbook = args.cookbook
+        self.args = args
         self.spicerack = spicerack
 
     def run(self):
         """As required by the parent class."""
-        return self.spicerack.run_cookbook(self.cookbook, [])
+        return self.spicerack.run_cookbook(self.args.cookbook, [], raises=self.args.raises, confirm=self.args.confirm)

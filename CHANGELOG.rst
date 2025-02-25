@@ -1,6 +1,27 @@
 Spicerack Changelog
 -------------------
 
+`v9.1.2`_ (2025-02-25)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* spicerack: extend the ``run_cookbook()`` accessor with two new optional parameters:
+
+  * ``raises``: make the call raise a new ``spicerack.exceptions.RunCookbookError`` exception if the execution
+    returns non-zero exit code.
+  * ``confirm``: wrap the call with a ``confirm_on_failure()`` call.
+
+* spicerack: allow to refresh the service catalog from disk adding a ``refresh`` argument to the ``service_catalog()``
+  accessor.
+* dbctl: pass a ``DbCtlConfiguration`` instance to ``DbConfig`` to complete the migration to the new API.
+
+Miscellanea
+"""""""""""
+
+* setup.py: add with-dbctl extra to conftool dependency to be future-proof.
+
 `v9.1.1`_ (2025-01-28)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3414,3 +3435,4 @@ New features
 .. _`v9.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.0.0
 .. _`v9.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.0
 .. _`v9.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.1
+.. _`v9.1.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.2

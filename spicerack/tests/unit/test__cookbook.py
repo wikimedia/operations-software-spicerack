@@ -205,12 +205,18 @@ def test_main_wrong_instance_config(capsys):
     _reset_logging_module()
 
 
-def test_main_call_another_cookbook_ok(capsys, caplog):
+@pytest.mark.parametrize("confirm", (True, False))
+@pytest.mark.parametrize("raises", (True, False))
+def test_main_call_another_cookbook_ok(raises, confirm, capsys, caplog):
     """It should execute the cookbook that calls another cookbook."""
+    args = ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.example"]
+    if raises:
+        args.append("--raises")
+    if confirm:
+        args.append("--confirm")
+
     with caplog.at_level(logging.DEBUG):
-        ret = _cookbook.main(
-            ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.example"]
-        )
+        ret = _cookbook.main(args)
 
     _, err = capsys.readouterr()
     assert ret == 0
