@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v9.1.3`_ (2025-02-25)
+^^^^^^^^^^^^^^^^^^^^^^
+
+Miscellanea
+"""""""""""
+
+* setup.py: revert conftool dependency extra requirement `with-dbctl` to decouple the release of both softwares.
+
 `v9.1.2`_ (2025-02-25)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3436,3 +3444,4 @@ New features
 .. _`v9.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.0
 .. _`v9.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.1
 .. _`v9.1.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.2
+.. _`v9.1.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.3
