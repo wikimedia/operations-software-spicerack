@@ -298,7 +298,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Run another Cookbook within the current run.
 
         The other Cookbook will be executed with the current setup and will log in the same file of the current
-        Cookbook that is running.
+        Cookbook that is running. This includes the propagation of DRY-RUN mode to the called cookbooks.
 
         Arguments:
             cookbook: the path to the cookbook to execute, either in Spicerack's dot notation or the relative path to
@@ -804,9 +804,19 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             self.icinga_hosts(target_hosts, verbatim_hosts=verbatim_hosts),
         )
 
-    def service_catalog(self) -> Catalog:
-        """Get a Catalog instance that reflects Puppet's service::catalog hieradata variable."""
-        if self._service_catalog is None:
+    def service_catalog(self, *, refresh: bool = False) -> Catalog:
+        """Get a Catalog instance that reflects Puppet's service::catalog hieradata variable.
+
+        The catalog is cached until explicitly refreshed.
+
+        Arguments:
+            refresh: when set to :py:data:`True` forces a refresh of the catalog data from disk and caches the new one.
+
+        Returns:
+            The service catalog data and caches it.
+
+        """
+        if self._service_catalog is None or refresh:
             config = load_yaml_config(self._spicerack_config_dir / "service" / "service.yaml")
             self._service_catalog = Catalog(
                 config,

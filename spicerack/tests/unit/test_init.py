@@ -109,9 +109,15 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
         EtcdctlController,
     )
     assert isinstance(spicerack.kafka(), Kafka)
+
     service_catalog = spicerack.service_catalog()
     assert isinstance(service_catalog, Catalog)
     assert spicerack.service_catalog() is service_catalog  # Returned the cached instance
+    service_catalog_new = spicerack.service_catalog(refresh=True)
+    assert isinstance(service_catalog_new, Catalog)
+    assert service_catalog_new is not service_catalog
+    assert spicerack.service_catalog() is service_catalog_new  # Returned the new cached instance
+
     assert isinstance(spicerack.apt_get(mock.MagicMock(spec_set=RemoteHosts)), AptGetHosts)
     assert isinstance(spicerack.orchestrator(), Orchestrator)
     assert isinstance(spicerack.lock(), NoLock)
