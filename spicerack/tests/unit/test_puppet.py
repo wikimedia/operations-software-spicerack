@@ -216,7 +216,7 @@ class TestPuppetHosts:
         """It should run Puppet with the specified arguments."""
         self.puppet_hosts.run(**kwargs)
         self.mocked_remote_hosts.run_sync.assert_called_once_with(
-            puppet.Command(f"run-puppet-agent {expected}", timeout=300.0),
+            puppet.Command(f"run-puppet-agent {expected}".strip(), timeout=300.0),
             batch_size=10,
         )
 
