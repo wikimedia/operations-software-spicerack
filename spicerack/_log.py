@@ -5,6 +5,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
+from wmflib.interactive import notify_logger
 from wmflib.irc import SALSocketHandler, SocketHandler
 
 root_logger = logging.getLogger()
@@ -40,6 +41,7 @@ def setup_logging(
     dry_run: bool = True,
     host: Optional[str] = None,
     port: int = 0,
+    notify_logger_enabled: bool = False,
 ) -> None:
     """Setup the root logger instance.
 
@@ -50,6 +52,7 @@ def setup_logging(
         dry_run: whether this is a dry-run.
         host: the tcpircbot hostname for the IRC logging.
         port: the tcpircbot port for the IRC logging.
+        notify_logger_enabled: whether to setup wmflib's notify_logger notification to IRC.
 
     """
     base_path.mkdir(mode=0o755, parents=True, exist_ok=True)
@@ -101,6 +104,13 @@ def setup_logging(
         irc_logger.setLevel(logging.INFO)
         sal_logger.addHandler(SALSocketHandler(host, port, user))
         sal_logger.setLevel(logging.INFO)
+
+        if notify_logger_enabled:
+            notify_handler = SocketHandler(host, port, user)
+            notify_formatter = logging.Formatter(fmt=f"{name} (PID %(process)d) %(message)s")
+            notify_handler.setFormatter(notify_formatter)
+            notify_logger.addHandler(notify_handler)
+            notify_logger.setLevel(logging.INFO)
 
     # Silence external noisy loggers
     logging.getLogger("urllib3").setLevel(logging.WARNING)

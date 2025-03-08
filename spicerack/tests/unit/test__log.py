@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+from wmflib import interactive
 
 from spicerack import _log as log
 
@@ -14,12 +15,14 @@ CUMIN_LOG_RECORD = logging.LogRecord("cumin.module", logging.DEBUG, "/cumin/sour
 logger = logging.getLogger(__name__)
 
 
-def _assert_match_in_tmpdir(match, tmp_dir):
+def _assert_match_in_tmpdir(match, tmp_dir, negate=False):
     """Given a match string, assert that it's present in all files in tmp_dir."""
     tmp_dir = Path(tmp_dir)  # Newer versions pass a LocalPath, older a string.
     for logfile in tmp_dir.iterdir():
-        with open(tmp_dir / logfile, "r") as f:
-            assert match in f.read()
+        if negate:
+            assert match not in (tmp_dir / logfile).read_text()
+        else:
+            assert match in (tmp_dir / logfile).read_text()
 
 
 def _reset_logging_module():
@@ -27,6 +30,10 @@ def _reset_logging_module():
     for log_logger in (log.root_logger, log.irc_logger, log.sal_logger):
         list(map(log_logger.removeHandler, log_logger.handlers))
         list(map(log_logger.removeFilter, log_logger.filters))
+
+    for handler in log.notify_logger.handlers:
+        if not isinstance(handler, logging.NullHandler):
+            log.notify_logger.removeHandler(handler)
 
 
 def test_cumin_filter_pass():
@@ -82,6 +89,51 @@ def test_setup_logging_dry_run(capsys, tmpdir, caplog):
     assert message in caplog.text
     _assert_match_in_tmpdir(message, tmpdir.strpath)
     _assert_match_in_tmpdir("DRY-RUN", tmpdir.strpath)
+    _reset_logging_module()
+
+
+@pytest.mark.parametrize("notify_logger_enabled", (True, False))
+@mock.patch("wmflib.interactive.NOTIFY_AFTER_SECONDS", 0.0)
+@mock.patch("builtins.input", return_value="go")
+@mock.patch("wmflib.interactive.sys.stdout.isatty", return_value=True)
+@mock.patch("wmflib.irc.socket.socket")
+def test_setup_logging_notify_logger_on(  # pylint: disable=too-many-positional-arguments
+    mocked_socket, mocked_isatty, mocked_input, notify_logger_enabled, capsys, tmpdir, caplog
+):
+    """It should setup the wmflib's notify_logger based on the related parameter."""
+    log.setup_logging(
+        Path(tmpdir.strpath),
+        "task",
+        "user",
+        dry_run=False,
+        host="host",
+        port=123,
+        notify_logger_enabled=notify_logger_enabled,
+    )
+    message = str(uuid.uuid4())
+    awaiting = "is awaiting input"
+
+    interactive.ask_confirmation(message)
+
+    out, err = capsys.readouterr()
+    assert message in out
+    assert awaiting not in out
+    assert message not in err
+    assert awaiting not in err
+    assert message not in caplog.text
+    assert awaiting not in caplog.text
+    _assert_match_in_tmpdir(message, tmpdir.strpath, negate=True)
+    mocked_isatty.assert_called_once_with()
+    mocked_input.assert_called_once_with("> ")
+
+    if notify_logger_enabled:
+        mocked_socket.assert_called()
+        sendall = mocked_socket.return_value.sendall
+        sendall.assert_called_once()
+        assert awaiting.encode() in sendall.call_args.args[0]
+    else:
+        mocked_socket.assert_not_called()
+
     _reset_logging_module()
 
 

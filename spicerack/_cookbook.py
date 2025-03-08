@@ -532,6 +532,7 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
         dry_run=args.dry_run,
         host=config.get("tcpircbot_host", None),
         port=int(config.get("tcpircbot_port", 0)),
+        notify_logger_enabled=config.get("user_input_notifications_enabled", False),
     )
 
     logger.debug("Executing cookbook %s with args: %s", args.cookbook, args.cookbook_args)
