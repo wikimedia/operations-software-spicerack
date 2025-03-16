@@ -12,7 +12,7 @@ INSTALL_REQUIRES = [
     "dnspython~=2.0.0",
     "elasticsearch>=5.0.0,<7.15.0",
     "gitpython>=3.1.14",
-    "kafka-python>=2.0.1",
+    "kafka-python~=2.0.1",
     "kubernetes==12.0.*",  # frozen to the version available on debian bullseye
     "packaging",
     "pymysql>=0.9.3",
