@@ -14,7 +14,7 @@ from cumin.transports import Command
 from pymysql.cursors import DictCursor
 
 from spicerack import mysql
-from spicerack.constants import PUPPET_CA_PATH
+from spicerack.constants import WMF_CA_BUNDLE_PATH
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
 from spicerack.tests import get_fixture_path
 from spicerack.tests.unit.test_remote import mock_cumin
@@ -893,7 +893,7 @@ class TestMysqlClient:
         assert call_args["charset"] == "utf8mb4"
         assert call_args["cursorclass"] == DictCursor
         assert call_args["read_default_file"].endswith("/.my.cnf")
-        assert call_args["ssl"] == {"ca": PUPPET_CA_PATH}
+        assert call_args["ssl"] == {"ca": WMF_CA_BUNDLE_PATH}
 
     @pytest.mark.parametrize(
         "kwargs",

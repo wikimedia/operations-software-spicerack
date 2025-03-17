@@ -1,7 +1,7 @@
 """Constants module."""
 
-PUPPET_CA_PATH: str = "/etc/ssl/certs/Puppet_Internal_CA.pem"
-"""The path to the Puppet Signing CA cert"""
+WMF_CA_BUNDLE_PATH: str = "/etc/ssl/certs/wmf-ca-certificates.crt"
+"""The path to the internal WMF CA certificates bundle, includes the old Puppet CA."""
 
 KEYHOLDER_SOCK: str = "/run/keyholder/proxy.sock"
-"""The path to the keyholder agent sock file used for cumin remote commands"""
+"""The path to the keyholder agent sock file used for cumin remote commands."""

@@ -19,7 +19,7 @@ from pymysql.cursors import DictCursor
 from wmflib.constants import CORE_DATACENTERS
 from wmflib.interactive import ask_confirmation
 
-from spicerack.constants import PUPPET_CA_PATH
+from spicerack.constants import WMF_CA_BUNDLE_PATH
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackError
 from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts, RemoteHostsAdapter
@@ -145,7 +145,7 @@ class MysqlClient:
             "cursorclass": DictCursor,
             "read_default_file": str(Path("~/.my.cnf").expanduser()),
             "read_default_group": default_group,
-            "ssl": {"ca": PUPPET_CA_PATH},
+            "ssl": {"ca": WMF_CA_BUNDLE_PATH},
         }
         params.update(kwargs)
 
