@@ -28,6 +28,7 @@ Spicerack Python API autodoc.
    spicerack.elasticsearch_cluster
    spicerack.exceptions
    spicerack.ganeti
+   spicerack.hosts
    spicerack.icinga
    spicerack.interactive
    spicerack.ipmi

@@ -1,8 +1,6 @@
 """Netbox module tests."""
 
-import json
 from ipaddress import IPv4Interface, IPv6Interface
-from types import SimpleNamespace
 from unittest import mock
 
 import pynetbox
@@ -23,79 +21,11 @@ NETBOX_TOKEN = "secret_token"
 SCRIPT_URL = f"{NETBOX_URL}api/script/"
 
 
-class NetboxObject(SimpleNamespace):
-    """Simple object to represent a pynetbox API response with a save() method and dict representation."""
-
-    def __iter__(self):
-        """Make the object convertable to dict."""
-        # The JSON passage is needed to recursively convert all the NetboxObject instances to dict
-        return iter(
-            json.loads(json.dumps(self, default=lambda x: {i: j for i, j in x.__dict__.items() if i != "save"})).items()
-        )
-
-
 def _request_error():
     """Return a Netbox RequestError."""
     fakestatus = mock.Mock()
     fakestatus.status_code = 404
     return pynetbox.RequestError(fakestatus)
-
-
-def _base_netbox_obj(name, additional_properties):
-    """Return a simple object to represent a response from Netbox API."""
-    dict_obj = {
-        "name": name,
-        "id": 1,
-        "asset_tag": "ASSET1234",
-        "status": {"value": "active", "label": "Active"},
-        "primary_ip4": {
-            "id": 1,
-            "family": 4,
-            "address": "10.0.0.1/22",
-            "dns_name": f"{name}.example.com",
-        },
-        "primary_ip6": {
-            "id": 1,
-            "family": 6,
-            "address": "2620:0:861:103:10::1/64",
-            "dns_name": f"{name}.example.com",
-        },
-        "role": {
-            "id": 1,
-            "name": "Server",
-            "slug": "server",
-        },
-    }
-    dict_obj["primary_ip"] = dict_obj["primary_ip6"]
-    dict_obj["primary_ip"]["assigned_object"] = {
-        "id": 1,
-        "connected_endpoints": [{"untagged_vlan": {"name": "test_vlan"}}],
-        "type": {"value": "10gbase-x-sfpp"},
-    }
-    dict_obj.update(additional_properties)
-
-    def custom_hook(decoded_dict):
-        """Custom hook for JSON load to convert a dict to an object with a save() attribute."""
-        decoded_obj = NetboxObject(**decoded_dict)
-        decoded_obj.save = mock.MagicMock(return_value=True)  # pylint: disable=attribute-defined-outside-init
-        return decoded_obj
-
-    obj = json.loads(json.dumps(dict_obj), object_hook=custom_hook)
-    obj.status.__str__ = lambda: dict_obj["status"]["label"]
-
-    return obj
-
-
-@pytest.fixture(name="netbox_host")
-def _netbox_host():
-    """Return a mocked Netbox physical device."""
-    return _base_netbox_obj("physical", {"rack": {"id": 1, "name": "rack1"}, "cluster": None})
-
-
-@pytest.fixture(name="netbox_virtual_machine")
-def _netbox_virtual_machine():
-    """Return a mocked Netbox virtual machine."""
-    return _base_netbox_obj("virtual", {"cluster": {"id": 1, "name": "testcluster"}})
 
 
 class TestNetbox:
