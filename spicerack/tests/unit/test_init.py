@@ -152,7 +152,7 @@ def test_spicerack_icinga(mocked_command_file, mocked_remote_query, mocked_dns, 
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
-    assert spicerack.icinga_master_host.hosts == "icinga-server.example.com"
+    assert spicerack.icinga_master_host().hosts == "icinga-server.example.com"
     assert isinstance(spicerack.icinga_hosts(["host1", "host2"]), IcingaHosts)
     mocked_hostname.assert_called_once_with()
 
@@ -205,7 +205,7 @@ def test_spicerack_management_consoles(mocked_netbox, monkeypatch, manufacturer,
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
-    assert spicerack.management_password == "env_password"
+    assert spicerack.management_password() == "env_password"
     assert isinstance(spicerack.ipmi("test-mgmt.example.com"), Ipmi)
     if manufacturer == "fancy-but-not-supported-yet":
         with pytest.raises(
@@ -235,9 +235,9 @@ def test_spicerack_management_password_cached(monkeypatch):
     """Should ask for the management_password only once and cache its result."""
     monkeypatch.setenv("MGMT_PASSWORD", "first_password")
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-    assert spicerack.management_password == "first_password"
+    assert spicerack.management_password() == "first_password"
     monkeypatch.setenv("MGMT_PASSWORD", "second_password")
-    assert spicerack.management_password == "first_password"
+    assert spicerack.management_password() == "first_password"
 
 
 @pytest.mark.parametrize(
@@ -263,7 +263,7 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_dns, read
     assert isinstance(spicerack.netbox(read_write=read_write), Netbox)
     # Values from fixtures/netbox/config.yaml
     mocked_pynetbox.assert_called_once_with("https://netbox.example.com", token=token, threading=True)
-    assert spicerack.netbox_master_host.hosts == "netbox-server.example.com"
+    assert spicerack.netbox_master_host().hosts == "netbox-server.example.com"
 
     mocked_pynetbox.reset_mock()
     del mocked_pynetbox.return_value.dcim.devices.get.return_value.device_role
@@ -365,7 +365,7 @@ def test_spicerack_alerting(mocked_command_file, mocked_remote_query, mocked_dns
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
-    assert spicerack.icinga_master_host.hosts == "icinga-server.example.com"
+    assert spicerack.icinga_master_host().hosts == "icinga-server.example.com"
     assert isinstance(spicerack.alerting_hosts(["host1", "host2"]), AlertingHosts)
     mocked_hostname.assert_called_once_with()
 
