@@ -5,7 +5,7 @@ import argparse
 from spicerack.cookbook import CookbookBase, CookbookRunnerBase
 
 
-class ExampleCookbook(CookbookBase):  # noqa: D101
+class ExampleCookbook(CookbookBase):  # noqa: D101, pylint: disable=missing-class-docstring
     # No docstring to test the spicerack.cookbook.CookbookBase.title implementation
 
     def argument_parser(self):
