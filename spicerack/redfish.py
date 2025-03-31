@@ -958,7 +958,8 @@ class RedfishDell(Redfish):
         """
         data = {"ExportFormat": "JSON", "ShareParameters": {"Target": target.value}}
         task_uri = self.submit_task(f"{self.scp_base_uri}.ExportSystemConfiguration", data)
-
+        # Wait before starting to poll for the task, so that a quick task can complete before the first attempt.
+        time.sleep(5)
         return DellSCP(self.poll_task(task_uri), target, allow_new_attributes=allow_new_attributes)
 
     def scp_push(

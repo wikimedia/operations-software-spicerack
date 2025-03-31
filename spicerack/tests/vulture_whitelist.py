@@ -9,12 +9,6 @@ class Whitelist:
         pass
 
 
-whitelist_logging = Whitelist()
-whitelist_logging.raiseExceptions
-
-whitelist_ganeti = Whitelist()
-whitelist_ganeti.Ganeti._http_session.auth
-
 whitelist__menu = Whitelist()
 whitelist__menu.CookbookItem._parse_args.parser.prog
 whitelist__menu.CookbookItem._parse_args.parser.epilog
@@ -25,28 +19,17 @@ whitelist_dhcp.DHCPConfOpt82.ipv4
 whitelist_dhcp.DHCPConfOpt82.switch_hostname
 whitelist_dhcp.DHCPConfOpt82.switch_iface
 whitelist_dhcp.DHCPConfOpt82.vlan
-whitelist_dhcp.DHCPConfOpt82.distro
-whitelist_dhcp.DHCPConfOpt82.media_type
 whitelist_dhcp.DHCPConfOpt82.rendered_dhcp_options
 whitelist_dhcp.DHCPConfOpt82.rendered_dhcp_filename
 whitelist_dhcp.DHCPConfMac.ipv4
-whitelist_dhcp.DHCPConfMac.distro
-whitelist_dhcp.DHCPConfMac.media_type
 whitelist_dhcp.DHCPConfMac.rendered_dhcp_options
 whitelist_dhcp.DHCPConfMac.rendered_dhcp_filename
 whitelist_dhcp.DHCPConfMgmt.ipv4
-
-whitelist_dnsdisc = Whitelist()
-whitelist_dnsdisc.Discovery._resolvers.nameservers
 
 whitelist_icinga = Whitelist()
 whitelist_icinga.CommandFile.__new__
 whitelist_icinga.IcingaStatus.CRITICAL
 whitelist_icinga.IcingaStatus.UNKNOWN
-
-whitelist_mysql = Whitelist()
-whitelist_mysql.set_core_masters_readonly
-whitelist_mysql.set_core_masters_readwrite
 
 whitelist_redfish = Whitelist()
 whitelist_redfish.ChassisResetPolicy.FORCE_RESTART

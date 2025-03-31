@@ -1,6 +1,70 @@
 Spicerack Changelog
 -------------------
 
+`v10.0.0`_ (2025-03-31)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* constants: replaced ``PUPPET_CA_PATH`` to ``WMF_CA_BUNDLE_PATH``, no cookbook is directly importing it.
+* spicerack: convert some ``@property`` into methods:
+
+  * To be more friendly with the upcoming spicerack-shell, convert some ``@property``, that will
+    generates either output or request input when using autocompletion, to methods to prevent them to be executed
+    when using autocompletion in the spicerack-shell.
+  * API breaking change: this will require to change the few direct use of those properties in the cookbooks
+    repository. Given the very limited usage it seems overkill to do this change in a backward compatible way as it
+    will be very easy to do a coordinated deploy.
+  * Changed properties:
+
+    * ``icinga_master_host`` became ``icinga_master_host()``.
+    * ``netbox_master_host`` became ``netbox_master_host()``.
+    * ``management_password`` became ``management_password()``.
+
+New features
+""""""""""""
+
+* cookbook: make the default argument parser tunable:
+
+  * Adds two class properties to the ``spicerack.cookbook.CookbookBase`` class to allow to tune the automatical
+    injection of common command line arguments that many cookbooks add by themselves.
+  * ``argument_reason_required`` allows to inject a ``-r/--reason`` argument.
+  * ``argument_task_required`` allows to inject a ``-t/--task-id`` argument.
+  * The arguments can be added as required or not based on the value of the class attribute:
+
+    * ``None``: do not include the argument, default.
+    * ``False``: include the argument but set it as non required.
+    * ``True``: include the argument and set it as required.
+
+Minor improvements
+""""""""""""""""""
+
+* constants: replace path of the old Puppet CA:
+
+  * Replace the path to the old Puppet CA certificate with the newer WMF bundled of certificates that includes both
+    the new PKI CA and the old Puppet CA.
+  * Replace the constant name from ``PUPPET_CA_PATH`` to ``WMF_CA_BUNDLE_PATH``, no cookbook is directly importing it.
+    This is an API breaking change.
+  * This way its usage will be forward and backward compatible, allowing clients to connect independently if the
+    server has switched to the new PKI-based certificates or not.
+
+* redfish: wait few seconds in ``scp_dump()`` before starting polling the job results so that if the job is quick
+  (like when collecting only one sets of items) it can complete before the first attempt avoiding to wait for 30s.
+
+Bug fixes
+"""""""""
+
+* puppet: remove spurious spaces from ``run()`` command.
+* setup.py: limit ``kafka-python`` version to ``2.0.*``, the recently released ``2.1.0`` has some backward
+  incompatible changes.
+
+Miscellanea
+"""""""""""
+
+* tests: remove unnecessary vulture settings, newer Vulture don't detect those as false positive anymore.
+* setup.py: update prospector pin to the latest version.
+
 `v9.1.3`_ (2025-02-25)
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3445,3 +3509,4 @@ New features
 .. _`v9.1.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.1
 .. _`v9.1.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.2
 .. _`v9.1.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.3
+.. _`v10.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.0.0

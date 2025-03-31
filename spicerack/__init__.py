@@ -242,19 +242,16 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """Returns a dictionary to log and record cookbook actions."""
         return self._actions
 
-    @property
     def icinga_master_host(self) -> RemoteHosts:
         """Returns the instance to execute commands on the Icinga master host."""
         return self.remote().query(self.dns().resolve_cname(ICINGA_DOMAIN))
 
-    @property
     def netbox_master_host(self) -> RemoteHosts:
         """Returns the instance to execute commands on the Netbox master host."""
         dns = self.dns()
         netbox_hostname = dns.resolve_ptr(dns.resolve_ips("netbox.discovery.wmnet")[0])[0]
         return self.remote().query(netbox_hostname)
 
-    @property
     def management_password(self) -> str:
         """Returns the management password.
 
@@ -539,7 +536,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
                 default, consider the given target hosts as FQDNs and extract their hostnames to be used in Icinga.
 
         """
-        return IcingaHosts(self.icinga_master_host, target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run)
+        return IcingaHosts(
+            self.icinga_master_host(), target_hosts, verbatim_hosts=verbatim_hosts, dry_run=self._dry_run
+        )
 
     def puppet(self, remote_hosts: RemoteHosts) -> PuppetHosts:
         """Get a PuppetHosts instance for the given remote hosts.
@@ -567,7 +566,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             target: the management console FQDN or IP to target.
 
         """
-        return Ipmi(target, self.management_password, dry_run=self._dry_run)
+        return Ipmi(target, self.management_password(), dry_run=self._dry_run)
 
     def phabricator(self, bot_config_file: str, section: str = "phabricator_bot") -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.
@@ -720,7 +719,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         """
         if not password:
-            password = self.management_password
+            password = self.management_password()
 
         netbox = self.netbox()
         server_metadata = netbox.get_server(hostname)

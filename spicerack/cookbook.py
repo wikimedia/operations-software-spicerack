@@ -1,6 +1,7 @@
 """Cookbook module."""
 
 import argparse
+import re
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
@@ -79,6 +80,23 @@ class CookbookBase(metaclass=ABCMeta):
     """Name of the team owning this cookbook and responsible to keep it up to date. If unset and any parent package
     (directory of cookbooks) has the ``__owner_team__`` property set it will inherit it. It shows up when listing
     cookbooks and in the help message as parser epilog."""
+    argument_task_required: Optional[bool] = None
+    """Control if a ``-t/--task-id`` argument is included in the default argument parser for the Phabricator task ID.
+
+        * If set to :py:data:`True` it will add a ``-t/--task-id`` required argument, accesible as ``args.task_id``.
+        * If set to :py:data:`False` it will add a ``-t/--task-id`` optional argument, accessible as ``args.task_id``.
+        * If set to :py:data:`None` it will not add the argument for providing a task ID.
+        * When adding the argument it also validates that it is a valid Phabricator task ID (e.g. T12345).
+    """
+    argument_reason_required: Optional[bool] = None
+    """Control if a ``-r/--reason`` argument is included in the default argument parser for the administrative reason.
+
+        * If set to :py:data:`True` it will add a ``-r/--reason`` required argument, accesible as ``args.reason``.
+        * If set to :py:data:`False` it will add a ``-r/--reason`` optional argument, accessible as ``args.reason``.
+        * If set to :py:data:`None` it will not add the argument for providing ad administrative reason.
+        * When adding the argument it also validates that it is a valid administrative reason (e.g. doesn't contains
+          double quotes and is not empty).
+    """
 
     def __init__(self, spicerack: Spicerack):
         """Initialize the instance and store the Spicerack instance into ``self.spicerack``.
@@ -106,9 +124,81 @@ class CookbookBase(metaclass=ABCMeta):
         """Optionally define an argument parser for the cookbook, if the cookbook accepts CLI arguments.
 
         The default implementation returns an empty ``ArgumentParser`` instance that doesn't accept any arguments and
-        uses the class docstring as description. The arguments will be parsed by the Spicerack framework.
+        uses the class docstring as description. Based on the class parameters ``argument_*``, additional common
+        arguments can be added automatically to the default argument parser.
+        The actual command line arguments will be parsed by the Spicerack framework.
+
+        Returns:
+            the argument parser instance.
+
         """
-        return argparse.ArgumentParser(description=self.__doc__, formatter_class=ArgparseFormatter)
+        parser = argparse.ArgumentParser(description=self.__doc__, formatter_class=ArgparseFormatter)
+
+        if self.argument_task_required is not None:
+
+            def task_id_type(task_id: str) -> str:
+                """Validates that the provided task ID matches a Phabricator task ID format.
+
+                Arguments:
+                    task_id: the task ID provided as argument.
+
+                Returns:
+                    the task ID if valid.
+
+                Raises;
+                    argparse.ArgumentTypeError: if the task ID is not valid.
+
+                """
+                pattern = r"T\d{1,6}$"
+                if re.match(pattern, task_id) is None:
+                    raise argparse.ArgumentTypeError(
+                        f"Invalid Phabricator task ID, expected to match pattern '{pattern}', got '{task_id}'."
+                    )
+
+                return task_id
+
+            parser.add_argument(
+                "-t",
+                "--task-id",
+                required=self.argument_task_required,
+                type=task_id_type,
+                help="The Phabricator task ID (e.g. T12345).",
+            )
+
+        if self.argument_reason_required is not None:
+
+            def reason_type(reason: str) -> str:
+                """Validates that the provided administrative reason is valid.
+
+                Arguments:
+                    reason: the administrative reason.
+
+                Returns:
+                    the administrative reason if valid.
+
+                Raises;
+                    argparse.ArgumentTypeError: if the administrative reason is not valid.
+
+                """
+                if not reason:
+                    raise argparse.ArgumentTypeError("The administrative reason cannot be empty.")
+
+                if '"' in reason:
+                    raise argparse.ArgumentTypeError(
+                        f"The administrative reason cannot contain double quotes, got '{reason}'."
+                    )
+
+                return reason
+
+            parser.add_argument(
+                "-r",
+                "--reason",
+                required=self.argument_reason_required,
+                type=reason_type,
+                help="Administrative Reason.",
+            )
+
+        return parser
 
     @abstractmethod
     def get_runner(self, args: argparse.Namespace) -> "CookbookRunnerBase":

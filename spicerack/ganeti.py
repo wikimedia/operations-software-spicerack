@@ -9,7 +9,7 @@ from requests.auth import HTTPBasicAuth
 from requests.exceptions import RequestException
 from wmflib.requests import http_session
 
-from spicerack.constants import PUPPET_CA_PATH
+from spicerack.constants import WMF_CA_BUNDLE_PATH
 from spicerack.exceptions import SpicerackError
 from spicerack.netbox import Netbox
 from spicerack.remote import Remote, RemoteHosts
@@ -405,7 +405,9 @@ class Ganeti:
             spicerack.ganeti.GanetiError: if unable to find the cluster endpoint.
 
         """
-        return GanetiRAPI(self.get_cluster(cluster).rapi, self._username, self._password, self._timeout, PUPPET_CA_PATH)
+        return GanetiRAPI(
+            self.get_cluster(cluster).rapi, self._username, self._password, self._timeout, WMF_CA_BUNDLE_PATH
+        )
 
     def instance(self, instance: str, *, cluster: str = "") -> GntInstance:
         """Return an instance of GntInstance to perform RW operation on the given Ganeti VM instance.

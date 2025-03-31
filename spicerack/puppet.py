@@ -227,8 +227,8 @@ class PuppetHosts(RemoteHostsAdapter):
             args += ["--attempts", str(attempts)]
 
         args_string = " ".join(args)
-        command = f"run-puppet-agent {args_string}"
-        logger.info("Running Puppet with args %s on %d hosts: %s", args_string, len(self), self)
+        command = f"run-puppet-agent {args_string}".strip()
+        logger.info("Running Puppet with args '%s' on %d hosts: %s", args_string, len(self), self)
         self._remote_hosts.run_sync(Command(command, timeout=timeout), batch_size=batch_size)
 
     def first_run(self, has_systemd: bool = True) -> Iterator[tuple]:
