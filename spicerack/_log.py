@@ -1,6 +1,7 @@
 """Log module."""
 
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
@@ -60,18 +61,24 @@ def setup_logging(
 
     # Default INFO logging
     formatter = logging.Formatter(fmt=f"%(asctime)s {dry_run_prefix}{user} %(process)d [%(levelname)s] %(message)s")
-    handler = logging.FileHandler(base_path / f"{name}.log")
+    # Tentatively keep logs forever for auditing purposes. Limit them to 10MB each file and keep 500 files.
+    # Max theoretical space used for the standard logs per cookbook is ~5GB
+    handler = RotatingFileHandler(base_path / f"{name}.log", maxBytes=(10 * (1024**2)), backupCount=500)
     handler.setFormatter(formatter)
     handler.setLevel(logging.INFO)
 
     # Extended logging for detailed debugging
     formatter_extended = logging.Formatter(
         fmt=(
-            f"%(asctime)s {dry_run_prefix}{user} %(process)d [%(levelname)s %(filename)s:%(lineno)s in %(funcName)s] "
+            f"%(asctime)s {dry_run_prefix}{user} %(process)d [%(levelname)s %(name)s:%(lineno)s in %(funcName)s] "
             "%(message)s"
         )
     )
-    handler_extended = logging.FileHandler(base_path / f"{name}-extended.log")
+    # Tentatively keep logs forever for auditing purposes. Limit them to 10MB each file and keep 500 files.
+    # Max theoretical space used for the extended logs per cookbook is ~5GB
+    handler_extended = RotatingFileHandler(
+        base_path / f"{name}-extended.log", maxBytes=(10 * (1024**2)), backupCount=500
+    )
     handler_extended.setFormatter(formatter_extended)
     handler_extended.setLevel(logging.DEBUG)
 
