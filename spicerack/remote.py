@@ -388,11 +388,7 @@ class Remote:
 
 
 class RemoteHosts:
-    """Remote Executor class.
-
-    This class can be extended to customize the interaction with remote hosts passing a custom factory function to
-    `spicerack.remote.Remote.query`.
-    """
+    """Class to execute remote commands on hosts. The instances are also iterable."""
 
     def __init__(self, config: Config, hosts: NodeSet, dry_run: bool = True, use_sudo: bool = False) -> None:
         """Initialize the instance.
@@ -432,6 +428,15 @@ class RemoteHosts:
     def __len__(self) -> int:
         """Returns the number of hosts targeted."""
         return len(self._hosts)
+
+    def __iter__(self) -> Iterator["RemoteHosts"]:
+        """Iterate over all remote hosts.
+
+        Yields:
+            spicerack.remote.RemoteHosts: an instance for each host.
+
+        """
+        yield from self.split(len(self))
 
     def split(self, n_slices: int) -> Iterator["RemoteHosts"]:
         """Split the current remote in n_slices RemoteHosts instances.
