@@ -632,6 +632,13 @@ class TestMysqlRemoteHosts:
         remote_host.run_sync = self.mocked_run_sync
         self.mysql_remote_host = mysql.MysqlRemoteHosts(remote_host)
 
+    def test_iter(self):
+        """It should iterate the instance yielding instances of the same class with one host."""
+        expected = ["host1", "host2", "host3", "host4", "host5", "host6", "host7", "host8", "host9"]
+        for index, mysql_remote_host in enumerate(self.mysql_remote_hosts):
+            assert isinstance(mysql_remote_host, mysql.MysqlRemoteHosts)
+            assert str(mysql_remote_host) == expected[index]
+
     def test_run_query(self):
         """Calling run_query() should run the given query in the target hosts."""
         self.mocked_run_sync.return_value = [(nodeset("host[1-9]"), MsgTreeElem(b"result", parent=MsgTreeElem()))]
