@@ -1,4 +1,6 @@
-"""Group2 zCookbook4."""
+# Group2 zCookbook4. No docstring to test the fallback value.
+# pylint: disable=missing-module-docstring
+# noqa:  D100
 
 
 def run(_args, _spicerack):

@@ -76,10 +76,10 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   `-- group1.cookbook1: Group1 Cookbook1. [unowned]
 |-- group2: -
 |   |-- group2.cookbook2: Group2 Cookbook2. [team2]
-|   |-- group2.subgroup1: -
+|   |-- group2.subgroup1: Group2 Subgroup1 Test Cookbooks.
 |   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3. [team9]
 |   `-- group2.zcookbook4: UNKNOWN (unable to detect title) [team2]
-|-- group3: -
+|-- group3: Group3 Test Cookbooks.
 |   |-- group3.argparse_ok: Group3 argparse_ok. [team1]
 |   |-- group3.argument_parser_raise_system_exit: Group3 argument_parser() raise SystemExit. [team3]
 |   |-- group3.get_argument_parser_raise: Group3 get argument_parser() raise. [team3]
@@ -90,7 +90,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |-- group3.raise_system_exit_0: Group3 Raise SystemExit(0). [team3]
 |   |-- group3.raise_system_exit_9: Group3 Raise SystemExit(9). [team3]
 |   |-- group3.raise_system_exit_str: Group3 Raise SystemExit('message'). [team3]
-|   `-- group3.subgroup3: -
+|   `-- group3.subgroup3: Group3 Subgroup3 Test Cookbooks.
 |       `-- group3.subgroup3.cookbook4: Group3 Subgroup3 Cookbook4. [team9]
 |-- multiple.CookbookA: Multiple cookbook classes. [team1]
 |-- multiple.CookbookB: Multiple cookbook classes. [team2]
@@ -121,7 +121,7 @@ COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
-[0/11] group3: -
+[0/11] group3: Group3 Test Cookbooks.
 [NOTRUN] multiple.CookbookA: Multiple cookbook classes.
 [NOTRUN] multiple.CookbookB: Multiple cookbook classes.
 [NOTRUN] root: Top level cookbook.
@@ -133,7 +133,7 @@ COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
-[0/11] group3: -
+[0/11] group3: Group3 Test Cookbooks.
 [NOTRUN] multiple.CookbookA: Multiple cookbook classes.
 [NOTRUN] multiple.CookbookB: Multiple cookbook classes.
 [NOTRUN] root: Top level cookbook.
@@ -148,7 +148,7 @@ h - Help
 """
 COOKBOOKS_GROUP2_MENU = """#--- group2 args=[] ---#
 [NOTRUN] cookbook2: Group2 Cookbook2.
-[0/1] subgroup1: -
+[0/1] subgroup1: Group2 Subgroup1 Test Cookbooks.
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu
 h - Help
@@ -156,12 +156,12 @@ h - Help
 COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """[{'argument': None, 'k': False}, False, False]
 #--- group2 args=[] ---#
 [PASS] cookbook2: Group2 Cookbook2.
-[0/1] subgroup1: -
+[0/1] subgroup1: Group2 Subgroup1 Test Cookbooks.
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu
 h - Help
 """
-COOKBOOKS_GROUP2_SUBGROUP1_MENU = """#--- subgroup1 args=[] ---#
+COOKBOOKS_GROUP2_SUBGROUP1_MENU = """#--- Group2 Subgroup1 Test Cookbooks. args=[] ---#
 [NOTRUN] cookbook3: Group2 Subgroup1 Cookbook3.
 b - Back to parent menu
 h - Help
@@ -375,7 +375,7 @@ class TestCookbookCollection:
             ("group3.argparse_ok", [], ["START - Cookbook", "END ("], 0, ["-h"]),
             (
                 "group3.invalid_syntax",
-                ["invalid syntax (invalid_syntax.py, line 7)"],
+                ["invalid syntax (invalid_syntax.py, line 6)"],
                 [],
                 cookbook.NOT_FOUND_RETCODE,
                 [],
@@ -632,7 +632,7 @@ class TestCookbookCollection:
         assert ret == 0
         assert out == LIST_COOKBOOKS_ALL.format(external_cookbooks="")
         lines = [
-            "Failed to import module cookbooks.group3.invalid_syntax: invalid syntax (invalid_syntax.py, line 7)",
+            "Failed to import module cookbooks.group3.invalid_syntax: invalid syntax (invalid_syntax.py, line 6)",
             "Failed to import module cookbooks.group3.invalid_subgroup: invalid syntax (__init__.py, line 2)",
         ]
         for line in lines:

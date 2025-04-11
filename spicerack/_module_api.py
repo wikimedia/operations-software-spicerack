@@ -30,7 +30,7 @@ class CookbooksModuleInterface:
     """The module name."""
 
     __title__: str = ""
-    """The cookbook static title."""
+    """The cookbook static title. If not set the first line of the module docstring will be used."""
 
     __owner_team__: str = "unowned"
     """Name of the team owning this cookbook and responsible to keep it up to date."""

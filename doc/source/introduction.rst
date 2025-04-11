@@ -49,7 +49,8 @@ Each cookbook must follow one of the two available API interfaces:
 The ``__title__`` and ``__owner_team__`` properties of the `Module interface`_ can also be used in the ``__init__.py``
 files of cookbook packages (directories). The ``__title__`` will set the title of the cookbook package and the
 ``__owner_team__`` will set the owner for all the cookbooks in the package and eventual subpackages, unless overridden
-by specific cookbooks or subpackages.
+by specific cookbooks or subpackages. If the ``__title__`` variable is not set the first line of the module docstring
+will be used, if present.
 
 Class interface
 """""""""""""""
@@ -135,7 +136,8 @@ following constants and functions.
 
 .. attribute:: __title__
 
-   A module attribute that defines the cookbook title. It must be a single line string.
+   A module attribute that defines the cookbook title. It must be a single line string. If not present and the module
+   has a top level docstring, the first line of the docstring will be used as title.
 
    :type: str
 

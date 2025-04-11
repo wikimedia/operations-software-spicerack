@@ -595,10 +595,22 @@ class TreeItem(BaseItem):
     @property
     def title(self) -> str:
         """Returns the title of the instance item."""
-        try:
-            title = self.module.__title__.splitlines()[0]
-        except AttributeError as e:
-            logger.debug("Unable to detect title for module %s: %s", self.path, e)
-            title = self.fallback_title
+        return get_module_title(self.module) or self.fallback_title
 
-        return title
+
+def get_module_title(module: _module_api.CookbooksModuleInterface) -> str:
+    """Given a cookbook module or a cookbooks package module return its title.
+
+    That is the content of the ``__title__`` variable limited to be one line or the first line of the module docstring.
+    If neither of those are present an empty string is returned.
+
+    Returns:
+        the cookbook or cookbooks package title.
+
+    """
+    raw_title = getattr(module, "__title__", module.__doc__)  # __doc__ is None if not present
+    if raw_title and isinstance(raw_title, str):
+        return raw_title.splitlines()[0]  # Force it to be one-line only
+
+    logger.debug("Unable to detect title for module %s. Both __title__ and __doc__ are missing/empty", module.__name__)
+    return ""

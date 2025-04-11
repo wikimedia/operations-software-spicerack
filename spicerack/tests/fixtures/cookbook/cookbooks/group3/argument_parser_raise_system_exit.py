@@ -2,8 +2,6 @@
 
 import argparse
 
-__title__ = __doc__
-
 
 def argument_parser():
     """As required by spicerack._cookbook."""
