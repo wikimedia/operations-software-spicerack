@@ -313,7 +313,12 @@ class KubernetesNode:
             raise KubernetesApiError(f"Failed to find pods running on node {self.name}: {exc}") from exc
 
     def __str__(self) -> str:
-        """String representation."""
+        """String representation of the node.
+
+        Returns:
+            the object type and FQDN.
+
+        """
         return f"Node({self._fqdn})"
 
     def _wait_for_empty(self, expected: int, max_grace_period: int) -> None:
@@ -492,5 +497,10 @@ class KubernetesPod:
         self._pod = self._get()
 
     def __str__(self) -> str:
-        """String representation."""
+        """String representation.
+
+        Returns:
+            the object type, namespace and name.
+
+        """
         return f"Pod({self.namespace}/{self.name})"

@@ -198,7 +198,7 @@ class Instance:
         """Return a string representation of the instance.
 
         Returns:
-            the FQDN and name of the instance, if present.
+            the FQDN and name of the instance, when present.
 
         """
         name = self.name if self.name else "single-instance"
@@ -737,7 +737,7 @@ class MysqlRemoteHosts(RemoteHostsAdapter):
         """Iterate over all remote hosts in this instance.
 
         Yields:
-            spicerack.mysql.MysqlRemoteHosts: an instance for each host.
+            spicerack.mysql.MysqlRemoteHosts: an new instance for each host.
 
         """
         yield from self.split(len(self))

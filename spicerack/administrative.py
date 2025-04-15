@@ -39,7 +39,7 @@ class Reason:
         Parameters as required by Python's data model, see `object.__setattr__`.
 
         Raises:
-            ReasonError: on validation error of the parameters.
+            spicerack.administrative.ReasonError: on validation error of the parameters.
 
         """
         if value is not None and '"' in value:

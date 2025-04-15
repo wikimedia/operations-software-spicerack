@@ -84,7 +84,12 @@ class RemoteHostsAdapter:
         self._remote_hosts = remote_hosts
 
     def __str__(self) -> str:
-        """String representation of the instance."""
+        """String representation of the instance.
+
+        Returns:
+            the string representation of the ``remote_hosts`` of the instance in ``NodeSet`` notation.
+
+        """
         return str(self._remote_hosts)
 
     def __len__(self) -> int:
@@ -422,7 +427,12 @@ class RemoteHosts:
         return self._hosts.copy()
 
     def __str__(self) -> str:
-        """String representation of the instance."""
+        """String representation of the instance.
+
+        Returns:
+            the hosts of the current instance in ``NodeSet`` notation.
+
+        """
         return str(self._hosts)
 
     def __len__(self) -> int:
