@@ -8,6 +8,9 @@ logs_base_dir: /var/log/spicerack
 # [optional] Hostname and port to use for the special IRC logging using tcpircbot.
 tcpircbot_host: tcpircbot.example.com
 tcpircbot_port: 1234
+# [optional] Whether to enable the IRC notify to users that have not being replied to input requests for a while
+# Has no effect if the above tcpircbot_host and tcpircbot_port are not set.
+user_input_notifications_enabled: false
 # [optional] A directory where there are importable Python modules that can be imported within Spicerack and Cookbooks
 # Relative paths to the user's home are also accepted (e.g. ~/spicerack_external_modules)
 external_modules_dir: /path/to/custom/spicerack/external_modules

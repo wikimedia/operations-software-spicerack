@@ -162,10 +162,10 @@ typehints_use_signature_return = True
 
 # Autodoc settings
 autodoc_default_options = {
-    # Using None as value instead of True to support the version of Sphinx used in Buster
-    "members": None,
+    "members": True,
     "member-order": "groupwise",
     "show-inheritance": None,
+    "special-members": "__iter__,__len__,__str__",
 }
 autoclass_content = "both"
 

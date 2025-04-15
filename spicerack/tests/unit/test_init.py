@@ -33,6 +33,7 @@ from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.exceptions import RunCookbookError, SpicerackError
 from spicerack.ganeti import Ganeti
+from spicerack.hosts import Host
 from spicerack.icinga import IcingaHosts
 from spicerack.ipmi import Ipmi
 from spicerack.k8s import Kubernetes
@@ -198,7 +199,7 @@ def test_spicerack_management_consoles(mocked_netbox, monkeypatch, manufacturer,
     """Should instantiate the instances that require the management password."""
     monkeypatch.setenv("MGMT_PASSWORD", "env_password")
     mocked_netbox.return_value.get_server.return_value.virtual = False
-    mocked_netbox.return_value.api.ipam.ip_addresses.get.return_value = "10.0.0.1/16"
+    mocked_netbox.return_value.api.ipam.ip_addresses.get.return_value.address = "10.0.0.1/16"
     mocked_netbox.return_value.get_server.return_value.as_dict.return_value = {
         "device_type": {"manufacturer": {"slug": manufacturer}}
     }
@@ -250,8 +251,8 @@ def test_spicerack_management_password_cached(monkeypatch):
 @mock.patch("spicerack.Dns", autospec=True)
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
 @mock.patch("pynetbox.api")
-def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_dns, read_write, token):
-    """Test instantiating Netbox abstraction."""
+def test_spicerack_netbox_host(mocked_pynetbox, mocked_remote_query, mocked_dns, read_write, token):
+    """Test instantiating Netbox abstraction and Host abstraction that depends on Netbox."""
     netbox_server = mock.MagicMock(spec_set=RemoteHosts)
     netbox_server.hosts = "netbox-server.example.com"
     mocked_remote_query.return_value = netbox_server
@@ -269,6 +270,7 @@ def test_spicerack_netbox(mocked_pynetbox, mocked_remote_query, mocked_dns, read
     del mocked_pynetbox.return_value.dcim.devices.get.return_value.device_role
     mocked_pynetbox.return_value.dcim.devices.get.return_value.role.slug = "server"
     assert isinstance(spicerack.netbox_server("host1"), NetboxServer)
+    assert isinstance(spicerack.host("host1", netbox_read_write=read_write), Host)
 
 
 @mock.patch("spicerack.remote.Remote.query", autospec=True)

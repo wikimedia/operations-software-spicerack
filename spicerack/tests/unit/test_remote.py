@@ -493,6 +493,13 @@ class TestRemoteHosts:
         ):
             remote.RemoteHosts.results_to_list(results, callback=lambda x: 1 / 0)
 
+    def test_iter(self):
+        """It should iterate the instance yielding instances of the same class with one host."""
+        expected = ["host1", "host2", "host3", "host4", "host5", "host6", "host7", "host8", "host9"]
+        for index, remote_host in enumerate(self.remote_hosts):
+            assert isinstance(remote_host, remote.RemoteHosts)
+            assert str(remote_host) == expected[index]
+
     def test_split_simple(self):
         """It should correctly split a simple remote."""
         results = list(self.remote_hosts.split(2))

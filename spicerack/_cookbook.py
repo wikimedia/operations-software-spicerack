@@ -12,7 +12,7 @@ from typing import Optional, cast
 from wmflib.config import load_yaml_config
 
 from spicerack import Spicerack, SpicerackExtenderBase, _log, _module_api, cookbook
-from spicerack._menu import BaseItem, CookbookItem, MenuError, TreeItem
+from spicerack._menu import BaseItem, CookbookItem, MenuError, TreeItem, get_module_title
 from spicerack.exceptions import SpicerackError
 
 logger = logging.getLogger(__name__)
@@ -262,11 +262,7 @@ class CookbookCollection:
 
         """
         module_name, name = module.__name__.rsplit(".", 1)
-        try:
-            title = module.__title__.splitlines()[0]  # Force it to be one-line only
-        except AttributeError as e:
-            logger.debug("Unable to detect title for module %s: %s", module.__name__, e)
-            title = CookbookItem.fallback_title
+        title = get_module_title(module) or CookbookItem.fallback_title
 
         try:
             owner_team = module.__owner_team__
@@ -536,6 +532,7 @@ def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
         dry_run=args.dry_run,
         host=config.get("tcpircbot_host", None),
         port=int(config.get("tcpircbot_port", 0)),
+        notify_logger_enabled=config.get("user_input_notifications_enabled", False),
     )
 
     logger.debug("Executing cookbook %s with args: %s", args.cookbook, args.cookbook_args)

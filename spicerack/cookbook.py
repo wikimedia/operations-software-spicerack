@@ -195,7 +195,7 @@ class CookbookBase(metaclass=ABCMeta):
                 "--reason",
                 required=self.argument_reason_required,
                 type=reason_type,
-                help="Administrative Reason.",
+                help="Administrative Reason. The current username and originating host are automatically added.",
             )
 
         return parser

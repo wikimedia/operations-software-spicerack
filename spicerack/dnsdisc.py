@@ -297,28 +297,33 @@ class Discovery:
         ips_by_ns: dict[str, Union[IPv4Address, IPv6Address]] = {}
         if record not in self._records:
             raise DiscoveryError(f"Record '{record}' not found")
+
         # Craft a query message
-        record_name = dns.name.from_text(f"{record}.discovery.wmnet")
-        rdtype = dns.rdatatype.from_text("A")
-        ecs_option_client_ip = dns.edns.ECSOption(str(client_ip))
-        query_msg = dns.message.make_query(record_name, rdtype)
-        query_msg.use_edns(options=[ecs_option_client_ip])
+        record_name = f"{record}.discovery.wmnet"
+        ecs_option = dns.edns.ECSOption(str(client_ip))
+        rdata_a = dns.rdatatype.from_text("A")  # TODO: replace with dns.rdatatype.A on v2.3.0
+        query = dns.message.make_query(record_name, rdata_a)
+        query.use_edns(options=[ecs_option])
 
         for nameserver, dns_resolver in self._resolvers.items():
             # Make the query. We catch generic exceptions as
             # dns.query.udp can raise many exceptions.
             try:
                 query_response, _ = dns.query.udp_with_fallback(
-                    query_msg, dns_resolver.nameservers[0], port=dns_resolver.port
+                    query, dns_resolver.nameservers[0], port=dns_resolver.port
                 )
             except Exception as exc:
                 raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}") from exc
             # Build an Answer instance as a Stub Resolver would
             try:
-                response = resolver.Answer(record_name, rdtype, dns.rdataclass.from_text("IN"), query_response)
-                # If no IN record was present in the response, the constructor raises an exception
-                # so we don't need to check for the presence of at least one RRset in the Answer object.
-                ips_by_ns[nameserver] = ip_address(response[0].address)
+                # Pick the first IN A response or raises a StopIteration if there is none
+                response_address = next(
+                    item.address
+                    for answer in query_response.answer
+                    if answer.rdtype == rdata_a and answer.rdclass == dns.rdatatype.from_text("A")
+                    for item in answer
+                )
+                ips_by_ns[nameserver] = ip_address(response_address)
             except (DNSException, IndexError, StopIteration) as exc:
                 raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}: {exc}") from exc
         return ips_by_ns

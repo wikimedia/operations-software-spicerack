@@ -1,5 +1,4 @@
 """Group3 Invalid syntax."""
-__title__ = __doc__
 
 
 def run(args, spicerack):  # pylint: disable=unused-argument

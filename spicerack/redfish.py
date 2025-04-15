@@ -160,7 +160,12 @@ class Redfish:
         self._updateservice_info: dict = {}
 
     def __str__(self) -> str:
-        """String representation of the instance."""
+        """String representation of the instance.
+
+        Returns:
+            the username, hostname and IP of the Redfish connection.
+
+        """
         return f"{self._username}@{self._hostname} ({self._interface.ip})"
 
     @property

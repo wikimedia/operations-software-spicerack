@@ -4,6 +4,7 @@ Python API
 Spicerack Python API autodoc.
 
 .. automodule:: spicerack
+   :special-members: __getattr__
 
 .. autodata:: __version__
 
@@ -27,6 +28,7 @@ Spicerack Python API autodoc.
    spicerack.elasticsearch_cluster
    spicerack.exceptions
    spicerack.ganeti
+   spicerack.hosts
    spicerack.icinga
    spicerack.interactive
    spicerack.ipmi

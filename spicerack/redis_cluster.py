@@ -183,7 +183,7 @@ class RedisInstance:
         """String representation of the instance.
 
         Returns:
-            str: the host or IP and port of the instance.
+            the host or IP and port of the instance, colon-separated.
 
         """
         return f"{self.host}:{self.port}"

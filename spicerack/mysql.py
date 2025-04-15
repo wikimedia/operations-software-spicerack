@@ -198,7 +198,7 @@ class Instance:
         """Return a string representation of the instance.
 
         Returns:
-            the FQDN and name of the instance, if present.
+            the FQDN and name of the instance, when present.
 
         """
         name = self.name if self.name else "single-instance"
@@ -732,6 +732,28 @@ class Instance:
 
 class MysqlRemoteHosts(RemoteHostsAdapter):
     """Custom RemoteHosts class for executing MySQL queries."""
+
+    def __iter__(self) -> Iterator["MysqlRemoteHosts"]:
+        """Iterate over all remote hosts in this instance.
+
+        Yields:
+            spicerack.mysql.MysqlRemoteHosts: an new instance for each host.
+
+        """
+        yield from self.split(len(self))
+
+    def split(self, n_slices: int) -> Iterator["MysqlRemoteHosts"]:
+        """Split the current MySQL remote hosts instance into ``n_slices`` instances.
+
+        Arguments:
+            n_slices: the number of slices to slice the MySQL remote hosts into.
+
+        Yields:
+            spicerack.mysql.MysqlRemoteHosts: the instances for the subset of nodes.
+
+        """
+        for remote_hosts in self.remote_hosts.split(n_slices):
+            yield MysqlRemoteHosts(remote_hosts)
 
     # TODO merge this method with Instance.run_query()
     def run_query(self, query: str, database: str = "", **kwargs: Any) -> Iterator[tuple[NodeSet, MsgTreeElem]]:

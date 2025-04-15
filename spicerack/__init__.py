@@ -33,6 +33,7 @@ from spicerack.dnsdisc import Discovery
 from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
 from spicerack.exceptions import RunCookbookError, SpicerackError
 from spicerack.ganeti import Ganeti
+from spicerack.hosts import Host
 from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
 from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
@@ -366,6 +367,24 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         return get_lock_instance(
             config_file=self._etcd_config, prefix=COOKBOOKS_CUSTOM_PREFIX, owner=self.owner, dry_run=self._dry_run
         )
+
+    def host(self, name: str, *, netbox_read_write: bool = False) -> Host:
+        """Get a Host instance that represents a single physical server or virtual machine.
+
+        It exposes a series of accessors like Spicerack but tailored for a single host.
+
+        Arguments:
+            name: the short hostname of the host as present in Netbox.
+            netbox_read_write: if the Netbox token used should allow read-write operations or not.
+
+        Returns:
+            the Host instance.
+
+        Raises:
+            spicerack.hosts.HostError: if unable to instantiate the Host instance.
+
+        """
+        return Host(name, self, netbox_read_write=netbox_read_write)
 
     def remote(self, installer: bool = False) -> Remote:
         """Get a Remote instance.
@@ -735,7 +754,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             redfish_class = RedfishSupermicro
         else:
             raise SpicerackError(f"The manufacturer {manufacturer} set in Netbox for {hostname} is not supported.")
-        return redfish_class(hostname, ip_interface(netbox_ip), username, password, dry_run=self._dry_run)
+        return redfish_class(hostname, ip_interface(netbox_ip.address), username, password, dry_run=self._dry_run)
 
     def alertmanager_hosts(
         self, target_hosts: TypeHosts, *, instance_name: str = "", verbatim_hosts: bool = False

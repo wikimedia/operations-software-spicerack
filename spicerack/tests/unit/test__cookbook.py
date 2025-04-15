@@ -9,7 +9,7 @@ import pytest
 
 from spicerack import Spicerack, _cookbook, _menu, cookbook
 from spicerack.tests import SPICERACK_TEST_PARAMS, get_fixture_path
-from spicerack.tests.unit.test__log import _reset_logging_module
+from spicerack.tests.unit.test__log import reset_logging_module
 
 COOKBOOKS_BASE_PATH = Path("spicerack/tests/fixtures/cookbook")
 COOKBOOKS_BASE_PATHS = [COOKBOOKS_BASE_PATH]
@@ -76,10 +76,10 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   `-- group1.cookbook1: Group1 Cookbook1. [unowned]
 |-- group2: -
 |   |-- group2.cookbook2: Group2 Cookbook2. [team2]
-|   |-- group2.subgroup1: -
+|   |-- group2.subgroup1: Group2 Subgroup1 Test Cookbooks.
 |   |   `-- group2.subgroup1.cookbook3: Group2 Subgroup1 Cookbook3. [team9]
 |   `-- group2.zcookbook4: UNKNOWN (unable to detect title) [team2]
-|-- group3: -
+|-- group3: Group3 Test Cookbooks.
 |   |-- group3.argparse_ok: Group3 argparse_ok. [team1]
 |   |-- group3.argument_parser_raise_system_exit: Group3 argument_parser() raise SystemExit. [team3]
 |   |-- group3.get_argument_parser_raise: Group3 get argument_parser() raise. [team3]
@@ -90,7 +90,7 @@ LIST_COOKBOOKS_ALL_VERBOSE = """cookbooks
 |   |-- group3.raise_system_exit_0: Group3 Raise SystemExit(0). [team3]
 |   |-- group3.raise_system_exit_9: Group3 Raise SystemExit(9). [team3]
 |   |-- group3.raise_system_exit_str: Group3 Raise SystemExit('message'). [team3]
-|   `-- group3.subgroup3: -
+|   `-- group3.subgroup3: Group3 Subgroup3 Test Cookbooks.
 |       `-- group3.subgroup3.cookbook4: Group3 Subgroup3 Cookbook4. [team9]
 |-- multiple.CookbookA: Multiple cookbook classes. [team1]
 |-- multiple.CookbookB: Multiple cookbook classes. [team2]
@@ -121,7 +121,7 @@ COOKBOOKS_MENU_TTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
-[0/11] group3: -
+[0/11] group3: Group3 Test Cookbooks.
 [NOTRUN] multiple.CookbookA: Multiple cookbook classes.
 [NOTRUN] multiple.CookbookB: Multiple cookbook classes.
 [NOTRUN] root: Top level cookbook.
@@ -133,7 +133,7 @@ COOKBOOKS_MENU_NOTTY = """#--- cookbooks args=[] ---#
 [NOTRUN] cookbook: Top level class cookbook.
 [0/1] group1: Group1 Test Cookbooks.
 [0/3] group2: -
-[0/11] group3: -
+[0/11] group3: Group3 Test Cookbooks.
 [NOTRUN] multiple.CookbookA: Multiple cookbook classes.
 [NOTRUN] multiple.CookbookB: Multiple cookbook classes.
 [NOTRUN] root: Top level cookbook.
@@ -148,7 +148,7 @@ h - Help
 """
 COOKBOOKS_GROUP2_MENU = """#--- group2 args=[] ---#
 [NOTRUN] cookbook2: Group2 Cookbook2.
-[0/1] subgroup1: -
+[0/1] subgroup1: Group2 Subgroup1 Test Cookbooks.
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu
 h - Help
@@ -156,12 +156,12 @@ h - Help
 COOKBOOKS_GROUP2_COOKBOOK2_MENU_RUN = """[{'argument': None, 'k': False}, False, False]
 #--- group2 args=[] ---#
 [PASS] cookbook2: Group2 Cookbook2.
-[0/1] subgroup1: -
+[0/1] subgroup1: Group2 Subgroup1 Test Cookbooks.
 [NOTRUN] zcookbook4: UNKNOWN (unable to detect title)
 b - Back to parent menu
 h - Help
 """
-COOKBOOKS_GROUP2_SUBGROUP1_MENU = """#--- subgroup1 args=[] ---#
+COOKBOOKS_GROUP2_SUBGROUP1_MENU = """#--- Group2 Subgroup1 Test Cookbooks. args=[] ---#
 [NOTRUN] cookbook3: Group2 Subgroup1 Cookbook3.
 b - Back to parent menu
 h - Help
@@ -196,91 +196,87 @@ def test_parse_args_list():
     assert args.cookbook == ""
 
 
-def test_main_wrong_instance_config(capsys):
-    """If the configuration file has invalid instance_params it should print an error and exit."""
-    ret = _cookbook.main(["-c", str(get_fixture_path("config_wrong_overrides.yaml")), "cookbook"])
-    _, err = capsys.readouterr()
-    assert ret == 1
-    assert "Unable to instantiate Spicerack, check your configuration" in err
-    _reset_logging_module()
+class TestMain:
+    """Test class for the main function."""
 
+    def teardown_method(self):
+        """Tear down the test setting resetting the logging module."""
+        reset_logging_module()
 
-@pytest.mark.parametrize("confirm", (True, False))
-@pytest.mark.parametrize("raises", (True, False))
-def test_main_call_another_cookbook_ok(raises, confirm, capsys, caplog):
-    """It should execute the cookbook that calls another cookbook."""
-    args = ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.example"]
-    if raises:
-        args.append("--raises")
-    if confirm:
-        args.append("--confirm")
+    def test_main_wrong_instance_config(self, capsys):
+        """If the configuration file has invalid instance_params it should print an error and exit."""
+        ret = _cookbook.main(["-c", str(get_fixture_path("config_wrong_overrides.yaml")), "cookbook"])
+        _, err = capsys.readouterr()
+        assert ret == 1
+        assert "Unable to instantiate Spicerack, check your configuration" in err
 
-    with caplog.at_level(logging.DEBUG):
-        ret = _cookbook.main(args)
+    @pytest.mark.parametrize("confirm", (True, False))
+    @pytest.mark.parametrize("raises", (True, False))
+    def test_main_call_another_cookbook_ok(self, raises, confirm, capsys, caplog):
+        """It should execute the cookbook that calls another cookbook."""
+        args = ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.example"]
+        if raises:
+            args.append("--raises")
+        if confirm:
+            args.append("--confirm")
 
-    _, err = capsys.readouterr()
-    assert ret == 0
-    expected = [
-        "START - Cookbook class_api.call_another_cookbook",
-        "START - Cookbook class_api.example",
-        "END (PASS) - Cookbook class_api.example (exit_code=0)",
-        "END (PASS) - Cookbook class_api.call_another_cookbook (exit_code=0)",
-    ]
-    for line in expected:
-        assert line in err
+        with caplog.at_level(logging.DEBUG):
+            ret = _cookbook.main(args)
 
-    assert "__COOKBOOK_STATS__:name=class_api.call_another_cookbook,exit_code=0,duration=" in caplog.text
-    assert "__COOKBOOK_STATS__:name=class_api.example,exit_code=0,duration=" in caplog.text
-    _reset_logging_module()
+        _, err = capsys.readouterr()
+        assert ret == 0
+        expected = [
+            "START - Cookbook class_api.call_another_cookbook",
+            "START - Cookbook class_api.example",
+            "END (PASS) - Cookbook class_api.example (exit_code=0)",
+            "END (PASS) - Cookbook class_api.call_another_cookbook (exit_code=0)",
+        ]
+        for line in expected:
+            assert line in err
 
+        assert "__COOKBOOK_STATS__:name=class_api.call_another_cookbook,exit_code=0,duration=" in caplog.text
+        assert "__COOKBOOK_STATS__:name=class_api.example,exit_code=0,duration=" in caplog.text
 
-def test_main_call_another_cookbook_not_found(capsys):
-    """It should fail to call another cookbook if it doesn't exists."""
-    ret = _cookbook.main(
-        ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.not_existent"]
-    )
-    _, err = capsys.readouterr()
-    assert ret == cookbook.EXCEPTION_RETCODE
-    assert "SpicerackError: Unable to find cookbook class_api.not_existent" in err
-    assert "END (FAIL) - Cookbook class_api.call_another_cookbook (exit_code=99)" in err
-    _reset_logging_module()
+    def test_main_call_another_cookbook_not_found(self, capsys):
+        """It should fail to call another cookbook if it doesn't exists."""
+        ret = _cookbook.main(
+            ["-c", str(get_fixture_path("config.yaml")), "class_api.call_another_cookbook", "class_api.not_existent"]
+        )
+        _, err = capsys.readouterr()
+        assert ret == cookbook.EXCEPTION_RETCODE
+        assert "SpicerackError: Unable to find cookbook class_api.not_existent" in err
+        assert "END (FAIL) - Cookbook class_api.call_another_cookbook (exit_code=99)" in err
 
+    def test_main_use_external_modules_and_extender_ok(self, capsys):
+        """It should inject the external module into the path and execute the cookbook with the extender."""
+        ret = _cookbook.main(
+            ["-c", str(get_fixture_path("config_external_modules.yaml")), "class_api.use_external_modules"]
+        )
+        _, err = capsys.readouterr()
+        assert ret == 0
+        expected = [
+            "START - Cookbook class_api.use_external_modules",
+            "Extender is a cool feature!",
+            "END (PASS) - Cookbook class_api.use_external_modules (exit_code=0)",
+        ]
+        for line in expected:
+            assert line in err
 
-def test_main_use_external_modules_and_extender_ok(capsys):
-    """It should inject the external module into the path and execute the cookbook with the extender."""
-    ret = _cookbook.main(
-        ["-c", str(get_fixture_path("config_external_modules.yaml")), "class_api.use_external_modules"]
-    )
-    _, err = capsys.readouterr()
-    assert ret == 0
-    expected = [
-        "START - Cookbook class_api.use_external_modules",
-        "Extender is a cool feature!",
-        "END (PASS) - Cookbook class_api.use_external_modules (exit_code=0)",
-    ]
-    for line in expected:
-        assert line in err
-    _reset_logging_module()
+    def test_main_use_external_modules_and_extender_raise(self, capsys):
+        """It should exit with 1 if unable to load the extender class."""
+        ret = _cookbook.main(
+            ["-c", str(get_fixture_path("config_bad_external_modules.yaml")), "class_api.use_external_modules"]
+        )
+        _, err = capsys.readouterr()
+        assert ret == 1
+        assert "Failed to import the extender_class spicerack_extender.SpicerackBadExtender" in err
 
-
-def test_main_use_external_modules_and_extender_raise(capsys):
-    """It should exit with 1 if unable to load the extender class."""
-    ret = _cookbook.main(
-        ["-c", str(get_fixture_path("config_bad_external_modules.yaml")), "class_api.use_external_modules"]
-    )
-    _, err = capsys.readouterr()
-    assert ret == 1
-    assert "Failed to import the extender_class spicerack_extender.SpicerackBadExtender" in err
-    _reset_logging_module()
-
-
-def test_main_empty_cookbooks_base_dirs_raise(capsys):
-    """It should exit with 1 if there are no cookbooks paths specified in cookbooks_base_dirs."""
-    ret = _cookbook.main(["-c", str(get_fixture_path("config_empty_base_dirs.yaml")), "-l"])
-    _, err = capsys.readouterr()
-    assert ret == 1
-    assert "No cookbooks paths are specified in the `cookbooks_base_dirs` key of the configuration file." in err
-    _reset_logging_module()
+    def test_main_empty_cookbooks_base_dirs_raise(self, capsys):
+        """It should exit with 1 if there are no cookbooks paths specified in cookbooks_base_dirs."""
+        ret = _cookbook.main(["-c", str(get_fixture_path("config_empty_base_dirs.yaml")), "-l"])
+        _, err = capsys.readouterr()
+        assert ret == 1
+        assert "No cookbooks paths are specified in the `cookbooks_base_dirs` key of the configuration file." in err
 
 
 class TestCookbookCollection:
@@ -294,7 +290,7 @@ class TestCookbookCollection:
 
     def teardown_method(self):
         """Tear down the test setting resetting the logging module."""
-        _reset_logging_module()
+        reset_logging_module()
 
     @pytest.mark.parametrize(
         "path_filter, verbose, expected",
@@ -375,7 +371,7 @@ class TestCookbookCollection:
             ("group3.argparse_ok", [], ["START - Cookbook", "END ("], 0, ["-h"]),
             (
                 "group3.invalid_syntax",
-                ["invalid syntax (invalid_syntax.py, line 7)"],
+                ["invalid syntax (invalid_syntax.py, line 6)"],
                 [],
                 cookbook.NOT_FOUND_RETCODE,
                 [],
@@ -632,7 +628,7 @@ class TestCookbookCollection:
         assert ret == 0
         assert out == LIST_COOKBOOKS_ALL.format(external_cookbooks="")
         lines = [
-            "Failed to import module cookbooks.group3.invalid_syntax: invalid syntax (invalid_syntax.py, line 7)",
+            "Failed to import module cookbooks.group3.invalid_syntax: invalid syntax (invalid_syntax.py, line 6)",
             "Failed to import module cookbooks.group3.invalid_subgroup: invalid syntax (__init__.py, line 2)",
         ]
         for line in lines:

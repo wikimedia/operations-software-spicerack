@@ -137,7 +137,12 @@ class ServiceDiscovery(abc.Iterable):
         self.records = records
 
     def __iter__(self) -> Iterator[ServiceDiscoveryRecord]:
-        """Iterate over the DNS Discovery records in the instance."""
+        """Iterate over the DNS Discovery records in the instance.
+
+        Yields:
+            the records related to this discovery service.
+
+        """
         return iter(self.records)
 
     def __len__(self) -> int:
@@ -561,7 +566,12 @@ class Catalog:
         self._dry_run = dry_run
 
     def __iter__(self) -> Iterator[Service]:
-        """Iterate over the catalog services."""
+        """Iterate over the catalog services.
+
+        Yields:
+            the service instances.
+
+        """
         return (self.get(name) for name in self._catalog)
 
     def __len__(self) -> int:

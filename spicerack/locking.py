@@ -607,7 +607,7 @@ class ConcurrentLock:
         """String representation of the concurrent lock.
 
         Returns:
-            the string representation.
+            the dictionary representation of the lock object as string.
 
         """
         return str(self.to_dict())
