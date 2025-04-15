@@ -1,3 +1,9 @@
+spicerack (10.1.0-1) unstable; urgency=medium
+
+  * v10.1.0 upstream release.
+
+ -- Riccardo Coccioli <rcoccioli@wikimedia.org>  Tue, 15 Apr 2025 20:00:42 -0000
+
 spicerack (10.0.0-1) unstable; urgency=medium
 
   * v10.0.0 upstream release.
