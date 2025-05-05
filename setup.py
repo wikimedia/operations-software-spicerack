@@ -14,7 +14,8 @@ INSTALL_REQUIRES = [
     "elasticsearch>=5.0.0,<7.15.0",
     "gitpython>=3.1.14",
     "kafka-python~=2.0.1",
-    "kubernetes==12.0.*",  # frozen to the version available on debian bullseye
+    "kubernetes==12.0.*; python_version=='3.9'",  # frozen to the version available on debian bullseye
+    "kubernetes==22.6.*; python_version>'3.9'",  # frozen to the version available on debian bookworm
     "packaging",
     "pymysql>=0.9.3",
     "pynetbox~=7.4",
