@@ -20,7 +20,8 @@ INSTALL_REQUIRES = [
     "pymysql>=0.9.3",
     "pynetbox~=7.4",
     "python-etcd~=0.4.5",
-    "redis>=3.5.3,<=4.1.3",
+    "redis>=3.5.3,<=4.1.3; python_version=='3.9'",
+    "redis==4.3.*; python_version>'3.9'",
     "requests>=2.25.0",
     "wmflib",
 ]
