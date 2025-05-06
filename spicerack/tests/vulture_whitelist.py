@@ -74,5 +74,6 @@ whitelist_tests = Whitelist()
 whitelist_tests.unit.test_confctl.TestConfctl.setup_method.backend
 whitelist_tests.unit.test_dnsdisc.MockDnsResult.canonical_name
 whitelist_tests.unit.test_dnsdisc.MockDnsResult.minimum_ttl
+whitelist_tests.unit.test_elasticsearch_cluster.pytestmark
 whitelist_tests.unit.test_netbox._netbox_host
 whitelist_tests.unit.test_netbox._netbox_virtual_machine
