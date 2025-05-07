@@ -1,6 +1,30 @@
 Spicerack Changelog
 -------------------
 
+`v10.2.0`_ (2025-05-07)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Temporary API breaking changes
+""""""""""""""""""""""""""""""
+
+* elasticsearch: temporarily remove support for elasticsearch on Debian Bookworm and Python versions 3.10+.
+  As the current version of the elasticsearch module in not compatible with the upstream newer versions of the
+  elasticsearch libraries, temporarily removing its support from spicerack when on newer versions of Debian or
+  Python. Accessing the ``elasticsearch_cluster()`` Spicerack accessor on Debian Bookworm if installed via deb
+  package or Python 3.10+ if installed via pip will raise an exception. On Debian Bullseye (deb) and Python 3.9 (pip)
+  nothing changes (`T390860`_).
+
+Bug fixes
+"""""""""
+
+* k8s: to support future upgrades allow both ``V1beta1Eviction`` and ``V1Eviction`` imports from the kubernetes module.
+
+Miscellanea
+"""""""""""
+
+* setup.py: update kubernetes and redis dependencies to support also bookworm.
+* doc: expand logging documentation.
+
 `v10.1.0`_ (2025-04-15)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3431,6 +3455,7 @@ New features
 .. _`T372485`: https://phabricator.wikimedia.org/T372485
 .. _`T373794`: https://phabricator.wikimedia.org/T373794
 .. _`T379258`: https://phabricator.wikimedia.org/T379258
+.. _`T390860`: https://phabricator.wikimedia.org/T390860
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3572,3 +3597,4 @@ New features
 .. _`v9.1.3`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v9.1.3
 .. _`v10.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.0.0
 .. _`v10.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.1.0
+.. _`v10.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.2.0

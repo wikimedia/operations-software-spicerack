@@ -1,5 +1,6 @@
 """Spicerack package."""
 
+import sys
 from collections.abc import Callable, Sequence
 from ipaddress import ip_interface
 from logging import Logger, getLogger
@@ -30,7 +31,6 @@ from spicerack.dbctl import Dbctl
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
-from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
 from spicerack.exceptions import RunCookbookError, SpicerackError
 from spicerack.ganeti import Ganeti
 from spicerack.hosts import Host
@@ -53,6 +53,18 @@ from spicerack.reposync import RepoSync
 from spicerack.service import Catalog
 from spicerack.toolforge.etcdctl import EtcdctlController
 from spicerack.typing import TypeHosts
+
+try:
+    from spicerack.elasticsearch_cluster import ElasticsearchClusters, create_elasticsearch_clusters
+except ImportError:  # For when elasticsearch is not supported
+
+    class ElasticsearchClusters:  # type: ignore  # https://github.com/python/mypy/issues/1153
+        """Dummy class for the type."""
+
+    def create_elasticsearch_clusters(*args: Any, **kwargs: Any) -> ElasticsearchClusters:  # type: ignore
+        """Dummy function to mimic the real one."""
+        return ElasticsearchClusters(*args, **kwargs)
+
 
 if TYPE_CHECKING:  # Imported only during type checking, prevents cyclic imports at runtime
     from spicerack._menu import BaseItem  # pragma: no cover
@@ -520,6 +532,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             write_queue_datacenters: Sequence of which core DCs to query write queues for.
 
         """
+        if sys.version_info >= (3, 10):
+            raise SpicerackError("The elasticsearch module is not yet supported on bookworm, use a bullseye host")
+
         configuration = load_yaml_config(self._spicerack_config_dir / "elasticsearch" / "config.yaml")
 
         return create_elasticsearch_clusters(

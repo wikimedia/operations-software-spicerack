@@ -10,6 +10,11 @@ import kubernetes  # mypy: no-type
 from kubernetes import client, config  # mypy: no-type
 from kubernetes.client.models import V1Taint
 
+try:
+    from kubernetes.client import V1beta1Eviction as V1Eviction
+except ImportError:
+    from kubernetes.client import V1Eviction
+
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 
@@ -461,7 +466,7 @@ class KubernetesPod:
             logger.info("Would have evicted %s", self)
             return
         logger.debug("Evicting pod %s", self)
-        body = kubernetes.client.V1beta1Eviction(metadata=client.V1ObjectMeta(name=self.name, namespace=self.namespace))
+        body = V1Eviction(metadata=client.V1ObjectMeta(name=self.name, namespace=self.namespace))
 
         @retry(
             tries=5,

@@ -9,7 +9,12 @@ from math import floor
 from random import shuffle
 from typing import Optional
 
-from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
+from elasticsearch import (  # pylint: disable=no-name-in-module
+    ConflictError,
+    Elasticsearch,
+    RequestError,
+    TransportError,
+)
 from urllib3.exceptions import HTTPError
 from wmflib.prometheus import Prometheus
 

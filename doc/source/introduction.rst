@@ -205,9 +205,11 @@ A special logger to send notification to the ``#wikimedia-operations`` IRC chann
 available through the ``spicerack`` argument, passed to the cookbook's ``run()`` function for the module API or
 available in the cookbook class as ``self.spicerack`` for the class API, in its ``sal_logger`` property. An additional
 ``irc_logger`` logger is also available to just write to the ``#wikimedia-operations`` IRC channel.
+The wmflib's :py:class:`wmflib.interactive.notify_logger` is configured to notify users on the
+``#wikimedia-operations`` IRC channel based on the Spicerack's configuration flag ``user_input_notifications_enabled``.
 
 Both IRC loggers log to both IRC and the nomal log outputs of Spicerack. If the dry-run mode is set it does not log
-to IRC.
+to IRC nor notify the user when awaiting for input.
 
 Log files
 """""""""
@@ -226,6 +228,12 @@ path ones::
     /var/log/spicerack/foo/bar.log  # with INFO and higher log levels
     /var/log/spicerack/foo/bar-extended.log  # with all log levels
 
+When using :py:meth:`spicerack.Spicerack.run_cookbook` to call other cookbooks from within a cookbook, all logs will
+go to the parent cookbook log files.
+
+Log files are automatically rotated when they reach 10 MB in size and up to 500 rotated files are kept for auditing
+purposes.
+
 Example
 """""""
 
@@ -241,6 +249,8 @@ Example
 
    def run(args, spicerack):
        spicerack.irc_logger.info('message')  # This sends a message to the #wikimedia-operation IRC channel with:
+                                             # user@host message
+       spicerack.sal_logger.info('message')  # This sends a message to the #wikimedia-operation IRC channel with:
                                              # !log user@host message
 
 Spicerack library

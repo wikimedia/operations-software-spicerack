@@ -18,7 +18,7 @@ from wmflib.interactive import AbortError
 from wmflib.phabricator import Phabricator
 from wmflib.prometheus import Prometheus, Thanos
 
-from spicerack import Spicerack
+from spicerack import ElasticsearchClusters, Spicerack
 from spicerack._cookbook import get_cookbook_callback
 from spicerack.administrative import Reason
 from spicerack.alerting import AlertingHosts
@@ -30,7 +30,6 @@ from spicerack.dbctl import Dbctl
 from spicerack.debmonitor import Debmonitor
 from spicerack.dhcp import DHCP
 from spicerack.dnsdisc import Discovery
-from spicerack.elasticsearch_cluster import ElasticsearchClusters
 from spicerack.exceptions import RunCookbookError, SpicerackError
 from spicerack.ganeti import Ganeti
 from spicerack.hosts import Host
@@ -89,10 +88,11 @@ def test_spicerack(mocked_dns_resolver, monkeypatch):
     assert isinstance(spicerack.mediawiki(), MediaWiki)
     assert isinstance(spicerack.mysql(), Mysql)
     assert isinstance(spicerack.redis_cluster("cluster"), RedisCluster)
-    assert isinstance(
-        spicerack.elasticsearch_clusters("search_eqiad", ("some_core_dc",)),
-        ElasticsearchClusters,
-    )
+    if sys.version_info < (3, 10):
+        assert isinstance(
+            spicerack.elasticsearch_clusters("search_eqiad", ("some_core_dc",)),
+            ElasticsearchClusters,
+        )
     assert isinstance(spicerack.admin_reason("Reason message", task_id="T12345"), Reason)
     assert isinstance(spicerack.puppet(mock.MagicMock(spec_set=RemoteHosts)), PuppetHosts)
     assert isinstance(

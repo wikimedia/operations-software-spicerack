@@ -11,15 +11,17 @@ INSTALL_REQUIRES = [
     "cumin>=3.0.2",
     "dnspython~=2.0.0; python_version=='3.9'",
     "dnspython~=2.3.0; python_version>'3.9'",
-    "elasticsearch>=5.0.0,<7.15.0",
+    "elasticsearch>=5.0.0,<7.15.0; python_version=='3.9'",
     "gitpython>=3.1.14",
     "kafka-python~=2.0.1",
-    "kubernetes==12.0.*",  # frozen to the version available on debian bullseye
+    "kubernetes==12.0.*; python_version=='3.9'",  # frozen to the version available on debian bullseye
+    "kubernetes==22.6.*; python_version>'3.9'",  # frozen to the version available on debian bookworm
     "packaging",
     "pymysql>=0.9.3",
     "pynetbox~=7.4",
     "python-etcd~=0.4.5",
-    "redis>=3.5.3,<=4.1.3",
+    "redis>=3.5.3,<=4.1.3; python_version=='3.9'",
+    "redis==4.3.*; python_version>'3.9'",
     "requests>=2.25.0",
     "wmflib",
 ]

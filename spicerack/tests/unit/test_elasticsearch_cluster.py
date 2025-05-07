@@ -1,20 +1,28 @@
 """ElasticsearchCluster module test."""
 
 import itertools
+import sys
 from datetime import datetime, timedelta
 from unittest import mock
 
 import pytest
-from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
 from wmflib.config import load_yaml_config
 from wmflib.prometheus import Prometheus
 
-from spicerack import elasticsearch_cluster as ec
 from spicerack.administrative import Reason
-from spicerack.elasticsearch_cluster import NodesGroup
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import get_fixture_path
 
+try:
+    from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
+
+    from spicerack import elasticsearch_cluster as ec  # pylint: disable=ungrouped-imports
+    from spicerack.elasticsearch_cluster import NodesGroup
+except ImportError:
+    pass
+
+
+pytestmark = pytest.mark.skipif(sys.version_info >= (3, 10), reason="elasticsearch not supported on 3.10+")
 ELASTICSEARCH_CONFIG = load_yaml_config(get_fixture_path("elasticsearch", "config.yaml"))
 
 
