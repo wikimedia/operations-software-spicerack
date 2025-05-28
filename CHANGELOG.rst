@@ -1,6 +1,25 @@
 Spicerack Changelog
 -------------------
 
+`v11.0.0`_ (2025-05-28)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+API breaking changes
+""""""""""""""""""""
+
+* ganeti: when creating new VMs make the storage type configurable. It breaks compatibility for the
+  ``spicerack.ganeti.GntInstance.add()`` method.
+
+Minor improvements
+""""""""""""""""""
+
+* icinga: allow to skip downtimed services in ``wait_for_optimal()``.
+
+Miscellanea
+"""""""""""
+
+* .wmfconfig: build spicerack also for Debian Bookworm.
+
 `v10.2.0`_ (2025-05-07)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3598,3 +3617,4 @@ New features
 .. _`v10.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.0.0
 .. _`v10.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.1.0
 .. _`v10.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.2.0
+.. _`v11.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.0.0
