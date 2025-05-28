@@ -20,6 +20,8 @@ RAPI_URL_FORMAT: str = "https://{cluster}:5080"
 """The template string to construct the Ganeti RAPI URL."""
 INSTANCE_LINKS: tuple[str, ...] = ("public", "private", "analytics", "sandbox")
 """The list of possible instance link types."""
+STORAGE_TYPES = ("drbd", "plain")
+"""The possible values for the instance storage type."""
 
 
 class GanetiError(SpicerackError):
@@ -236,13 +238,14 @@ class GntInstance:
         )
         self._master.run_sync(f"gnt-instance remove --shutdown-timeout={shutdown_timeout} --force {self._instance}")
 
-    def add(
+    def add(  # pylint: disable=too-many-arguments
         self,
         *,
         group: str,
         vcpus: int,
         memory: Union[int, float],
         disk: int,
+        storage_type: str,
         net: Union[str, IPv4Address],
         ip6: IPv6Address,
     ) -> None:
@@ -253,6 +256,7 @@ class GntInstance:
             vcpus: the number of virtual CPUs to assign to the instance.
             memory: the amount of RAM to assign to the instance in gigabytes.
             disk: the amount of disk to assign to the instance in gigabytes.
+            storage_type: the storage type for the VM (one of :py:const:`spicerack.ganeti.STORAGE_TYPES`).
             net: either the IP or the type of network link to use (from :py:const:`spicerack.ganeti.INSTANCE_LINKS`).
             ip6: the IPv6 assigned to the VM.
 
@@ -277,6 +281,9 @@ class GntInstance:
         if not isinstance(ip6, IPv6Address):
             raise GanetiError(f"'{ip6}' must be an IPv6Address object.")
 
+        if storage_type not in STORAGE_TYPES:
+            raise GanetiError(f"Invalid storage type '{storage_type}', expected one of: {STORAGE_TYPES}.")
+
         local_vars = locals()
         for var_label in ("vcpus", "memory", "disk"):
             if local_vars[var_label] <= 0:
@@ -287,7 +294,7 @@ class GntInstance:
         memory_mb = int(memory * 1024)
         command = (
             "gnt-instance add"
-            " -t drbd"
+            f" -t {storage_type}"
             " -I hail"
             f" --net {net_option}"
             f" --hypervisor-parameters=kvm:boot_order=network{kvm_extra}"
