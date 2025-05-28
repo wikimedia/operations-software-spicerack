@@ -146,6 +146,11 @@ class HostsStatus(dict):
         """Return a list of services which have failed, but are acknowledged in Icinga for each host."""
         return {status.name: status.acked_services for status in self.values() if not status.optimal}
 
+    @property
+    def downtimed_services(self) -> dict[str, list[str]]:
+        """Return a list of services which have failed, but are downtimed in Icinga for each host."""
+        return {status.name: status.downtimed_services for status in self.values() if not status.optimal}
+
 
 class ServiceStatus(UserDict):
     """Represent the current status of a service."""
@@ -163,9 +168,15 @@ class ServiceStatus(UserDict):
 
     @property
     def acked(self) -> bool:
-        """Returns :py:data:`True` if the service acknowledged, :py:data:`False` otherwise."""
+        """Returns :py:data:`True` if the service is acknowledged, :py:data:`False` otherwise."""
         is_acked = self.get("status", {}).get("problem_has_been_acknowledged", "0")
         return is_acked == "1"
+
+    @property
+    def downtimed(self) -> bool:
+        """Returns :py:data:`True` if the service is downtimed, :py:data:`False` otherwise."""
+        is_downtimed = self.get("status", {}).get("scheduled_downtime_depth", 0)
+        return is_downtimed > 0
 
 
 class HostStatus:
@@ -224,6 +235,11 @@ class HostStatus:
     def acked_services(self) -> list[str]:
         """Return a list of services which have failed, but are acknowledged in Icinga."""
         return [service["name"] for service in self.services if service.acked]
+
+    @property
+    def downtimed_services(self) -> list[str]:
+        """Return a list of services which have failed, but are downtimed in Icinga."""
+        return [service["name"] for service in self.services if service.downtimed]
 
 
 class IcingaHosts:
@@ -594,7 +610,7 @@ class IcingaHosts:
 
         return HostsStatus({hostname: HostStatus(**host_status) for hostname, host_status in status.items()})
 
-    def wait_for_optimal(self, *, skip_acked: bool = False) -> None:
+    def wait_for_optimal(self, *, skip_acked: bool = False, skip_downtimed: bool = False) -> None:
         """Waits for an icinga optimal status, else raises an exception.
 
         This function will first instruct icinga to recheck all failed services and then wait until all services are
@@ -602,6 +618,7 @@ class IcingaHosts:
 
         Arguments:
             skip_acked: ignore any acknowledge alerts when determining if a device is in optimal state.
+            skip_downtimed: if a service is downtimed, skip checking its state.
 
         Raises:
             IcingaError: if the status is not optimal.
@@ -621,16 +638,20 @@ class IcingaHosts:
             if status.optimal:
                 return
 
-            if skip_acked:
+            if skip_acked or skip_downtimed:
                 # Loop over each host and it's failed services.
-                # Find any services which has not been acknowledged,
-                # that is the "diff". If unacknowledge services are
-                # found, add them to the new failed dict.
+                # Find any services which has not been acknowledged or downtimed,
+                # that is the "diff".
                 failed: dict[str, list[str]] = {}
                 for k, v in status.failed_services.items():
-                    diff = set(v) - set(status.acked_services[k])
+                    diff = set(v)
+                    if skip_acked:
+                        diff -= set(status.acked_services[k])
+                    if skip_downtimed:
+                        diff -= set(status.downtimed_services[k])
                     if diff:
                         failed[k] = list(diff)
+
             else:
                 failed = status.failed_services
 

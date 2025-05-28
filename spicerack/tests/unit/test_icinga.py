@@ -493,6 +493,51 @@ class TestIcingaHosts:
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     @pytest.mark.parametrize(
+        "skip_downtimed,match",
+        [
+            (False, "Not all services are recovered: host2:check_name1"),
+            (True, None),
+        ],
+    )
+    def test_check_failed_services_downtimed(self, mocked_time, skip_downtimed, match):
+        """Test that situations where only a subset of alerts are downtimed."""
+        with open(get_fixture_path("icinga", "status_with_failed_services_downtimed.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
+
+        status = self.icinga_hosts.get_status()
+        assert len(status.downtimed_services["host2"]) == 2
+
+        if match:
+            with pytest.raises(icinga.IcingaError, match=match):
+                self.icinga_hosts.wait_for_optimal(skip_downtimed=skip_downtimed)
+                assert mocked_time.called
+        else:
+            self.icinga_hosts.wait_for_optimal(skip_downtimed=skip_downtimed)
+            assert not mocked_time.called
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    @pytest.mark.parametrize(
+        "skip_downtimed,match",
+        [
+            (False, "Not all services are recovered: host2:check_name1,check_name2"),
+            (True, "Not all services are recovered: host2:check_name1$"),
+        ],
+    )
+    def test_check_failed_services_partially_downtimed(self, mocked_time, skip_downtimed, match):
+        """Test that situations where only a subset of alerts are downtimed."""
+        with open(get_fixture_path("icinga", "status_with_failed_services_partially_downtimed.json")) as f:
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 40)
+
+        status = self.icinga_hosts.get_status()
+        assert len(status.downtimed_services["host2"]) == 1
+
+        with pytest.raises(icinga.IcingaError, match=match):
+            self.icinga_hosts.wait_for_optimal(skip_downtimed=skip_downtimed)
+
+        assert mocked_time.called
+
+    @mock.patch("wmflib.decorators.time.sleep", return_value=None)
+    @pytest.mark.parametrize(
         "skip_acked,match",
         [
             (False, "Not all services are recovered: host2:check_name1,check_name2"),
