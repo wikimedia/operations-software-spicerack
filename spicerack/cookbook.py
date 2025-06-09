@@ -1,10 +1,11 @@
 """Cookbook module."""
 
 import argparse
-import re
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
+
+from wmflib.phabricator import validate_task_id
 
 from spicerack import Spicerack
 
@@ -135,34 +136,18 @@ class CookbookBase(metaclass=ABCMeta):
         parser = argparse.ArgumentParser(description=self.__doc__, formatter_class=ArgparseFormatter)
 
         if self.argument_task_required is not None:
-
-            def task_id_type(task_id: str) -> str:
-                """Validates that the provided task ID matches a Phabricator task ID format.
-
-                Arguments:
-                    task_id: the task ID provided as argument.
-
-                Returns:
-                    the task ID if valid.
-
-                Raises;
-                    argparse.ArgumentTypeError: if the task ID is not valid.
-
-                """
-                pattern = r"T\d{1,6}$"
-                if re.match(pattern, task_id) is None:
-                    raise argparse.ArgumentTypeError(
-                        f"Invalid Phabricator task ID, expected to match pattern '{pattern}', got '{task_id}'."
-                    )
-
-                return task_id
+            if self.argument_task_required:
+                message = "The Phabricator task ID (e.g. T12345)."
+            else:
+                message = "The Phabricator task ID (e.g. T12345) or empty string to not make any updates."
 
             parser.add_argument(
                 "-t",
                 "--task-id",
                 required=self.argument_task_required,
-                type=task_id_type,
-                help="The Phabricator task ID (e.g. T12345).",
+                default=None if self.argument_task_required else "",
+                type=lambda x: validate_task_id(x, allow_empty_identifiers=not self.argument_task_required),
+                help=message,
             )
 
         if self.argument_reason_required is not None:
