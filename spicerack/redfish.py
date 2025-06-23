@@ -874,9 +874,10 @@ class RedfishDell(Redfish):
     """The boot mode key in the Bios attributes."""
     http_boot_target = "UefiHttp"
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
-
     scp_base_uri: str = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
     """The Dell's SCP push base URI."""
+    idrac_10_min_gen: int = 17
+    """The minimum generation shipped with iDRAC 10."""
 
     def __init__(
         self,
@@ -961,10 +962,15 @@ class RedfishDell(Redfish):
             spicerack.redfish.RedfishTaskNotCompletedError: if unable to fetch the dumped results.
 
         """
-        data = {"ExportFormat": "JSON", "ShareParameters": {"Target": target.value}}
+        data: dict = {"ExportFormat": "JSON", "ShareParameters": {"Target": target.value}}
+        if self.generation >= self.idrac_10_min_gen:
+            # Hardcoded for now because the other possible values (NFS, CIFS, HTTP, HTTPS) requires additional settings
+            data["ShareParameters"]["ShareType"] = "LOCAL"
+
         task_uri = self.submit_task(f"{self.scp_base_uri}.ExportSystemConfiguration", data)
         # Wait before starting to poll for the task, so that a quick task can complete before the first attempt.
         time.sleep(5)
+
         return DellSCP(self.poll_task(task_uri), target, allow_new_attributes=allow_new_attributes)
 
     def scp_push(
@@ -1001,12 +1007,15 @@ class RedfishDell(Redfish):
         else:
             uri = "ImportSystemConfiguration"
 
-        data = {
+        data: dict = {
             "ImportBuffer": json.dumps(scp.config),  # The API requires a JSON-encoded string inside a JSON payload.
             "ShareParameters": {"Target": scp.target.value},
             "HostPowerState": power_state.value,
             "ShutdownType": reboot.value,
         }
+        if self.generation >= self.idrac_10_min_gen:
+            # Hardcoded for now because the other possible values (NFS, CIFS, HTTP, HTTPS) requires additional settings
+            data["ShareParameters"]["ShareType"] = "LOCAL"
 
         task_id = self.submit_task(f"{self.scp_base_uri}.{uri}", data)
 

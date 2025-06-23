@@ -923,10 +923,15 @@ class TestRedfishDell:
 
         assert mocked_sleep.mock_calls == calls
 
+    @pytest.mark.parametrize(
+        "model, expected_params",
+        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": "ALL", "ShareType": "LOCAL"})),
+    )
     @pytest.mark.parametrize("allow_new", (False, True))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_dump(self, mocked_sleep, allow_new):
+    def test_scp_dump(self, mocked_sleep, allow_new, model, expected_params):
         """It should return an instance of DellSCP with the current configuration for the given target."""
+        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1", json={"Model": model})
         self.requests_mock.post(
             "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ExportSystemConfiguration",
             headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
@@ -939,6 +944,8 @@ class TestRedfishDell:
         config = self.redfish.scp_dump(allow_new_attributes=allow_new)
         assert config.service_tag == "12ABC34"
         assert mocked_sleep.called
+        assert self.requests_mock.request_history[1].json()["ShareParameters"] == expected_params
+
         if allow_new:
             config.set("Some.Component.1", "Non.Existent", "new_value")
             assert config.components["Some.Component.1"]["Non.Existent"] == "new_value"
@@ -947,6 +954,10 @@ class TestRedfishDell:
                 config.set("Some.Component.1", "Non.Existent", "new_value")
 
     @pytest.mark.parametrize(
+        "model, expected_params",
+        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": "ALL", "ShareType": "LOCAL"})),
+    )
+    @pytest.mark.parametrize(
         "uri_suffix, preview",
         (
             ("ImportSystemConfigurationPreview", True),
@@ -954,10 +965,11 @@ class TestRedfishDell:
         ),
     )
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_push(self, mocked_sleep, uri_suffix, preview):
+    def test_scp_push(self, mocked_sleep, uri_suffix, preview, model, expected_params):
         """It should push the configuration to the device for preview, no changes will be applied."""
         expected = deepcopy(DELL_TASK_REPONSE)
         expected["EndTime"] = "2021-12-09T14:39:29-06:00"
+        self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1", json={"Model": model})
         self.requests_mock.post(
             f"/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.{uri_suffix}",
             headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
@@ -970,6 +982,7 @@ class TestRedfishDell:
         result = self.redfish.scp_push(redfish.DellSCP(DELL_SCP, redfish.DellSCPTargetPolicy.ALL), preview=preview)
         assert result == expected
         assert mocked_sleep.called
+        assert self.requests_mock.request_history[1].json()["ShareParameters"] == expected_params
 
     def test_get_power_state(self):
         """It should return the current power state of the device."""
