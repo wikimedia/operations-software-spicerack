@@ -1000,6 +1000,72 @@ class TestRedfishDell:
         )
         assert self.redfish.is_uefi is False
 
+    @mock.patch("wmflib.decorators.time.sleep")
+    def test_get_primary_mac(self, _mocked_sleep):
+        """It should return the pxe enabled mac."""
+        self.requests_mock.post(
+            "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ExportSystemConfiguration",
+            headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
+            status_code=202,
+        )
+        scp = {
+            "SystemConfiguration": {
+                "Components": [
+                    {
+                        "FQDD": "NIC.Embedded.1-1-1",
+                        "Attributes": [
+                            {"Name": "LegacyBootProto", "Value": "NONE"},
+                        ],
+                    },
+                    {
+                        "FQDD": "NIC.Embedded.2-1-1",
+                        "Attributes": [
+                            {"Name": "LegacyBootProto", "Value": "NONE"},
+                        ],
+                    },
+                    {
+                        "FQDD": "NIC.Integrated.1-1-1",
+                        "Attributes": [
+                            {"Name": "LegacyBootProto", "Value": "PXE"},
+                        ],
+                    },
+                    {
+                        "FQDD": "NIC.Integrated.1-2-1",
+                        "Attributes": [
+                            {"Name": "LegacyBootProto", "Value": "NONE"},
+                        ],
+                    },
+                ],
+            },
+        }
+
+        self.requests_mock.get(
+            "/redfish/v1/TaskService/Tasks/JID_1234567890",
+            [{"status_code": 202, "json": DELL_TASK_REPONSE}, {"status_code": 200, "json": scp}],
+        )
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
+        ifaces = {
+            "@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces",
+            "Members": [
+                {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.1-1-1"},
+                {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.2-1-1"},
+                {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-1-1"},
+                {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-2-1"},
+            ],
+        }
+        self.requests_mock.get("/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces", json=ifaces)
+
+        iface = {
+            "@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-1-1",
+            "MACAddress": "00:62:0B:C8:9C:50",
+        }
+        self.requests_mock.get(
+            "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-1-1",
+            json=iface,
+        )
+        assert self.redfish.get_primary_mac() == "00:62:0b:c8:9c:50"
+
 
 class TestRedfishSupermicro:
     """Tests for the RedfishSupermicro class."""
@@ -1075,3 +1141,40 @@ class TestRedfishSupermicro:
         """It should return the device is UEFI."""
         self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
         assert self.redfish.is_uefi is True
+
+    def test_get_primary_mac(self):
+        """It should return the pxe enabled mac."""
+        bios = {
+            "@odata.id": "/redfish/v1/Systems/1/Bios",
+            "Attributes": {"OnboardLAN1OptionROM": "EFI"},
+        }
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json=bios)
+
+        adapters = {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters",
+            "Members": [{"@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/1"}],
+        }
+        self.requests_mock.get("/redfish/v1/Chassis/1/NetworkAdapters", json=adapters)
+
+        adapter = {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/1",
+            "Controllers": [
+                {
+                    "Links": {
+                        "Ports": [
+                            {"@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/1/Ports/1"},
+                            {"@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/1/Ports/2"},
+                        ]
+                    }
+                }
+            ],
+            "Model": "AOC-S25G-b2S",
+        }
+        self.requests_mock.get("/redfish/v1/Chassis/1/NetworkAdapters/1", json=adapter)
+
+        port = {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/1/Ports/1",
+            "Ethernet": {"AssociatedMACAddresses": ["7C:C2:55:97:5A:0E"]},
+        }
+        self.requests_mock.get("/redfish/v1/Chassis/1/NetworkAdapters/1/Ports/1", json=port)
+        assert self.redfish.get_primary_mac() == "7c:c2:55:97:5a:0e"

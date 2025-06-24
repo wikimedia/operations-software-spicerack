@@ -840,6 +840,39 @@ class RedfishSupermicro(Redfish):
         response = self.request("get", self.system_manager).json()
         return response["PowerState"]
 
+    def get_primary_mac(self) -> str:
+        """Return the MAC address of the primary interface.
+
+        Primary is defined as the only interface that have PXE enabled.
+
+        Raises:
+            spicerack.redfish.RedfishError: if any error, or if there is no or more than one PXE interface.
+
+        """
+        bios_attrs = self.request("get", f"{self.system_manager}/Bios").json()["Attributes"]
+        pxe_enabled = [key for key, value in bios_attrs.items() if "LAN" in key and value != "Disabled"]
+        if len(pxe_enabled) > 1:
+            raise RedfishError(f"Found more than 1 NIC with PXE enabled: {pxe_enabled}")
+        if not pxe_enabled:
+            raise RedfishError("No PXE enabled NIC found")
+
+        pxe_iface = pxe_enabled[0]
+        adapters = self.request("get", f"/redfish/v1/Chassis/{self.system}/NetworkAdapters").json()["Members"]
+
+        for adapter_uri in adapters:
+            adapter = self.request("get", adapter_uri["@odata.id"]).json()
+            model = adapter["Model"].replace("-", "_")[0:-2]
+            if not pxe_iface.startswith("OnboardLAN") and model not in pxe_iface:
+                continue
+
+            for controller in adapter["Controllers"]:
+                for port_uri in controller["Links"]["Ports"]:
+                    port_id = port_uri["@odata.id"].rsplit("/", 1)[1]
+                    if f"LAN{port_id}" in pxe_iface:
+                        port = self.request("get", port_uri["@odata.id"]).json()
+                        return port["Ethernet"]["AssociatedMACAddresses"][0].lower()
+        raise RedfishError("No MAC found on the PXE enabled interface")
+
     def add_account(
         self, username: str, password: str, role: RedfishUserRoles = RedfishUserRoles.ADMINISTRATOR
     ) -> None:
@@ -1025,3 +1058,27 @@ class RedfishDell(Redfish):
         """Return the current power state of the device."""
         response = self.request("get", "/redfish/v1/Chassis/System.Embedded.1").json()
         return response["PowerState"]
+
+    def get_primary_mac(self) -> str:
+        """Return the MAC address of the primary interface.
+
+        Primary is defined as the only interface that have PXE enabled.
+
+        Raises:
+            spicerack.redfish.RedfishError: if any error, or if there is no or more than one PXE interface.
+
+        """
+        dump = self.scp_dump(DellSCPTargetPolicy.NIC)
+        pxe_enabled = [key for key, value in dump.components.items() if value["LegacyBootProto"] == "PXE"]
+        if len(pxe_enabled) > 1:
+            raise RedfishError(f"Found more than 1 NIC with PXE enabled: {pxe_enabled}")
+        if not pxe_enabled:
+            raise RedfishError("No PXE enabled NIC found")
+
+        pxe_iface = pxe_enabled[0]
+        system = self.request("get", self.system_manager).json()
+        ifaces = self.request("get", system["EthernetInterfaces"]["@odata.id"]).json()["Members"]
+        for iface in ifaces:
+            if iface["@odata.id"].endswith(f"/{pxe_iface}"):
+                return self.request("get", iface["@odata.id"]).json()["MACAddress"].lower()
+        raise RedfishError("No MAC found on the PXE enabled interface")
