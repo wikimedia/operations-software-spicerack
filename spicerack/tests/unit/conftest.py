@@ -36,6 +36,7 @@ def _base_netbox_obj(name, additional_properties):
             "family": 6,
             "address": "2620:0:861:103:10::1/64",
             "dns_name": f"{name}.example.com",
+            "assigned_object_type": "dcim.interface",
         },
         "role": {
             "id": 1,
@@ -52,6 +53,7 @@ def _base_netbox_obj(name, additional_properties):
     dict_obj["primary_ip"]["assigned_object"] = {
         "id": 1,
         "connected_endpoints": [{"untagged_vlan": {"name": "test_vlan"}}],
+        "mac_address": "11:22:33:44:55:66",
         "type": {"value": "10gbase-x-sfpp"},
     }
     dict_obj.update(additional_properties)

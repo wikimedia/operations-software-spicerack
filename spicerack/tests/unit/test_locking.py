@@ -310,8 +310,11 @@ class TestNoLock:
 
     def test_acquired(self):
         """It should just give back control to the user."""
+        executed = False
         with self.lock.acquired():
-            return True
+            executed = True
+
+        assert executed
 
     def test_acquire(self):
         """It should just do nothing and return an empty lock id."""

@@ -840,6 +840,39 @@ class RedfishSupermicro(Redfish):
         response = self.request("get", self.system_manager).json()
         return response["PowerState"]
 
+    def get_primary_mac(self) -> str:
+        """Return the MAC address of the primary interface.
+
+        Primary is defined as the only interface that have PXE enabled.
+
+        Raises:
+            spicerack.redfish.RedfishError: if any error, or if there is no or more than one PXE interface.
+
+        """
+        bios_attrs = self.request("get", f"{self.system_manager}/Bios").json()["Attributes"]
+        pxe_enabled = [key for key, value in bios_attrs.items() if "LAN" in key and value != "Disabled"]
+        if len(pxe_enabled) > 1:
+            raise RedfishError(f"Found more than 1 NIC with PXE enabled: {pxe_enabled}")
+        if not pxe_enabled:
+            raise RedfishError("No PXE enabled NIC found")
+
+        pxe_iface = pxe_enabled[0]
+        adapters = self.request("get", f"/redfish/v1/Chassis/{self.system}/NetworkAdapters").json()["Members"]
+
+        for adapter_uri in adapters:
+            adapter = self.request("get", adapter_uri["@odata.id"]).json()
+            model = adapter["Model"].replace("-", "_")[0:-2]
+            if not pxe_iface.startswith("OnboardLAN") and model not in pxe_iface:
+                continue
+
+            for controller in adapter["Controllers"]:
+                for port_uri in controller["Links"]["Ports"]:
+                    port_id = port_uri["@odata.id"].rsplit("/", 1)[1]
+                    if f"LAN{port_id}" in pxe_iface:
+                        port = self.request("get", port_uri["@odata.id"]).json()
+                        return port["Ethernet"]["AssociatedMACAddresses"][0].lower()
+        raise RedfishError("No MAC found on the PXE enabled interface")
+
     def add_account(
         self, username: str, password: str, role: RedfishUserRoles = RedfishUserRoles.ADMINISTRATOR
     ) -> None:
@@ -874,9 +907,10 @@ class RedfishDell(Redfish):
     """The boot mode key in the Bios attributes."""
     http_boot_target = "UefiHttp"
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
-
     scp_base_uri: str = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
     """The Dell's SCP push base URI."""
+    idrac_10_min_gen: int = 17
+    """The minimum generation shipped with iDRAC 10."""
 
     def __init__(
         self,
@@ -961,10 +995,15 @@ class RedfishDell(Redfish):
             spicerack.redfish.RedfishTaskNotCompletedError: if unable to fetch the dumped results.
 
         """
-        data = {"ExportFormat": "JSON", "ShareParameters": {"Target": target.value}}
+        data: dict = {"ExportFormat": "JSON", "ShareParameters": {"Target": target.value}}
+        if self.generation >= self.idrac_10_min_gen:
+            # Hardcoded for now because the other possible values (NFS, CIFS, HTTP, HTTPS) requires additional settings
+            data["ShareParameters"]["ShareType"] = "LOCAL"
+
         task_uri = self.submit_task(f"{self.scp_base_uri}.ExportSystemConfiguration", data)
         # Wait before starting to poll for the task, so that a quick task can complete before the first attempt.
         time.sleep(5)
+
         return DellSCP(self.poll_task(task_uri), target, allow_new_attributes=allow_new_attributes)
 
     def scp_push(
@@ -1001,12 +1040,15 @@ class RedfishDell(Redfish):
         else:
             uri = "ImportSystemConfiguration"
 
-        data = {
+        data: dict = {
             "ImportBuffer": json.dumps(scp.config),  # The API requires a JSON-encoded string inside a JSON payload.
             "ShareParameters": {"Target": scp.target.value},
             "HostPowerState": power_state.value,
             "ShutdownType": reboot.value,
         }
+        if self.generation >= self.idrac_10_min_gen:
+            # Hardcoded for now because the other possible values (NFS, CIFS, HTTP, HTTPS) requires additional settings
+            data["ShareParameters"]["ShareType"] = "LOCAL"
 
         task_id = self.submit_task(f"{self.scp_base_uri}.{uri}", data)
 
@@ -1016,3 +1058,27 @@ class RedfishDell(Redfish):
         """Return the current power state of the device."""
         response = self.request("get", "/redfish/v1/Chassis/System.Embedded.1").json()
         return response["PowerState"]
+
+    def get_primary_mac(self) -> str:
+        """Return the MAC address of the primary interface.
+
+        Primary is defined as the only interface that have PXE enabled.
+
+        Raises:
+            spicerack.redfish.RedfishError: if any error, or if there is no or more than one PXE interface.
+
+        """
+        dump = self.scp_dump(DellSCPTargetPolicy.NIC)
+        pxe_enabled = [key for key, value in dump.components.items() if value["LegacyBootProto"] == "PXE"]
+        if len(pxe_enabled) > 1:
+            raise RedfishError(f"Found more than 1 NIC with PXE enabled: {pxe_enabled}")
+        if not pxe_enabled:
+            raise RedfishError("No PXE enabled NIC found")
+
+        pxe_iface = pxe_enabled[0]
+        system = self.request("get", self.system_manager).json()
+        ifaces = self.request("get", system["EthernetInterfaces"]["@odata.id"]).json()["Members"]
+        for iface in ifaces:
+            if iface["@odata.id"].endswith(f"/{pxe_iface}"):
+                return self.request("get", iface["@odata.id"]).json()["MACAddress"].lower()
+        raise RedfishError("No MAC found on the PXE enabled interface")

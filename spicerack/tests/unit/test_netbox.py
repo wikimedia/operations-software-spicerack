@@ -193,7 +193,8 @@ class TestNetboxServer:
     def test_fqdn_setter_ok(self):
         """It should set the new FQDN as expected."""
         self.physical_server.fqdn = "foo.wikimedia.org"
-        assert self.netbox_host.save.called_once_with()
+        self.netbox_host.primary_ip4.save.assert_called_once_with()
+        self.netbox_host.primary_ip6.save.assert_called_once_with()
         assert self.physical_server.fqdn == "foo.wikimedia.org"
 
     def test_fqdn_setter_identical(self):
@@ -244,7 +245,6 @@ class TestNetboxServer:
     def test_mgmt_fqdn_setter_ok(self):
         """It should set the new mgmt FQDN as expected."""
         self.physical_server.mgmt_fqdn = "foo.wikimedia.org"
-        assert self.netbox_host.save.called_once_with()
         assert self.physical_server.mgmt_fqdn == "foo.wikimedia.org"
 
     def test_mgmt_fqdn_setter_identical(self):
@@ -405,11 +405,50 @@ class TestNetboxServer:
         assert self.physical_server.primary_ip6_address == IPv6Interface("2620:0:861:103:10::1/64")
         self.netbox_host.save.assert_not_called()
 
-    def test_primary_ip4_address_getter_no_primary_ip(self):
+    def test_primary_ip4_address_setter_no_primary_ip(self):
         """It should raise a NetboxError if it tries to set the address to a device without primary IP."""
         self.netbox_host.primary_ip4 = None
         with pytest.raises(NetboxError, match="No existing primary IPv4 for physical."):
             self.physical_server.primary_ip4_address = "192.0.2.1/32"
+
+    def test_primary_mac_address_getter_ok(self):
+        """It should return the primary MAC address of the device."""
+        assert self.physical_server.primary_mac_address == "11:22:33:44:55:66"
+
+    def test_primary_mac_address_getter_none_ok(self):
+        """It should return None."""
+        self.netbox_host.primary_ip.assigned_object.mac_address = None
+        assert self.physical_server.primary_mac_address is None
+
+    def test_primary_mac_address_getter_not_assigned_error(self):
+        """It should return raise a NetboxError if the IP is not assigned to an interface."""
+        self.netbox_host.primary_ip.assigned_object = None
+        with pytest.raises(NetboxError, match="No primary IP or primary IP not assigned to an interface for physical"):
+            assert self.physical_server.primary_mac_address == "11:22:33:44:55:66"
+
+    def test_primary_mac_address_setter_ok(self):
+        """It should set the primary MAC address."""
+        self.physical_server.primary_mac_address = "11:22:33:44:55:66"
+        self.netbox_host.primary_ip.assigned_object.save.assert_called_once_with()
+
+    def test_primary_mac_address_setter_dry_run(self):
+        """It should skip setting the primary MAC address."""
+        physical_server = NetboxServer(api=self.mocked_api, server=self.netbox_host, dry_run=True)
+        physical_server.primary_mac_address = "11:11:11:11:11:11"
+        assert self.physical_server.primary_mac_address == "11:22:33:44:55:66"
+        self.netbox_host.primary_ip.assigned_object.save.assert_not_called()
+
+    def test_primary_mac_address_setter_not_assigned_error(self):
+        """It should return raise a NetboxError if the IP is not assigned to an interface."""
+        self.netbox_host.primary_ip.assigned_object = None
+        with pytest.raises(NetboxError, match="No primary IP or primary IP not assigned to an interface for physical"):
+            self.physical_server.primary_mac_address = "11:11:11:11:11:11"
+
+    def test_primary_mac_address_setter_save_error(self):
+        """It should return raise a NetboxError if the .save() didn't work."""
+        self.netbox_host.primary_ip.assigned_object.save.return_value = False
+        with pytest.raises(NetboxError, match="Spicerack was not able to update the primary MAC for physical"):
+            self.physical_server.primary_mac_address = "11:11:11:11:11:11"
 
     def test_name_getter_ok(self):
         """It should return the name of the device."""

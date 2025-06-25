@@ -418,6 +418,59 @@ class NetboxServer:
         """
         self._set_primary_ip(value, 6)
 
+    @property
+    def primary_mac_address(self) -> Optional[str]:
+        """Get and set the server primary MAC address.
+
+        Arguments:
+            value: the new MAC address to be set.
+
+        """
+        # TODO : check if there is any risk of race condition,
+        # Where we would need the MAC before the primary IP is set or assigned
+        # The TODO from _find_primary_switch_iface is relevant here too
+        try:
+            return self._server.primary_ip.assigned_object.mac_address
+        except AttributeError as exc:
+            raise NetboxError(
+                f"No primary IP or primary IP not assigned to an interface for {self._server.name}."
+            ) from exc
+
+    @primary_mac_address.setter
+    def primary_mac_address(self, new_mac: Union[None, str]) -> None:
+        """Get and set the server primary MAC address.
+
+        Arguments:
+            new_mac: the new MAC address to be set.
+
+        """
+        try:
+            netbox_interface = self._server.primary_ip.assigned_object
+            current_mac = netbox_interface.mac_address
+        except AttributeError as exc:
+            raise NetboxError(
+                f"No primary IP or primary IP not assigned to an interface for {self._server.name}."
+            ) from exc
+
+        if self._dry_run:
+            logger.info(
+                "Skipping Netbox primary MAC change from %s to %s for device %s in DRY-RUN.",
+                current_mac,
+                new_mac,
+                self._server.name,
+            )
+            return
+        netbox_interface.mac_address = new_mac
+        if not netbox_interface.save():
+            raise NetboxError(f"Spicerack was not able to update the primary MAC for {self._server.name}.")
+        logger.debug(
+            "Updated Netbox primary MAC from %s to %s for device %s",
+            current_mac,
+            new_mac,
+            self._server.name,
+        )
+        return
+
     def _find_primary_switch_iface(self) -> pynetbox.core.response.Record:
         """Returns the switch side interface connected to the device's primary interface.
 
