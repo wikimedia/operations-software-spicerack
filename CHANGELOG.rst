@@ -1,6 +1,27 @@
 Spicerack Changelog
 -------------------
 
+`v11.1.0`_ (2025-06-25)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* redfish: add ``get_primary_mac()`` method to gather the MAC address of the interface on which PXE is enabled.
+* netbox: add ``primary_mac_address()`` getter and setter to the ``NetboxServer`` class to manipulate interface MAC
+  addresses.
+
+Bug fixes
+"""""""""
+
+* redfish: add support for iDRAC 10. It requires the specification of an additional parameter for the SCP
+  functionalities. Add it only when an iDRAC 10 is detected.
+
+Miscellanea
+"""""""""""
+
+* locking: fix unit test missing assert
+
 `v11.0.0`_ (2025-05-28)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3618,3 +3639,4 @@ New features
 .. _`v10.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.1.0
 .. _`v10.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.2.0
 .. _`v11.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.0.0
+.. _`v11.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.1.0
