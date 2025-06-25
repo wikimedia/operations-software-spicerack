@@ -163,19 +163,19 @@ class ServiceStatus(UserDict):
             :py:data:`True` if the service is not in a :py:data:`IcingaStatus.OK` status, :py:data:`False` otherwise.
 
         """
-        current_state = IcingaStatus(self.get("status", {}).get("current_state", 3))
+        current_state = IcingaStatus(self.get("status", cast(dict, {})).get("current_state", 3))
         return current_state != IcingaStatus.OK
 
     @property
     def acked(self) -> bool:
         """Returns :py:data:`True` if the service is acknowledged, :py:data:`False` otherwise."""
-        is_acked = self.get("status", {}).get("problem_has_been_acknowledged", "0")
+        is_acked = self.get("status", cast(dict, {})).get("problem_has_been_acknowledged", "0")
         return is_acked == "1"
 
     @property
     def downtimed(self) -> bool:
         """Returns :py:data:`True` if the service is downtimed, :py:data:`False` otherwise."""
-        is_downtimed = self.get("status", {}).get("scheduled_downtime_depth", 0)
+        is_downtimed = self.get("status", cast(dict, {})).get("scheduled_downtime_depth", 0)
         return is_downtimed > 0
 
 
