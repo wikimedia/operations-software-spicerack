@@ -474,6 +474,11 @@ class TestRedfish:
         self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
         assert self.redfish.manufacturer == "Dell Inc."
 
+    def test_property_uuid(self):
+        """It should return the UUID."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.uuid == "4c4c4544-0058-3810-8032-b2c04f525032"
+
     def test_property_firmware(self):
         """It should return the firmware."""
         self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
@@ -989,7 +994,7 @@ class TestRedfishDell:
         self.requests_mock.get("/redfish/v1/Chassis/System.Embedded.1", json={"PowerState": "On"})
         assert self.redfish.get_power_state() == "On"
 
-    def test_property_boot_mode_attribute(self) -> str:
+    def test_property_boot_mode_attribute(self):
         """Property to return the boot mode key in the Bios attributes."""
         assert self.redfish.boot_mode_attribute == "BootMode"
 

@@ -3,6 +3,7 @@
 import base64
 import logging
 import re
+import struct
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
@@ -36,6 +37,24 @@ class DHCPRestartError(DHCPError):
 class DHCPConfiguration(ABC):
     """An abstract class which defines the interface for the DHCP configuration generators."""
 
+    dhcp_filename: str = ""
+    dhcp_filename_exclude_vendor: str = ""
+    dhcp_options: dict[str, str] = {}
+    distro: str = ""
+    media_type: str = "installer"
+
+    def __post_init__(self) -> None:
+        """According to Python's dataclass API to validate/augment the arguments.
+
+        See Also:
+           https://docs.python.org/3/library/dataclasses.html#post-init-processing
+
+        """
+        if not self.dhcp_options and self.distro:
+            self.dhcp_options["pxelinux.pathprefix"] = (
+                f"http://apt.wikimedia.org/tftpboot/{self.distro}-{self.media_type}/"
+            )
+
     def __str__(self) -> str:
         """Return the rendered DHCP configuration snippet."""
         return textwrap.dedent(self._template.format(s=self))
@@ -55,6 +74,42 @@ class DHCPConfiguration(ABC):
     @abstractmethod
     def filename(self) -> str:
         """Return a string of the proposed filename for this configuration, from the automation directory."""
+
+    @property
+    def rendered_dhcp_options(self) -> str:
+        """Return the DHCP options config strings.
+
+        Returns:
+            A string representing the DHCP options config provided.
+
+        """
+        options = ""
+        for key, value in self.dhcp_options.items():
+            options += f'\n        option {key} "{value}";'
+        return options
+
+    @property
+    def rendered_dhcp_filename(self) -> str:
+        """Return the DHCP filename config string.
+
+        Returns:
+            A string representing the DHCP filename config provided.
+
+        """
+        if self.dhcp_filename:
+            if self.dhcp_filename_exclude_vendor:
+                rendered_filename = textwrap.dedent(
+                    f"""\
+                    if option vendor-class-identifier = "{self.dhcp_filename_exclude_vendor}" {{
+                        filename "";
+                    }} else {{
+                        filename "{self.dhcp_filename}";
+                    }}"""
+                )
+            else:
+                rendered_filename = f'filename "{self.dhcp_filename}";'
+            return "\n" + textwrap.indent(rendered_filename, "        ")
+        return ""
 
 
 @dataclass(frozen=True)
@@ -96,54 +151,6 @@ class DHCPConfOpt82(DHCPConfiguration):
         fixed-address {s.ipv4};{s.rendered_dhcp_filename}{s.rendered_dhcp_options}
     }}
     """
-
-    def __post_init__(self) -> None:
-        """According to Python's dataclass API to validate/augment the arguments.
-
-        See Also:
-           https://docs.python.org/3/library/dataclasses.html#post-init-processing
-
-        """
-        if not self.dhcp_options and self.distro:
-            self.dhcp_options["pxelinux.pathprefix"] = (
-                f"http://apt.wikimedia.org/tftpboot/{self.distro}-{self.media_type}/"
-            )
-
-    @property
-    def rendered_dhcp_filename(self) -> str:
-        """Return the DHCP filename config string.
-
-        Returns:
-            A string representing the DHCP filename config provided.
-
-        """
-        if self.dhcp_filename:
-            if self.dhcp_filename_exclude_vendor:
-                rendered_filename = textwrap.dedent(
-                    f"""\
-                    if option vendor-class-identifier = "{self.dhcp_filename_exclude_vendor}" {{
-                        filename "";
-                    }} else {{
-                        filename "{self.dhcp_filename}";
-                    }}"""
-                )
-            else:
-                rendered_filename = f'filename "{self.dhcp_filename}";'
-            return "\n" + textwrap.indent(rendered_filename, "        ")
-        return ""
-
-    @property
-    def rendered_dhcp_options(self) -> str:
-        """Return the DHCP options config strings.
-
-        Returns:
-            A string representing the DHCP options config provided.
-
-        """
-        options = ""
-        for key, value in self.dhcp_options.items():
-            options += f'\n        option {key} "{value}";'
-        return options
 
     @property
     def filename(self) -> str:
@@ -197,51 +204,76 @@ class DHCPConfMac(DHCPConfiguration):
         mac_pattern = r"[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}"
         if re.fullmatch(mac_pattern, self.mac) is None:
             raise DHCPError(f"Invalid MAC address {self.mac}, must match pattern {mac_pattern}.")
-        if not self.dhcp_options and self.distro:
-            self.dhcp_options["pxelinux.pathprefix"] = (
-                f"http://apt.wikimedia.org/tftpboot/{self.distro}-{self.media_type}/"
-            )
-
-    @property
-    def rendered_dhcp_filename(self) -> str:
-        """Return the DHCP filename config string.
-
-        Returns:
-            A string representing the DHCP filename config provided.
-
-        """
-        if self.dhcp_filename:
-            if self.dhcp_filename_exclude_vendor:
-                rendered_filename = textwrap.dedent(
-                    f"""\
-                    if option vendor-class-identifier = "{self.dhcp_filename_exclude_vendor}" {{
-                        filename "";
-                    }} else {{
-                        filename "{self.dhcp_filename}";
-                    }}"""
-                )
-            else:
-                rendered_filename = f'filename "{self.dhcp_filename}";'
-            return "\n" + textwrap.indent(rendered_filename, "        ")
-        return ""
-
-    @property
-    def rendered_dhcp_options(self) -> str:
-        """Return the DHCP options config strings.
-
-        Returns:
-            A string representing the DHCP options config provided.
-
-        """
-        options = ""
-        for key, value in self.dhcp_options.items():
-            options += f'\n        option {key} "{value}";'
-        return options
+        super().__post_init__()
 
     @property
     def filename(self) -> str:
         """Return the proposed filename based on this configuration."""
         return f"ttyS{self.ttys}-115200/{self.hostname}.conf"
+
+
+@dataclass(frozen=True)
+class DHCPConfUUID(DHCPConfiguration):
+    """A configuration generator for host installation DHCP entries via SMBIOS UUIDs.
+
+    Arguments:
+        hostname: the hostname to generate the DHCP matching block for.
+        ipv4: the IPv4 to be assigned to the host.
+        uuid: the SMBIOS UUID of the host.
+        ttys: which ttyS to use for this host, accepted values are 0 and 1.
+        distro: the codename of the Debian distribution to use for the PXE
+        installer (empty string or None is allowed and removes the related dhcp
+        default options from the config).
+        media_type: The media type to use e.g. installer, installer-11.0, rescue
+        dhcp_filename: the DHCP filename option to set.
+        dhcp_filename_exclude_vendor: vendor to exclude from sending over the filename, e.g. d-i
+        dhcp_options: a dictionary of DHCP option settings to use.
+
+    """
+
+    hostname: str
+    ipv4: IPv4Address
+    uuid: str
+    ttys: int
+    distro: str
+    media_type: str = "installer"
+    dhcp_filename: str = ""
+    dhcp_filename_exclude_vendor: str = ""
+    dhcp_options: dict[str, str] = field(default_factory=dict)
+
+    # The leading 00 on the pxe-client-id is needed to match the UUID type
+    # code, which is always 0 in practice for Option 97 UUIDS
+    _template: str = """
+    host {s.hostname} {{
+        host-identifier option pxe-client-id 00:{pxe_client_id};
+        fixed-address {s.ipv4};{s.rendered_dhcp_filename}{s.rendered_dhcp_options}
+    }}
+    """
+
+    def __str__(self) -> str:
+        """Return the rendered DHCP configuration snippet."""
+        return textwrap.dedent(self._template.format(s=self, pxe_client_id=self._uuid_to_pxe_client_id(self.uuid)))
+
+    @property
+    def filename(self) -> str:
+        """Return the proposed filename based on this configuration."""
+        return f"ttyS{self.ttys}-115200/{self.hostname}.conf"
+
+    # Converts a string SMBIOS UUID to the pxe-client-id found in DHCP Option
+    # 97. The first three parts of the string format UUID are in litte endian
+    # order, however the data in the DHCP packet is all big endian[1]. The
+    # output of this function is a hex string separated by colons, which is the
+    # form needed to match a host with a dhcp host-identifier keyword.
+    # [1]: https://devblogs.microsoft.com/oldnewthing/20220928-00/?p=107221
+    def _uuid_to_pxe_client_id(self, uuid: str) -> str:
+        """Return a pxe-client-id suitable for a DHCP config."""
+        parts = uuid.split("-")
+        le = bytes.fromhex(parts[0] + parts[1] + parts[2])
+        lev = struct.unpack("<LHH", le)
+        be = bytes.fromhex(parts[3] + parts[4])
+        bev = struct.unpack(">HLH", be)
+        be_uuid = struct.pack(">LHHHLH", *lev, *bev)
+        return bytes.hex(be_uuid, ":")
 
 
 @dataclass(frozen=True)
@@ -262,6 +294,8 @@ class DHCPConfMgmt(DHCPConfiguration):
     manufacturer: str
     fqdn: str
     ipv4: IPv4Address
+    distro: str = ""  # unused
+    dhcp_options: dict[str, str] = field(default_factory=dict)
 
     _template: str = """
     class "{s.fqdn}" {{
@@ -280,6 +314,7 @@ class DHCPConfMgmt(DHCPConfiguration):
         pattern = MGMT_HOSTNAME_RE.format(dc=self.datacenter)
         if not re.search(pattern, self.fqdn):
             raise DHCPError(f"Invalid management FQDN {self.fqdn}, must match {pattern}.")
+        super().__post_init__()
 
     @property
     def filename(self) -> str:

@@ -267,6 +267,11 @@ class Redfish:
         return self.system_info["Manufacturer"]
 
     @property
+    def uuid(self) -> str:
+        """Property to return a string representing the UUID."""
+        return self.system_info["UUID"]
+
+    @property
     def pushuri(self) -> str:
         """Property representing the HttpPushUri of the idrac for uploading firmwares to it."""
         try:
