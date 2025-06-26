@@ -1,6 +1,19 @@
 Spicerack Changelog
 -------------------
 
+`v11.2.0`_ (2025-06-26)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* dhcp: add support for vendor exclusion to the ``DHCPConfMac`` class like the ``DHCPConfOpt82`` one.
+
+Bug fixes
+"""""""""
+
+redfish: fix support for SCP on iDRAC 10 that was not properly added in the previous release.
+
 `v11.1.0`_ (2025-06-25)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3640,3 +3653,4 @@ New features
 .. _`v10.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v10.2.0
 .. _`v11.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.0.0
 .. _`v11.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.1.0
+.. _`v11.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.2.0

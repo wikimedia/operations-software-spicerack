@@ -925,7 +925,7 @@ class TestRedfishDell:
 
     @pytest.mark.parametrize(
         "model, expected_params",
-        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": "ALL", "ShareType": "LOCAL"})),
+        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": ["ALL"]})),
     )
     @pytest.mark.parametrize("allow_new", (False, True))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
@@ -955,7 +955,7 @@ class TestRedfishDell:
 
     @pytest.mark.parametrize(
         "model, expected_params",
-        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": "ALL", "ShareType": "LOCAL"})),
+        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": ["ALL"]})),
     )
     @pytest.mark.parametrize(
         "uri_suffix, preview",

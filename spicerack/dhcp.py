@@ -165,6 +165,7 @@ class DHCPConfMac(DHCPConfiguration):
         default options from the config).
         media_type: The media type to use e.g. installer, installer-11.0, rescue
         dhcp_filename: the DHCP filename option to set.
+        dhcp_filename_exclude_vendor: vendor to exclude from sending over the filename, e.g. d-i
         dhcp_options: a dictionary of DHCP option settings to use.
 
     """
@@ -176,6 +177,7 @@ class DHCPConfMac(DHCPConfiguration):
     distro: str
     media_type: str = "installer"
     dhcp_filename: str = ""
+    dhcp_filename_exclude_vendor: str = ""
     dhcp_options: dict[str, str] = field(default_factory=dict)
 
     _template: str = """
@@ -209,7 +211,18 @@ class DHCPConfMac(DHCPConfiguration):
 
         """
         if self.dhcp_filename:
-            return f'\n        filename "{self.dhcp_filename}";'
+            if self.dhcp_filename_exclude_vendor:
+                rendered_filename = textwrap.dedent(
+                    f"""\
+                    if option vendor-class-identifier = "{self.dhcp_filename_exclude_vendor}" {{
+                        filename "";
+                    }} else {{
+                        filename "{self.dhcp_filename}";
+                    }}"""
+                )
+            else:
+                rendered_filename = f'filename "{self.dhcp_filename}";'
+            return "\n" + textwrap.indent(rendered_filename, "        ")
         return ""
 
     @property

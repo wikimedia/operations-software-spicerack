@@ -183,7 +183,7 @@ configuration_generator_data = (
         ),
         "ttyS0-115200/testhost0.conf",
     ),
-    # - If dhcp_filename_exclude_vendor is set, vendor should be excluded
+    # - If dhcp_filename_exclude_vendor is set, vendor should be excluded, Opt82
     (
         dhcp.DHCPConfOpt82,
         {
@@ -200,6 +200,31 @@ configuration_generator_data = (
         (
             "\nhost testhost0 {\n"
             '    host-identifier option agent.circuit-id "asw2-d-eqiad:ge-0/0/0:1021";\n'
+            "    fixed-address 10.0.0.1;\n"
+            '    if option vendor-class-identifier = "d-i" {\n'
+            '        filename "";\n'
+            "    } else {\n"
+            '        filename "http://snponly.efi";\n'
+            "    }\n"
+            "}\n"
+        ),
+        "ttyS0-115200/testhost0.conf",
+    ),
+    # - If dhcp_filename_exclude_vendor is set, vendor should be excluded, Mac
+    (
+        dhcp.DHCPConfMac,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "mac": "00:00:00:00:00:01",
+            "ttys": 0,
+            "distro": None,
+            "dhcp_filename": "http://snponly.efi",
+            "dhcp_filename_exclude_vendor": "d-i",
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    hardware ethernet 00:00:00:00:00:01;\n"
             "    fixed-address 10.0.0.1;\n"
             '    if option vendor-class-identifier = "d-i" {\n'
             '        filename "";\n'
