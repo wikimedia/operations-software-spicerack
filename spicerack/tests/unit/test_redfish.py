@@ -690,27 +690,6 @@ class TestRedfish:
         with pytest.raises(redfish.RedfishError, match="Got unexpected response HTTP 201, expected HTTP 200/204"):
             self.redfish.chassis_reset(redfish.ChassisResetPolicy.FORCE_OFF)
 
-    def test_force_http_boot_once_ok(self):
-        """It should change the HTTP boot mode."""
-        self.requests_mock.get("/redfish/v1/Systems/Testing_system.1/Bios", json={"Attributes": {"BootMode": "UEFI"}})
-        self.requests_mock.patch("/redfish/v1/Systems/Testing_system.1", status_code=204)
-        self.redfish.force_http_boot_once()
-        assert self.requests_mock.last_request.method == "PATCH"
-        request_json = self.requests_mock.last_request.json()
-        assert request_json == {
-            "Boot": {
-                "BootSourceOverrideEnabled": "Once",
-                "BootSourceOverrideTarget": "UefiHttp",
-                "BootSourceOverrideMode": "UEFI",
-            }
-        }
-
-    def test_force_http_boot_once_raise(self):
-        """It should raise a RedfishError as the BootMode is not UEFI."""
-        self.requests_mock.get("/redfish/v1/Systems/Testing_system.1/Bios", json={"Attributes": {"BootMode": "Legacy"}})
-        with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
-            self.redfish.force_http_boot_once()
-
 
 class TestDellSCP:
     """Tests for the DellSCP class."""
@@ -1071,6 +1050,36 @@ class TestRedfishDell:
         )
         assert self.redfish.get_primary_mac() == "00:62:0b:c8:9c:50"
 
+    @pytest.mark.parametrize(
+        "idrac_gen, redfish_uri",
+        ((14, "/redfish/v1/Systems/System.Embedded.1"), (17, "/redfish/v1/Systems/System.Embedded.1/Settings")),
+    )
+    def test_force_http_boot_once_ok(self, idrac_gen: int, redfish_uri: str):
+        """It should change the HTTP boot mode."""
+        self.requests_mock.get("/redfish/v1/Systems/System.Embedded.1/Bios", json={"Attributes": {"BootMode": "UEFI"}})
+        self.requests_mock.patch(redfish_uri, status_code=204)
+        self.redfish._generation = idrac_gen  # pylint: disable=protected-access
+        self.redfish.force_http_boot_once()
+        assert self.requests_mock.last_request.method == "PATCH"
+        request_json = self.requests_mock.last_request.json()
+        request_json_to_match = {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": "UefiHttp",
+            }
+        }
+        if idrac_gen < self.redfish.idrac_10_min_gen:
+            request_json_to_match["Boot"]["BootSourceOverrideMode"] = "UEFI"
+        assert request_json == request_json_to_match
+
+    def test_force_http_boot_once_raise(self):
+        """It should raise a RedfishError as the BootMode is not UEFI."""
+        self.requests_mock.get(
+            "/redfish/v1/Systems/System.Embedded.1/Bios", json={"Attributes": {"BootMode": "Legacy"}}
+        )
+        with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
+            self.redfish.force_http_boot_once()
+
 
 class TestRedfishSupermicro:
     """Tests for the RedfishSupermicro class."""
@@ -1183,3 +1192,24 @@ class TestRedfishSupermicro:
         }
         self.requests_mock.get("/redfish/v1/Chassis/1/NetworkAdapters/1/Ports/1", json=port)
         assert self.redfish.get_primary_mac() == "7c:c2:55:97:5a:0e"
+
+    def test_force_http_boot_once_ok(self):
+        """It should change the HTTP boot mode."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
+        self.requests_mock.patch("/redfish/v1/Systems/1", status_code=204)
+        self.redfish.force_http_boot_once()
+        assert self.requests_mock.last_request.method == "PATCH"
+        request_json = self.requests_mock.last_request.json()
+        assert request_json == {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": "Pxe",
+                "BootSourceOverrideMode": "UEFI",
+            }
+        }
+
+    def test_force_http_boot_once_raise(self):
+        """It should raise a RedfishError as the BootMode is not UEFI."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootMode": "Legacy"}})
+        with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
+            self.redfish.force_http_boot_once()

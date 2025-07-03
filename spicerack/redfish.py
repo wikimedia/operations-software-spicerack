@@ -576,29 +576,6 @@ class Redfish:
         response = self.request("get", f"{self.system_manager}/Bios").json()
         return "efi" in response["Attributes"].get(self.boot_mode_attribute, "").lower()
 
-    def force_http_boot_once(self) -> None:
-        """Force the host to boot over UEFI HTTP at the next reboot.
-
-        Raises:
-            spicerack.redfish.RedfishError: if unable to perform the config change or not UEFI host.
-
-        """
-        if not self.is_uefi:
-            raise RedfishError("HTTP boot is only possible for UEFI hosts.")
-        logger.info("Setting the next boot to UEFI HTTP for %s", self._hostname)
-        efi_http_boot = {
-            "Boot": {
-                "BootSourceOverrideEnabled": "Once",
-                "BootSourceOverrideTarget": self.http_boot_target,
-                "BootSourceOverrideMode": "UEFI",
-            }
-        }
-        self.request(
-            "patch",
-            self.system_manager,
-            json=efi_http_boot,
-        )
-
     def chassis_reset(self, action: ChassisResetPolicy) -> None:
         """Perform a reset of the chassis power status.
 
@@ -896,6 +873,29 @@ class RedfishSupermicro(Redfish):
         new_user_data = {"UserName": username, "Password": password, "RoleId": role.value, "Enabled": True}
         self.request("post", f"{self.account_manager}/Accounts", json=new_user_data)
 
+    def force_http_boot_once(self) -> None:
+        """Force the host to boot over UEFI HTTP at the next reboot.
+
+        Raises:
+            spicerack.redfish.RedfishError: if unable to perform the config change or not UEFI host.
+
+        """
+        if not self.is_uefi:
+            raise RedfishError("HTTP boot is only possible for UEFI hosts.")
+        logger.info("Setting the next boot to UEFI HTTP for %s", self._hostname)
+        efi_http_boot = {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": self.http_boot_target,
+                "BootSourceOverrideMode": "UEFI",
+            }
+        }
+        self.request(
+            "patch",
+            self.system_manager,
+            json=efi_http_boot,
+        )
+
 
 class RedfishDell(Redfish):
     """Dell specific Redfish support."""
@@ -1083,3 +1083,32 @@ class RedfishDell(Redfish):
             if iface["@odata.id"].endswith(f"/{pxe_iface}"):
                 return self.request("get", iface["@odata.id"]).json()["MACAddress"].lower()
         raise RedfishError("No MAC found on the PXE enabled interface")
+
+    def force_http_boot_once(self) -> None:
+        """Force the host to boot over UEFI HTTP at the next reboot.
+
+        Raises:
+            spicerack.redfish.RedfishError: if unable to perform the config change or not UEFI host.
+
+        """
+        if not self.is_uefi:
+            raise RedfishError("HTTP boot is only possible for UEFI hosts.")
+        logger.info("Setting the next boot to UEFI HTTP for %s", self._hostname)
+        efi_http_boot = {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": self.http_boot_target,
+            }
+        }
+        if self.generation >= self.idrac_10_min_gen:
+            uri: str = f"{self.system_manager}/Settings"
+        else:
+            uri = self.system_manager
+            # This property is marked as read-only in recent iDRAC versions.
+            efi_http_boot["Boot"]["BootSourceOverrideMode"] = "UEFI"
+
+        self.request(
+            "patch",
+            uri,
+            json=efi_http_boot,
+        )
