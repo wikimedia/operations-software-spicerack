@@ -248,7 +248,7 @@ class NetboxServer:
         """
         if self.virtual:
             raise NetboxError(
-                f"Server {self._server.name} is a virtual machine, chaging the name is only for physical servers."
+                f"Server {self._server.name} is a virtual machine, changing the name is only for physical servers."
             )
 
         current = self._server.name
@@ -673,6 +673,26 @@ class NetboxServer:
         parts = self.mgmt_fqdn.split(".")
         parts[0] = self._server.asset_tag.lower()
         return ".".join(parts)
+
+    @property
+    def switches(self) -> list[str]:
+        """Return the name(s) of the production switch(es) the server is connected to.
+
+        Raises:
+            spicerack.netbox.NetboxError: for virtual servers.
+
+        """
+        if self.virtual:
+            raise NetboxError(f"Server {self._server.name} is a virtual machine, not connected to a switch.")
+
+        interfaces = self._api.dcim.interfaces.filter(
+            device_id=self._server.id,
+            mgmt_only=False,
+            cabled=True,
+            connected=True,
+            connected_endpoints_type="dcim.interface",
+        )
+        return sorted(list({conn.device.name for interface in interfaces for conn in interface.connected_endpoints}))
 
     def as_dict(self) -> dict:
         """Return a dict containing details about the server."""
