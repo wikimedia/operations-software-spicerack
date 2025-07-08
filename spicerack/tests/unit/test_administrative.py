@@ -17,6 +17,12 @@ def test_reason_init_with_task():
     assert str(reason) == "Reason message - user1@host1 - T12345"
 
 
+def test_reason_init_with_empty_task():
+    """It should initalize a Reason instance without the task ID in the message."""
+    reason = administrative.Reason("Reason message", "user1", "host1", task_id="")
+    assert str(reason) == "Reason message - user1@host1"
+
+
 @pytest.mark.parametrize(
     "failing_param_name, args, kwargs",
     (
@@ -65,7 +71,8 @@ def test_reason_task_id_without_task():
     assert reason.task_id is None
 
 
-def test_reason_task_id_with_task():
+@pytest.mark.parametrize("task_id", ("", "T12345"))
+def test_reason_task_id_with_task(task_id):
     """It should return the task ID."""
-    reason = administrative.Reason("Reason message", "user1", "host1", task_id="T12345")
-    assert reason.task_id == "T12345"
+    reason = administrative.Reason("Reason message", "user1", "host1", task_id=task_id)
+    assert reason.task_id == task_id

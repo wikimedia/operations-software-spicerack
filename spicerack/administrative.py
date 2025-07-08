@@ -61,7 +61,7 @@ class Reason:
 
         """
         parts = [self._reason, self.owner]
-        if self._task_id is not None:
+        if self._task_id:  # Exclude both None and empty string
             parts.append(self._task_id)
 
         return " - ".join(parts)
