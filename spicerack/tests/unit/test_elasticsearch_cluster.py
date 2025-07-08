@@ -1,6 +1,7 @@
 """ElasticsearchCluster module test."""
 
 import itertools
+import logging
 import sys
 from datetime import datetime, timedelta
 from unittest import mock
@@ -10,12 +11,11 @@ from wmflib.config import load_yaml_config
 from wmflib.prometheus import Prometheus
 
 from spicerack.administrative import Reason
+from spicerack.apiclient import APIClient, APIClientError
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import get_fixture_path
 
 try:
-    from elasticsearch import ConflictError, Elasticsearch, RequestError, TransportError
-
     from spicerack import elasticsearch_cluster as ec  # pylint: disable=ungrouped-imports
     from spicerack.elasticsearch_cluster import NodesGroup
 except ImportError:
@@ -143,22 +143,10 @@ def test_wait_for_elasticsearch_up_retries_on_failures(mocked_sleep):
 
 def test_cluster_settings_are_unchanged_when_stopped_replication_is_dry_run():
     """Check that cluster routing in dry run mode is truly safe."""
-    elasticsearch = Elasticsearch("endpoint:9200")
-    elasticsearch.cluster.put_settings = mock.Mock(return_value=True)
-    elasticsearch_cluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=True)
-    with elasticsearch_cluster.stopped_replication():
-        assert not elasticsearch.cluster.put_settings.called
-
-
-def test_get_nodes_wraps_exceptions():
-    """Get nodes should wrap exceptions from elasticsearch client."""
-    elasticsearch = mock.Mock()
-    elasticsearch.nodes.info = mock.Mock(side_effect=TransportError(500, "test"))
-    remote = mock.Mock()
-
-    cluster = ec.ElasticsearchCluster(elasticsearch, remote)
-    with pytest.raises(ec.ElasticsearchClusterError):
-        cluster.get_nodes()
+    elasticsearch_cluster = ec.ElasticsearchCluster("endpoint:9200", None, dry_run=True)
+    with mock.patch.object(elasticsearch_cluster, "make_api_call"):
+        with elasticsearch_cluster.stopped_replication():
+            assert not elasticsearch_cluster.make_api_call.called
 
 
 class TestElasticsearchClusters:
@@ -167,11 +155,13 @@ class TestElasticsearchClusters:
     def setup_method(self):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
-        self.elasticsearch1 = Elasticsearch("endpoint:9201")
-        self.elasticsearch2 = Elasticsearch("endpoint:9202")
-        self.cluster1 = ec.ElasticsearchCluster(self.elasticsearch1, None, dry_run=False)
-        self.cluster2 = ec.ElasticsearchCluster(self.elasticsearch2, None, dry_run=False)
+        endpoint1 = "endpoint:9201"
+        endpoint2 = "endpoint:9202"
+        self.cluster1 = ec.ElasticsearchCluster(endpoint1, None, dry_run=False)
+        self.cluster2 = ec.ElasticsearchCluster(endpoint2, None, dry_run=False)
         self.clusters = [self.cluster1, self.cluster2]
+        self.cluster1.make_api_call = mock.Mock()
+        self.cluster2.make_api_call = mock.Mock()
 
     def default_elasticsearch_clusters(self):
         """Return simple default Elasticsearch clusters to DRY up test code."""
@@ -179,234 +169,345 @@ class TestElasticsearchClusters:
 
     def test_flush_markers_on_clusters(self):
         """Test that elasticsearch call to flush markers was properly made."""
-        self.elasticsearch1.indices.flush = mock.Mock(return_value=True)
-        self.elasticsearch1.indices.flush_synced = mock.Mock(return_value=True)
-        self.elasticsearch2.indices.flush = mock.Mock(return_value=True)
-        self.elasticsearch2.indices.flush_synced = mock.Mock(return_value=True)
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.flush_markers(timedelta(seconds=30))
-        self.elasticsearch1.indices.flush.assert_called_with(force=True, request_timeout=30)
-        self.elasticsearch1.indices.flush_synced.assert_called_with(request_timeout=30)
-        self.elasticsearch2.indices.flush.assert_called_with(force=True, request_timeout=30)
-        self.elasticsearch2.indices.flush_synced.assert_called_with(request_timeout=30)
+        self.cluster1.make_api_call.assert_has_calls(
+            [
+                mock.call(
+                    route="/_flush",
+                    params={"force": "true"},
+                    http_method="POST",
+                    body={},
+                    timeout=30.0,
+                ),
+                mock.call(
+                    route="/_flush/synced",
+                    params={},
+                    http_method="POST",
+                    body={},
+                    timeout=30.0,
+                ),
+            ]
+        )
+        self.cluster2.make_api_call.assert_has_calls(
+            [
+                mock.call(
+                    route="/_flush",
+                    params={"force": "true"},
+                    http_method="POST",
+                    body={},
+                    timeout=30.0,
+                ),
+                mock.call(route="/_flush/synced", params={}, http_method="POST", body={}, timeout=30.0),
+            ]
+        )
 
     def test_flush_markers_on_clusters_fail(self):
         """Test that when conflict error is raised, execution continues."""
-        self.elasticsearch1.indices.flush = mock.Mock(side_effect=ConflictError("test"))
-        self.elasticsearch1.indices.flush_synced = mock.Mock(return_value=True)
-        self.elasticsearch2.indices.flush = mock.Mock(return_value=True)
-        self.elasticsearch2.indices.flush_synced = mock.Mock(return_value=True)
-        elasticsearch_clusters = self.default_elasticsearch_clusters()
-        elasticsearch_clusters.flush_markers(timedelta(seconds=30))
-        self.elasticsearch1.indices.flush_synced.assert_called_with(request_timeout=30)
-        self.elasticsearch2.indices.flush.assert_called_with(force=True, request_timeout=30)
-        self.elasticsearch2.indices.flush_synced.assert_called_with(request_timeout=30)
+        self.cluster1.make_api_call = mock.Mock(side_effect=APIClientError("test"))
 
-    def test_flush_markers_on_clusters_fail_synced(self):
-        """Test that when conflict error is raised during synced flush, execution continues."""
-        self.elasticsearch1.indices.flush = mock.Mock(return_value=True)
-        self.elasticsearch1.indices.flush_synced = mock.Mock(side_effect=ConflictError("test"))
-        self.elasticsearch2.indices.flush = mock.Mock(return_value=True)
-        self.elasticsearch2.indices.flush_synced = mock.Mock(return_value=True)
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.flush_markers(timedelta(seconds=30))
-        self.elasticsearch1.indices.flush_synced.assert_called_with(request_timeout=30)
-        self.elasticsearch2.indices.flush.assert_called_with(force=True, request_timeout=30)
-        self.elasticsearch2.indices.flush_synced.assert_called_with(request_timeout=30)
+        self.cluster2.make_api_call.assert_has_calls(
+            [
+                mock.call(
+                    route="/_flush",
+                    params={"force": "true"},
+                    http_method="POST",
+                    body={},
+                    timeout=30.0,
+                ),
+                mock.call(route="/_flush/synced", params={}, http_method="POST", body={}, timeout=30.0),
+            ]
+        )
+
+    def test_flush_markers_on_clusters_fail_synced(self, caplog):
+        """Test that when conflict error is raised during synced flush, execution continues."""
+        caplog.set_level(logging.WARNING)
+        self.cluster1.make_api_call = mock.Mock(side_effect=[None, APIClientError("test")])
+        elasticsearch_clusters = self.default_elasticsearch_clusters()
+        elasticsearch_clusters.flush_markers(timedelta(seconds=30))
+        self.cluster1.make_api_call.assert_has_calls(
+            [
+                mock.call(
+                    route="/_flush",
+                    params={"force": "true"},
+                    http_method="POST",
+                    body={},
+                    timeout=30.0,
+                ),
+                mock.call(route="/_flush/synced", params={}, http_method="POST", body={}, timeout=30.0),
+            ]
+        )
+        self.cluster2.make_api_call.assert_has_calls(
+            [
+                mock.call(
+                    route="/_flush",
+                    params={"force": "true"},
+                    http_method="POST",
+                    body={},
+                    timeout=30.0,
+                ),
+                mock.call(route="/_flush/synced", params={}, http_method="POST", body={}, timeout=30.0),
+            ]
+        )
+        assert caplog.record_tuples == [
+            (
+                "spicerack.elasticsearch_cluster",
+                logging.WARNING,
+                "Not all shards were synced flushed on endpoint:9201.",
+            ),
+        ]
 
     def test_when_all_shards_are_assigned_no_allocation_is_performed(self):
         """Test that shard allocation is not performed when all shards have been assigned on all clusters."""
-        self.elasticsearch1.nodes.info = mock.Mock(return_value={"nodes": {"ELASTIC1": {"name": "el1-alpha"}}})
-        self.elasticsearch2.nodes.info = mock.Mock(return_value={"nodes": {"ELASTIC7": {"name": "el1-beta"}}})
-        self.elasticsearch1.cat.shards = mock.Mock(
-            return_value=[
-                {"index": "index1", "shard": 2, "state": "ASSIGNED"},
-                {"index": "index2", "shard": 4, "state": "ASSIGNED"},
-            ]
-        )
-        self.elasticsearch2.cat.shards = mock.Mock(
-            return_value=[
-                {"index": "index3", "shard": 6, "state": "ASSIGNED"},
-                {"index": "index4", "shard": 7, "state": "ASSIGNED"},
-            ]
-        )
-        self.elasticsearch1.cluster.reroute = mock.Mock(return_value=True)
-        self.elasticsearch2.cluster.reroute = mock.Mock(return_value=True)
+        self.cluster1.get_nodes = mock.Mock(return_value={"ELASTIC1": {"name": "el1-alpha"}})
+        self.cluster2.get_nodes = mock.Mock(return_value={"ELASTIC7": {"name": "el1-beta"}})
+        self.cluster1._get_unassigned_shards = mock.Mock(return_value=[])  # pylint: disable=protected-access
+        self.cluster2._get_unassigned_shards = mock.Mock(return_value=[])  # pylint: disable=protected-access
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.force_allocation_of_all_unassigned_shards()
-        assert not self.elasticsearch1.cluster.reroute.called
-        assert not self.elasticsearch2.cluster.reroute.called
+        self.cluster1.make_api_call.assert_not_called()
+        self.cluster2.make_api_call.assert_not_called()
 
     def test_force_allocation_of_all_unassigned_shards(self):
         """Test that elasticsearch performs cluster reroute with with unassigned shards on all clusters."""
-        self.elasticsearch1.nodes.info = mock.Mock(return_value={"nodes": {"ELASTIC1": {"name": "el1-alpha"}}})
-        self.elasticsearch2.nodes.info = mock.Mock(return_value={"nodes": {"ELASTIC7": {"name": "el1-beta"}}})
-        self.elasticsearch1.cat.shards = mock.Mock(
+        self.cluster1.get_nodes = mock.Mock(return_value={"ELASTIC1": {"name": "el1-alpha"}})
+        self.cluster2.get_nodes = mock.Mock(return_value={"ELASTIC7": {"name": "el1-beta"}})
+        self.cluster1._get_unassigned_shards = mock.Mock(  # pylint: disable=protected-access
             return_value=[
                 {"index": "index1", "shard": 2, "state": "UNASSIGNED"},
-                {"index": "index2", "shard": 4, "state": "ASSIGNED"},
             ]
         )
-        self.elasticsearch2.cat.shards = mock.Mock(
+        self.cluster2._get_unassigned_shards = mock.Mock(  # pylint: disable=protected-access
             return_value=[
-                {"index": "index3", "shard": 6, "state": "ASSIGNED"},
                 {"index": "index4", "shard": 7, "state": "UNASSIGNED"},
             ]
         )
-        self.elasticsearch1.cluster.reroute = mock.Mock(return_value=True)
-        self.elasticsearch2.cluster.reroute = mock.Mock(return_value=True)
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.force_allocation_of_all_unassigned_shards()
-        self.elasticsearch1.cluster.reroute.assert_called_with(
-            retry_failed=True,
-            body={
-                "commands": [
-                    {
-                        "allocate_replica": {
-                            "index": "index1",
-                            "shard": 2,
-                            "node": "el1-alpha",
-                        }
-                    }
-                ]
-            },
+        self.cluster1.make_api_call.assert_called_once_with(
+            route="/_cluster/reroute",
+            params={"retry_failed": True},
+            http_method="POST",
+            body={"commands": {"allocate_replica": {"index": "index1", "shard": 2, "node": "el1-alpha"}}},
+            timeout=30,
         )
-        self.elasticsearch2.cluster.reroute.assert_called_with(
-            retry_failed=True,
-            body={
-                "commands": [
-                    {
-                        "allocate_replica": {
-                            "index": "index4",
-                            "shard": 7,
-                            "node": "el1-beta",
-                        }
-                    }
-                ]
-            },
+        self.cluster2.make_api_call.assert_called_once_with(
+            route="/_cluster/reroute",
+            params={"retry_failed": True},
+            http_method="POST",
+            body={"commands": {"allocate_replica": {"index": "index4", "shard": 7, "node": "el1-beta"}}},
+            timeout=30,
         )
 
-    def test_force_allocation_of_shards_with_failed_node(self):
+    def test_force_allocation_of_shards_with_failed_node(self, caplog):
         """Test that shard allocation command was called twice after it fails on the first node."""
-        self.elasticsearch1.nodes.info = mock.Mock(
+        caplog.set_level(logging.WARNING)
+        self.cluster1.get_nodes = mock.Mock(
             return_value={
-                "nodes": {
-                    "ELASTIC1": {"name": "el1-alpha"},
-                    "ELASTIC3": {"name": "el2-alpha"},
-                }
+                "ELASTIC1": {"name": "el1-alpha"},
+                "ELASTIC3": {"name": "el2-alpha"},
             }
         )
-        self.elasticsearch2.nodes.info = mock.Mock(
+        self.cluster2.get_nodes = mock.Mock(
             return_value={
-                "nodes": {
-                    "ELASTIC7": {"name": "el1-beta"},
-                    "ELASTIC4": {"name": "el2-beta"},
-                }
+                "ELASTIC7": {"name": "el1-beta"},
+                "ELASTIC4": {"name": "el2-beta"},
             }
         )
-        self.elasticsearch1.cat.shards = mock.Mock(
+        self.cluster1._get_unassigned_shards = mock.Mock(  # pylint: disable=protected-access
             return_value=[
                 {"index": "index1", "shard": 2, "state": "UNASSIGNED"},
-                {"index": "index2", "shard": 4, "state": "ASSIGNED"},
             ]
         )
-        self.elasticsearch2.cat.shards = mock.Mock(
+        self.cluster2._get_unassigned_shards = mock.Mock(  # pylint: disable=protected-access
             return_value=[
-                {"index": "index3", "shard": 6, "state": "ASSIGNED"},
                 {"index": "index4", "shard": 7, "state": "UNASSIGNED"},
             ]
         )
-        self.elasticsearch1.cluster.reroute = mock.Mock(side_effect=RequestError("test"))
-        self.elasticsearch2.cluster.reroute = mock.Mock(side_effect=RequestError("test"))
+        self.cluster1.make_api_call = mock.Mock(side_effect=APIClientError("test"))
+        self.cluster2.make_api_call = mock.Mock(side_effect=APIClientError("test"))
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.force_allocation_of_all_unassigned_shards()
-        assert self.elasticsearch1.cluster.reroute.call_count == 2
-        assert self.elasticsearch2.cluster.reroute.call_count == 2
+        self.cluster1.make_api_call.assert_has_calls(
+            calls=[
+                mock.call(
+                    route="/_cluster/reroute",
+                    params={"retry_failed": True},
+                    http_method="POST",
+                    body={"commands": {"allocate_replica": {"index": "index1", "shard": 2, "node": "el1-alpha"}}},
+                    timeout=30,
+                ),
+                mock.call(
+                    route="/_cluster/reroute",
+                    params={"retry_failed": True},
+                    http_method="POST",
+                    body={"commands": {"allocate_replica": {"index": "index1", "shard": 2, "node": "el2-alpha"}}},
+                    timeout=30,
+                ),
+            ],
+            any_order=True,  # we shuffle the nodes
+        )
+        self.cluster2.make_api_call.assert_has_calls(
+            calls=[
+                mock.call(
+                    route="/_cluster/reroute",
+                    params={"retry_failed": True},
+                    http_method="POST",
+                    body={"commands": {"allocate_replica": {"index": "index4", "shard": 7, "node": "el1-beta"}}},
+                    timeout=30,
+                ),
+                mock.call(
+                    route="/_cluster/reroute",
+                    params={"retry_failed": True},
+                    http_method="POST",
+                    body={"commands": {"allocate_replica": {"index": "index4", "shard": 7, "node": "el2-beta"}}},
+                    timeout=30,
+                ),
+            ],
+            any_order=True,  # we shuffle the nodes
+        )
+        assert caplog.record_tuples == [
+            ("spicerack.elasticsearch_cluster", logging.WARNING, "Could not reallocate shard [index1:2] on any node"),
+            ("spicerack.elasticsearch_cluster", logging.WARNING, "Could not reallocate shard [index4:7] on any node"),
+        ]
 
     def test_stopped_replication(self):
         """Check that context manager stops replication and then starts replication on each cluster."""
-        self.elasticsearch1.cluster.put_settings = mock.Mock(return_value=True)
-        self.elasticsearch2.cluster.put_settings = mock.Mock(return_value=True)
+        self.cluster1.make_api_call = mock.Mock()
+        self.cluster2.make_api_call = mock.Mock()
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         with elasticsearch_clusters.stopped_replication():
-            self.elasticsearch1.cluster.put_settings.assert_called_with(
-                body={"persistent": {"cluster.routing.allocation.enable": "primaries"}}
+            self.cluster1.make_api_call.assert_called_with(
+                route="/_cluster/settings",
+                params={},
+                http_method="PUT",
+                body={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
+                timeout=30,
             )
-            self.elasticsearch2.cluster.put_settings.assert_called_with(
-                body={"persistent": {"cluster.routing.allocation.enable": "primaries"}}
+            self.cluster2.make_api_call.assert_called_with(
+                route="/_cluster/settings",
+                params={},
+                http_method="PUT",
+                body={"persistent": {"cluster.routing.allocation.enable": "primaries"}},
+                timeout=30,
             )
 
-        self.elasticsearch1.cluster.put_settings.assert_called_with(
-            body={"persistent": {"cluster.routing.allocation.enable": "all"}}
+        self.cluster1.make_api_call.assert_called_with(
+            route="/_cluster/settings",
+            params={},
+            http_method="PUT",
+            body={"persistent": {"cluster.routing.allocation.enable": "all"}},
+            timeout=30,
         )
-        self.elasticsearch2.cluster.put_settings.assert_called_with(
-            body={"persistent": {"cluster.routing.allocation.enable": "all"}}
+        self.cluster2.make_api_call.assert_called_with(
+            route="/_cluster/settings",
+            params={},
+            http_method="PUT",
+            body={"persistent": {"cluster.routing.allocation.enable": "all"}},
+            timeout=30,
         )
 
     def test_frozen_writes_write_to_index(self):
         """Test that elasticsearch write to index is called to freeze writes."""
-        self.elasticsearch1.index = mock.Mock(return_value=True)
-        self.elasticsearch2.index = mock.Mock(return_value=True)
-        self.elasticsearch1.delete = mock.Mock(return_value=True)
-        self.elasticsearch2.delete = mock.Mock(return_value=True)
         reason = Reason("test", "test_user", "test_host", task_id="T111222")
-        cluster1 = ec.ElasticsearchCluster(self.elasticsearch1, None, dry_run=False)
-        cluster2 = ec.ElasticsearchCluster(self.elasticsearch2, None, dry_run=False)
-        elasticsearch_clusters = ec.ElasticsearchClusters([cluster1, cluster2], None, None, ["eqiad", "codfw"])
+        elasticsearch_clusters = self.default_elasticsearch_clusters()
         with elasticsearch_clusters.frozen_writes(reason):
-            assert self.elasticsearch1.index.called
-            assert self.elasticsearch2.index.called
+            self.cluster1.make_api_call.assert_called_with(
+                route="/mw_cirrus_metastore/_doc/freeze-everything",
+                params={},
+                http_method="PUT",
+                body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
+                timeout=30,
+            )
+            self.cluster2.make_api_call.assert_called_with(
+                route="/mw_cirrus_metastore/_doc/freeze-everything",
+                params={},
+                http_method="PUT",
+                body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
+                timeout=30,
+            )
 
-        assert self.elasticsearch1.delete.called
-        assert self.elasticsearch2.delete.called
+        self.cluster1.make_api_call.assert_called_with(
+            route="mw_cirrus_metastore/_doc/freeze-everything", params={}, http_method="DELETE", body={}, timeout=30
+        )
+        self.cluster2.make_api_call.assert_called_with(
+            route="mw_cirrus_metastore/_doc/freeze-everything", params={}, http_method="DELETE", body={}, timeout=30
+        )
 
     def test_when_frozen_writes_fails_exception_is_raised(self):
         """Test that when elasticsearch write to index fails, an exception is raised.
 
         and a call to delete/unfreeze write is placed
         """
-        self.elasticsearch1.index = mock.Mock(side_effect=TransportError(500, "test"))
-        self.elasticsearch2.index = mock.Mock(return_value=True)
-        self.elasticsearch1.delete = mock.Mock(return_value=True)
-        self.elasticsearch2.delete = mock.Mock(return_value=True)
+        self.cluster1.make_api_call.side_effect = APIClientError("test")
         reason = Reason("test", "test_user", "test_host", task_id="T111222")
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         with pytest.raises(ec.ElasticsearchClusterError):
             with elasticsearch_clusters.frozen_writes(reason):
-                assert self.elasticsearch1.index.called
+                self.cluster1.make_api_call.assert_called_with(
+                    route="/mw_cirrus_metastore/_doc/freeze-everything",
+                    params={},
+                    http_method="PUT",
+                    body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
+                    timeout=30,
+                )
+                self.cluster2.make_api_call.assert_not_called()
+        assert self.cluster1.make_api_call.call_count == 1
+        assert self.cluster2.make_api_call.call_count == 0
 
-            assert self.elasticsearch1.delete.called
-            assert self.elasticsearch2.delete.called
-
-    def test_when_unfreeze_writes_fails_exception_is_raised(self):
+    def test_when_unfreeze_writes_fails_exception_is_raised(self, caplog):
         """Test that when elasticsearch delete doc in index fails, an exception is raised.
 
         and a call to delete/unfreeze write is placed
+
         """
-        self.elasticsearch1.index = mock.Mock(return_value=True)
-        self.elasticsearch2.index = mock.Mock(return_value=True)
-        self.elasticsearch1.delete = mock.Mock(side_effect=TransportError(500, "test"))
-        self.elasticsearch2.delete = mock.Mock(return_value=True)
+        caplog.set_level(logging.WARNING)
+        # the freeze works, unfreeze fails
+        self.cluster1.make_api_call = mock.Mock(side_effect=[None, APIClientError("test"), None, None])
+
         reason = Reason("test", "test_user", "test_host", task_id="T111222")
         elasticsearch_clusters = self.default_elasticsearch_clusters()
-        with pytest.raises(ec.ElasticsearchClusterError):
-            with elasticsearch_clusters.frozen_writes(reason):
-                assert self.elasticsearch1.index.called
+        with elasticsearch_clusters.frozen_writes(reason):
+            self.cluster1.make_api_call.assert_called_with(
+                route="/mw_cirrus_metastore/_doc/freeze-everything",
+                params={},
+                http_method="PUT",
+                body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
+                timeout=30,
+            )
+            self.cluster2.make_api_call.assert_called_with(
+                route="/mw_cirrus_metastore/_doc/freeze-everything",
+                params={},
+                http_method="PUT",
+                body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
+                timeout=30,
+            )
 
-            assert self.elasticsearch1.delete.called
-            assert self.elasticsearch2.delete.called
+        # the second api call (unfreeze) failed, so we tried to freeze and unfreeze again
+        assert self.cluster1.make_api_call.call_count == 4  # freeze(ok), unfreeze(fail), freeze(ok), unfreeze(ok)
+        assert self.cluster2.make_api_call.call_count == 2  # freeze(ok), unfreeze(fail)
+        assert caplog.record_tuples == [
+            (
+                "spicerack.elasticsearch_cluster",
+                logging.WARNING,
+                (
+                    "Could not unfreeze writes, trying to freeze and unfreeze again: Encountered error while deleting "
+                    "'freeze-everything' document to unfreeze cluster writes"
+                ),
+            )
+        ]
 
     def test_no_call_to_freeze_write_in_dry_run(self):
         """Test that when dry run is enabled, call to write to cluster index to freeze write is not placed."""
-        self.elasticsearch1.index = mock.Mock(return_value=True)
-        self.elasticsearch2.delete = mock.Mock(return_value=True)
-        cluster1 = ec.ElasticsearchCluster(self.elasticsearch1, None, dry_run=True)
-        cluster2 = ec.ElasticsearchCluster(self.elasticsearch2, None, dry_run=True)
+        cluster1 = ec.ElasticsearchCluster(self.cluster1, None, dry_run=True)
+        cluster2 = ec.ElasticsearchCluster(self.cluster2, None, dry_run=True)
         reason = Reason("test", "test_user", "test_host", task_id="T111222")
         elasticsearch_clusters = ec.ElasticsearchClusters([cluster1, cluster2], None, None, ["eqiad", "codfw"])
         with elasticsearch_clusters.frozen_writes(reason):
-            assert not self.elasticsearch1.index.called
-            assert not self.elasticsearch2.delete.called
+            self.cluster1.make_api_call.assert_not_called()
+            self.cluster2.make_api_call.assert_not_called()
 
     def test_wait_for_all_write_queues_with_queues_empty(self):
         """Ensure that we return None in the "happy path", when all queues are empty, meaning we didn't raise."""
@@ -493,18 +594,26 @@ class TestElasticsearchClusters:
 
     def test_wait_for_green_on_all_clusters_elastisearch_call(self):
         """Makes sure the call to elasticsearch.cluster.health is placed for each cluster."""
-        self.elasticsearch1.cluster.health = mock.Mock(return_value=True)
-        self.elasticsearch2.cluster.health = mock.Mock(return_value=True)
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.wait_for_green(timedelta(seconds=13))
-        assert self.elasticsearch1.cluster.health.called
-        assert self.elasticsearch2.cluster.health.called
+        self.cluster1.make_api_call.assert_called_once_with(
+            route="/_cluster/health",
+            params={"wait_for_status": "green", "timeout": "1s"},
+            http_method="GET",
+            body={},
+            timeout=30,
+        )
+        self.cluster2.make_api_call.assert_called_once_with(
+            route="/_cluster/health",
+            params={"wait_for_status": "green", "timeout": "1s"},
+            http_method="GET",
+            body={},
+            timeout=30,
+        )
 
     @mock.patch("spicerack.elasticsearch_cluster.retry")
     def test_wait_for_green_correct_tries_test(self, retry):
         """Check that the number of tries is correctly computed."""
-        self.elasticsearch1.cluster.health = mock.Mock(return_value=True)
-        self.elasticsearch2.cluster.health = mock.Mock(return_value=True)
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.wait_for_green(timedelta(seconds=20))
         assert retry.call_args[1]["tries"] == 2
@@ -512,8 +621,6 @@ class TestElasticsearchClusters:
     @mock.patch("spicerack.elasticsearch_cluster.retry")
     def test_wait_for_green_default_tries_test(self, retry):
         """Checks that a default value of 1 is returned when timeout is less than 10."""
-        self.elasticsearch1.cluster.health = mock.Mock(return_value=True)
-        self.elasticsearch2.cluster.health = mock.Mock(return_value=True)
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.wait_for_green(timedelta(seconds=4))
         assert retry.call_args[1]["tries"] == 1
@@ -521,57 +628,90 @@ class TestElasticsearchClusters:
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_green_retry_test(self, mocked_sleep):
         """Test that the retry is called again when cluster health request throws an exception."""
-        self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError(500, "test"))
-        self.elasticsearch2.cluster.health = mock.Mock(side_effect=TransportError(500, "test"))
+        self.cluster1.make_api_call = mock.Mock(side_effect=[APIClientError("test"), None])
+        self.cluster2.make_api_call = mock.Mock(side_effect=[APIClientError("test"), None])
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         with pytest.raises(ec.ElasticsearchClusterCheckError):
             elasticsearch_clusters.wait_for_green(timedelta(seconds=20))
-            assert mocked_sleep.called
-            assert self.elasticsearch1.cluster.health.call_count == 2
-            assert self.elasticsearch2.cluster.health.call_count == 2
+
+        mocked_sleep.assert_called_once_with(10.0)
+        assert self.cluster1.make_api_call.call_count == 2  # fail, ok
+        assert self.cluster2.make_api_call.call_count == 1  # not called, ok
 
     def test_wait_for_yellow_w_no_moving_shards_on_all_clusters_elastisearch_call(self):
         """Makes sure the call to elasticsearch.cluster.health is placed for each cluster."""
-        self.elasticsearch1.cluster.health = mock.Mock(return_value=True)
-        self.elasticsearch2.cluster.health = mock.Mock(return_value=True)
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         elasticsearch_clusters.wait_for_yellow_w_no_moving_shards(timedelta(seconds=13))
-        assert self.elasticsearch1.cluster.health.called
-        assert self.elasticsearch2.cluster.health.called
+        self.cluster1.make_api_call.assert_called_once_with(
+            route="/_cluster/health",
+            params={
+                "wait_for_status": "yellow",
+                "wait_for_no_initializing_shards": True,
+                "wait_for_no_relocating_shards": True,
+                "timeout": "1s",
+            },
+            http_method="GET",
+            body={},
+            timeout=30,
+        )
+        self.cluster2.make_api_call.assert_called_once_with(
+            route="/_cluster/health",
+            params={
+                "wait_for_status": "yellow",
+                "wait_for_no_initializing_shards": True,
+                "wait_for_no_relocating_shards": True,
+                "timeout": "1s",
+            },
+            http_method="GET",
+            body={},
+            timeout=30,
+        )
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_for_yellow_w_no_moving_shards_retry_test(self, mocked_sleep):
         """Test that the retry is called again when cluster health request throws an exception."""
-        self.elasticsearch1.cluster.health = mock.Mock(side_effect=TransportError(500, "test"))
-        self.elasticsearch2.cluster.health = mock.Mock(side_effect=TransportError(500, "test"))
+        self.cluster1.make_api_call = mock.Mock(side_effect=[APIClientError("test"), None])
+        self.cluster2.make_api_call = mock.Mock(side_effect=[APIClientError("test"), None])
         elasticsearch_clusters = self.default_elasticsearch_clusters()
         with pytest.raises(ec.ElasticsearchClusterCheckError):
             elasticsearch_clusters.wait_for_yellow_w_no_moving_shards(timedelta(seconds=20))
             assert mocked_sleep.called
-            assert self.elasticsearch1.cluster.health.call_count == 2
-            assert self.elasticsearch2.cluster.health.call_count == 2
+
+        assert self.cluster1.make_api_call.call_count == 2  # fail, ok
+        assert self.cluster2.make_api_call.call_count == 1  # not called, ok
 
     def test_reset_read_only_is_sent_to_all_clusters(self):
         """Reset read only status should be sent to all clusters."""
         # This should really be an integration test but too much work to set up.
         elasticsearch_clusters = self.default_elasticsearch_clusters()
-        for client in [self.elasticsearch1, self.elasticsearch2]:
-            client.indices.put_settings = mock.Mock()
-
         elasticsearch_clusters.reset_indices_to_read_write()
 
-        for client in [self.elasticsearch1, self.elasticsearch2]:
-            assert client.indices.put_settings.called
+        self.cluster1.make_api_call.assert_called_once_with(
+            route="/_all/_settings",
+            params={},
+            http_method="PUT",
+            body={"index.blocks.read_only_allow_delete": None},
+            timeout=30,
+        )
+        self.cluster2.make_api_call.assert_called_once_with(
+            route="/_all/_settings",
+            params={},
+            http_method="PUT",
+            body={"index.blocks.read_only_allow_delete": None},
+            timeout=30,
+        )
 
     def test_reset_read_only_wraps_exceptions(self):
         """Exceptions from underlying elasticsearch client should be wrapped."""
-        elasticsearch_clusters = self.default_elasticsearch_clusters()
-        for client in [self.elasticsearch1, self.elasticsearch2]:
-            client.indices.put_settings = mock.Mock(side_effect=TransportError(500, "test"))
+        self.cluster1.make_api_call = mock.Mock(side_effect=APIClientError("test"))
+        self.cluster2.make_api_call = mock.Mock(side_effect=APIClientError("test"))
 
+        elasticsearch_clusters = self.default_elasticsearch_clusters()
         with pytest.raises(ec.ElasticsearchClusterError):
             elasticsearch_clusters.reset_indices_to_read_write()
-            assert not self.elasticsearch2.indices.put_settings.called
+
+        self.cluster1.make_api_call.assert_called_once()
+        self.cluster2.make_api_call.assert_not_called()
 
 
 def test_get_next_clusters_nodes():
@@ -851,8 +991,12 @@ def test_all_nodes_are_restarted():
 
     # whitebox testing for convenience
     # TODO: refactor mock_node_info() to expose the mock Elasticsearch instances
-    assert alpha._elasticsearch.nodes.info.called  # pylint: disable=protected-access
-    assert beta._elasticsearch.nodes.info.called  # pylint: disable=protected-access
+    alpha._api_client.request.assert_called_once_with(  # pylint: disable=protected-access
+        "GET", "/_nodes", json={}, params={}, timeout=30
+    )
+    beta._api_client.request.assert_called_once_with(  # pylint: disable=protected-access
+        "GET", "/_nodes", json={}, params={}, timeout=30
+    )
 
 
 def test_node_not_restarted():
@@ -865,8 +1009,7 @@ def test_node_not_restarted():
     group.accumulate(node2, beta)
 
     # remove elastic1001 from alpha cluster
-    alpha._elasticsearch.nodes.info = mock.Mock(return_value={"nodes": {}})  # pylint: disable=protected-access
-
+    alpha.make_api_call = mock.Mock(return_value={"nodes": {}})  # pylint: disable=protected-access
     with pytest.raises(ec.ElasticsearchClusterCheckError):
         group.check_all_nodes_up()
 
@@ -903,9 +1046,14 @@ def mock_node_info(values):
     clusters = []
     port = 9200
     for nodes in values:
-        elasticsearch = Elasticsearch(f"localhost:{port}")
-        port += 1
-        elasticsearch.nodes.info = mock.Mock(return_value={"nodes": nodes})
-        cluster = ec.ElasticsearchCluster(elasticsearch, None, dry_run=False)
+        endpoint = f"localhost:{port}"
+        api_client = mock.Mock(spec_set=APIClient)
+        mock_response = mock.Mock()
+        mock_response.json.return_value = {"nodes": nodes}
+        api_client.request.return_value = mock_response
+        cluster = ec.ElasticsearchCluster(endpoint, None, dry_run=False)
+        cluster._api_client = api_client  # pylint: disable=protected-access
         clusters.append(cluster)
+
+        port += 1
     return clusters
