@@ -360,6 +360,40 @@ UPDATE_SERVICE_RESPONSE_NO_HTTP_PUSH = deepcopy(UPDATE_SERVICE_RESPONSE)
 del UPDATE_SERVICE_RESPONSE_NO_HTTP_PUSH["HttpPushUri"]
 
 
+def get_scp_dell_nics(nic2, nic3):
+    """Get the NIC components of a system configuration based on parameters."""
+    return {
+        "SystemConfiguration": {
+            "Components": [
+                {
+                    "FQDD": "NIC.Embedded.1-1-1",
+                    "Attributes": [
+                        {"Name": "LegacyBootProto", "Value": "NONE"},
+                    ],
+                },
+                {
+                    "FQDD": "NIC.Embedded.2-1-1",
+                    "Attributes": [
+                        {"Name": "LegacyBootProto", "Value": nic2},
+                    ],
+                },
+                {
+                    "FQDD": "NIC.Integrated.1-1-1",
+                    "Attributes": [
+                        {"Name": "LegacyBootProto", "Value": nic3},
+                    ],
+                },
+                {
+                    "FQDD": "NIC.Integrated.1-2-1",
+                    "Attributes": [
+                        {"Name": "LegacyBootProto", "Value": "NONE"},
+                    ],
+                },
+            ],
+        },
+    }
+
+
 def add_accounts_mock_responses(requests_mock):
     """Setup requests mock URLs and return payloads for all the existing users."""
     requests_mock.get("/redfish/v1/AccountService/Accounts", json=ACCOUNTS_RESPONSE)
@@ -473,6 +507,11 @@ class TestRedfish:
         """It should return the firmware."""
         self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
         assert self.redfish.manufacturer == "Dell Inc."
+
+    def test_property_uuid(self):
+        """It should return the UUID."""
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        assert self.redfish.uuid == "4c4c4544-0058-3810-8032-b2c04f525032"
 
     def test_property_firmware(self):
         """It should return the firmware."""
@@ -684,27 +723,6 @@ class TestRedfish:
         self.requests_mock.post("/redfish/v1/Systems/Testing_system.1/Actions/ComputerSystem.Reset", status_code=201)
         with pytest.raises(redfish.RedfishError, match="Got unexpected response HTTP 201, expected HTTP 200/204"):
             self.redfish.chassis_reset(redfish.ChassisResetPolicy.FORCE_OFF)
-
-    def test_force_http_boot_once_ok(self):
-        """It should change the HTTP boot mode."""
-        self.requests_mock.get("/redfish/v1/Systems/Testing_system.1/Bios", json={"Attributes": {"BootMode": "UEFI"}})
-        self.requests_mock.patch("/redfish/v1/Systems/Testing_system.1", status_code=204)
-        self.redfish.force_http_boot_once()
-        assert self.requests_mock.last_request.method == "PATCH"
-        request_json = self.requests_mock.last_request.json()
-        assert request_json == {
-            "Boot": {
-                "BootSourceOverrideEnabled": "Once",
-                "BootSourceOverrideTarget": "UefiHttp",
-                "BootSourceOverrideMode": "UEFI",
-            }
-        }
-
-    def test_force_http_boot_once_raise(self):
-        """It should raise a RedfishError as the BootMode is not UEFI."""
-        self.requests_mock.get("/redfish/v1/Systems/Testing_system.1/Bios", json={"Attributes": {"BootMode": "Legacy"}})
-        with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
-            self.redfish.force_http_boot_once()
 
 
 class TestDellSCP:
@@ -989,7 +1007,7 @@ class TestRedfishDell:
         self.requests_mock.get("/redfish/v1/Chassis/System.Embedded.1", json={"PowerState": "On"})
         assert self.redfish.get_power_state() == "On"
 
-    def test_property_boot_mode_attribute(self) -> str:
+    def test_property_boot_mode_attribute(self):
         """Property to return the boot mode key in the Bios attributes."""
         assert self.redfish.boot_mode_attribute == "BootMode"
 
@@ -1008,37 +1026,7 @@ class TestRedfishDell:
             headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
             status_code=202,
         )
-        scp = {
-            "SystemConfiguration": {
-                "Components": [
-                    {
-                        "FQDD": "NIC.Embedded.1-1-1",
-                        "Attributes": [
-                            {"Name": "LegacyBootProto", "Value": "NONE"},
-                        ],
-                    },
-                    {
-                        "FQDD": "NIC.Embedded.2-1-1",
-                        "Attributes": [
-                            {"Name": "LegacyBootProto", "Value": "NONE"},
-                        ],
-                    },
-                    {
-                        "FQDD": "NIC.Integrated.1-1-1",
-                        "Attributes": [
-                            {"Name": "LegacyBootProto", "Value": "PXE"},
-                        ],
-                    },
-                    {
-                        "FQDD": "NIC.Integrated.1-2-1",
-                        "Attributes": [
-                            {"Name": "LegacyBootProto", "Value": "NONE"},
-                        ],
-                    },
-                ],
-            },
-        }
-
+        scp = get_scp_dell_nics("NONE", "PXE")
         self.requests_mock.get(
             "/redfish/v1/TaskService/Tasks/JID_1234567890",
             [{"status_code": 202, "json": DELL_TASK_REPONSE}, {"status_code": 200, "json": scp}],
@@ -1065,6 +1053,82 @@ class TestRedfishDell:
             json=iface,
         )
         assert self.redfish.get_primary_mac() == "00:62:0b:c8:9c:50"
+
+    @pytest.mark.parametrize(
+        "idrac_gen, redfish_uri",
+        ((14, "/redfish/v1/Systems/System.Embedded.1"), (17, "/redfish/v1/Systems/System.Embedded.1/Settings")),
+    )
+    def test_force_http_boot_once_ok(self, idrac_gen: int, redfish_uri: str):
+        """It should change the HTTP boot mode."""
+        self.requests_mock.get("/redfish/v1/Systems/System.Embedded.1/Bios", json={"Attributes": {"BootMode": "UEFI"}})
+        self.requests_mock.patch(redfish_uri, status_code=204)
+        self.redfish._generation = idrac_gen  # pylint: disable=protected-access
+        self.redfish.force_http_boot_once()
+        assert self.requests_mock.last_request.method == "PATCH"
+        request_json = self.requests_mock.last_request.json()
+        request_json_to_match = {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": "UefiHttp",
+            }
+        }
+        if idrac_gen < self.redfish.idrac_10_min_gen:
+            request_json_to_match["Boot"]["BootSourceOverrideMode"] = "UEFI"
+        assert request_json == request_json_to_match
+
+    def test_force_http_boot_once_raise(self):
+        """It should raise a RedfishError as the BootMode is not UEFI."""
+        self.requests_mock.get(
+            "/redfish/v1/Systems/System.Embedded.1/Bios", json={"Attributes": {"BootMode": "Legacy"}}
+        )
+        with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
+            self.redfish.force_http_boot_once()
+
+    @pytest.mark.parametrize(
+        "nic_pxe, nic_name, error_msg",
+        (
+            ({"nic2": "PXE", "nic3": "PXE"}, "", "Found more than 1 NIC with PXE enabled: "),
+            ({"nic2": "NONE", "nic3": "NONE"}, "", "No PXE enabled NIC found"),
+            ({"nic2": "NONE", "nic3": "PXE"}, "foobar", "No MAC found on the PXE enabled interface"),
+        ),
+    )
+    @mock.patch("wmflib.decorators.time.sleep")
+    def test_get_primary_mac_error(self, _mocked_sleep, nic_pxe, nic_name, error_msg):
+        """It should raise an error if there is none or more than 1 PXE nic."""
+        self.requests_mock.post(
+            "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ExportSystemConfiguration",
+            headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
+            status_code=202,
+        )
+        scp = get_scp_dell_nics(nic_pxe["nic2"], nic_pxe["nic3"])
+
+        self.requests_mock.get(
+            "/redfish/v1/TaskService/Tasks/JID_1234567890",
+            [{"status_code": 202, "json": DELL_TASK_REPONSE}, {"status_code": 200, "json": scp}],
+        )
+        self.requests_mock.get(self.redfish.system_manager, json=SYSTEM_MANAGER_RESPONSE)
+        self.requests_mock.get(self.redfish.oob_manager, json=MANAGER_RESPONSE)
+        ifaces = {
+            "@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces",
+            "Members": [
+                {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.1-1-1"},
+                {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Embedded.2-1-1"},
+                {"@odata.id": f"/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/{nic_name}"},
+                {"@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-2-1"},
+            ],
+        }
+        self.requests_mock.get("/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces", json=ifaces)
+
+        iface = {
+            "@odata.id": "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-1-1",
+            "MACAddress": "00:62:0B:C8:9C:50",
+        }
+        self.requests_mock.get(
+            "/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces/NIC.Integrated.1-1-1",
+            json=iface,
+        )
+        with pytest.raises(redfish.RedfishError, match=error_msg):
+            self.redfish.get_primary_mac()
 
 
 class TestRedfishSupermicro:
@@ -1178,3 +1242,52 @@ class TestRedfishSupermicro:
         }
         self.requests_mock.get("/redfish/v1/Chassis/1/NetworkAdapters/1/Ports/1", json=port)
         assert self.redfish.get_primary_mac() == "7c:c2:55:97:5a:0e"
+
+    def test_force_http_boot_once_ok(self):
+        """It should change the HTTP boot mode."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
+        self.requests_mock.patch("/redfish/v1/Systems/1", status_code=204)
+        self.redfish.force_http_boot_once()
+        assert self.requests_mock.last_request.method == "PATCH"
+        request_json = self.requests_mock.last_request.json()
+        assert request_json == {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Once",
+                "BootSourceOverrideTarget": "Pxe",
+                "BootSourceOverrideMode": "UEFI",
+            }
+        }
+
+    def test_force_http_boot_once_raise(self):
+        """It should raise a RedfishError as the BootMode is not UEFI."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootMode": "Legacy"}})
+        with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
+            self.redfish.force_http_boot_once()
+
+    @pytest.mark.parametrize(
+        "bios_attributes, error_msg",
+        (
+            (
+                {"OnboardLAN1OptionROM": "EFI", "OnboardLAN2OptionROM": "EFI"},
+                "Found more than 1 NIC with PXE enabled: ",
+            ),
+            ({}, "No PXE enabled NIC found"),
+            ({"OnboardLAN1OptionROM": "EFI"}, "No MAC found on the PXE enabled interface"),
+        ),
+    )
+    def test_get_primary_mac_error(self, bios_attributes, error_msg):
+        """It should raise an error if there is none or more than 1 PXE nic."""
+        bios = {
+            "@odata.id": "/redfish/v1/Systems/1/Bios",
+            "Attributes": bios_attributes,
+        }
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json=bios)
+
+        adapters = {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters",
+            "Members": [],
+        }
+        self.requests_mock.get("/redfish/v1/Chassis/1/NetworkAdapters", json=adapters)
+
+        with pytest.raises(redfish.RedfishError, match=error_msg):
+            self.redfish.get_primary_mac()

@@ -1,6 +1,41 @@
 Spicerack Changelog
 -------------------
 
+`v11.3.0`_ (2025-07-09)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+
+* dhcp: add a config to match based on the host UUID, sent in Option 97, pxe-client-id, rather than the MAC or
+  Option 82 info.
+* redfish: add support for iDRAC 10 to ``force_http_boot_once``.
+* netbox: expose the switches a server is connected to.
+* cookbook API: simplify ``-t/--task-id`` support:
+
+  * Use directly the wmflib's Phabricator task validator as type in the argument parser instance. When the argument
+    is not mandatory set a default value of empty string that will make all the calls to the Phabricator's instance
+    noop.
+  * Set ``allow_empty_identifiers`` to ``True`` when instantiating a Phabricator instance to allow the calls to
+    Phabricator to be noop when using an empty identifier.
+  * This will allow to simplify a lot of logic in the cookbooks that will be able to blindly call the phabricator
+    methods and decide if they should raise or not on failure.
+
+* administrative: add support for empty task ID. Don't include the task ID in the reason message if it's an empty
+  string. Add this support so that when using the newer wmflib's Phabricator capabilities if empty string is used
+  it will be supported in this module too.
+
+Bug fixes
+"""""""""
+
+* icinga: fix mypy call-overload reported error.
+
+Miscellanea
+"""""""""""
+
+* tox: add python 3.12 and 3.13, skip Python 3.10 in CI.
+* redfish: add some more tests.
+
 `v11.2.0`_ (2025-06-26)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3654,3 +3689,4 @@ New features
 .. _`v11.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.0.0
 .. _`v11.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.1.0
 .. _`v11.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.2.0
+.. _`v11.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.3.0

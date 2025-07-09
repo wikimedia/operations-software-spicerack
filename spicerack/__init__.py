@@ -605,6 +605,9 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
     def phabricator(self, bot_config_file: str, section: str = "phabricator_bot") -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.
 
+        The Phabricator object is instantiated with ``allow_empty_identifiers=True``, so that it can be a NOOP when
+        executed with an empty string task ID or other identifier.
+
         Arguments:
             bot_config_file: the path to the configuration file for the Phabricator bot, with the following structure::
 
@@ -618,7 +621,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         """
         # Allow to specify the configuration file as opposed to other methods so that different clients can use
         # different Phabricator BOT accounts, potentially with different permissions.
-        return create_phabricator(bot_config_file, section=section, dry_run=self._dry_run)
+        return create_phabricator(bot_config_file, section=section, allow_empty_identifiers=True, dry_run=self._dry_run)
 
     def prometheus(self) -> Prometheus:
         """Get a Prometheus instance."""

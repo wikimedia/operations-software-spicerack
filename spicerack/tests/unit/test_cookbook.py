@@ -82,7 +82,7 @@ class TestCookbookBase:
         parser = self.cookbook.argument_parser()
         parsed_args = parser.parse_args([])
         assert parsed_args.reason is None
-        assert parsed_args.task_id is None
+        assert parsed_args.task_id == ""
 
     @pytest.mark.parametrize(
         "kwargs",
@@ -103,7 +103,6 @@ class TestCookbookBase:
     @pytest.mark.parametrize(
         "task",
         (
-            "",
             "T",
             "123",
             "T123456789",

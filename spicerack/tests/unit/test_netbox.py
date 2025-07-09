@@ -456,7 +456,7 @@ class TestNetboxServer:
 
     def test_name_setter_virtual(self):
         """It should raise a NetboxError if trying to change the name of a VM."""
-        with pytest.raises(NetboxError, match="chaging the name is only for physical servers"):
+        with pytest.raises(NetboxError, match="changing the name is only for physical servers"):
             self.virtual_server.name = "foo"
 
     def test_name_setter_identical(self):
@@ -483,3 +483,26 @@ class TestNetboxServer:
         self.netbox_host.save.return_value = False
         with pytest.raises(NetboxError, match="Name change for physical didn't get applied by Netbox."):
             self.physical_server.name = "new_name"
+
+    def test_switches_ok(self):
+        """It should return the production switches connected to the server."""
+        iface1 = mock.Mock()
+        endpoint1 = mock.Mock()
+        endpoint1.device.name = "switch1"
+        iface1.connected_endpoints = [endpoint1]
+        iface2 = mock.Mock()
+        endpoint2 = mock.Mock()
+        endpoint2.device.name = "switch2"
+        iface2.connected_endpoints = [endpoint2]
+        self.mocked_api.dcim.interfaces.filter.return_value = [iface1, iface2]
+
+        assert self.physical_server.switches == ["switch1", "switch2"]
+
+        self.mocked_api.dcim.interfaces.filter.assert_called_once_with(
+            device_id=1, mgmt_only=False, cabled=True, connected=True, connected_endpoints_type="dcim.interface"
+        )
+
+    def test_connected_switches_virtual(self):
+        """It should raise a NetboxError if trying to get the connected_switches on a virtual machine."""
+        with pytest.raises(NetboxError, match="Server virtual is a virtual machine, not connected to a switch."):
+            self.virtual_server.switches  # pylint: disable=pointless-statement

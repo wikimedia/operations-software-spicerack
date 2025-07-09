@@ -360,6 +360,26 @@ configuration_generator_data = (
         ),
         "ttyS1-115200/testhost0.conf",
     ),
+    # DHCPConfUUID tests
+    # - basic check of functionality
+    (
+        dhcp.DHCPConfUUID,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "uuid": "4c4c4544-0059-4b10-804e-b4c04f4d5733",
+            "ttys": 0,
+            "distro": "buster",
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    host-identifier option pxe-client-id 00:44:45:4c:4c:59:00:10:4b:80:4e:b4:c0:4f:4d:57:33;\n"
+            "    fixed-address 10.0.0.1;\n"
+            '    option pxelinux.pathprefix "http://apt.wikimedia.org/tftpboot/buster-installer/";\n'
+            "}\n"
+        ),
+        "ttyS0-115200/testhost0.conf",
+    ),
     # dhcpconfmgmt tests
     (  # Dell host
         dhcp.DHCPConfMgmt,
