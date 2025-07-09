@@ -85,9 +85,14 @@ class CookbookBase(metaclass=ABCMeta):
     """Control if a ``-t/--task-id`` argument is included in the default argument parser for the Phabricator task ID.
 
         * If set to :py:data:`True` it will add a ``-t/--task-id`` required argument, accesible as ``args.task_id``.
-        * If set to :py:data:`False` it will add a ``-t/--task-id`` optional argument, accessible as ``args.task_id``.
+        * If set to :py:data:`False` it will add a ``-t/--task-id`` optional argument, accessible as ``args.task_id``
+          and set its default value to empty string, allowing noop calls to :py:class:`wmflib.phabricator.Phabricator`
+          methods without checking if a task ID was provided.
         * If set to :py:data:`None` it will not add the argument for providing a task ID.
-        * When adding the argument it also validates that it is a valid Phabricator task ID (e.g. T12345).
+        * When adding the argument it also validates that it is a valid Phabricator task ID (e.g. T12345) using
+          :py:func:`wmflib.phabricator.validate_task_id`.
+        * When set to :py:data:`False` the :py:func:`wmflib.phabricator.validate_task_id` function is called with
+          ``allow_empty_identifiers=True`` that allows empty strings as a valid identifiers.
     """
     argument_reason_required: Optional[bool] = None
     """Control if a ``-r/--reason`` argument is included in the default argument parser for the administrative reason.
