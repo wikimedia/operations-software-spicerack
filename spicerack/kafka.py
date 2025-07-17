@@ -7,7 +7,9 @@ from datetime import timedelta
 from typing import Any
 
 from kafka import KafkaConsumer, OffsetAndMetadata, TopicPartition
+from kafka.admin import KafkaAdminClient
 
+from spicerack.constants import WMF_CA_BUNDLE_PATH
 from spicerack.exceptions import SpicerackError
 
 TIMEOUT_MS: int = 20000
@@ -17,6 +19,7 @@ DELTA: int = timedelta(minutes=2).seconds * 1000
 """For offset approximation, timestamp that will be used will be earlier by this amount of ms."""
 
 logger = logging.getLogger(__name__)
+logging.getLogger("kafka").setLevel(logging.WARNING)  # drop kafka connection chatter
 
 
 @dataclass
@@ -45,20 +48,26 @@ class KafkaClient:
     _consumer: KafkaConsumer
     _site: str
 
-    def __init__(self, consumer_definition: ConsumerDefinition, kafka_config: dict, dry_run: bool) -> None:
+    def __init__(
+        self,
+        consumer_definition: ConsumerDefinition,
+        kafka_config: dict,
+        dry_run: bool,
+        ca_bundle_path: str = WMF_CA_BUNDLE_PATH,
+    ) -> None:
         """Sets up a KafkaConsumer.
 
         Arguments:
             consumer_definition: definition of the Kafka data for the consumer.
             kafka_config: complete, available in Puppet, kafka definition.
             dry_run: enable dry run mode.
+            ca_bundle_path: the path to the CA certificate bundle.
 
         """
         self._dry_run = dry_run
         self._site = consumer_definition.site
         context = ssl.create_default_context()
-        crt_location = "/etc/ssl/certs/ca-certificates.crt"
-        context.load_verify_locations(crt_location)
+        context.load_verify_locations(ca_bundle_path)
 
         logger.debug(
             "Creating kafka client (kafka consumer with site prefix) with SSL context (check_hostname: %s, "
@@ -188,7 +197,13 @@ class KafkaClient:
 class Kafka:
     """Kafka module, that currently allows for inter and cross cluster consumer group position transfer."""
 
-    def __init__(self, *, kafka_config: dict[str, dict[str, dict]], dry_run: bool = True):
+    def __init__(
+        self,
+        *,
+        kafka_config: dict[str, dict[str, dict]],
+        dry_run: bool = True,
+        ca_bundle_path: str = WMF_CA_BUNDLE_PATH,
+    ):
         """Create Kafka module instance.
 
         Kafka config is based on a Puppet generated config.yaml in spicerack configs. At minimum, it requires a
@@ -203,10 +218,26 @@ class Kafka:
         Arguments:
               kafka_config: complete, available in Puppet, kafka definition.
               dry_run: enable dry run mode.
+              ca_bundle_path: the path to the CA certificate bundle.
 
         """
         self._dry_run = dry_run
         self._kafka_config = kafka_config
+        self._ca_bundle_path = ca_bundle_path
+
+    def admin_client(self, site: str, cluster_name: str) -> KafkaAdminClient:
+        """Return a KafkaAdminClient connected to the kafka cluster of provided name located in the argument site.
+
+        Arguments:
+              site: site name (eqiad, codfw, etc)
+              cluster_name: Kafka cluster name (jumbo, main, logging, test, etc)
+
+        """
+        return KafkaAdminClient(
+            bootstrap_servers=self._kafka_config[cluster_name][site]["brokers"]["ssl_string"],
+            security_protocol="SSL",
+            ssl_certfile=self._ca_bundle_path,
+        )
 
     @staticmethod
     def _get_offsets(*, client: KafkaClient, topics: list[str]) -> dict[TopicPartition, int]:
