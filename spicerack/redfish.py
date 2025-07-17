@@ -144,7 +144,7 @@ class Redfish:
         self._password = password
 
         session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
-        # TODO: evaluate if we should create an intermediate CA for managament consoles
+        # TODO: evaluate if we should create an intermediate CA for management consoles
         session.verify = False  # The devices have a self-signed certificate
         session.auth = (self._username, self._password)
         session.headers.update({"Accept": "application/json"})
