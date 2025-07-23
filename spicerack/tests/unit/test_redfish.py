@@ -422,6 +422,11 @@ class RedfishTest(redfish.Redfish):
         """Return the current power state of the device."""
         return "On"
 
+    @property
+    def is_uefi(self) -> bool:
+        """Return whether or not UEFI is being used."""
+        return True
+
 
 class TestRedfish:
     """Tests for the Redfish class."""
@@ -1201,10 +1206,18 @@ class TestRedfishSupermicro:
         """Property to return the boot mode key in the Bios attributes."""
         assert self.redfish.boot_mode_attribute == "BootModeSelect"
 
-    def test_is_uefi(self):
-        """It should return the device is UEFI."""
-        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
-        assert self.redfish.is_uefi is True
+    @pytest.mark.parametrize(
+        "attributes, is_uefi",
+        (
+            ({"Attributes": {"BootModeSelect": "Legacy"}}, False),
+            ({"Attributes": {"BootModeSelectIsAbsent": "Batman"}}, True),
+            ({"Attributes": {"BootModeSelect": "UEFI"}}, True),
+        ),
+    )
+    def test_is_uefi(self, attributes, is_uefi):
+        """It should return that the device is not UEFI."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json=attributes)
+        assert self.redfish.is_uefi is is_uefi
 
     def test_get_primary_mac(self):
         """It should return the pxe enabled mac."""
@@ -1259,8 +1272,8 @@ class TestRedfishSupermicro:
         }
 
     def test_force_http_boot_once_raise(self):
-        """It should raise a RedfishError as the BootMode is not UEFI."""
-        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootMode": "Legacy"}})
+        """It should raise a RedfishError as the BootModeSelect is not UEFI."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "Legacy"}})
         with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
             self.redfish.force_http_boot_once()
 
