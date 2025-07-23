@@ -900,8 +900,11 @@ class TestRedfishDell:
         """It should return the generation."""
         self.requests_mock.get(self.redfish.oob_manager, json=response)
         assert self.redfish.generation == generation
+        assert self.requests_mock.called
+        assert self.requests_mock.call_count == 1
         # assert twice to check cached version
         assert self.redfish.generation == generation
+        assert self.requests_mock.call_count == 1
 
     @pytest.mark.parametrize("generation", (1, 13, 14))
     @mock.patch("spicerack.redfish.time.sleep")
@@ -947,16 +950,19 @@ class TestRedfishDell:
         assert mocked_sleep.mock_calls == calls
 
     @pytest.mark.parametrize(
-        "model, expected_params",
-        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": ["ALL"]})),
+        "model, expected_params, endpoint",
+        (
+            ("16G Monolithic", {"Target": "ALL"}, "EID_674_Manager"),
+            ("17G Monolithic", {"Target": ["ALL"]}, "OemManager"),
+        ),
     )
     @pytest.mark.parametrize("allow_new", (False, True))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_dump(self, mocked_sleep, allow_new, model, expected_params):
+    def test_scp_dump(self, mocked_sleep, allow_new, model, expected_params, endpoint):
         """It should return an instance of DellSCP with the current configuration for the given target."""
         self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1", json={"Model": model})
         self.requests_mock.post(
-            "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ExportSystemConfiguration",
+            f"/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/{endpoint}.ExportSystemConfiguration",
             headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
             status_code=202,
         )
@@ -977,8 +983,11 @@ class TestRedfishDell:
                 config.set("Some.Component.1", "Non.Existent", "new_value")
 
     @pytest.mark.parametrize(
-        "model, expected_params",
-        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": ["ALL"]})),
+        "model, expected_params, endpoint",
+        (
+            ("16G Monolithic", {"Target": "ALL"}, "EID_674_Manager"),
+            ("17G Monolithic", {"Target": ["ALL"]}, "OemManager"),
+        ),
     )
     @pytest.mark.parametrize(
         "uri_suffix, preview",
@@ -988,13 +997,15 @@ class TestRedfishDell:
         ),
     )
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_push(self, mocked_sleep, uri_suffix, preview, model, expected_params):
+    def test_scp_push(  # pylint: disable=too-many-positional-arguments
+        self, mocked_sleep, uri_suffix, preview, model, expected_params, endpoint
+    ):
         """It should push the configuration to the device for preview, no changes will be applied."""
         expected = deepcopy(DELL_TASK_REPONSE)
         expected["EndTime"] = "2021-12-09T14:39:29-06:00"
         self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1", json={"Model": model})
         self.requests_mock.post(
-            f"/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.{uri_suffix}",
+            f"/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/{endpoint}.{uri_suffix}",
             headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
             status_code=202,
         )

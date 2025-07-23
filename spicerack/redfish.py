@@ -922,8 +922,6 @@ class RedfishDell(Redfish):
     """The boot mode key in the Bios attributes."""
     http_boot_target = "UefiHttp"
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
-    scp_base_uri: str = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
-    """The Dell's SCP push base URI."""
     idrac_10_min_gen: int = 17
     """The minimum generation shipped with iDRAC 10."""
 
@@ -965,6 +963,20 @@ class RedfishDell(Redfish):
                 self._generation = int(match.group(0))
         logger.debug("%s: iDRAC generation %s", self._hostname, self._generation)
         return self._generation
+
+    @property
+    def scp_base_uri(self) -> str:
+        """Property representing the base url for the SCP operations.
+
+        Returns: the base URI path for all SCP operations.
+
+        """
+        if self.generation >= self.idrac_10_min_gen:
+            endpoint = "OemManager"
+        else:
+            endpoint = "EID_674_Manager"
+
+        return f"{self.oob_manager}/Actions/Oem/{endpoint}"
 
     @retry(
         tries=240,
