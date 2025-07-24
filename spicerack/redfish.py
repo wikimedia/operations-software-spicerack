@@ -546,9 +546,7 @@ class Redfish:
         """
         user_uri, etag = self.find_account(username)
         logger.info("Changing password for the account with username %s: %s", username, user_uri)
-        response = self.request(
-            "patch", user_uri, json={"UserName": username, "Password": password}, headers={"If-Match": etag}
-        )
+        response = self.request("patch", user_uri, json={"Password": password}, headers={"If-Match": etag})
         if response.status_code != 200:
             raise RedfishError(f"Got unexpected HTTP {response.status_code}, expected 200:\n{response.text}")
 
