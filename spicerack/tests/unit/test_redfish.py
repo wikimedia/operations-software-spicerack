@@ -422,11 +422,6 @@ class RedfishTest(redfish.Redfish):
         """Return the current power state of the device."""
         return "On"
 
-    @property
-    def is_uefi(self) -> bool:
-        """Return whether or not UEFI is being used."""
-        return True
-
 
 class TestRedfish:
     """Tests for the Redfish class."""
@@ -1027,12 +1022,18 @@ class TestRedfishDell:
         """Property to return the boot mode key in the Bios attributes."""
         assert self.redfish.boot_mode_attribute == "BootMode"
 
-    def test_is_uefi(self):
+    @pytest.mark.parametrize(
+        "attributes, is_uefi",
+        (
+            ({"Attributes": {"BootMode": "Legacy"}}, False),
+            ({"Attributes": {"BootModeIsAbsent": "Batman"}}, True),
+            ({"Attributes": {"BootMode": "Uefi"}}, True),
+        ),
+    )
+    def test_is_uefi(self, attributes, is_uefi):
         """It should return that the device is not UEFI."""
-        self.requests_mock.get(
-            "/redfish/v1/Systems/System.Embedded.1/Bios", json={"Attributes": {"BootMode": "Legacy"}}
-        )
-        assert self.redfish.is_uefi is False
+        self.requests_mock.get("/redfish/v1/Systems/System.Embedded.1/Bios", json=attributes)
+        assert self.redfish.is_uefi is is_uefi
 
     @mock.patch("wmflib.decorators.time.sleep")
     def test_get_primary_mac(self, _mocked_sleep):

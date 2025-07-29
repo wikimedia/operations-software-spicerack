@@ -569,9 +569,15 @@ class Redfish:
         """Return the current power state of the device."""
 
     @property
-    @abstractmethod
     def is_uefi(self) -> bool:
         """Return weather the host is legacy BIOS or UEFI."""
+        response = self.request("get", f"{self.system_manager}/Bios").json()
+        # Supermicro and Dell ship UEFI-only servers, that don't have any BIOS tunable
+        # to set "Legacy" mode anymore.
+        # More info: T393948 and T392851
+        if self.boot_mode_attribute not in response["Attributes"]:
+            return True
+        return "efi" in response["Attributes"].get(self.boot_mode_attribute, "").lower()
 
     def chassis_reset(self, action: ChassisResetPolicy) -> None:
         """Perform a reset of the chassis power status.
@@ -893,17 +899,6 @@ class RedfishSupermicro(Redfish):
             json=efi_http_boot,
         )
 
-    @property
-    def is_uefi(self) -> bool:
-        """Return weather the host is legacy BIOS or UEFI."""
-        response = self.request("get", f"{self.system_manager}/Bios").json()
-        # Supermicro ships UEFI-only servers, that don't have any BIOS tunable
-        # to set "Legacy" mode anymore.
-        # More info: T393948
-        if self.boot_mode_attribute not in response["Attributes"]:
-            return True
-        return "efi" in response["Attributes"].get(self.boot_mode_attribute, "").lower()
-
 
 class RedfishDell(Redfish):
     """Dell specific Redfish support."""
@@ -1132,9 +1127,3 @@ class RedfishDell(Redfish):
             uri,
             json=efi_http_boot,
         )
-
-    @property
-    def is_uefi(self) -> bool:
-        """Return weather the host is legacy BIOS or UEFI."""
-        response = self.request("get", f"{self.system_manager}/Bios").json()
-        return "efi" in response["Attributes"].get(self.boot_mode_attribute, "").lower()
