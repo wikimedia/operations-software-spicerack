@@ -144,7 +144,7 @@ class Redfish:
         self._password = password
 
         session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
-        # TODO: evaluate if we should create an intermediate CA for managament consoles
+        # TODO: evaluate if we should create an intermediate CA for management consoles
         session.verify = False  # The devices have a self-signed certificate
         session.auth = (self._username, self._password)
         session.headers.update({"Accept": "application/json"})
@@ -546,9 +546,7 @@ class Redfish:
         """
         user_uri, etag = self.find_account(username)
         logger.info("Changing password for the account with username %s: %s", username, user_uri)
-        response = self.request(
-            "patch", user_uri, json={"UserName": username, "Password": password}, headers={"If-Match": etag}
-        )
+        response = self.request("patch", user_uri, json={"Password": password}, headers={"If-Match": etag})
         if response.status_code != 200:
             raise RedfishError(f"Got unexpected HTTP {response.status_code}, expected 200:\n{response.text}")
 
@@ -574,6 +572,11 @@ class Redfish:
     def is_uefi(self) -> bool:
         """Return weather the host is legacy BIOS or UEFI."""
         response = self.request("get", f"{self.system_manager}/Bios").json()
+        # Supermicro and Dell ship UEFI-only servers, that don't have any BIOS tunable
+        # to set "Legacy" mode anymore.
+        # More info: T393948 and T392851
+        if self.boot_mode_attribute not in response["Attributes"]:
+            return True
         return "efi" in response["Attributes"].get(self.boot_mode_attribute, "").lower()
 
     def chassis_reset(self, action: ChassisResetPolicy) -> None:
@@ -912,8 +915,6 @@ class RedfishDell(Redfish):
     """The boot mode key in the Bios attributes."""
     http_boot_target = "UefiHttp"
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
-    scp_base_uri: str = "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager"
-    """The Dell's SCP push base URI."""
     idrac_10_min_gen: int = 17
     """The minimum generation shipped with iDRAC 10."""
 
@@ -955,6 +956,20 @@ class RedfishDell(Redfish):
                 self._generation = int(match.group(0))
         logger.debug("%s: iDRAC generation %s", self._hostname, self._generation)
         return self._generation
+
+    @property
+    def scp_base_uri(self) -> str:
+        """Property representing the base url for the SCP operations.
+
+        Returns: the base URI path for all SCP operations.
+
+        """
+        if self.generation >= self.idrac_10_min_gen:
+            endpoint = "OemManager"
+        else:
+            endpoint = "EID_674_Manager"
+
+        return f"{self.oob_manager}/Actions/Oem/{endpoint}"
 
     @retry(
         tries=240,

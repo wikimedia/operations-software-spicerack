@@ -895,8 +895,11 @@ class TestRedfishDell:
         """It should return the generation."""
         self.requests_mock.get(self.redfish.oob_manager, json=response)
         assert self.redfish.generation == generation
+        assert self.requests_mock.called
+        assert self.requests_mock.call_count == 1
         # assert twice to check cached version
         assert self.redfish.generation == generation
+        assert self.requests_mock.call_count == 1
 
     @pytest.mark.parametrize("generation", (1, 13, 14))
     @mock.patch("spicerack.redfish.time.sleep")
@@ -942,16 +945,19 @@ class TestRedfishDell:
         assert mocked_sleep.mock_calls == calls
 
     @pytest.mark.parametrize(
-        "model, expected_params",
-        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": ["ALL"]})),
+        "model, expected_params, endpoint",
+        (
+            ("16G Monolithic", {"Target": "ALL"}, "EID_674_Manager"),
+            ("17G Monolithic", {"Target": ["ALL"]}, "OemManager"),
+        ),
     )
     @pytest.mark.parametrize("allow_new", (False, True))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_dump(self, mocked_sleep, allow_new, model, expected_params):
+    def test_scp_dump(self, mocked_sleep, allow_new, model, expected_params, endpoint):
         """It should return an instance of DellSCP with the current configuration for the given target."""
         self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1", json={"Model": model})
         self.requests_mock.post(
-            "/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ExportSystemConfiguration",
+            f"/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/{endpoint}.ExportSystemConfiguration",
             headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
             status_code=202,
         )
@@ -972,8 +978,11 @@ class TestRedfishDell:
                 config.set("Some.Component.1", "Non.Existent", "new_value")
 
     @pytest.mark.parametrize(
-        "model, expected_params",
-        (("16G Monolithic", {"Target": "ALL"}), ("17G Monolithic", {"Target": ["ALL"]})),
+        "model, expected_params, endpoint",
+        (
+            ("16G Monolithic", {"Target": "ALL"}, "EID_674_Manager"),
+            ("17G Monolithic", {"Target": ["ALL"]}, "OemManager"),
+        ),
     )
     @pytest.mark.parametrize(
         "uri_suffix, preview",
@@ -983,13 +992,15 @@ class TestRedfishDell:
         ),
     )
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_push(self, mocked_sleep, uri_suffix, preview, model, expected_params):
+    def test_scp_push(  # pylint: disable=too-many-positional-arguments
+        self, mocked_sleep, uri_suffix, preview, model, expected_params, endpoint
+    ):
         """It should push the configuration to the device for preview, no changes will be applied."""
         expected = deepcopy(DELL_TASK_REPONSE)
         expected["EndTime"] = "2021-12-09T14:39:29-06:00"
         self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1", json={"Model": model})
         self.requests_mock.post(
-            f"/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.{uri_suffix}",
+            f"/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/{endpoint}.{uri_suffix}",
             headers={"Location": "/redfish/v1/TaskService/Tasks/JID_1234567890"},
             status_code=202,
         )
@@ -1011,12 +1022,18 @@ class TestRedfishDell:
         """Property to return the boot mode key in the Bios attributes."""
         assert self.redfish.boot_mode_attribute == "BootMode"
 
-    def test_is_uefi(self):
+    @pytest.mark.parametrize(
+        "attributes, is_uefi",
+        (
+            ({"Attributes": {"BootMode": "Legacy"}}, False),
+            ({"Attributes": {"BootModeIsAbsent": "Batman"}}, True),
+            ({"Attributes": {"BootMode": "Uefi"}}, True),
+        ),
+    )
+    def test_is_uefi(self, attributes, is_uefi):
         """It should return that the device is not UEFI."""
-        self.requests_mock.get(
-            "/redfish/v1/Systems/System.Embedded.1/Bios", json={"Attributes": {"BootMode": "Legacy"}}
-        )
-        assert self.redfish.is_uefi is False
+        self.requests_mock.get("/redfish/v1/Systems/System.Embedded.1/Bios", json=attributes)
+        assert self.redfish.is_uefi is is_uefi
 
     @mock.patch("wmflib.decorators.time.sleep")
     def test_get_primary_mac(self, _mocked_sleep):
@@ -1201,10 +1218,18 @@ class TestRedfishSupermicro:
         """Property to return the boot mode key in the Bios attributes."""
         assert self.redfish.boot_mode_attribute == "BootModeSelect"
 
-    def test_is_uefi(self):
-        """It should return the device is UEFI."""
-        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
-        assert self.redfish.is_uefi is True
+    @pytest.mark.parametrize(
+        "attributes, is_uefi",
+        (
+            ({"Attributes": {"BootModeSelect": "Legacy"}}, False),
+            ({"Attributes": {"BootModeSelectIsAbsent": "Batman"}}, True),
+            ({"Attributes": {"BootModeSelect": "UEFI"}}, True),
+        ),
+    )
+    def test_is_uefi(self, attributes, is_uefi):
+        """It should return that the device is not UEFI."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json=attributes)
+        assert self.redfish.is_uefi is is_uefi
 
     def test_get_primary_mac(self):
         """It should return the pxe enabled mac."""
@@ -1259,8 +1284,8 @@ class TestRedfishSupermicro:
         }
 
     def test_force_http_boot_once_raise(self):
-        """It should raise a RedfishError as the BootMode is not UEFI."""
-        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootMode": "Legacy"}})
+        """It should raise a RedfishError as the BootModeSelect is not UEFI."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "Legacy"}})
         with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
             self.redfish.force_http_boot_once()
 
