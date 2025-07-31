@@ -1,6 +1,26 @@
 Spicerack Changelog
 -------------------
 
+`v11.4.0`_ (2025-07-31)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+
+* kafka: expose a KafkaAdminClient builder method (`T399069`_).
+
+Minor improvements
+""""""""""""""""""
+
+* redfish: improve is_uefi for Supermicro and Dell.
+* redfish: improve iDRAC 10 support for Dell.
+* redfish: simplify change_user_password for Supermicro.
+
+Miscellanea
+"""""""""""
+
+* redfish: fix inconsequential typo
+
 `v11.3.0`_ (2025-07-09)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3544,6 +3564,7 @@ New features
 .. _`T373794`: https://phabricator.wikimedia.org/T373794
 .. _`T379258`: https://phabricator.wikimedia.org/T379258
 .. _`T390860`: https://phabricator.wikimedia.org/T390860
+.. _`T399069`: https://phabricator.wikimedia.org/T399069
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3690,3 +3711,4 @@ New features
 .. _`v11.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.1.0
 .. _`v11.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.2.0
 .. _`v11.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.3.0
+.. _`v11.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.4.0
