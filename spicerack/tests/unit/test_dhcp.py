@@ -419,6 +419,25 @@ configuration_generator_data = (
         ),
         "mgmt-eqiad/test-switch1001.mgmt.eqiad.wmnet.conf",
     ),
+    (  # Nokia device
+        dhcp.DHCPConfMgmt,
+        {
+            "datacenter": "eqiad",
+            "serial": "TESTSERIAL",
+            "manufacturer": "nokia",
+            "fqdn": "test-switch1001.mgmt.eqiad.wmnet",
+            "ipv4": IPv4Address("10.0.0.1"),
+        },
+        (
+            '\nclass "test-switch1001.mgmt.eqiad.wmnet" {\n'
+            '    match if (lcase(option dhcp-client-identifier) = "\0testserial");\n'
+            "}\npool {\n"
+            '    allow members of "test-switch1001.mgmt.eqiad.wmnet";\n'
+            "    range 10.0.0.1 10.0.0.1;\n"
+            "}\n"
+        ),
+        "mgmt-eqiad/test-switch1001.mgmt.eqiad.wmnet.conf",
+    ),
 )
 """`tuple[class, tuple[dict[str, str], str]]`: Parameters for test_configuration_generator."""
 
