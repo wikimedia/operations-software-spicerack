@@ -546,7 +546,15 @@ class Redfish:
         """
         user_uri, etag = self.find_account(username)
         logger.info("Changing password for the account with username %s: %s", username, user_uri)
-        response = self.request("patch", user_uri, json={"Password": password}, headers={"If-Match": etag})
+        # On IDRAC 10+ the etag returned for a give username is a weak one,
+        # so it will not be validated if sent with a If-Match HTTP header.
+        # More info: https://phabricator.wikimedia.org/T392851#11151990
+        if "W/" in etag:
+            logger.info("The Etag provided for %s is a weak one, skipping the If-Match HTTP header.", username)
+            http_headers = {}
+        else:
+            http_headers = {"If-Match": etag}
+        response = self.request("patch", user_uri, json={"Password": password}, headers=http_headers)
         if response.status_code != 200:
             raise RedfishError(f"Got unexpected HTTP {response.status_code}, expected 200:\n{response.text}")
 

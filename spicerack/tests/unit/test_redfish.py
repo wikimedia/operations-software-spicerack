@@ -23,6 +23,7 @@ ACCOUNTS_RESPONSE = {
         {"@odata.id": "/redfish/v1/AccountService/Accounts/1"},
         {"@odata.id": "/redfish/v1/AccountService/Accounts/2"},
         {"@odata.id": "/redfish/v1/AccountService/Accounts/3"},
+        {"@odata.id": "/redfish/v1/AccountService/Accounts/4"},
     ],
     "Members@odata.count": 3,
     "Name": "Accounts Collection",
@@ -397,14 +398,19 @@ def get_scp_dell_nics(nic2, nic3):
 def add_accounts_mock_responses(requests_mock):
     """Setup requests mock URLs and return payloads for all the existing users."""
     requests_mock.get("/redfish/v1/AccountService/Accounts", json=ACCOUNTS_RESPONSE)
-    users = {"1": "user", "2": "root", "3": "guest"}
-    for user_id, username in users.items():
+    users = {
+        "1": ("user", "12345-1"),
+        "2": ("root", "12345-2"),
+        "3": ("guest", "12345-3"),
+        "4": ("batman", "W/'gen-3'-gzip"),
+    }
+    for user_id, username_metadata in users.items():
         response = deepcopy(ACCOUNT_RESPONSE)
         response["Id"] = response["Id"].format(user_id=user_id)
         response["@odata.id"] = response["@odata.id"].format(user_id=user_id)
-        response["UserName"] = username
+        response["UserName"] = username_metadata[0]
         requests_mock.get(
-            f"/redfish/v1/AccountService/Accounts/{user_id}", json=response, headers={"ETag": f"12345-{user_id}"}
+            f"/redfish/v1/AccountService/Accounts/{user_id}", json=response, headers={"ETag": username_metadata[1]}
         )
 
 
@@ -676,7 +682,10 @@ class TestRedfish:
             (None, "test12345"),
         ),
     )
-    @pytest.mark.parametrize("user_id, username, is_current", ((1, "user", False), (2, "root", True)))
+    @pytest.mark.parametrize(
+        "user_id, username, is_current",
+        ((1, "user", False), (2, "root", True), (3, "guest", False), (4, "batman", False)),
+    )
     def test_change_user_password_ok(self, user_id, username, is_current, response, password):
         """It should change the password for the given user and update the instance auth credentials accordingly."""
         self.requests_mock.get("/redfish", json={"v1": "/redfish/v1/"})
