@@ -554,7 +554,9 @@ class Redfish:
             http_headers = {}
         else:
             http_headers = {"If-Match": etag}
-        response = self.request("patch", user_uri, json={"Password": password}, headers=http_headers)
+        # Raise the request's timeout to 30s since new Dells take more time to
+        # return from a HTTP patch request.
+        response = self.request("patch", user_uri, json={"Password": password}, headers=http_headers, timeout=30)
         if response.status_code != 200:
             raise RedfishError(f"Got unexpected HTTP {response.status_code}, expected 200:\n{response.text}")
 
