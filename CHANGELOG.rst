@@ -1,6 +1,13 @@
 Spicerack Changelog
 -------------------
 
+`v11.6.0`_ (2025-09-12)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+* redfish: add a 30s timeout to change_user_password to support Dell's IDRAC 10 (`T392851`_).
+
 `v11.5.0`_ (2025-09-12)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3721,3 +3728,4 @@ New features
 .. _`v11.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.3.0
 .. _`v11.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.4.0
 .. _`v11.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.5.0
+.. _`v11.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.6.0
