@@ -299,7 +299,7 @@ class DHCPConfMgmt(DHCPConfiguration):
 
     _template: str = """
     class "{s.fqdn}" {{
-        match if (lcase(option host-name) = "{s.hostname}");
+        match if (lcase(option {s.match_option}) = "{s.hostname}");
     }}
     pool {{
         allow members of "{s.fqdn}";
@@ -327,8 +327,16 @@ class DHCPConfMgmt(DHCPConfiguration):
         serial = self.serial.lower()
         if self.manufacturer.lower() == "dell":
             return f"idrac-{serial}"
-
+        if self.manufacturer.lower() == "nokia":
+            return f"\0{serial}"
         return serial
+
+    @property
+    def match_option(self) -> str:
+        """Return on which DHCP option to perform the serial's match."""
+        if self.manufacturer.lower() == "nokia":
+            return "dhcp-client-identifier"
+        return "host-name"
 
 
 class DHCP:

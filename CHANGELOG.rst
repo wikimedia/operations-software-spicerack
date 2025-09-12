@@ -1,6 +1,13 @@
 Spicerack Changelog
 -------------------
 
+`v11.5.0`_ (2025-09-12)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+* redfish: update change_user_password to support Dell's IDRAC 10 (`T392851`_).
+
 `v11.4.0`_ (2025-07-31)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3564,6 +3571,7 @@ New features
 .. _`T373794`: https://phabricator.wikimedia.org/T373794
 .. _`T379258`: https://phabricator.wikimedia.org/T379258
 .. _`T390860`: https://phabricator.wikimedia.org/T390860
+.. _`T392851`: https://phabricator.wikimedia.org/T392851
 .. _`T399069`: https://phabricator.wikimedia.org/T399069
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
@@ -3712,3 +3720,4 @@ New features
 .. _`v11.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.2.0
 .. _`v11.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.3.0
 .. _`v11.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.4.0
+.. _`v11.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.5.0
