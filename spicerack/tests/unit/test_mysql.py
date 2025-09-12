@@ -19,8 +19,8 @@ from spicerack.remote import Remote, RemoteExecutionError, RemoteHosts
 from spicerack.tests import get_fixture_path
 from spicerack.tests.unit.test_remote import mock_cumin
 
-EQIAD_CORE_MASTERS_QUERY = "db10[01-11]"
-CODFW_CORE_MASTERS_QUERY = "db20[01-11]"
+EQIAD_CORE_MASTERS_QUERY = "db10[01-12]"
+CODFW_CORE_MASTERS_QUERY = "db20[01-12]"
 VERTICAL_QUERY_NEWLINE = """*************************** 1. row ***************************
 test: line with
 a newline
@@ -738,7 +738,7 @@ class TestMysql:
             (
                 {"datacenter": "eqiad", "replication_role": "master", "excludes": ("s2",)},
                 "A:db-core and A:eqiad and not A:db-section-s2 and A:db-role-master",
-                "db10[01-10]",
+                "db10[01-11]",
             ),
             (
                 {"section": "s1", "replication_role": "master"},
@@ -779,7 +779,7 @@ class TestMysql:
     def test_get_core_dbs_fail_sanity_check(self):
         """It should raise MysqlError if matching an invalid number of hosts when looking for masters."""
         self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db1001"))
-        with pytest.raises(mysql.MysqlError, match="Matched 1 masters, expected 11"):
+        with pytest.raises(mysql.MysqlError, match="Matched 1 masters, expected 12"):
             self.mysql.get_core_dbs(datacenter="eqiad", replication_role="master")
 
         assert self.mocked_remote.query.called
@@ -787,8 +787,8 @@ class TestMysql:
     @pytest.mark.parametrize("mode, value", (("readonly", b"1"), ("readwrite", b"0")))
     def test_set_core_masters_readonly(self, mode, value, caplog):
         """It should set the masters as read-only/read-write."""
-        self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db10[01-11]"))
-        mock_cumin(self.mocked_transports, 0, retvals=[[("db10[01-11]", value)]])
+        self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db10[01-12]"))
+        mock_cumin(self.mocked_transports, 0, retvals=[[("db10[01-12]", value)]])
         with caplog.at_level(logging.DEBUG):
             getattr(self.mysql, "set_core_masters_" + mode)("eqiad")
         assert "SET GLOBAL read_only=" + value.decode() in caplog.text
@@ -796,19 +796,19 @@ class TestMysql:
     @pytest.mark.parametrize("readonly, reply", ((True, b"1"), (False, b"0")))
     def test_verify_core_masters_readonly_ok(self, readonly, reply, caplog):
         """Should verify that the masters have the intended read-only value."""
-        self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db10[01-11]"))
-        mock_cumin(self.mocked_transports, 0, retvals=[[("db10[01-11]", reply)]])
+        self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db10[01-12]"))
+        mock_cumin(self.mocked_transports, 0, retvals=[[("db10[01-12]", reply)]])
         with caplog.at_level(logging.DEBUG):
             self.mysql.verify_core_masters_readonly("eqiad", readonly)
         assert "SELECT @@global.read_only" in caplog.text
 
     def test_verify_core_masters_readonly_fail(self):
         """Should raise MysqlError if some masters do not have the intended read-only value."""
-        self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db10[01-11]"))
+        self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db10[01-12]"))
         mock_cumin(
             self.mocked_transports,
             0,
-            retvals=[[("db1001", b"0"), ("db10[02-11]", b"1")]],
+            retvals=[[("db1001", b"0"), ("db10[02-12]", b"1")]],
         )
         with pytest.raises(
             mysql.MysqlError,

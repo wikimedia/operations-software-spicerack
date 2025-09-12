@@ -36,12 +36,15 @@ CORE_SECTIONS: tuple[str, ...] = (
     "s4",
     "s1",
     "x1",
+    "x3",
     "es6",
     "es7",
 )
 """Valid MySQL RW core sections (external storage RO, parser cache, x2 and misc sections are not included here).
 They are ordered from less impactful if anything goes wrong to most impactful.
 """
+# Note that adding/removing core sections will require updating tests/unit/test_mysql.py
+# to reflect the newly expected number of sections.
 
 logger = logging.getLogger(__name__)
 
