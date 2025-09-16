@@ -1,6 +1,13 @@
 Spicerack Changelog
 -------------------
 
+`v11.7.0`_ (2025-09-16)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Miscellanea
+"""""""""""
+* mysql: update CORE_SECTIONS to reflect newly added x3 section (`T404464`_).
+
 `v11.6.0`_ (2025-09-12)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3580,6 +3587,7 @@ New features
 .. _`T390860`: https://phabricator.wikimedia.org/T390860
 .. _`T392851`: https://phabricator.wikimedia.org/T392851
 .. _`T399069`: https://phabricator.wikimedia.org/T399069
+.. _`T404464`: https://phabricator.wikimedia.org/T404464
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3729,3 +3737,4 @@ New features
 .. _`v11.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.4.0
 .. _`v11.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.5.0
 .. _`v11.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.6.0
+.. _`v11.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.7.0
