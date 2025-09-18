@@ -943,7 +943,7 @@ class RedfishDell(Redfish):
     @property
     def log_entries(self) -> str:
         """String representing the log entries uri."""
-        if self.firmware_version < version.Version("4.10"):
+        if self.hw_model < 10 and self.firmware_version < version.Version("4.10"):
             return "/redfish/v1/Managers/Logs/Lclog"
 
         return super().log_entries
