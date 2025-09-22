@@ -940,6 +940,7 @@ class RedfishDell(Redfish):
         """Override parent's constructor."""
         super().__init__(hostname, interface, username, password, dry_run=dry_run)
         self._generation = 0
+        self._hw_model = 0
 
     @property
     def log_entries(self) -> str:
@@ -966,6 +967,31 @@ class RedfishDell(Redfish):
                 self._generation = int(match.group(0))
         logger.debug("%s: iDRAC generation %s", self._hostname, self._generation)
         return self._generation
+
+    @property
+    def hw_model(self) -> int:
+        """Property representing the hw_model of the iDRAC itself, e.g. 10, for an iDRAC model 10."""
+        if not self._hw_model:
+            self._update_hw_model()
+        return self._hw_model
+
+    def _update_hw_model(self) -> int:
+        """Update hw_model."""
+        if self.generation < 13:
+            hw_model = "iDRAC 7"
+        elif self.generation == 13:
+            hw_model = "iDRAC 8"
+        elif self.generation <= 16:
+            hw_model = "iDRAC 9"
+        else:
+            oem_oob = self.request("get", f"{self.oob_manager}/Oem/Dell/DellAttributes/iDRAC.Embedded.1").json()
+            hw_model = oem_oob["Attributes"]["Info.1.HWModel"]
+        match = re.search(r"^iDRAC (\d+)$", hw_model)
+        if match is None:
+            raise RedfishError(f"{self._hostname}: Unrecognized iDRAC hardware model '{hw_model}'")
+        self._hw_model = int(match.group(1))
+        logger.debug("%s: iDRAC hardware model is '%s'", self._hostname, self._hw_model)
+        return self._hw_model
 
     @property
     def scp_base_uri(self) -> str:

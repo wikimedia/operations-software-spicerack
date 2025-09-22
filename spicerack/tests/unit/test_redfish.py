@@ -301,6 +301,35 @@ LCLOG_RESPONSE = {
     "Name": "Log Entry Collection",
 }
 
+OOB_OEM = {
+    "@odata.context": "/redfish/v1/$metadata#DellAttributes.DellAttributes",
+    "@odata.etag": "\"W/'gen-2945'\"",
+    "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/iDRAC.Embedded.1",
+    "@odata.type": "#DellAttributes.v1_0_0.DellAttributes",
+    "AttributeRegistry": "ManagerAttributeRegistry.v1_0_0",
+    "Attributes": {
+        "ACE.1.CA-URL": "",
+        "Info.1.Build": "60",
+        "Info.1.CPLDVersion": "107.102.000",
+        "Info.1.Description": "This system component provides a "
+        "complete set of remote management "
+        "functions for Dell PowerEdge Servers",
+        "Info.1.HWModel": "iDRAC 10",
+        "Info.1.HWRev": "0.01",
+        "Info.1.IPMIVersion": "2.0",
+        "Info.1.Name": "iDRAC",
+        "Info.1.Product": "Integrated Dell Remote Access Controller",
+        "Info.1.RollbackBuild": "60",
+        "Info.1.RollbackVersion": "1.20.25.00",
+        "Info.1.ServerGen": "17G",
+        "Info.1.Type": "17G Monolithic",
+        "Info.1.Version": "1.20.25.00",
+    },
+    "Description": "This schema provides the oem attributes",
+    "Id": "iDRAC.Embedded.1",
+    "Name": "OEMAttributeRegistry",
+}
+
 LCLOG_RESPONSE_NO_MESSAGE = deepcopy(LCLOG_RESPONSE)
 LCLOG_RESPONSE_NO_MESSAGE["Members"] = []
 # The below is trimmed output
@@ -928,6 +957,23 @@ class TestRedfishDell:
             calls.append(mock.call(120))
         calls.append(mock.call(30))
         assert mocked_sleep.mock_calls == calls
+
+    @pytest.mark.parametrize(
+        "generation, oob, hw_model",
+        (
+            (1, None, 7),
+            (13, None, 8),
+            (17, OOB_OEM, 10),
+        ),
+    )
+    def test_property_hw_model(self, generation, oob, hw_model):
+        """It should return the hw_model."""
+        self.redfish._generation = generation  # pylint: disable=protected-access
+        self.requests_mock.get(
+            "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/iDRAC.Embedded.1",
+            json=oob,
+        )
+        assert self.redfish.hw_model == hw_model
 
     @pytest.mark.parametrize("generation", (1, 13, 14))
     @mock.patch("spicerack.redfish.time.sleep")
