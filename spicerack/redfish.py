@@ -925,8 +925,6 @@ class RedfishDell(Redfish):
     """The boot mode key in the Bios attributes."""
     http_boot_target = "UefiHttp"
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
-    idrac_10_min_gen: int = 17
-    """The minimum generation shipped with iDRAC 10."""
 
     def __init__(
         self,
@@ -1000,7 +998,7 @@ class RedfishDell(Redfish):
         Returns: the base URI path for all SCP operations.
 
         """
-        if self.generation >= self.idrac_10_min_gen:
+        if self.hw_model >= 10:
             endpoint = "OemManager"
         else:
             endpoint = "EID_674_Manager"
@@ -1052,7 +1050,7 @@ class RedfishDell(Redfish):
 
         """
         # iDRAC 10 wants Target as a list
-        target_value = [target.value] if self.generation >= self.idrac_10_min_gen else target.value
+        target_value = [target.value] if self.hw_model >= 10 else target.value
         data: dict = {"ExportFormat": "JSON", "ShareParameters": {"Target": target_value}}
         task_uri = self.submit_task(f"{self.scp_base_uri}.ExportSystemConfiguration", data)
         # Wait before starting to poll for the task, so that a quick task can complete before the first attempt.
@@ -1095,7 +1093,7 @@ class RedfishDell(Redfish):
             uri = "ImportSystemConfiguration"
 
         # iDRAC 10 wants Target as a list
-        target_value = [scp.target.value] if self.generation >= self.idrac_10_min_gen else scp.target.value
+        target_value = [scp.target.value] if self.hw_model >= 10 else scp.target.value
         data: dict = {
             "ImportBuffer": json.dumps(scp.config),  # The API requires a JSON-encoded string inside a JSON payload.
             "ShareParameters": {"Target": target_value},
@@ -1151,7 +1149,7 @@ class RedfishDell(Redfish):
                 "BootSourceOverrideTarget": self.http_boot_target,
             }
         }
-        if self.generation >= self.idrac_10_min_gen:
+        if self.hw_model >= 10:
             uri: str = f"{self.system_manager}/Settings"
         else:
             uri = self.system_manager
