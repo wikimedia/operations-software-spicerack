@@ -282,13 +282,18 @@ class Discovery:
                 raise DiscoveryError(message)
 
     def resolve_with_client_ip(
-        self, record: str, client_ip: Union[IPv4Address, IPv6Address]
+        self,
+        record: str,
+        client_ip: Union[IPv4Address, IPv6Address],
+        timeout: Optional[float] = 2.0,
     ) -> dict[str, Union[IPv4Address, IPv6Address]]:
         """Resolves a discovery record with a specific client IP and returns the resolved address grouped by nameserver.
 
         Arguments:
             record: record name to use for the resolution.
             client_ip: IP address to be used in EDNS client subnet.
+            timeout: the number of seconds to wait before the underlying DNS query times out, or None. If None, no
+                timeout is applied, and the query will wait forever.
 
         Raises:
             spicerack.discovery.DiscoveryError: if unable to resolve the address.
@@ -310,7 +315,7 @@ class Discovery:
             # dns.query.udp can raise many exceptions.
             try:
                 query_response, _ = dns.query.udp_with_fallback(
-                    query, dns_resolver.nameservers[0], port=dns_resolver.port
+                    query, dns_resolver.nameservers[0], port=dns_resolver.port, timeout=timeout
                 )
             except Exception as exc:
                 raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}") from exc
