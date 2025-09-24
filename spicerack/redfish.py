@@ -925,8 +925,6 @@ class RedfishDell(Redfish):
     """The boot mode key in the Bios attributes."""
     http_boot_target = "UefiHttp"
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
-    idrac_10_min_gen: int = 17
-    """The minimum generation shipped with iDRAC 10."""
 
     def __init__(
         self,
@@ -940,11 +938,12 @@ class RedfishDell(Redfish):
         """Override parent's constructor."""
         super().__init__(hostname, interface, username, password, dry_run=dry_run)
         self._generation = 0
+        self._hw_model = 0
 
     @property
     def log_entries(self) -> str:
         """String representing the log entries uri."""
-        if self.firmware_version < version.Version("4.10"):
+        if self.hw_model < 10 and self.firmware_version < version.Version("4.10"):
             return "/redfish/v1/Managers/Logs/Lclog"
 
         return super().log_entries
@@ -968,13 +967,38 @@ class RedfishDell(Redfish):
         return self._generation
 
     @property
+    def hw_model(self) -> int:
+        """Property representing the hw_model of the iDRAC itself, e.g. 10, for an iDRAC model 10."""
+        if not self._hw_model:
+            self._update_hw_model()
+        return self._hw_model
+
+    def _update_hw_model(self) -> int:
+        """Update hw_model."""
+        if self.generation < 13:
+            hw_model = "iDRAC 7"
+        elif self.generation == 13:
+            hw_model = "iDRAC 8"
+        elif self.generation <= 16:
+            hw_model = "iDRAC 9"
+        else:
+            oem_oob = self.request("get", f"{self.oob_manager}/Oem/Dell/DellAttributes/iDRAC.Embedded.1").json()
+            hw_model = oem_oob["Attributes"]["Info.1.HWModel"]
+        match = re.search(r"^iDRAC (\d+)$", hw_model)
+        if match is None:
+            raise RedfishError(f"{self._hostname}: Unrecognized iDRAC hardware model '{hw_model}'")
+        self._hw_model = int(match.group(1))
+        logger.debug("%s: iDRAC hardware model is '%s'", self._hostname, self._hw_model)
+        return self._hw_model
+
+    @property
     def scp_base_uri(self) -> str:
         """Property representing the base url for the SCP operations.
 
         Returns: the base URI path for all SCP operations.
 
         """
-        if self.generation >= self.idrac_10_min_gen:
+        if self.hw_model >= 10:
             endpoint = "OemManager"
         else:
             endpoint = "EID_674_Manager"
@@ -1026,7 +1050,7 @@ class RedfishDell(Redfish):
 
         """
         # iDRAC 10 wants Target as a list
-        target_value = [target.value] if self.generation >= self.idrac_10_min_gen else target.value
+        target_value = [target.value] if self.hw_model >= 10 else target.value
         data: dict = {"ExportFormat": "JSON", "ShareParameters": {"Target": target_value}}
         task_uri = self.submit_task(f"{self.scp_base_uri}.ExportSystemConfiguration", data)
         # Wait before starting to poll for the task, so that a quick task can complete before the first attempt.
@@ -1069,7 +1093,7 @@ class RedfishDell(Redfish):
             uri = "ImportSystemConfiguration"
 
         # iDRAC 10 wants Target as a list
-        target_value = [scp.target.value] if self.generation >= self.idrac_10_min_gen else scp.target.value
+        target_value = [scp.target.value] if self.hw_model >= 10 else scp.target.value
         data: dict = {
             "ImportBuffer": json.dumps(scp.config),  # The API requires a JSON-encoded string inside a JSON payload.
             "ShareParameters": {"Target": target_value},
@@ -1125,7 +1149,7 @@ class RedfishDell(Redfish):
                 "BootSourceOverrideTarget": self.http_boot_target,
             }
         }
-        if self.generation >= self.idrac_10_min_gen:
+        if self.hw_model >= 10:
             uri: str = f"{self.system_manager}/Settings"
         else:
             uri = self.system_manager

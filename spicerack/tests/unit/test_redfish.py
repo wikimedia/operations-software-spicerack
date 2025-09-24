@@ -301,6 +301,35 @@ LCLOG_RESPONSE = {
     "Name": "Log Entry Collection",
 }
 
+OOB_OEM = {
+    "@odata.context": "/redfish/v1/$metadata#DellAttributes.DellAttributes",
+    "@odata.etag": "\"W/'gen-2945'\"",
+    "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/iDRAC.Embedded.1",
+    "@odata.type": "#DellAttributes.v1_0_0.DellAttributes",
+    "AttributeRegistry": "ManagerAttributeRegistry.v1_0_0",
+    "Attributes": {
+        "ACE.1.CA-URL": "",
+        "Info.1.Build": "60",
+        "Info.1.CPLDVersion": "107.102.000",
+        "Info.1.Description": "This system component provides a "
+        "complete set of remote management "
+        "functions for Dell PowerEdge Servers",
+        "Info.1.HWModel": "iDRAC 10",
+        "Info.1.HWRev": "0.01",
+        "Info.1.IPMIVersion": "2.0",
+        "Info.1.Name": "iDRAC",
+        "Info.1.Product": "Integrated Dell Remote Access Controller",
+        "Info.1.RollbackBuild": "60",
+        "Info.1.RollbackVersion": "1.20.25.00",
+        "Info.1.ServerGen": "17G",
+        "Info.1.Type": "17G Monolithic",
+        "Info.1.Version": "1.20.25.00",
+    },
+    "Description": "This schema provides the oem attributes",
+    "Id": "iDRAC.Embedded.1",
+    "Name": "OEMAttributeRegistry",
+}
+
 LCLOG_RESPONSE_NO_MESSAGE = deepcopy(LCLOG_RESPONSE)
 LCLOG_RESPONSE_NO_MESSAGE["Members"] = []
 # The below is trimmed output
@@ -929,6 +958,23 @@ class TestRedfishDell:
         calls.append(mock.call(30))
         assert mocked_sleep.mock_calls == calls
 
+    @pytest.mark.parametrize(
+        "generation, oob, hw_model",
+        (
+            (1, None, 7),
+            (13, None, 8),
+            (17, OOB_OEM, 10),
+        ),
+    )
+    def test_property_hw_model(self, generation, oob, hw_model):
+        """It should return the hw_model."""
+        self.redfish._generation = generation  # pylint: disable=protected-access
+        self.requests_mock.get(
+            "/redfish/v1/Managers/iDRAC.Embedded.1/Oem/Dell/DellAttributes/iDRAC.Embedded.1",
+            json=oob,
+        )
+        assert self.redfish.hw_model == hw_model
+
     @pytest.mark.parametrize("generation", (1, 13, 14))
     @mock.patch("spicerack.redfish.time.sleep")
     @mock.patch("spicerack.redfish.RedfishDell.last_reboot")
@@ -954,15 +1000,16 @@ class TestRedfishDell:
         assert mocked_sleep.mock_calls == calls
 
     @pytest.mark.parametrize(
-        "model, expected_params, endpoint",
+        "model, hw_model, expected_params, endpoint",
         (
-            ("16G Monolithic", {"Target": "ALL"}, "EID_674_Manager"),
-            ("17G Monolithic", {"Target": ["ALL"]}, "OemManager"),
+            ("16G Monolithic", 9, {"Target": "ALL"}, "EID_674_Manager"),
+            ("17G Monolithic", 10, {"Target": ["ALL"]}, "OemManager"),
         ),
     )
     @pytest.mark.parametrize("allow_new", (False, True))
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_dump(self, mocked_sleep, allow_new, model, expected_params, endpoint):
+    # pylint: disable-next=too-many-arguments, too-many-positional-arguments
+    def test_scp_dump(self, mocked_sleep, allow_new, model, hw_model, expected_params, endpoint):
         """It should return an instance of DellSCP with the current configuration for the given target."""
         self.requests_mock.get("/redfish/v1/Managers/iDRAC.Embedded.1", json={"Model": model})
         self.requests_mock.post(
@@ -974,10 +1021,11 @@ class TestRedfishDell:
             "/redfish/v1/TaskService/Tasks/JID_1234567890",
             [{"status_code": 202, "json": DELL_TASK_REPONSE}, {"status_code": 200, "json": DELL_SCP}],
         )
+        self.redfish._hw_model = hw_model  # pylint: disable=protected-access
         config = self.redfish.scp_dump(allow_new_attributes=allow_new)
         assert config.service_tag == "12ABC34"
         assert mocked_sleep.called
-        assert self.requests_mock.request_history[1].json()["ShareParameters"] == expected_params
+        assert self.requests_mock.request_history[0].json()["ShareParameters"] == expected_params
 
         if allow_new:
             config.set("Some.Component.1", "Non.Existent", "new_value")
@@ -987,10 +1035,10 @@ class TestRedfishDell:
                 config.set("Some.Component.1", "Non.Existent", "new_value")
 
     @pytest.mark.parametrize(
-        "model, expected_params, endpoint",
+        "model, hw_model, expected_params, endpoint",
         (
-            ("16G Monolithic", {"Target": "ALL"}, "EID_674_Manager"),
-            ("17G Monolithic", {"Target": ["ALL"]}, "OemManager"),
+            ("16G Monolithic", 9, {"Target": "ALL"}, "EID_674_Manager"),
+            ("17G Monolithic", 10, {"Target": ["ALL"]}, "OemManager"),
         ),
     )
     @pytest.mark.parametrize(
@@ -1001,9 +1049,8 @@ class TestRedfishDell:
         ),
     )
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
-    def test_scp_push(  # pylint: disable=too-many-positional-arguments
-        self, mocked_sleep, uri_suffix, preview, model, expected_params, endpoint
-    ):
+    # pylint: disable-next=too-many-arguments, too-many-positional-arguments
+    def test_scp_push(self, mocked_sleep, uri_suffix, preview, model, hw_model, expected_params, endpoint):
         """It should push the configuration to the device for preview, no changes will be applied."""
         expected = deepcopy(DELL_TASK_REPONSE)
         expected["EndTime"] = "2021-12-09T14:39:29-06:00"
@@ -1017,10 +1064,11 @@ class TestRedfishDell:
             "/redfish/v1/TaskService/Tasks/JID_1234567890",
             [{"status_code": 202, "json": DELL_TASK_REPONSE}, {"status_code": 200, "json": expected}],
         )
+        self.redfish._hw_model = hw_model  # pylint: disable=protected-access
         result = self.redfish.scp_push(redfish.DellSCP(DELL_SCP, redfish.DellSCPTargetPolicy.ALL), preview=preview)
         assert result == expected
         assert mocked_sleep.called
-        assert self.requests_mock.request_history[1].json()["ShareParameters"] == expected_params
+        assert self.requests_mock.request_history[0].json()["ShareParameters"] == expected_params
 
     def test_get_power_state(self):
         """It should return the current power state of the device."""
@@ -1081,11 +1129,12 @@ class TestRedfishDell:
         assert self.redfish.get_primary_mac() == "00:62:0b:c8:9c:50"
 
     @pytest.mark.parametrize(
-        "idrac_gen, redfish_uri",
-        ((14, "/redfish/v1/Systems/System.Embedded.1"), (17, "/redfish/v1/Systems/System.Embedded.1/Settings")),
+        "idrac_gen, hw_model, redfish_uri",
+        ((14, 9, "/redfish/v1/Systems/System.Embedded.1"), (17, 10, "/redfish/v1/Systems/System.Embedded.1/Settings")),
     )
-    def test_force_http_boot_once_ok(self, idrac_gen: int, redfish_uri: str):
+    def test_force_http_boot_once_ok(self, idrac_gen: int, hw_model: int, redfish_uri: str):
         """It should change the HTTP boot mode."""
+        self.redfish._hw_model = hw_model  # pylint: disable=protected-access
         self.requests_mock.get("/redfish/v1/Systems/System.Embedded.1/Bios", json={"Attributes": {"BootMode": "UEFI"}})
         self.requests_mock.patch(redfish_uri, status_code=204)
         self.redfish._generation = idrac_gen  # pylint: disable=protected-access
@@ -1098,7 +1147,7 @@ class TestRedfishDell:
                 "BootSourceOverrideTarget": "UefiHttp",
             }
         }
-        if idrac_gen < self.redfish.idrac_10_min_gen:
+        if self.redfish.hw_model < 10:
             request_json_to_match["Boot"]["BootSourceOverrideMode"] = "UEFI"
         assert request_json == request_json_to_match
 

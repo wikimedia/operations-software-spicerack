@@ -1,6 +1,18 @@
 Spicerack Changelog
 -------------------
 
+`v11.8.0`_ (2025-09-24)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+* add iDRAC hw_model to redfish
+
+Minor improvements
+""""""""""""""""""
+* redfish: improve log_entries for idrac 10
+* dell: replace self.idrac_10_min_gen with self.hw_model
+
 `v11.7.0`_ (2025-09-16)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3738,3 +3750,4 @@ New features
 .. _`v11.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.5.0
 .. _`v11.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.6.0
 .. _`v11.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.7.0
+.. _`v11.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.8.0
