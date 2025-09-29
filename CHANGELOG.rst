@@ -1,6 +1,13 @@
 Spicerack Changelog
 -------------------
 
+`v11.9.0`_ (2025-09-29)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+* dnsdisc: set a timeout on udp_with_fallback (`T405397`_).
+
 `v11.8.0`_ (2025-09-24)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3600,6 +3607,7 @@ New features
 .. _`T392851`: https://phabricator.wikimedia.org/T392851
 .. _`T399069`: https://phabricator.wikimedia.org/T399069
 .. _`T404464`: https://phabricator.wikimedia.org/T404464
+.. _`T405397`: https://phabricator.wikimedia.org/T405397
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3751,3 +3759,4 @@ New features
 .. _`v11.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.6.0
 .. _`v11.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.7.0
 .. _`v11.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.8.0
+.. _`v11.9.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.9.0
