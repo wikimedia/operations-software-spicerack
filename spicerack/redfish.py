@@ -457,7 +457,7 @@ class Redfish:
         self.request("get", "/redfish")
 
     @retry(
-        tries=30,
+        tries=60,
         delay=timedelta(seconds=30),
         backoff_mode="constant",
         exceptions=(RedfishTaskNotCompletedError,),
@@ -471,7 +471,7 @@ class Redfish:
 
         Raises:
             spicerack.redfish.RedfishError: if the response from the server is outside the expected values of HTTP
-            200 or 202.
+            200, 202 or 204.
             spicearck.redfish.RedfishTaskNotCompletedError: if the task is not yet completed.
 
         """
@@ -479,8 +479,11 @@ class Redfish:
             return {}
 
         response = self.request("get", uri)
-        if response.status_code not in (200, 202):
+        if response.status_code not in (200, 202, 204):
             raise RedfishError(f"{uri} returned HTTP {response.status_code}:\n{response.text}")
+
+        if response.status_code == 204:
+            return {}
 
         results = response.json()
         if response.status_code == 200 and "@odata.id" not in results:  # Task completed, got data without metadata
