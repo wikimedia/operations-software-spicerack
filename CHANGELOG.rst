@@ -1,6 +1,12 @@
 Spicerack Changelog
 -------------------
 
+`v11.10.0`_ (2025-10-06)
+^^^^^^^^^^^^^^^^^^^^^^^^
+Minor improvements
+""""""""""""""""""
+* redfish: allow HTTP 204 responses in poll_task (`T392851`_).
+
 `v11.9.0`_ (2025-09-29)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3760,3 +3766,4 @@ New features
 .. _`v11.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.7.0
 .. _`v11.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.8.0
 .. _`v11.9.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.9.0
+.. _`v11.10.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.10.0
