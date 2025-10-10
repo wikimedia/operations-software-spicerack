@@ -116,12 +116,6 @@ def setup_logging(
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
 
-    # Elasticsearch lib is very noisy about HTTP level errors
-    # ideally, we'd want to keep it at WARNING level for logs
-    # sent to file, but ERROR for the console. Since this is
-    # non trivial, let's raise level to ERROR for the moment.
-    logging.getLogger("elasticsearch").setLevel(logging.ERROR)
-
 
 def log_task_start(*, skip_start_sal: bool, message: str) -> None:
     """Log the start of a task on the logs and unless ``skip_start_sal`` is :py:data:`True` also to IRC/SAL.

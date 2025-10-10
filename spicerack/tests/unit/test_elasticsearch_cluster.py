@@ -2,7 +2,6 @@
 
 import itertools
 import logging
-import sys
 from datetime import datetime, timedelta
 from unittest import mock
 
@@ -22,7 +21,6 @@ except ImportError:
     pass
 
 
-pytestmark = pytest.mark.skipif(sys.version_info >= (3, 10), reason="elasticsearch not supported on 3.10+")
 ELASTICSEARCH_CONFIG = load_yaml_config(get_fixture_path("elasticsearch", "config.yaml"))
 
 
