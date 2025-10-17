@@ -168,9 +168,6 @@ autodoc_default_options = {
     "special-members": "__iter__,__len__,__str__",
 }
 autoclass_content = "both"
-if sys.version_info >= (3, 10):
-    autodoc_mock_imports = ["spicerack.elasticsearch_cluster"]
-    suppress_warnings = ["autodoc.mocked_object"]
 
 
 # -- Helper functions -----------------------------------------------------
