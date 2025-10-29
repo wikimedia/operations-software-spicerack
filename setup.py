@@ -7,7 +7,7 @@ with open("README.rst", "r") as readme:
 
 
 INSTALL_REQUIRES = [
-    "conftool>=5.0.0",
+    "conftool>=6.0.0",
     "cumin>=3.0.2",
     "dnspython~=2.0.0; python_version=='3.9'",
     "dnspython~=2.3.0; python_version>'3.9'",

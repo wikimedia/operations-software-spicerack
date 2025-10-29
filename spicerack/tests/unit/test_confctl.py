@@ -17,11 +17,11 @@ class TestConfctl:
         """Setup a Confctl instance with a mocked conftool backend and driver."""
         # pylint: disable=attribute-defined-outside-init
         self.conftool_backend = MockBackend({})
-        confctl.kvobject.KVObject.backend = self.conftool_backend
-        confctl.kvobject.KVObject.config = configuration.Config(driver="")
+        confctl.kvobject.Entity.backend = self.conftool_backend
+        confctl.kvobject.Entity.config = configuration.Config(driver="")
         self.config = get_fixture_path("confctl", "config.yaml")
         self.schema = get_fixture_path("confctl", "schema.yaml")
-        with mock.patch("spicerack.confctl.kvobject.KVObject.setup"):
+        with mock.patch("spicerack.confctl.kvobject.Entity.setup"):
             self.confctl = confctl.Confctl(config=self.config, schema=self.schema, dry_run=False)
             self.entity = self.confctl.entity("discovery")._entity  # pylint: disable=protected-access
 
