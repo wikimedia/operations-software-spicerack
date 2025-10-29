@@ -17,11 +17,11 @@ class TestDbctl:
         """Setup a Dbctl instance with a mocked conftool backend and driver."""
         # pylint: disable=attribute-defined-outside-init
         self.conftool_backend = MockBackend({})
-        kvobject.KVObject.backend = self.conftool_backend
-        kvobject.KVObject.config = configuration.Config(driver="")
+        kvobject.Entity.backend = self.conftool_backend
+        kvobject.Entity.config = configuration.Config(driver="")
         self.config = get_fixture_path("confctl", "config.yaml")
         self.schema = get_fixture_path("confctl", "schema.yaml")
-        with mock.patch("spicerack.confctl.kvobject.KVObject.setup"):
+        with mock.patch("spicerack.confctl.kvobject.Entity.setup"):
             self.dbctl = dbctl.Dbctl(config=self.config, schema=self.schema, dry_run=False)
 
     @pytest.mark.parametrize(
