@@ -4,7 +4,7 @@ import logging
 import math
 import time
 from collections.abc import Callable, Iterator, Sequence
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
@@ -607,7 +607,8 @@ class RemoteHosts:
                 When in DRY-RUN mode, it will raise only if unable to connect.
 
         """
-        delta = (datetime.utcnow() - since).total_seconds()
+        now = datetime.now(timezone.utc) if since.tzinfo else datetime.utcnow()
+        delta = (now - since).total_seconds()
         try:
             uptimes = self.uptime(print_progress_bars=print_progress_bars)
         except (RemoteExecutionError, RemoteError) as e:

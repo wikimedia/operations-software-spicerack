@@ -9,16 +9,11 @@ from math import floor
 from random import shuffle
 from typing import Optional
 
-from elasticsearch import (  # pylint: disable=no-name-in-module
-    ConflictError,
-    Elasticsearch,
-    RequestError,
-    TransportError,
-)
-from urllib3.exceptions import HTTPError
 from wmflib.prometheus import Prometheus
+from wmflib.requests import http_session
 
 from spicerack.administrative import Reason
+from spicerack.apiclient import APIClient, APIClientError, APIClientResponseError
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
 from spicerack.remote import Remote, RemoteHosts, RemoteHostsAdapter
@@ -61,8 +56,7 @@ def create_elasticsearch_clusters(
     except KeyError as e:
         raise ElasticsearchClusterError(f"No cluster group named {clustergroup}") from e
 
-    clusters = [Elasticsearch(endpoint) for endpoint in endpoints]
-    elasticsearch_clusters = [ElasticsearchCluster(cluster, remote, dry_run=dry_run) for cluster in clusters]
+    elasticsearch_clusters = [ElasticsearchCluster(endpoint, remote, dry_run=dry_run) for endpoint in endpoints]
     return ElasticsearchClusters(
         elasticsearch_clusters,
         remote,
@@ -403,31 +397,55 @@ class ElasticsearchClusters:
 class ElasticsearchCluster:
     """Class to manage elasticsearch cluster."""
 
-    def __init__(self, elasticsearch: Elasticsearch, remote: Remote, dry_run: bool = True) -> None:
+    def __init__(self, endpoint: str, remote: Remote, dry_run: bool = True) -> None:
         """Initialize ElasticsearchCluster.
 
         Arguments:
-            elasticsearch: elasticsearch instance.
+            endpoint: str representing endpoint URL to reach out to
             remote: the Remote instance.
             dry_run:  whether this is a DRY-RUN.
 
         """
-        self._elasticsearch = elasticsearch
+        self._endpoint = endpoint
         self._remote = remote
         self._dry_run = dry_run
         self._freeze_writes_index: str = "mw_cirrus_metastore"
-        self._freeze_writes_doc_type: str = "mw_cirrus_metastore"
+
+        self._session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
+        self._session.headers.update({"Accept": "application/json"})
+        self._api_client = APIClient(endpoint, self._session, dry_run=self._dry_run)
 
     def __str__(self) -> str:
         """Class string method."""
-        return str(self._elasticsearch)
+        return str(self._endpoint)
+
+    def make_api_call(self, route: str, params: dict, http_method: str, body: dict, timeout: float) -> dict:
+        """Make a generic api call to the search cluster. Log if non-2xx status code. Returns response json.
+
+        Arguments:
+            route: str like _cluster/health to append to the endpoint
+            params: dict representing query string like ?pretty&s=idx.name
+            http_method: str representing the http verb: one of [GET, OPTIONS, HEAD, POST, PUT, PATCH, DELETE]
+            body: dictionary representing request body like
+                  {"persistent": {"cluster.routing.allocation.enable": "primaries"}}
+            timeout: float representing how long to wait before giving up
+
+        """
+        return self._api_client.request(http_method, route, json=body, params=params, timeout=timeout).json()
 
     def get_nodes(self) -> dict:
         """Get all Elasticsearch Nodes in the cluster."""
         try:
-            return self._elasticsearch.nodes.info()["nodes"]
-        except (TransportError, HTTPError) as e:
-            raise ElasticsearchClusterError("Could not connect to the cluster") from e
+            response = self.make_api_call(
+                route="/_nodes",
+                params={},
+                http_method="GET",
+                body={},
+                timeout=30,
+            )
+            return response["nodes"]
+        except (APIClientError, APIClientResponseError) as exc:
+            raise ElasticsearchClusterError("Could not connect to the cluster") from exc
 
     def is_node_in_cluster_nodes(self, node: str) -> bool:
         """Checks if node is in a list of elasticsearch cluster nodes.
@@ -458,15 +476,15 @@ class ElasticsearchCluster:
         """Stops cluster replication."""
         logger.info("stop replication - %s", self)
         if not self._dry_run:
-            self._elasticsearch.cluster.put_settings(
-                body={"persistent": {"cluster.routing.allocation.enable": "primaries"}}
-            )
+            body = {"persistent": {"cluster.routing.allocation.enable": "primaries"}}
+            self.make_api_call(route="/_cluster/settings", params={}, http_method="PUT", body=body, timeout=30)
 
     def _start_replication(self) -> None:
         """Starts cluster replication."""
         logger.info("start replication - %s", self)
         if not self._dry_run:
-            self._elasticsearch.cluster.put_settings(body={"persistent": {"cluster.routing.allocation.enable": "all"}})
+            body = {"persistent": {"cluster.routing.allocation.enable": "all"}}
+            self.make_api_call(route="/_cluster/settings", params={}, http_method="PUT", body=body, timeout=30)
 
     def check_green(self) -> None:
         """Cluster health status.
@@ -477,8 +495,14 @@ class ElasticsearchCluster:
 
         """
         try:
-            self._elasticsearch.cluster.health(wait_for_status="green", timeout="1s")
-        except (TransportError, HTTPError) as e:
+            self.make_api_call(
+                route="/_cluster/health",
+                params={"wait_for_status": "green", "timeout": "1s"},
+                http_method="GET",
+                body={},
+                timeout=30,
+            )
+        except (APIClientError, APIClientResponseError) as e:
             raise ElasticsearchClusterCheckError("Error while waiting for green") from e
 
     def check_yellow_w_no_moving_shards(self) -> None:
@@ -490,13 +514,15 @@ class ElasticsearchCluster:
 
         """
         try:
-            self._elasticsearch.cluster.health(
-                wait_for_status="yellow",
-                wait_for_no_initializing_shards=True,
-                wait_for_no_relocating_shards=True,
-                timeout="1s",
-            )
-        except (TransportError, HTTPError) as e:
+            params = {
+                "wait_for_status": "yellow",
+                "wait_for_no_initializing_shards": True,
+                "wait_for_no_relocating_shards": True,
+                "timeout": "1s",
+            }
+            self.make_api_call(route="/_cluster/health", params=params, http_method="GET", body={}, timeout=30)
+
+        except (APIClientError, APIClientResponseError) as e:
             raise ElasticsearchClusterCheckError(
                 "Error while waiting for yellow with no initializing or relocating shards"
             ) from e
@@ -542,14 +568,17 @@ class ElasticsearchCluster:
         if self._dry_run:
             return
         try:
-            self._elasticsearch.index(
-                index=self._freeze_writes_index,
-                doc_type=self._freeze_writes_doc_type,
-                id="freeze-everything",
+            self.make_api_call(
+                route=f"/{self._freeze_writes_index}/_doc/freeze-everything",
+                params={},
+                http_method="PUT",
                 body=doc,
+                timeout=30,
             )
-        except TransportError as e:
-            raise ElasticsearchClusterError("Encountered error while creating document to freeze cluster writes") from e
+        except (APIClientError, APIClientResponseError) as e:
+            raise ElasticsearchClusterError(
+                ("Encountered error while creating 'freeze-everything' document to freeze cluster writes")
+            ) from e
 
     def _unfreeze_writes(self) -> None:
         """Enable writes on all elasticsearch indices."""
@@ -557,14 +586,16 @@ class ElasticsearchCluster:
         if self._dry_run:
             return
         try:
-            self._elasticsearch.delete(
-                index=self._freeze_writes_index,
-                doc_type=self._freeze_writes_doc_type,
-                id="freeze-everything",
+            self.make_api_call(
+                route=f"{self._freeze_writes_index}/_doc/freeze-everything",
+                params={},
+                http_method="DELETE",
+                body={},
+                timeout=30,
             )
-        except TransportError as e:
+        except (APIClientError, APIClientResponseError) as e:
             raise ElasticsearchClusterError(
-                "Encountered error while deleting document to unfreeze cluster writes"
+                "Encountered error while deleting 'freeze-everything' document to unfreeze cluster writes"
             ) from e
 
     def flush_markers(self, timeout: timedelta = timedelta(seconds=60)) -> None:
@@ -580,13 +611,25 @@ class ElasticsearchCluster:
         """
         logger.info("flush markers on %s", self)
         try:
-            self._elasticsearch.indices.flush(force=True, request_timeout=timeout.seconds)
-        except ConflictError:
+            self.make_api_call(
+                route="/_flush",
+                params={"force": "true"},
+                http_method="POST",
+                body={},
+                timeout=float(timeout.seconds),
+            )
+        except (APIClientError, APIClientResponseError):
             logger.warning("Not all shards were flushed on %s.", self)
 
         try:
-            self._elasticsearch.indices.flush_synced(request_timeout=timeout.seconds)
-        except ConflictError:
+            self.make_api_call(
+                route="/_flush/synced",
+                params={},
+                http_method="POST",
+                body={},
+                timeout=float(timeout.seconds),
+            )
+        except (APIClientError, APIClientResponseError):
             logger.warning("Not all shards were synced flushed on %s.", self)
 
     def force_allocation_of_all_unassigned_shards(self) -> None:
@@ -598,8 +641,9 @@ class ElasticsearchCluster:
 
     def _get_unassigned_shards(self) -> list[dict]:
         """Fetch unassigned shards from the cluster."""
-        shards = self._elasticsearch.cat.shards(format="json", h="index,shard,state")
-        return [s for s in shards if s["state"] == "UNASSIGNED"]
+        params = {"format": "json", "h": "index,shard,state"}
+        shard_response = self.make_api_call("/_cat/shards", params, "GET", {}, 30)
+        return [s for s in shard_response if s["state"] == "UNASSIGNED"]
 
     def _force_allocation_of_shard(self, shard: dict, nodes: list[str]) -> None:
         """Force allocation of shard.
@@ -625,20 +669,24 @@ class ElasticsearchCluster:
                     shard["shard"],
                     node,
                 )
-                self._elasticsearch.cluster.reroute(
-                    retry_failed=True,
-                    body={
-                        "commands": [
-                            {
-                                "allocate_replica": {
-                                    "index": shard["index"],
-                                    "shard": shard["shard"],
-                                    "node": node,
-                                }
-                            }
-                        ]
-                    },
+                body = {
+                    "commands": {
+                        "allocate_replica": {
+                            "index": shard["index"],
+                            "shard": shard["shard"],
+                            "node": node,
+                        }
+                    }
+                }
+                self.make_api_call(
+                    route="/_cluster/reroute",
+                    params={"retry_failed": True},
+                    http_method="POST",
+                    body=body,
+                    timeout=30,
                 )
+                # TODO the try-catch logic might want to be updated now that we use http request and not the library
+
                 # successful allocation, we can exit
                 logger.info(
                     "Successfully allocated shard [%s:%s] on [%s]",
@@ -647,7 +695,7 @@ class ElasticsearchCluster:
                     node,
                 )
                 break
-            except RequestError:
+            except (APIClientError, APIClientResponseError):
                 # error allocating shard, let's try the next node
                 logger.debug(
                     "Could not reallocate shard [%s:%s] on [%s]",
@@ -669,8 +717,14 @@ class ElasticsearchCluster:
         readonly. This method will update all readonly indices to read/write.
         """
         try:
-            self._elasticsearch.indices.put_settings(body={"index.blocks.read_only_allow_delete": None}, index="_all")
-        except (RequestError, TransportError, HTTPError) as e:
+            self.make_api_call(
+                route="/_all/_settings",
+                params={},
+                http_method="PUT",
+                body={"index.blocks.read_only_allow_delete": None},
+                timeout=30,
+            )
+        except (APIClientError, APIClientResponseError) as e:
             raise ElasticsearchClusterError("Could not reset read only status") from e
 
 
