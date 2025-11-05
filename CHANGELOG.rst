@@ -1,6 +1,23 @@
 Spicerack Changelog
 -------------------
 
+`v12.0.0`_ (2025-11-05)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Dependencies breaking changes
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+* elasticsearch_cluster: refactor the module to use the Elastic's HTTP API
+  instead of using the client provided by the elasticsearch dependency.
+  The API does not change but the elasticsearch dependency is dropped.
+  Remove also the workarounds made in previous versions to exclude
+  the elasticsearch_cluster module on systems running Debian Bookworm
+  or greater (`T390860`_).
+* conftool: upgrade dependency to 6.x
+
+Minor improvements
+""""""""""""""""""
+* remote: Support timezone-aware objects (`T401581`_).
+
 `v11.10.0`_ (2025-10-06)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Minor improvements
@@ -3612,6 +3629,7 @@ New features
 .. _`T390860`: https://phabricator.wikimedia.org/T390860
 .. _`T392851`: https://phabricator.wikimedia.org/T392851
 .. _`T399069`: https://phabricator.wikimedia.org/T399069
+.. _`T401581`: https://phabricator.wikimedia.org/T401581
 .. _`T404464`: https://phabricator.wikimedia.org/T404464
 .. _`T405397`: https://phabricator.wikimedia.org/T405397
 
@@ -3767,3 +3785,4 @@ New features
 .. _`v11.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.8.0
 .. _`v11.9.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.9.0
 .. _`v11.10.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.10.0
+.. _`v12.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.0.0
