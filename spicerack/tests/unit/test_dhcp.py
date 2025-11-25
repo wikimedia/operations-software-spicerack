@@ -380,6 +380,30 @@ configuration_generator_data = (
         ),
         "ttyS0-115200/testhost0.conf",
     ),
+    (
+        dhcp.DHCPConfUUID,
+        {
+            "hostname": "testhost0",
+            "ipv4": IPv4Address("10.0.0.1"),
+            "uuid": "4c4c4544-0059-4b10-804e-b4c04f4d5733",
+            "ttys": 0,
+            "distro": "buster",
+            "dhcp_filename": "/srv/tftpboot/ipxe/undionly.kpxe",
+            "dhcp_filename_ipxe": "http://example.com/autoexec.ipxe",
+        },
+        (
+            "\nhost testhost0 {\n"
+            "    host-identifier option pxe-client-id 00:44:45:4c:4c:59:00:10:4b:80:4e:b4:c0:4f:4d:57:33;\n"
+            "    fixed-address 10.0.0.1;\n"
+            '    if exists user-class and option user-class = "iPXE" {\n'
+            '        filename "http://example.com/autoexec.ipxe";\n'
+            "    } else {\n"
+            '        filename "/srv/tftpboot/ipxe/undionly.kpxe";\n'
+            "    }\n"
+            "}\n"
+        ),
+        "ttyS0-115200/testhost0.conf",
+    ),
     # dhcpconfmgmt tests
     (  # Dell host
         dhcp.DHCPConfMgmt,
