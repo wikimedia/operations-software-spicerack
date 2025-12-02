@@ -39,6 +39,7 @@ class DHCPConfiguration(ABC):
 
     dhcp_filename: str = ""
     dhcp_filename_exclude_vendor: str = ""
+    dhcp_filename_ipxe: str = ""
     dhcp_options: dict[str, str] = {}
     distro: str = ""
     media_type: str = "installer"
@@ -50,7 +51,7 @@ class DHCPConfiguration(ABC):
            https://docs.python.org/3/library/dataclasses.html#post-init-processing
 
         """
-        if not self.dhcp_options and self.distro:
+        if not self.dhcp_options and self.distro and not self.dhcp_filename_ipxe:
             self.dhcp_options["pxelinux.pathprefix"] = (
                 f"http://apt.wikimedia.org/tftpboot/{self.distro}-{self.media_type}/"
             )
@@ -106,6 +107,19 @@ class DHCPConfiguration(ABC):
                         filename "{self.dhcp_filename}";
                     }}"""
                 )
+            elif self.dhcp_filename_ipxe:
+                # Avoid a DHCP loop, since MBR iPXE does not
+                # support an autoload of the autoexec.ipxe
+                # - https://ipxe.org/howto/dhcpd#pxe_chainloading
+                # - https://github.com/ipxe/ipxe/issues/643#issuecomment-1418028439
+                rendered_filename = textwrap.dedent(
+                    f"""\
+                    if exists user-class and option user-class = "iPXE" {{
+                        filename "{self.dhcp_filename_ipxe}";
+                    }} else {{
+                        filename "{self.dhcp_filename}";
+                    }}"""
+                )
             else:
                 rendered_filename = f'filename "{self.dhcp_filename}";'
             return "\n" + textwrap.indent(rendered_filename, "        ")
@@ -143,6 +157,7 @@ class DHCPConfOpt82(DHCPConfiguration):
     media_type: str = "installer"
     dhcp_filename: str = ""
     dhcp_filename_exclude_vendor: str = ""
+    dhcp_filename_ipxe: str = ""
     dhcp_options: dict[str, str] = field(default_factory=dict)
 
     _template: str = """
@@ -185,6 +200,7 @@ class DHCPConfMac(DHCPConfiguration):
     media_type: str = "installer"
     dhcp_filename: str = ""
     dhcp_filename_exclude_vendor: str = ""
+    dhcp_filename_ipxe: str = ""
     dhcp_options: dict[str, str] = field(default_factory=dict)
 
     _template: str = """
@@ -227,6 +243,7 @@ class DHCPConfUUID(DHCPConfiguration):
         media_type: The media type to use e.g. installer, installer-11.0, rescue
         dhcp_filename: the DHCP filename option to set.
         dhcp_filename_exclude_vendor: vendor to exclude from sending over the filename, e.g. d-i
+        dhcp_filename_ipxe: ipxe script
         dhcp_options: a dictionary of DHCP option settings to use.
 
     """
@@ -239,6 +256,7 @@ class DHCPConfUUID(DHCPConfiguration):
     media_type: str = "installer"
     dhcp_filename: str = ""
     dhcp_filename_exclude_vendor: str = ""
+    dhcp_filename_ipxe: str = ""
     dhcp_options: dict[str, str] = field(default_factory=dict)
 
     # The leading 00 on the pxe-client-id is needed to match the UUID type

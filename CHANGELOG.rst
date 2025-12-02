@@ -1,6 +1,13 @@
 Spicerack Changelog
 -------------------
 
+`v12.1.0`_ (2025-12-02)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+* dhcp: Add iPXE support for legacy MBR boot.
+
 `v12.0.0`_ (2025-11-05)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3786,3 +3793,4 @@ New features
 .. _`v11.9.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.9.0
 .. _`v11.10.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.10.0
 .. _`v12.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.0.0
+.. _`v12.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.1.0
