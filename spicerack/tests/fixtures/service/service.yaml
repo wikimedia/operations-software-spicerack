@@ -92,6 +92,7 @@ service2:
     eqiad:
       default: 10.64.0.1
   state: production
+  team: "sre"
 
 service3:
   description: service3 description

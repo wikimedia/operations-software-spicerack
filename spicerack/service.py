@@ -417,6 +417,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
         public_aliases: the list of public aliases set for this service.
         public_endpoint: the name of the public endpoint if present, empty string otherwise.
         role: the service role name in Puppet if present, empty string otherwise.
+        team: the team to set in AlertManager.
 
     """
 
@@ -439,6 +440,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
     public_aliases: list[str] = field(default_factory=list)
     public_endpoint: str = ""
     role: str = ""
+    team: str = ""
 
     def downtime(self, site: str, reason: Reason, *, duration: timedelta = timedelta(hours=4)) -> str:
         """Downtime the service on the given site in Alertmanager and return its ID.
