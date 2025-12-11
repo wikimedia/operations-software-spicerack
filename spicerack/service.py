@@ -402,6 +402,8 @@ class Service:  # pylint: disable=too-many-instance-attributes
         name: the service name.
         description: the service description.
         encryption: whether TLS encryption is enabled or not on the service.
+        exclude_from_switchover: whether the service requires manual intervention during a datacentre switchover,
+            and should therefore be excluded.
         ip: the instance that represents all the service IPs.
         port: the port the service listen on.
         sites: the list of datacenters where the service is configured.
@@ -432,6 +434,7 @@ class Service:  # pylint: disable=too-many-instance-attributes
     _alertmanager: AlertmanagerHosts
     aliases: list[str] = field(default_factory=list)
     discovery: Optional[ServiceDiscovery] = None
+    exclude_from_switchover: bool = False  # Services are not excluded by default.
     httpbb_dir: str = ""
     lvs: Optional[ServiceLVS] = None
     monitoring: Optional[ServiceMonitoring] = None

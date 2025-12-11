@@ -73,6 +73,7 @@ service_no_lvs:
 
 service2:
   encryption: true
+  exclude_from_switchover: true
   role: "service2"
   public_endpoint: "service2"
   public_aliases:
