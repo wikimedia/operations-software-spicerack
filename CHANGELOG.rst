@@ -1,6 +1,14 @@
 Spicerack Changelog
 -------------------
 
+`v12.2.0`_ (2025-12-15)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Miscellanea
+"""""""""""
+* service: add exclude_from_switchover field in the Service's definition (`T412211`_).
+* service: add the team field in the Service's definition (`T399807`_).
+
 `v12.1.0`_ (2025-12-02)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3636,9 +3644,11 @@ New features
 .. _`T390860`: https://phabricator.wikimedia.org/T390860
 .. _`T392851`: https://phabricator.wikimedia.org/T392851
 .. _`T399069`: https://phabricator.wikimedia.org/T399069
+.. _`T399807`: https://phabricator.wikimedia.org/T399807
 .. _`T401581`: https://phabricator.wikimedia.org/T401581
 .. _`T404464`: https://phabricator.wikimedia.org/T404464
 .. _`T405397`: https://phabricator.wikimedia.org/T405397
+.. _`T412211`: https://phabricator.wikimedia.org/T412211
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3794,3 +3804,4 @@ New features
 .. _`v11.10.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v11.10.0
 .. _`v12.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.0.0
 .. _`v12.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.1.0
+.. _`v12.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.2.0

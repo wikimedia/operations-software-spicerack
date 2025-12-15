@@ -73,6 +73,7 @@ service_no_lvs:
 
 service2:
   encryption: true
+  exclude_from_switchover: true
   role: "service2"
   public_endpoint: "service2"
   public_aliases:
@@ -92,6 +93,7 @@ service2:
     eqiad:
       default: 10.64.0.1
   state: production
+  team: "sre"
 
 service3:
   description: service3 description
