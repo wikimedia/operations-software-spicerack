@@ -5,6 +5,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta
+from enum import Enum
 from math import floor
 from random import shuffle
 from typing import Optional
@@ -27,6 +28,13 @@ class ElasticsearchClusterError(SpicerackError):
 
 class ElasticsearchClusterCheckError(SpicerackCheckError):
     """Custom Exception class for check errors of this module."""
+
+
+class OperationType(Enum):
+    """Type of rolling operation to perform."""
+
+    RESTART = "restart"
+    REBOOT = "reboot"
 
 
 def create_elasticsearch_clusters(
@@ -266,7 +274,12 @@ class ElasticsearchClusters:
 
         inner_wait()
 
-    def get_next_clusters_nodes(self, started_before: datetime, size: int = 1) -> Optional[ElasticsearchHosts]:
+    def get_next_clusters_nodes(
+        self,
+        started_before: datetime,
+        size: int = 1,
+        operation: OperationType = OperationType.RESTART,
+    ) -> Optional[ElasticsearchHosts]:
         """Get next set of cluster nodes for cookbook operations like upgrade, rolling restart etc.
 
         Nodes are selected from the row with the least restarted nodes. This ensures that a row is fully upgraded
@@ -277,8 +290,10 @@ class ElasticsearchClusters:
         strongly suggest the masters are upgraded last.
 
         Arguments:
-            started_before: the time against after which we check if the node has been restarted.
+            started_before: the time against after which we check if the node has been restarted/rebooted.
             size: size of nodes not restarted in a row.
+            operation: the type of operation being performed; determines whether to check JVM start time or host
+                boot time.
 
         Returns:
             Next eligible nodes for ElasticsearchHosts or :py:data:`None` when all nodes have been processed.
@@ -287,8 +302,25 @@ class ElasticsearchClusters:
         if size < 1:
             raise ElasticsearchClusterError("Size of next nodes must be at least 1")
 
-        nodes_group = self._get_nodes_group()
-        nodes_to_process = [node for node in nodes_group if not node.restarted_since(started_before)]
+        nodes_group = list(self._get_nodes_group())
+
+        if operation == OperationType.REBOOT:
+            all_node_names = ",".join([node.fqdn for node in nodes_group])
+            uptimes = self._remote.query(all_node_names).uptime()
+            now = datetime.utcnow()
+            # In theory we can have multiple nodes with same uptime, thus the slight nesting
+            boot_times = {str(node): now - timedelta(seconds=secs) for nodeset, secs in uptimes for node in nodeset}
+            nodes_to_process = [node for node in nodes_group if boot_times[node.fqdn] < started_before]
+        else:
+            nodes_to_process = [node for node in nodes_group if not node.restarted_since(started_before)]
+
+        logger.info(
+            "Nodes to process for %s (started_before=%s): %s",
+            operation.value,
+            started_before,
+            [node.fqdn for node in nodes_to_process],
+        )
+
         if not nodes_to_process:
             return None
         # delay master nodes until all the workers have been restarted
