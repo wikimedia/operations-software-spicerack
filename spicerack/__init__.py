@@ -46,7 +46,7 @@ from spicerack.mysql import Mysql
 from spicerack.netbox import MANAGEMENT_IFACE_NAME, Netbox, NetboxServer
 from spicerack.orchestrator import Orchestrator
 from spicerack.peeringdb import PeeringDB
-from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer, get_ca_via_srv_record, get_puppet_ca_hostname
+from spicerack.puppet import PuppetHosts, PuppetServer, get_ca_via_srv_record
 from spicerack.redfish import Redfish, RedfishDell, RedfishSupermicro
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteError, RemoteHosts
@@ -574,10 +574,6 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         # We only have one CA so it doesn't matter which site we lookup
         domain = "eqiad.wmnet"
         return PuppetServer(self.remote().query(get_ca_via_srv_record(domain)))
-
-    def puppet_master(self) -> PuppetMaster:
-        """Get a PuppetMaster instance to manage hosts and certificates from a Puppet master."""
-        return PuppetMaster(self.remote().query(get_puppet_ca_hostname()))
 
     def ipmi(self, target: str) -> Ipmi:
         """Get an Ipmi instance to send remote IPMI commands to management consoles.

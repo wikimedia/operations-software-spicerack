@@ -44,7 +44,7 @@ from spicerack.mysql import Mysql
 from spicerack.netbox import Netbox, NetboxServer
 from spicerack.orchestrator import Orchestrator
 from spicerack.peeringdb import PeeringDB
-from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer
+from spicerack.puppet import PuppetHosts, PuppetServer
 from spicerack.redfish import RedfishDell, RedfishSupermicro
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteError, RemoteHosts
@@ -156,20 +156,6 @@ def test_spicerack_icinga(mocked_command_file, mocked_remote_query, mocked_dns, 
     assert spicerack.icinga_master_host().hosts == "icinga-server.example.com"
     assert isinstance(spicerack.icinga_hosts(["host1", "host2"]), IcingaHosts)
     mocked_hostname.assert_called_once_with()
-
-
-@mock.patch("spicerack.get_puppet_ca_hostname", return_value="puppetmaster.example.com")
-@mock.patch("spicerack.remote.Remote.query", autospec=True)
-def test_spicerack_puppet_master(mocked_remote_query, mocked_get_puppet_ca_hostname):
-    """An instance of Spicerack should allow to get a PuppetMaster instance."""
-    host = mock.MagicMock(spec_set=RemoteHosts)
-    host.__len__.return_value = 1
-    mocked_remote_query.return_value = host
-    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
-
-    assert isinstance(spicerack.puppet_master(), PuppetMaster)
-    mocked_get_puppet_ca_hostname.assert_called_once_with()
-    assert mocked_remote_query.called
 
 
 @mock.patch("spicerack.get_ca_via_srv_record", return_value="puppetserver1001.example.org")
