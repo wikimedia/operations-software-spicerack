@@ -1,6 +1,8 @@
 """Spicerack package."""
 
 from collections.abc import Callable, Sequence
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as meta_version
 from ipaddress import ip_interface
 from logging import Logger, getLogger
 from os import getpid
@@ -9,7 +11,6 @@ from socket import gethostname
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 from git import Repo
-from pkg_resources import DistributionNotFound, get_distribution
 from requests.auth import HTTPBasicAuth
 from wmflib import requests
 from wmflib.actions import ActionsDict
@@ -61,9 +62,9 @@ if TYPE_CHECKING:  # Imported only during type checking, prevents cyclic imports
 logger = getLogger(__name__)
 
 try:
-    __version__: str = get_distribution("wikimedia-spicerack").version  # Must be the same used as 'name' in setup.py
+    __version__: str = meta_version("wikimedia-spicerack")  # Must be the same used as 'name' in setup.py
     """The version of the current Spicerack module."""
-except DistributionNotFound:  # pragma: no cover - this should never happen during tests
+except PackageNotFoundError:  # pragma: no cover - this should never happen during tests
     pass  # package is not installed
 
 
