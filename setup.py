@@ -9,19 +9,16 @@ with open("README.rst", "r") as readme:
 INSTALL_REQUIRES = [
     "conftool>=6.0.0",
     "cumin>=3.0.2",
-    "dnspython~=2.0.0; python_version=='3.9'",
-    "dnspython~=2.3.0; python_version>'3.9'",
-    "gitpython>=3.1.14",
-    "kafka-python~=2.0.1",
-    "kubernetes==12.0.*; python_version=='3.9'",  # frozen to the version available on debian bullseye
-    "kubernetes==22.6.*; python_version>'3.9'",  # frozen to the version available on debian bookworm
+    "dnspython~=2.3.0",
+    "gitpython>=3.1.30",
+    "kafka-python~=2.0.2",
+    "kubernetes==22.6.*",  # frozen to the version available on debian bookworm
     "packaging",
-    "pymysql>=0.9.3",
+    "pymysql>=1.0.2",
     "pynetbox~=7.4",
     "python-etcd~=0.4.5",
-    "redis>=3.5.3,<=4.1.3; python_version=='3.9'",
-    "redis==4.3.*; python_version>'3.9'",
-    "requests>=2.25.0",
+    "redis==4.3.*",
+    "requests>=2.28.1",
     "wmflib",
 ]
 
@@ -30,26 +27,27 @@ EXTRAS_REQUIRE = {
     # Test dependencies
     "tests": [
         "bandit>=1.6.2",
-        "mypy>=0.812",
-        "pytest-cov>=2.10.1",
-        "pytest-xdist>=2.2.0",
-        "pytest>=6.0.2",
-        "requests-mock>=1.7.0",
+        "mypy>=1.0.1",
+        "pytest-cov>=4.0.0",
+        "pytest-xdist>=3.1.0",
+        "pytest>=7.2.1",
+        "requests-mock>=1.9.3",
         # This is required for flake8 to run proprely, as when running tox
         # setuptools comes boundled is usually way older (debian sid has 44 as
         # of writing this).
-        "setuptools>=53.0",
-        "sphinx_rtd_theme>=1.0",
-        "sphinx-argparse>=0.2.5",
-        "sphinx-autodoc-typehints>=1.9.0",
-        "Sphinx>=3.4.3,<9.0.0",
+        "setuptools>=66.1.1",
+        "sphinx_rtd_theme>=1.2.0",
+        "sphinx-argparse>=0.3.2",
+        "sphinx-autodoc-typehints>=1.12.0",
+        "Sphinx>=3.4.3",
+        "Sphinx>=5.3.0,<9.0.0",
         "types-PyMySQL",
         "types-redis",
         "types-requests",
         "types-setuptools",
     ],
     "flake8": [
-        "flake8>=3.8.4",
+        "flake8>=5.0.4",
     ],
     "format": [
         "black",
@@ -57,14 +55,14 @@ EXTRAS_REQUIRE = {
     ],
     "prospector": [
         "prospector[with_everything]==1.15.3",  # Pinned
-        "pytest>=6.0.2",
-        "requests-mock>=1.7.0",
+        "pytest>=7.2.1",
+        "requests-mock>=1.9.3",
     ],
 }
 
 SETUP_REQUIRES = [
     "pytest-runner>=2.11.1",
-    "setuptools_scm>=5.0.1",
+    "setuptools_scm>=7.1.0",
 ]
 
 setup(
@@ -78,8 +76,6 @@ setup(
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX :: BSD",
         "Operating System :: POSIX :: Linux",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
@@ -101,7 +97,7 @@ setup(
     package_data={"spicerack": ["py.typed"]},
     packages=find_packages(exclude=["*.tests", "*.tests.*"]),
     platforms=["GNU/Linux"],
-    python_requires=">=3.9",
+    python_requires=">=3.11",
     setup_requires=SETUP_REQUIRES,
     use_scm_version=True,
     url="https://github.com/wikimedia/operations-software-spicerack",
