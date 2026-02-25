@@ -38,7 +38,7 @@ EXTRAS_REQUIRE = {
         # This is required for flake8 to run proprely, as when running tox
         # setuptools comes boundled is usually way older (debian sid has 44 as
         # of writing this).
-        "setuptools>=53.0,<82.0.0",
+        "setuptools>=53.0",
         "sphinx_rtd_theme>=1.0",
         "sphinx-argparse>=0.2.5",
         "sphinx-autodoc-typehints>=1.9.0",
@@ -59,7 +59,6 @@ EXTRAS_REQUIRE = {
         "prospector[with_everything]==1.15.3",  # Pinned
         "pytest>=6.0.2",
         "requests-mock>=1.7.0",
-        "setuptools<82.0.0",
     ],
 }
 
