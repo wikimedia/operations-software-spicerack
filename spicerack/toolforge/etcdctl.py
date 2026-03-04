@@ -33,14 +33,15 @@ class EtcdctlController(RemoteHostsAdapter):
         ca_file = "/etc/etcd/ssl/ca.pem"
         key_file = f"/etc/etcd/ssl/{self._remote_hosts.hosts}.priv"
         self._base_args = [
+            "ETCDCTL_API=3",
             "etcdctl",
             "--endpoints",
             endpoints,
-            "--ca-file",
+            "--cacert",
             ca_file,
-            "--cert-file",
+            "--cert",
             cert_file,
-            "--key-file",
+            "--key",
             key_file,
         ]
 

@@ -77,7 +77,7 @@ class TestGetClusterInfo(TestCase):
             controller.get_cluster_info()
 
         _assert_called_with_single_param(
-            param=f"--cert-file {expected_cert_file}",
+            param=f"--cert {expected_cert_file}",
             mock_obj=mock_run_sync,
         )
 
@@ -93,7 +93,7 @@ class TestGetClusterInfo(TestCase):
             controller.get_cluster_info()
 
         _assert_called_with_single_param(
-            param=f"--ca-file {expected_ca_file}",
+            param=f"--cacert {expected_ca_file}",
             mock_obj=mock_run_sync,
         )
 
@@ -109,7 +109,7 @@ class TestGetClusterInfo(TestCase):
             controller.get_cluster_info()
 
         _assert_called_with_single_param(
-            param=f"--key-file {expected_key_file}",
+            param=f"--key {expected_key_file}",
             mock_obj=mock_run_sync,
         )
 
@@ -213,6 +213,7 @@ class TestGetClusterInfo(TestCase):
                 415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
                 cf612c785df58f6a[unstarted]: peerURLs=https://idontexist.localhost:1234
             """)  # noqa: E501
+
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
