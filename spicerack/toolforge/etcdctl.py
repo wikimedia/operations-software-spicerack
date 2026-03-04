@@ -1,5 +1,6 @@
 """Wrapper around etcdctl handling parameters and such."""
 
+import json
 import logging
 from typing import Optional, Union, cast
 
@@ -45,44 +46,43 @@ class EtcdctlController(RemoteHostsAdapter):
             key_file,
         ]
 
-    def get_cluster_info(self) -> dict[str, dict[str, SimpleType]]:
+    def get_cluster_info(self) -> dict[str, dict[str, SimpleType]]:  # noqa: MC0001
         """Gets the current etcd cluster information."""
-        args = self._base_args + ["member", "list"]
+        args = self._base_args + ["member", "list", "-w=json"]
         raw_results = self._remote_hosts.run_sync(" ".join(args))
         try:
             result = next(raw_results)[1].message().decode("utf8")
         except StopIteration as e:
             raise UnableToParseOutput("Got no results when trying to retrieve the etcdctl members list.") from e
 
+        members = json.loads(result.strip()).get("members", []) if result else []
         structured_result = {}
-        for line in result.split("\n"):
-            if not line.strip():
-                continue
 
-            # <memberid>[<status>]: <key>=<value> <key>=<value>...
-            # where value might be the string "true" or a stringified int "42"
-            # and the '[<status>]' bit might not be there
-            # peerURLs and memberid are the only key that seems to be there always
-            split_info = [self._to_simple_tuple(elem) for elem in line.split(":", 1)[-1].split()]
-            struct_elem: dict[str, SimpleType] = dict(split_info)
+        for member in members:
+            if "ID" not in member:
+                raise UnableToParseOutput("Unable to parse etcdctl output (missing ID)\n" f"Full output: {result}")
 
-            first_part = line.split(":", 1)[0].strip()
-            if "[" in first_part:
-                member_id = first_part.split("[", 1)[0]
-                status = first_part.split("[", 1)[1][:-1]
-            else:
-                member_id = first_part
-                status = "up"
-
-            struct_elem["member_id"] = member_id
-            struct_elem["status"] = status
-
-            if "peerURLs" not in struct_elem:
+            if "peerURLs" not in member:
                 raise UnableToParseOutput(
-                    "Unable to parse etcdctl output (missing peerURLs for "
-                    f"member line):\nParsed: {struct_elem}\nLine: {line}\n"
-                    f"Full output: {result}"
+                    "Unable to parse etcdctl output (missing peerURLs)\n" f"Full output: {result}"
                 )
+
+            struct_elem: dict[str, SimpleType] = {}
+
+            decimal_id = member["ID"]
+            member_id = format(int(decimal_id), "x")
+            struct_elem["member_id"] = member_id
+            name = member.get("name", "")
+            if name:
+                struct_elem["name"] = name
+            clienturls = member.get("clientURLs", [""])[0]
+            if clienturls:
+                struct_elem["clientURLs"] = clienturls
+            peerurls = member.get("peerURLs", [""])[0]
+            struct_elem["peerURLs"] = peerurls
+
+            struct_elem["status"] = "up" if "clientURLs" in struct_elem else "unstarted"
+
             structured_result[member_id] = struct_elem
 
         return structured_result
@@ -128,7 +128,7 @@ class EtcdctlController(RemoteHostsAdapter):
             ]
 
         else:
-            extra_args = ["member", "add", new_member_fqdn, member_peer_url]
+            extra_args = ["member", "add", new_member_fqdn, "--peer-urls", member_peer_url]
 
         self._remote_hosts.run_sync(" ".join(self._base_args + extra_args))
 

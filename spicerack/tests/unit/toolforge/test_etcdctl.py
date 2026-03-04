@@ -84,7 +84,7 @@ class TestGetClusterInfo(TestCase):
     def test_passes_correct_ca_file(self):
         """Test that passes correct ca file by default."""
         expected_ca_file = "/etc/etcd/ssl/ca.pem"
-        mock_run_sync = _get_mock_run_sync(return_value=b"")
+        mock_run_sync = _get_mock_run_sync(return_value=b"{}")
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
@@ -135,13 +135,12 @@ class TestGetClusterInfo(TestCase):
             "member_id": "415090d15def9053",
             "name": "toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud",
             "status": "up",
-            "isLeader": True,
             "peerURLs": "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380",
             "clientURLs": "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379",
         }
         mock_run_sync = _get_mock_run_sync(
             return_value=b"""
-                                415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]}]}
                             """,  # noqa: E501
         )
         controller = EtcdctlController(
@@ -163,13 +162,11 @@ class TestGetClusterInfo(TestCase):
                 "member_id": "415090d15def9053",
                 "name": "toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud",
                 "status": "up",
-                "isLeader": True,
                 "peerURLs": "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380",
                 "clientURLs": "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379",
             },
             "5208bbf5c00e7cdf": {
                 "clientURLs": "https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379",
-                "isLeader": False,
                 "member_id": "5208bbf5c00e7cdf",
                 "name": "toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud",
                 "peerURLs": "https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380",
@@ -178,8 +175,7 @@ class TestGetClusterInfo(TestCase):
         }
         mock_run_sync = _get_mock_run_sync(
             return_value=b"""
-                                415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
-                                5208bbf5c00e7cdf: name=toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":5911181175087332575,"name":"toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379"]}]}
                             """,  # noqa: E501
         )
         controller = EtcdctlController(
@@ -199,21 +195,19 @@ class TestGetClusterInfo(TestCase):
                 "member_id": "415090d15def9053",
                 "name": "toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud",
                 "status": "up",
-                "isLeader": True,
                 "peerURLs": "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380",
                 "clientURLs": "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379",
             },
-            "cf612c785df58f6a": {
-                "member_id": "cf612c785df58f6a",
-                "peerURLs": "https://idontexist.localhost:1234",
+            "5208bbf5c00e7cdf": {
+                "member_id": "5208bbf5c00e7cdf",
+                "name": "toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud",
+                "peerURLs": "https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380",
                 "status": "unstarted",
             },
         }
         mock_run_sync = _get_mock_run_sync(return_value=b"""
-                415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
-                cf612c785df58f6a[unstarted]: peerURLs=https://idontexist.localhost:1234
-            """)  # noqa: E501
-
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":5911181175087332575,"name":"toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380"]}]}
+                """)  # noqa: E501
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
@@ -227,8 +221,7 @@ class TestGetClusterInfo(TestCase):
     def test_raises_when_getting_member_without_id(self):
         """Test that raises when getting member without id."""
         mock_run_sync = _get_mock_run_sync(return_value=b"""
-                415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
-                peerURLs=https://idontexist.localhost:1234
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"name":"toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380"]}]}
             """)  # noqa: E501
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
@@ -244,13 +237,12 @@ class TestEnsureNodeExists(TestCase):
 
     def test_skips_addition_if_member_already_exists(self):
         """Test that skips addition if member already exists."""
-        existing_member_fqdn = "i.already.exist"
+        existing_member_fqdn = "ialreadyexist"
         existing_member_peer_url = f"https://{existing_member_fqdn}:1234"
         expected_member_id = "1234556789012345"
-        mock_run_sync = _get_mock_run_sync(return_value=f"""
-                415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
-                {expected_member_id}: name={existing_member_fqdn} peerURLs={existing_member_peer_url}
-            """.encode())  # noqa: E501
+        mock_run_sync = _get_mock_run_sync(return_value=("""
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":"%s","name":"%s","peerURLs":["%s"]}]}
+""" % (expected_member_id, existing_member_fqdn, existing_member_peer_url)).encode())  # noqa: E501
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
@@ -263,29 +255,22 @@ class TestEnsureNodeExists(TestCase):
 
         _assert_called_with_single_param(param="list", mock_obj=mock_run_sync)
         _assert_not_called_with_single_param(param="add", mock_obj=mock_run_sync)
-        assert gotten_member_id == expected_member_id
+        assert gotten_member_id == format(int(expected_member_id), "x")
 
     def test_updates_the_member_if_the_peer_url_does_not_match(self):
         """Test that updates the member if the peer url does not match."""
-        existing_member_fqdn = "i.already.exist"
+        existing_member_fqdn = "ialreadyexist"
         existing_member_peer_url = f"https://{existing_member_fqdn}:1234"
         expected_member_id = "1234556789012345"
         mock_run_sync = _get_mock_run_sync(
             side_effect=[
-                (
-                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true\n"
-                    f"{expected_member_id}: name={existing_member_fqdn} "
-                    f"peerURLs={existing_member_peer_url}_but_different"
-                ).encode(),
+                ("""
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":"%s","name":"%s","peerURLs":["%s_differs"]}]}
+""" % (expected_member_id, existing_member_fqdn, existing_member_peer_url)).encode(),
                 b"""Updated :)""",
-                (
-                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false\n"
-                    f"{expected_member_id}: name={existing_member_fqdn} peerURLs={existing_member_peer_url}"
-                ).encode(),
+                ("""
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":"%s","name":"%s","peerURLs":["%s"]}]}
+""" % (expected_member_id, existing_member_fqdn, existing_member_peer_url)).encode(),
             ]
         )
         controller = EtcdctlController(
@@ -299,27 +284,22 @@ class TestEnsureNodeExists(TestCase):
             )
 
         _assert_called_with_single_param(param="update", mock_obj=mock_run_sync)
-        assert gotten_member_id == expected_member_id
+        assert gotten_member_id == format(int(expected_member_id), "x")
 
     def test_adds_the_member_if_not_there(self):
         """Test that adds the member if not there."""
-        new_member_fqdn = "i.already.exist"
+        new_member_fqdn = "ialreadyexist"
         new_member_peer_url = f"https://{new_member_fqdn}:1234"
         expected_member_id = "1234556789012345"
         mock_run_sync = _get_mock_run_sync(
             side_effect=[
-                (
-                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true"
-                ).encode(),
+                ("""
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]}]}
+""").encode(),
                 b"""Added :)""",
-                (
-                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false\n"
-                    f"{expected_member_id}: name={new_member_fqdn} peerURLs={new_member_peer_url}"
-                ).encode(),
+                ("""
+{"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":"%s","name":"%s","peerURLs":["%s"]}]}
+""" % (expected_member_id, new_member_fqdn, new_member_peer_url)).encode(),
             ]
         )
         controller = EtcdctlController(
@@ -333,19 +313,23 @@ class TestEnsureNodeExists(TestCase):
             )
 
         _assert_called_with_single_param(param="add", mock_obj=mock_run_sync)
-        assert gotten_member_id == expected_member_id
+        assert gotten_member_id == format(int(expected_member_id), "x")
 
     def test_uses_default_member_url_if_not_passed(self):
         """Test that uses default member url if not passed."""
-        new_member_fqdn = "i.already.exist"
+        new_member_fqdn = "ialreadyexist"
         expected_peer_url = f"https://{new_member_fqdn}:2380"
         mock_run_sync = _get_mock_run_sync(
             side_effect=[
                 b"",
                 b"""Added :)""",
-                f"""
-                    415090d15def9053: name={new_member_fqdn} peerURLs={expected_peer_url}
-                """.encode(),
+                (
+                    """{"header":
+                           {"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},
+                        "members":
+                            [{"ID":4706420839500714067,"name":"%s","peerURLs":["%s"]}]}"""
+                    % (new_member_fqdn, expected_peer_url)
+                ).encode(),
             ]
         )
         controller = EtcdctlController(
@@ -365,13 +349,15 @@ class TestEnsureNodeDoesNotExist(TestCase):
         """Test that skips removal if member does not exist."""
         non_existing_member_fqdn = "i.dont.exist"
         expected_result = None
-        mock_run_sync = _get_mock_run_sync(
-            return_value=(
-                "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
-                "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
-                "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true"
-            ).encode()
-        )
+        mock_run_sync = _get_mock_run_sync(return_value="""
+                    {"header":
+                      {"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},
+                     "members":
+                       [{"ID":4706420839500714067,
+                         "name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud",
+                         "peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],
+                         "clientURLs":
+                           ["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]}]}""".encode())
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
@@ -387,16 +373,26 @@ class TestEnsureNodeDoesNotExist(TestCase):
 
     def test_removes_the_member_if_there_already(self):
         """Test that it removes the member if there already."""
-        member_fqdn = "i.already.exist"
+        member_fqdn = "ialreadyexist"
         expected_member_id = "1234556789012345"
         mock_run_sync = _get_mock_run_sync(
             side_effect=[
                 (
-                    "415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs="
-                    "https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=false\n"
-                    f"{expected_member_id}: name={member_fqdn} peerURLs=http://some.url"
-                ).encode(),
+                    (
+                        """
+                            {"header":
+                                {"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},
+                             "members":
+                                 [{"ID":4706420839500714067,
+                                   "name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud",
+                                   "peerURLs":
+                                     ["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],
+                                   "clientURLs":
+                                     ["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]}
+                                 ,{"ID":"%s","name":"%s","peerURLs":"http://some.url"}]}"""
+                        % (expected_member_id, member_fqdn)
+                    ).encode()
+                ),
                 "Removed :)",
             ]
         )
@@ -408,4 +404,4 @@ class TestEnsureNodeDoesNotExist(TestCase):
             gotten_result = controller.ensure_node_does_not_exist(member_fqdn=member_fqdn)
 
         _assert_called_with_single_param(param="remove", mock_obj=mock_run_sync)
-        assert gotten_result == expected_member_id
+        assert gotten_result == format(int(expected_member_id), "x")
