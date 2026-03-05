@@ -7,7 +7,7 @@ from ClusterShell.MsgTree import MsgTreeElem
 from cumin import Config, nodeset
 
 from spicerack.remote import RemoteHosts
-from spicerack.toolforge.etcdctl import EtcdctlController, HealthStatus, TooManyHosts, UnableToParseOutput
+from spicerack.toolforge.etcdctl import EtcdctlController, TooManyHosts, UnableToParseOutput
 
 
 def _assert_called_with_single_param(param: str, mock_obj: mock.MagicMock) -> None:
@@ -60,214 +60,6 @@ class TestEtcdctlController(TestCase):
 
         with self.assertRaises(TooManyHosts):
             EtcdctlController(remote_host=nodes)
-
-
-class TestGetHealth(TestCase):
-    """TestGetHealth."""
-
-    def test_passes_correct_cert_file(self):
-        """Test that passes correct cert file by default."""
-        expected_cert_file = "/etc/etcd/ssl/test0.local.host.pem"
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 415090d15def9053 is healthy: got healthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is healthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            controller.get_cluster_health()
-
-        _assert_called_with_single_param(
-            param=f"--cert-file {expected_cert_file}",
-            mock_obj=mock_run_sync,
-        )
-
-    def test_passes_correct_ca_file(self):
-        """Test that passes correct ca file by default."""
-        expected_ca_file = "/etc/etcd/ssl/ca.pem"
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 415090d15def9053 is healthy: got healthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is healthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            controller.get_cluster_health()
-
-        _assert_called_with_single_param(
-            param=f"--ca-file {expected_ca_file}",
-            mock_obj=mock_run_sync,
-        )
-
-    def test_passes_correct_key_file(self):
-        """Test that passes correct key file by default."""
-        expected_key_file = "/etc/etcd/ssl/test0.local.host.priv"
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 415090d15def9053 is healthy: got healthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is healthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            controller.get_cluster_health()
-
-        _assert_called_with_single_param(
-            param=f"--key-file {expected_key_file}",
-            mock_obj=mock_run_sync,
-        )
-
-    def test_passes_correct_endpoints(self):
-        """Test that passes correct endpoints by default."""
-        expected_endpoints = "https://test0.local.host:2379"
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 415090d15def9053 is healthy: got healthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is healthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            controller.get_cluster_health()
-
-        _assert_called_with_single_param(
-            param=f"--endpoints {expected_endpoints}",
-            mock_obj=mock_run_sync,
-        )
-
-    def test_parses_result_with_one_member(self):
-        """Test that parses result with one member."""
-        expected_members = {"415090d15def9053": HealthStatus.healthy}
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 415090d15def9053 is healthy: got healthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is healthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            gotten_result = controller.get_cluster_health()
-
-        mock_run_sync.assert_called_once()
-        assert gotten_result.members_status == expected_members
-
-    def test_parses_result_with_many_members(self):
-        """Test that parses result with many members."""
-        expected_members = {
-            "415090d15def9053": HealthStatus.healthy,
-            "5208bbf5c00e7cdf": HealthStatus.healthy,
-        }
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 415090d15def9053 is healthy: got healthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                member 5208bbf5c00e7cdf is healthy: got healthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is healthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            gotten_result = controller.get_cluster_health()
-
-        mock_run_sync.assert_called_once()
-        assert expected_members == gotten_result.members_status
-
-    def test_parses_result_with_member_down(self):
-        """Test that parses result with member down."""
-        expected_members = {
-            "415090d15def9053": HealthStatus.healthy,
-            "5208bbf5c00e7cdf": HealthStatus.unhealthy,
-        }
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 415090d15def9053 is healthy: got healthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                member 5208bbf5c00e7cdf is unhealthy: got unhealthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is healthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            gotten_result = controller.get_cluster_health()
-
-        mock_run_sync.assert_called_once()
-        assert expected_members == gotten_result.members_status
-
-    def test_gets_cluster_healthy(self):
-        """Test that parses cluster global status when healthy."""
-        expected_global_status = HealthStatus.healthy
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 5208bbf5c00e7cdf is unhealthy: got unhealthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is healthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            gotten_result = controller.get_cluster_health()
-
-        mock_run_sync.assert_called_once()
-        assert expected_global_status == gotten_result.global_status
-
-    def test_gets_cluster_unhealthy(self):
-        """Test that parses cluster global status when unhealthy."""
-        expected_global_status = HealthStatus.unhealthy
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 5208bbf5c00e7cdf is unhealthy: got unhealthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-                cluster is unhealthy
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            gotten_result = controller.get_cluster_health()
-
-        mock_run_sync.assert_called_once()
-        assert expected_global_status == gotten_result.global_status
-
-    def test_raises_when_no_global_cluster_health(self):
-        """Test that parses cluster global status when unhealthy."""
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
-                member 5208bbf5c00e7cdf is unhealthy: got unhealthy result from https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379
-            """,  # noqa: E501
-        )
-        controller = EtcdctlController(
-            remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
-        )
-
-        with mock.patch.object(RemoteHosts, "run_sync", mock_run_sync):
-            with self.assertRaises(UnableToParseOutput):
-                controller.get_cluster_health()
-
-        mock_run_sync.assert_called_once()
 
 
 class TestGetClusterInfo(TestCase):
@@ -417,12 +209,10 @@ class TestGetClusterInfo(TestCase):
                 "status": "unstarted",
             },
         }
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
+        mock_run_sync = _get_mock_run_sync(return_value=b"""
                 415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
                 cf612c785df58f6a[unstarted]: peerURLs=https://idontexist.localhost:1234
-            """  # noqa: E501
-        )
+            """)  # noqa: E501
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
@@ -435,12 +225,10 @@ class TestGetClusterInfo(TestCase):
 
     def test_raises_when_getting_member_without_id(self):
         """Test that raises when getting member without id."""
-        mock_run_sync = _get_mock_run_sync(
-            return_value=b"""
+        mock_run_sync = _get_mock_run_sync(return_value=b"""
                 415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
                 peerURLs=https://idontexist.localhost:1234
-            """  # noqa: E501
-        )
+            """)  # noqa: E501
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
@@ -458,12 +246,10 @@ class TestEnsureNodeExists(TestCase):
         existing_member_fqdn = "i.already.exist"
         existing_member_peer_url = f"https://{existing_member_fqdn}:1234"
         expected_member_id = "1234556789012345"
-        mock_run_sync = _get_mock_run_sync(
-            return_value=f"""
+        mock_run_sync = _get_mock_run_sync(return_value=f"""
                 415090d15def9053: name=toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud peerURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380 clientURLs=https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379 isLeader=true
                 {expected_member_id}: name={existing_member_fqdn} peerURLs={existing_member_peer_url}
-            """.encode()  # noqa: E501
-        )
+            """.encode())  # noqa: E501
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
