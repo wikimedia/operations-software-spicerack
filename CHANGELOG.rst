@@ -1,6 +1,23 @@
 Spicerack Changelog
 -------------------
 
+`v12.3.0`_ (2026-03-30)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+* elasticsearch_cluster: allow checking last reboot (`T410577`_).
+
+Minor improvements
+""""""""""""""""""
+* Use importlib.metadata instead of pkg_resources, now deprecated/removed.
+* setup.py: limit sphinx's version.
+* .wmfconfig: remove bullseye build.
+* Drop support for older Python versions 3.9 and 3.10
+* toolforge.etcdctl: remove get_cluster_health and associated rigging.
+* toolforge.etcdctl: update cert flag names.
+* toolforge.etcdctl: update handling of 'member list' output.
+
 `v12.2.0`_ (2025-12-15)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3648,6 +3665,7 @@ New features
 .. _`T401581`: https://phabricator.wikimedia.org/T401581
 .. _`T404464`: https://phabricator.wikimedia.org/T404464
 .. _`T405397`: https://phabricator.wikimedia.org/T405397
+.. _`T410577`: https://phabricator.wikimedia.org/T410577
 .. _`T412211`: https://phabricator.wikimedia.org/T412211
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
@@ -3805,3 +3823,4 @@ New features
 .. _`v12.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.0.0
 .. _`v12.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.1.0
 .. _`v12.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.2.0
+.. _`v12.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.3.0
