@@ -1055,3 +1055,112 @@ def mock_node_info(values):
 
         port += 1
     return clusters
+
+
+def test_get_next_clusters_nodes_for_reboot_skips_already_rebooted():
+    """Test that get_next_clusters_nodes with operation=REBOOT skips nodes that were already rebooted."""
+    remote = mock.Mock(spec_set=Remote)
+
+    mock_remote_hosts = mock.Mock(spec_set=RemoteHosts)
+    # Node has been up for only 10 seconds (recently rebooted)
+    mock_remote_hosts.uptime.return_value = [
+        (["elastic1001.example.com"], 10.0),
+    ]
+    remote.query.return_value = mock_remote_hosts
+
+    # since is 60 seconds ago; node was rebooted 10 seconds ago (after since), so should be skipped
+    since = datetime.utcnow() - timedelta(seconds=60)
+    elasticsearch_clusters = ec.ElasticsearchClusters(
+        mock_node_info(
+            [
+                {
+                    "x1": json_node("elastic1001.example.com", start_time=30),
+                }
+            ]
+        ),
+        remote,
+        None,
+        ["eqiad", "codfw"],
+    )
+
+    result = elasticsearch_clusters.get_next_clusters_nodes(since, 1, operation=ec.OperationType.REBOOT)
+    assert result is None
+
+
+def test_get_next_clusters_nodes_for_reboot_returns_nodes_not_rebooted():
+    """Test that get_next_clusters_nodes with operation=REBOOT returns nodes that haven't been rebooted."""
+    remote = mock.Mock(spec_set=Remote)
+
+    mock_remote_hosts = mock.Mock(spec_set=RemoteHosts)
+    # Node has been up for 7 days (not recently rebooted)
+    mock_remote_hosts.uptime.return_value = [
+        (["elastic1001.example.com"], 604800.0),
+    ]
+    remote.query.return_value = mock_remote_hosts
+
+    # since is 60 seconds ago; node was booted 7 days ago (before since), so needs reboot
+    since = datetime.utcnow() - timedelta(seconds=60)
+    elasticsearch_clusters = ec.ElasticsearchClusters(
+        mock_node_info(
+            [
+                {
+                    "x1": json_node("elastic1001.example.com", start_time=100),
+                }
+            ]
+        ),
+        remote,
+        None,
+        ["eqiad", "codfw"],
+    )
+
+    result = elasticsearch_clusters.get_next_clusters_nodes(since, 1, operation=ec.OperationType.REBOOT)
+    assert result is not None
+    # Verify remote.query was called (once for uptime fetch, once for returning ElasticsearchHosts)
+    assert remote.query.call_count == 2
+
+
+def test_get_next_clusters_nodes_restarted_but_not_rebooted():
+    """Test the key scenario: node was restarted (JVM) but host was not rebooted.
+
+    This is the core use case for the operation parameter:
+    - JVM start_time > since (service was     restarted)
+    - boot_time      < since (host    was NOT rebooted)
+
+    With operation=RESTART: node should be skipped  (service already restarted)
+    With operation=REBOOT:  node should be returned (host    needs   reboot)
+    """
+    since = datetime.utcnow() - timedelta(seconds=60)
+
+    # Node config: JVM started 10s ago (after since=60s ago), but host booted 7 days ago (before since)
+    # This simulates: host booted long ago, service was restarted recently
+    jvm_start_ms = int((datetime.utcnow() - timedelta(seconds=10)).timestamp() * 1000)
+    node_info = [{"x1": json_node("elastic1001.example.com", start_time=jvm_start_ms)}]
+
+    # Test operation=RESTART: should skip node (JVM recently restarted, after since)
+    remote_restart = mock.Mock(spec_set=Remote)
+    clusters_restart = ec.ElasticsearchClusters(
+        mock_node_info(node_info),
+        remote_restart,
+        None,
+        ["eqiad", "codfw"],
+    )
+    result_restart = clusters_restart.get_next_clusters_nodes(since, 1, operation=ec.OperationType.RESTART)
+    assert result_restart is None, "Node should be skipped when operation=RESTART (already restarted)"
+
+    # Test operation=REBOOT: should return node (host booted 7 days ago, before since)
+    remote_reboot = mock.Mock(spec_set=Remote)
+    mock_remote_hosts = mock.Mock(spec_set=RemoteHosts)
+    # Host has been up for 7 days
+    mock_remote_hosts.uptime.return_value = [
+        (["elastic1001.example.com"], 604800.0),
+    ]
+    remote_reboot.query.return_value = mock_remote_hosts
+
+    clusters_reboot = ec.ElasticsearchClusters(
+        mock_node_info(node_info),
+        remote_reboot,
+        None,
+        ["eqiad", "codfw"],
+    )
+    result_reboot = clusters_reboot.get_next_clusters_nodes(since, 1, operation=ec.OperationType.REBOOT)
+    assert result_reboot is not None, "Node should be returned when operation=REBOOT (not yet rebooted)"

@@ -14,10 +14,10 @@
 import os
 import sys
 from datetime import date
+from importlib.metadata import version as meta_version
 from pathlib import Path
 
 import sphinx_rtd_theme
-from pkg_resources import get_distribution
 
 # Adjust path
 sys.path.insert(0, Path(__file__).parent.parent.resolve())
@@ -68,7 +68,7 @@ author = "Riccardo Coccioli"
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = get_distribution("wikimedia-spicerack").version
+release = meta_version("wikimedia-spicerack")
 # The short X.Y version.
 version = release
 

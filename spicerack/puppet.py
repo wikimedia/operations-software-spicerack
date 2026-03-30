@@ -52,11 +52,11 @@ class PuppetHostsCheckError(SpicerackCheckError):
 
 
 class PuppetServerError(SpicerackError):
-    """Custom base exception class for errors in the PuppetMaster class."""
+    """Custom base exception class for errors in the PuppetServer class."""
 
 
 class PuppetServerCheckError(SpicerackCheckError):
-    """Custom exception class for check errors in the PuppetMaster class."""
+    """Custom exception class for check errors in the PuppetServer class."""
 
 
 class PuppetHosts(RemoteHostsAdapter):

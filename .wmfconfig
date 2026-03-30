@@ -6,7 +6,7 @@ name = wikimedia-spicerack
 wheels_prefix = wikimedia_spicerack
 
 [debian]
-distros = bullseye,bookworm
+distros = bookworm
 source_package = spicerack
 binary_package = spicerack
 
