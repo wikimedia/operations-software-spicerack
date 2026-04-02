@@ -78,9 +78,9 @@ class CookbookCollection:
         for i, subpath in enumerate(parts):
             if i == 0:  # Initial menu
                 item = self.menu
-            elif item is not None and subpath in item.items.keys():  # Submenu or child cookbook found
+            elif item is not None and subpath in item.items:  # Submenu or child cookbook found
                 item = item.items[subpath]
-            elif item is not None and i == len(parts) - 2 and multiple_class_name in item.items.keys():
+            elif item is not None and i == len(parts) - 2 and multiple_class_name in item.items:
                 # Found cookbook in a module that has multiple class API cookbooks
                 item = item.items[multiple_class_name]
                 break
@@ -203,10 +203,7 @@ class CookbookCollection:
         if not self.path_filter:
             return False
 
-        if name.startswith(self.path_filter[: len(name)]):
-            return False
-
-        return True
+        return not name.startswith(self.path_filter[:len(name)])
 
     def _collect_module_cookbooks(
         self, module: _module_api.CookbooksModuleInterface
@@ -249,7 +246,7 @@ class CookbookCollection:
 
         return classes
 
-    def _convert_module_in_cookbook(  # noqa: MC0001
+    def _convert_module_in_cookbook(
         self, module: _module_api.CookbooksModuleInterface
     ) -> type[cookbook.CookbookBase]:
         """Convert a module API based cookbook into a class API cookbook.
@@ -315,8 +312,7 @@ class CookbookCollection:
                 description=module.__doc__, formatter_class=cookbook.ArgparseFormatter
             )
 
-        cookbook_class = type(name, (cookbook.CookbookBase,), attributes)
-        return cookbook_class
+        return type(name, (cookbook.CookbookBase,), attributes)
 
 
 def argument_parser() -> argparse.ArgumentParser:
@@ -462,7 +458,7 @@ def get_cookbook_callback(
     return get_cookbook
 
 
-def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:  # noqa: MC0001
+def main(argv: Optional[Sequence[str]] = None) -> Optional[int]:
     """Entry point, run the tool.
 
     Arguments:

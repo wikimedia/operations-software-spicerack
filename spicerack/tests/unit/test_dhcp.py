@@ -737,6 +737,6 @@ class TestDHCP:
             mock_remotehosts.results_to_list.return_value = [[None, f"{configsha256} {config.filename}"]]
             with pytest.raises(RuntimeError):
                 with self.dhcp.config(config):
-                    raise RuntimeError()
+                    raise RuntimeError
 
         hosts.run_sync.assert_has_calls([call_write, call_refresh, call_sha256, call_rm, call_refresh])

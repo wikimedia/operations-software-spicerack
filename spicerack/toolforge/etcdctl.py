@@ -46,9 +46,9 @@ class EtcdctlController(RemoteHostsAdapter):
             key_file,
         ]
 
-    def get_cluster_info(self) -> dict[str, dict[str, SimpleType]]:  # noqa: MC0001
+    def get_cluster_info(self) -> dict[str, dict[str, SimpleType]]:
         """Gets the current etcd cluster information."""
-        args = self._base_args + ["member", "list", "-w=json"]
+        args = [*self._base_args, "member", "list", "-w=json"]
         raw_results = self._remote_hosts.run_sync(" ".join(args))
         try:
             result = next(raw_results)[1].message().decode("utf8")
@@ -60,11 +60,11 @@ class EtcdctlController(RemoteHostsAdapter):
 
         for member in members:
             if "ID" not in member:
-                raise UnableToParseOutput("Unable to parse etcdctl output (missing ID)\n" f"Full output: {result}")
+                raise UnableToParseOutput(f"Unable to parse etcdctl output (missing ID)\nFull output: {result}")
 
             if "peerURLs" not in member:
                 raise UnableToParseOutput(
-                    "Unable to parse etcdctl output (missing peerURLs)\n" f"Full output: {result}"
+                    f"Unable to parse etcdctl output (missing peerURLs)\nFull output: {result}"
                 )
 
             struct_elem: dict[str, SimpleType] = {}
@@ -205,12 +205,12 @@ class EtcdctlController(RemoteHostsAdapter):
                 member
                 for member in members.values()
                 if (
-                    "name" in member
-                    and member["name"] == member_name
+                    ("name" in member
+                    and member["name"] == member_name)
                     # in case the member is not started, it does not show the name,
                     # just the peer url
-                    or "name" not in member
-                    and member["peerURLs"] == member_peer_url
+                    or ("name" not in member
+                    and member["peerURLs"] == member_peer_url)
                 )
             ),
             {},

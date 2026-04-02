@@ -32,6 +32,7 @@ EXTRAS_REQUIRE = {
         "pytest-xdist>=3.1.0",
         "pytest>=7.2.1",
         "requests-mock>=1.9.3",
+        "ruff",
         # This is required for flake8 to run proprely, as when running tox
         # setuptools comes boundled is usually way older (debian sid has 44 as
         # of writing this).
@@ -46,12 +47,8 @@ EXTRAS_REQUIRE = {
         "types-requests",
         "types-setuptools",
     ],
-    "flake8": [
-        "flake8>=5.0.4",
-    ],
     "format": [
-        "black",
-        "isort",
+        "ruff",
     ],
     "prospector": [
         "prospector[with_everything]==1.15.3",  # Pinned

@@ -786,7 +786,7 @@ def _eval_get_next_nodes(node_info, batch_size=4):
                 if accept(node):
                     node["jvm"] = {"start_time_in_millis": start_time}
 
-    update_start(0, lambda x: True)
+    update_start(0, lambda _: True)
     since = datetime.utcfromtimestamp(10 / 1000)
     for i in itertools.count(start=20, step=10):
         remote = mock.Mock(spec_set=Remote)

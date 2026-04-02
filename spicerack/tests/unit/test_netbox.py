@@ -183,7 +183,7 @@ class TestNetboxServer:
         self.netbox_host.primary_ip4 = None
         self.netbox_host.primary_ip6.dns_name = None
         with pytest.raises(NetboxError, match="Server physical does not have any primary IP with a DNS name set"):
-            self.physical_server.fqdn  # pylint: disable=pointless-statement
+            _ = self.physical_server.fqdn
 
     def test_fqdn_setter_virtual(self):
         """It should raise a NetboxError if trying to change the FQDN of a VM."""
@@ -228,14 +228,14 @@ class TestNetboxServer:
         """It should raise a NetboxError if the management FQDN is not set."""
         self.mgmt_ip.dns_name = ""
         with pytest.raises(NetboxError, match="Server physical has no management interface with a DNS name set"):
-            self.physical_server.mgmt_fqdn  # pylint: disable=pointless-statement
+            _ = self.physical_server.mgmt_fqdn
 
     def test_mgmt_fqdn_getter_virtual(self):
         """It should raise a NetboxError if trying to get the management FQDN on a virtual machine."""
         with pytest.raises(
             NetboxError, match="Server virtual is a virtual machine, does not have a management address"
         ):
-            self.virtual_server.mgmt_fqdn  # pylint: disable=pointless-statement
+            _ = self.virtual_server.mgmt_fqdn
 
     def test_mgmt_fqdn_setter_virtual(self):
         """It should raise a NetboxError if trying to change the FQDN of a VM."""
@@ -257,7 +257,7 @@ class TestNetboxServer:
         self.mocked_api.ipam.ip_addresses.get.return_value = None
         self.physical_server.mgmt_fqdn = "foo.mgmt.local"
         with pytest.raises(NetboxError, match="Server physical has no management interface with a DNS name set."):
-            self.physical_server.mgmt_fqdn  # pylint: disable=pointless-statement
+            _ = self.physical_server.mgmt_fqdn
 
     def test_mgmt_fqdn_setter_error(self):
         """It should raise a NetboxError."""
@@ -300,13 +300,13 @@ class TestNetboxServer:
         """It should raise a NetboxError if no primary IP is set."""
         self.netbox_host.primary_ip = None
         with pytest.raises(NetboxError, match="No primary IP, needed to find the primary interface."):
-            self.physical_server.access_vlan  # pylint: disable=pointless-statement
+            _ = self.physical_server.access_vlan
 
     def test_access_vlan_getter_primary_ip_not_assigned(self):
         """It should raise a NetboxError if the primary IP is not assigned to an interface."""
         self.netbox_host.primary_ip.assigned_object = None
         with pytest.raises(NetboxError, match="Primary IP not assigned to an interface."):
-            self.physical_server.access_vlan  # pylint: disable=pointless-statement
+            _ = self.physical_server.access_vlan
 
     @pytest.mark.parametrize("iface_type", ("10gbase-x-sfpp", "bridge"))
     def test_access_vlan_getter_primary_interface_not_connected(self, iface_type):
@@ -320,7 +320,7 @@ class TestNetboxServer:
             self.mocked_api.dcim.interfaces.get.return_value = real_iface
 
         with pytest.raises(NetboxError, match="Primary interface not connected."):
-            self.physical_server.access_vlan  # pylint: disable=pointless-statement
+            _ = self.physical_server.access_vlan
 
     def test_access_vlan_getter_switch_interface_no_vlan(self):
         """It should return an empty string."""
@@ -330,7 +330,7 @@ class TestNetboxServer:
     def test_access_vlan_getter_virtual(self):
         """It should raise a NetboxError if trying to get the access vlan on a virtual machine."""
         with pytest.raises(NetboxError, match="Server is a virtual machine, can't return a switch interface."):
-            self.virtual_server.access_vlan  # pylint: disable=pointless-statement
+            _ = self.virtual_server.access_vlan
 
     def test_access_vlan_setter_ok(self):
         """It should set the access vlan."""
@@ -505,4 +505,4 @@ class TestNetboxServer:
     def test_connected_switches_virtual(self):
         """It should raise a NetboxError if trying to get the connected_switches on a virtual machine."""
         with pytest.raises(NetboxError, match="Server virtual is a virtual machine, not connected to a switch."):
-            self.virtual_server.switches  # pylint: disable=pointless-statement
+            _ = self.virtual_server.switches

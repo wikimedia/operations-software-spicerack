@@ -425,7 +425,7 @@ class TestInstance:
         self.mocked_cursor.fetchone.return_value = mocked_status
 
         with pytest.raises(mysql.MysqlError, match="Could not find the replication position"):
-            self.single_instance.get_replication_info()
+            _ = self.single_instance.get_replication_info()
 
         self.mocked_cursor.execute.assert_called_once_with("SHOW SLAVE STATUS")
         self.mocked_cursor.fetchone.assert_called_once_with()
@@ -440,7 +440,7 @@ class TestInstance:
 
         self.mocked_cursor.execute.assert_called_once_with("SHOW SLAVE STATUS")
         # Ensure the caching of the result works
-        self.single_instance.primary  # pylint: disable=pointless-statement
+        _ = self.single_instance.primary
         assert self.mocked_cursor.execute.call_count == 1
         assert self.mocked_cursor.fetchone.call_count == 1
 
@@ -453,7 +453,7 @@ class TestInstance:
         self.mocked_cursor.fetchone.return_value = None if no_content else mocked_status
 
         with pytest.raises(mysql.MysqlError, match="Unable to retrieve master host"):
-            self.single_instance.primary  # pylint: disable=pointless-statement
+            _ = self.single_instance.primary
 
         if not no_content:
             self.mocked_cursor.fetchone.assert_called_once_with()
@@ -600,7 +600,7 @@ class TestInstance:
         "row",
         (
             {"lag": None},
-            {"invalid": Decimal(0.1234)},
+            {"invalid": Decimal("0.1234")},
         ),
     )
     def test_replication_lag_no_lag(self, row):

@@ -455,7 +455,7 @@ def test_spicerack_extender():
     """An instance of Spicerack with an extender should allow to access the extender accessors."""
     sys.path.append(str(get_fixture_path("external_modules")))
     loader_module = import_module("spicerack_extender")
-    spicerack = Spicerack(extender_class=getattr(loader_module, "SpicerackExtender"), **SPICERACK_TEST_PARAMS)
+    spicerack = Spicerack(extender_class=loader_module.SpicerackExtender, **SPICERACK_TEST_PARAMS)
 
     assert str(spicerack.cool_feature("Extender")) == "Extender is a cool feature!"
 
@@ -473,7 +473,7 @@ def test_spicerack_lock(monkeypatch):
 
 def test_spicerack_private_lock():
     """It should return a lock instance for the spicerack modules and also cache it for re-use."""
-    Spicerack.test_accessor = lambda self: getattr(self, "_spicerack_lock")
+    Spicerack.test_accessor = lambda self: self._spicerack_lock
     spicerack = Spicerack(**SPICERACK_TEST_PARAMS)
 
     lock_1 = spicerack.test_accessor()

@@ -28,8 +28,8 @@ class ExampleRunner(CookbookRunnerBase):
         """Initialize the instance."""
         if args.message:
             raise CookbookInitSuccess(args.message)
-        raise CookbookInitSuccess()
+        raise CookbookInitSuccess
 
     def run(self):
         """As required by the parent class."""
-        raise RuntimeError()  # This should never be executed
+        raise RuntimeError  # This should never be executed

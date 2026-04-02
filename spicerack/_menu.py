@@ -189,7 +189,7 @@ class CookbookItem(BaseItem):
         """Returns the owner_team of the instance item."""
         return self.instance.owner_team
 
-    def run(self) -> int:  # noqa: MC0001
+    def run(self) -> int:
         """Run the cookbook.
 
         Returns:
@@ -249,7 +249,7 @@ class CookbookItem(BaseItem):
 
         return ret
 
-    def _run(self, runner: cookbook.CookbookRunnerBase) -> int:  # noqa: MC0001
+    def _run(self, runner: cookbook.CookbookRunnerBase) -> int:
         """Execute the active part of the cookbook.
 
         Arguments:
@@ -534,7 +534,7 @@ class TreeItem(BaseItem):
             lines.append(line)
 
             if item.items:
-                lines += cast(TreeItem, item).get_menu_tree(level + 1, cont_levels + [not is_final])
+                lines += cast(TreeItem, item).get_menu_tree(level + 1, [*cont_levels, not is_final])
 
         return lines
 

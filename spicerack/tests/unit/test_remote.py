@@ -500,7 +500,7 @@ class TestRemoteHosts:
             remote.RemoteError,
             match=r"Unable to extract data with <lambda> for host\[1-9\] from: test",
         ):
-            remote.RemoteHosts.results_to_list(results, callback=lambda x: 1 / 0)
+            remote.RemoteHosts.results_to_list(results, callback=lambda _: 1 / 0)
 
     def test_iter(self):
         """It should iterate the instance yielding instances of the same class with one host."""

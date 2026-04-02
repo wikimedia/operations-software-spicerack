@@ -36,7 +36,7 @@ class TestAlerting:
     @mock.patch("spicerack.alertmanager.AlertmanagerHosts.downtime", return_value="foo")
     def test_downtime(self, am_dt, icinga_dt):
         """It should call both Alertmanager and Icinga."""
-        assert "foo" == self.alerting_hosts.downtime(self.reason)
+        assert self.alerting_hosts.downtime(self.reason) == "foo"
         assert am_dt.called
         assert icinga_dt.called
 
@@ -79,6 +79,6 @@ class TestAlerting:
             with self.alerting_hosts.downtimed(self.reason, remove_on_error=remove_on_error):
                 assert am_dt.called
                 assert icinga_dt.called
-                raise ValueError()
+                raise ValueError
         assert am_rmdt.call_count == remove_downtime_calls
         assert icinga_rmdt.call_count == remove_downtime_calls

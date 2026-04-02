@@ -80,11 +80,11 @@ class PeeringDB:
         if resource_id is None and filters is None:
             return f"{resource}/index"
         if filters is None:
-            return f"{resource}/{str(resource_id)}"
+            return f"{resource}/{resource_id!s}"
         filter_key = "/".join("/".join([k, str(v)]) for k, v in filters.items())
         if resource_id is None:
             return f"{resource}/{filter_key}"
-        return f"{resource}/{str(resource_id)}/{filter_key}"
+        return f"{resource}/{resource_id!s}/{filter_key}"
 
     def fetch_asn(self, asn: int) -> dict:
         """Fetch a specific asn data.
@@ -107,18 +107,18 @@ class PeeringDB:
         if resource_id is None:
             endpoint = resource
         else:
-            endpoint = f"{resource}/{str(resource_id)}"
+            endpoint = f"{resource}/{resource_id!s}"
 
         cache_key = self._get_cache_key(resource=resource, resource_id=resource_id, filters=filters)
         try:
             json_response = self._cache_get(cache_key)
         except CacheMiss as e:
             url = self.baseurl + endpoint
-            logging.debug("Fetching %s from PeeringDB (params: %s)", url, filters)
+            logger.debug("Fetching %s from PeeringDB (params: %s)", url, filters)
             raw_response = self.session.get(url, params=filters)
             if not raw_response.ok:
                 raise PeeringDBError(
-                    f"Server response with status {raw_response.status_code}" f" ({raw_response.text})"
+                    f"Server response with status {raw_response.status_code} ({raw_response.text})"
                 ) from e
             json_response = raw_response.json()
             self._cache_put(json_response, cache_key)
@@ -132,18 +132,18 @@ class PeeringDB:
 
         """
         if not self.use_cache:
-            raise CacheMiss()
+            raise CacheMiss
 
         cachefile = self.cachedir / cache_key
         try:
             mtime = cachefile.stat().st_mtime
             age = time.time() - mtime
             if age > self.ttl:
-                raise CacheMiss()
+                raise CacheMiss
             return json.loads(cachefile.read_text())
 
         except OSError as e:
-            raise CacheMiss() from e
+            raise CacheMiss from e
 
     def _cache_put(self, content: dict, cache_key: str) -> None:
         """Write the resource to the on disk cache if configured to do so.

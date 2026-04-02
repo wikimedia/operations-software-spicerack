@@ -280,7 +280,7 @@ class CookbookRunnerBase(metaclass=ABCMeta):
 
         """
 
-    def rollback(self) -> None:
+    def rollback(self) -> None:  # noqa: B027
         """Called by Spicerack when the cookbook fails the execution.
 
         This method by default does nothing. Cookbooks classes that inherit from this one can override it to add their

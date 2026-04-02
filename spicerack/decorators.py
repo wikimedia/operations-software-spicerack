@@ -31,7 +31,7 @@ def get_effective_tries(params: RetryParams, func: Callable, args: tuple, kwargs
     # Detect if func is an instance method that has self ensuring that the name of the class of the first parameter
     # (self) matches the class name extracted from the function's qualname.
     has_self = (
-        "." in qualname and args and qualname.rsplit(".", 1)[0] == getattr(getattr(args[0], "__class__"), "__name__")
+        "." in qualname and args and qualname.rsplit(".", 1)[0] == args[0].__class__.__name__
     )
 
     # When the decorated object is an instance method
@@ -97,7 +97,7 @@ def retry(*args: Any, **kwargs: Any) -> Callable:
         The decorated function.
 
     """
-    kwargs["dynamic_params_callbacks"] = tuple(list(kwargs.get("dynamic_params_callbacks", [])) + [get_effective_tries])
+    kwargs["dynamic_params_callbacks"] = (*kwargs.get("dynamic_params_callbacks", []), get_effective_tries)
     kwargs["exceptions"] = kwargs.get("exceptions", (SpicerackError,))
 
     return wmflib_retry(*args[1:], **kwargs)(args[0])

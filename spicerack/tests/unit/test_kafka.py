@@ -68,7 +68,7 @@ def _answer_offsets_for_times(timestamps):
 
 
 def _answer_partitions_for_topic(topic) -> Union[list[int], None]:
-    return [0] if topic.startswith("eqiad.") or topic.startswith("codfw.") else []
+    return [0] if topic.startswith(("eqiad.", "codfw.")) else []
 
 
 @mock.patch("ssl.SSLContext.load_verify_locations")
@@ -132,7 +132,7 @@ class TestKafka:
     def test_no_destination_offset(self, consumer_patch, _):
         """It should raise an exception with specific message if no source timestamp available."""
         TestKafka._setup_consumer_mocks(
-            consumer_patch, offset_for_times_answer=lambda x: {TopicPartition("eqiad.wikidata", 0): None}
+            consumer_patch, offset_for_times_answer=lambda _: {TopicPartition("eqiad.wikidata", 0): None}
         )
         with pytest.raises(
             expected_exception=KafkaError,
@@ -207,7 +207,7 @@ class TestKafka:
         from_consumer_mock.committed.return_value = OFFSET
         to_consumer_mock = mock.MagicMock(spec_set=KafkaConsumer)
         to_consumer_mock.partitions_for_topic.side_effect = lambda topic: (
-            [0] if topic.startswith("eqiad.") or topic.startswith("codfw.") else []
+            [0] if topic.startswith(("eqiad.", "codfw.")) else []
         )
         to_consumer_mock.offsets_for_times.side_effect = offset_for_times_answer
         consumer_patch.side_effect = [from_consumer_mock, to_consumer_mock]
