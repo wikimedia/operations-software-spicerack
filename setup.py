@@ -26,22 +26,12 @@ INSTALL_REQUIRES = [
 EXTRAS_REQUIRE = {
     # Test dependencies
     "tests": [
-        "bandit>=1.6.2",
         "mypy>=1.0.1",
         "pytest-cov>=4.0.0",
         "pytest-xdist>=3.1.0",
         "pytest>=7.2.1",
         "requests-mock>=1.9.3",
         "ruff",
-        # This is required for flake8 to run proprely, as when running tox
-        # setuptools comes boundled is usually way older (debian sid has 44 as
-        # of writing this).
-        "setuptools>=66.1.1",
-        "sphinx_rtd_theme>=1.2.0",
-        "sphinx-argparse>=0.3.2",
-        "sphinx-autodoc-typehints>=1.12.0",
-        "Sphinx>=3.4.3",
-        "Sphinx>=5.3.0,<9.0.0",
         "types-PyMySQL",
         "types-redis",
         "types-requests",
@@ -49,6 +39,13 @@ EXTRAS_REQUIRE = {
     ],
     "format": [
         "ruff",
+    ],
+    "sphinx": [
+        "sphinx_rtd_theme>=1.2.0",
+        "sphinx-argparse>=0.3.2",
+        "sphinx-autodoc-typehints>=1.12.0",
+        "Sphinx>=3.4.3",
+        "Sphinx>=5.3.0,<9.0.0",
     ],
     "prospector": [
         "prospector[with_everything]==1.15.3",  # Pinned
