@@ -49,11 +49,14 @@ class Ipmi:
         self._target = target
         self._dry_run = dry_run
 
-    def command(self, command_parts: list[str], is_safe: bool = False, hide_parts: tuple = ()) -> str:
+    def command(
+        self, command_parts: list[str], user: str = "root", is_safe: bool = False, hide_parts: tuple = ()
+    ) -> str:
         """Run an ipmitool command for a remote management console and return its output.
 
         Arguments:
             command_parts: a list of :py:class:`str` with the IPMI command components to execute.
+            user: the user that runs the command on the target.
             is_safe: if this is a safe command to run also in DRY RUN mode.
             hide_parts: tuple with indexes of the command_parts list that should be redacted in logs and outputs
                 because contain sensitive data. For example setting it to (2, 4) would replace in logs and outputs the
@@ -70,7 +73,7 @@ class Ipmi:
             "-H",
             self._target,
             "-U",
-            "root",
+            user,
             "-E",
         ]
         redacted_parts = command_parts[:]
