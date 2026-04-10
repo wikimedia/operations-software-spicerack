@@ -96,6 +96,7 @@ class TestCommandFile:
     def setup_method(self):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
+        icinga.CommandFile.clear_cache()
         self.mocked_icinga_host = mock.MagicMock(spec_set=RemoteHosts)
         self.mocked_icinga_host.__len__.return_value = 1
         set_mocked_icinga_host_output(self.mocked_icinga_host, "/var/lib/icinga/rw/icinga.cmd")
@@ -166,6 +167,7 @@ class TestIcingaHosts:
     def setup_method(self):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
+        icinga.CommandFile.clear_cache()
         self.reason = Reason("Downtime reason", "user1", "orchestration-host", task_id="T12345")
         self.mocked_icinga_host = mock.MagicMock(spec_set=RemoteHosts)
         self.mocked_icinga_host.__len__.return_value = 1
