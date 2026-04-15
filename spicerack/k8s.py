@@ -4,7 +4,7 @@ import logging
 import time
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 import kubernetes  # mypy: no-type
 from kubernetes import client, config  # mypy: no-type
@@ -82,7 +82,7 @@ class Kubernetes:
 class KubernetesApiFactory:
     """Provides kubernetes object classes easy access to the API."""
 
-    API_CLASSES: dict[str, Any] = {"core": client.CoreV1Api, "batch": client.BatchV1Api}
+    API_CLASSES: ClassVar[dict[str, Any]] = {"core": client.CoreV1Api, "batch": client.BatchV1Api}
     """The different kubernetes APIs supported."""
     CONFIG_BASE: str = "/etc/kubernetes"
     """The base path for the kubernetes clusters configurations files."""
@@ -286,9 +286,8 @@ class KubernetesNode:
                 return nodes.items[0]
             if nodes_found == 0:  # pylint: disable=no-else-raise
                 raise KubernetesError(f"Node {self._fqdn} not found")
-            else:
-                node_names = ",".join([o.metadata.name for o in nodes.items])
-                raise KubernetesError(f"More than one node found for name {self._fqdn}: {node_names}")
+            node_names = ",".join([o.metadata.name for o in nodes.items])
+            raise KubernetesError(f"More than one node found for name {self._fqdn}: {node_names}")
         except kubernetes.client.exceptions.ApiException as exc:
             raise KubernetesApiError(f"Failed to list nodes: {exc}") from exc
 

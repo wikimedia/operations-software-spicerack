@@ -47,6 +47,11 @@ class CommandFile(str):
     _command_files: dict[tuple[str, str], str] = {}
     """Cache a command file per Icinga hostname and configuration file."""
 
+    @classmethod
+    def clear_cache(cls) -> None:
+        """Clear the cached command files. Useful for testing."""
+        cls._command_files.clear()
+
     def __new__(cls, icinga_host: RemoteHosts, *, config_file: str = "/etc/icinga/icinga.cfg") -> "CommandFile":
         """Get the Icinga host command file path where to write the commands and cache it.
 

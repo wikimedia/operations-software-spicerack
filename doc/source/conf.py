@@ -17,8 +17,6 @@ from datetime import date
 from importlib.metadata import version as meta_version
 from pathlib import Path
 
-import sphinx_rtd_theme
-
 # Adjust path
 sys.path.insert(0, Path(__file__).parent.parent.resolve())
 

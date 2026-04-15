@@ -253,9 +253,8 @@ class Instance:
         # TODO: make the Instance class be aware of the port to use to connect to mysql, ideally allowing to use the
         # admin port if needed.
         kwargs["host"] = str(self.host)
-        with self._mysql.connect(**kwargs) as connection:
-            with connection.cursor() as cursor:
-                yield connection, cursor
+        with self._mysql.connect(**kwargs) as connection, connection.cursor() as cursor:
+            yield connection, cursor
 
     def check_warnings(self, cursor: DictCursor) -> None:
         """It will check if there is any warning in the cursor for the last query and ask the user what to do.

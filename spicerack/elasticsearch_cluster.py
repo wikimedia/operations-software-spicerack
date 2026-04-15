@@ -489,11 +489,7 @@ class ElasticsearchCluster:
             :py:data:`True` if node is present and :py:data:`False` if not.
 
         """
-        nodes_names = [node["attributes"]["hostname"] for node in self.get_nodes().values()]
-        if node in nodes_names:
-            return True
-
-        return False
+        return node in [existing["attributes"]["hostname"] for existing in self.get_nodes().values()]
 
     @contextmanager
     def stopped_replication(self) -> Iterator[None]:

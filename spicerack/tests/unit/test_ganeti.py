@@ -284,7 +284,7 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         requests_mock.get(self.base_url + "/info", text=self.info)
         instance = self.ganeti.instance(self.instance)
         instance.shutdown(**kwargs)
-        timeout = kwargs["timeout"] if "timeout" in kwargs else 2
+        timeout = kwargs.get("timeout", 2)
         self.remote.query.return_value.run_sync.assert_called_once_with(
             f"gnt-instance shutdown --force --timeout={timeout} test.example.com"
         )
@@ -296,7 +296,7 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         requests_mock.get(self.base_url + "/info", text=self.info)
         instance = self.ganeti.instance(self.instance)
         instance.remove(**kwargs)
-        timeout = kwargs["shutdown_timeout"] if "shutdown_timeout" in kwargs else 2
+        timeout = kwargs.get("shutdown_timeout", 2)
         self.remote.query.return_value.run_sync.assert_called_once_with(
             f"gnt-instance remove --shutdown-timeout={timeout} --force test.example.com"
         )

@@ -125,7 +125,7 @@ class TestAlertmanager:
         with pytest.raises(ValueError):
             with self.alertmanager.downtimed(self.reason, matchers=self.matchers, remove_on_error=remove_on_error):
                 assert self.requests_mock.call_count == 1
-                raise ValueError()
+                raise ValueError
         assert self.requests_mock.call_count == total_call_count
 
     def test_connection_errors(self):
@@ -138,13 +138,13 @@ class TestAlertmanager:
         """It should fallback to the next Alertmanager on error."""
         self.requests_mock.post(f"{ALERTMANAGER_URLS[0]}/api/v2/silences", exc=requests.exceptions.ConnectionError)
         self.requests_mock.post(f"{ALERTMANAGER_URLS[1]}/api/v2/silences", json={"silenceID": "foobar"})
-        assert "foobar" == self.alertmanager.downtime(self.reason, matchers=self.matchers)
+        assert self.alertmanager.downtime(self.reason, matchers=self.matchers) == "foobar"
         assert self.requests_mock.last_request.hostname == "alertmanager-codfw.wikimedia.example"
 
     def test_uses_http_authentication(self):
         """It should use the given HTTP authentication configuration."""
         self.requests_mock.post("/api/v2/silences", json={"silenceID": "foobar"})
-        assert "foobar" == self.am_authenticated.downtime(self.reason, matchers=self.matchers)
+        assert self.am_authenticated.downtime(self.reason, matchers=self.matchers) == "foobar"
         # c3BpY2VyYWNrOmV4YW1wbGUy == base64(spicerack:example2)
         assert self.requests_mock.last_request.headers["Authorization"] == "Basic c3BpY2VyYWNrOmV4YW1wbGUy"
 
@@ -300,5 +300,5 @@ class TestAlertmanagerHosts:
         with pytest.raises(ValueError):
             with self.am_hosts.downtimed(self.reason, remove_on_error=remove_on_error):
                 assert self.requests_mock.call_count == 1
-                raise ValueError()
+                raise ValueError
         assert self.requests_mock.call_count == total_call_count

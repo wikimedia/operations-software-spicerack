@@ -786,7 +786,7 @@ def _eval_get_next_nodes(node_info, batch_size=4):
                 if accept(node):
                     node["jvm"] = {"start_time_in_millis": start_time}
 
-    update_start(0, lambda x: True)
+    update_start(0, lambda _: True)
     since = datetime.utcfromtimestamp(10 / 1000)
     for i in itertools.count(start=20, step=10):
         remote = mock.Mock(spec_set=Remote)
@@ -1133,7 +1133,9 @@ def test_get_next_clusters_nodes_restarted_but_not_rebooted():
 
     # Node config: JVM started 10s ago (after since=60s ago), but host booted 7 days ago (before since)
     # This simulates: host booted long ago, service was restarted recently
-    jvm_start_ms = int((datetime.utcnow() - timedelta(seconds=10)).timestamp() * 1000)
+    dt = datetime.utcnow() - timedelta(seconds=10)
+    epoch = datetime.utcfromtimestamp(0)
+    jvm_start_ms = int((dt - epoch).total_seconds() * 1000)
     node_info = [{"x1": json_node("elastic1001.example.com", start_time=jvm_start_ms)}]
 
     # Test operation=RESTART: should skip node (JVM recently restarted, after since)

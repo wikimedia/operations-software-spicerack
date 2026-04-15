@@ -1,0 +1,136 @@
+target-version = "py311"  # Minimum python version to support
+line-length = 120
+[lint]
+select = [
+    # Ordered as in https://docs.astral.sh/ruff/rules/
+    "ERA",  # Eradicate
+    "YTT",  # Flake8 2020
+    "ANN",  # Flake8 annotations
+    "S",  # Flake8 bandit
+    "BLE",  # Flake8 blind except
+    "FBT",  # Flake8 boolean trap
+    "B",  # Flake8 bugbear
+    "A",  # Flake8 builtins
+    "COM",  # Flake8 commas
+    "C4",  # Flake8 comprehensions
+    "DTZ",  # Flake8 datetimez
+    "T10",  # Flake8 debugger
+    "EXE",  # Flake8 executable
+    "ISC",  # Flaje8 implicit string concat
+    "LOG",  # Flake8 logging
+    "G",  # Flake8 logging format
+    "INP",  # Flake8 no pep420
+    "PIE",  # Flake8 pie
+    "T20",  # Flake8 print
+    "PT",  # Flake8 pytest style
+    "Q",  # Flake8 quotes
+    "RSE",  # Flake8 raise
+    "RET",  # Flake8 return
+    "SLF",  # Flake8 self
+    "SIM",  # Flake8 simplify
+    "SLOT",  # Flake8 slots
+    "TID",  # Flake8 tidy imports
+    "ARG",  # Flake8 unused arguments
+    "PTH",  # Flake8 use pathlib
+    "I",  # Isort
+    "N",  # Pep8 naming
+    "E",  # Pycodestyle errors
+    "W",  # Pycodestyle warnings
+    "D",  # Pydocstyle
+    "F",  # Pyflakes
+    "PGH",  # Pygrep hooks
+    "PL",  # Pylint
+    "RUF",  # Ruff specific rules
+    "TRY",  # Tryceratops
+]
+ignore = [
+    "PLR",     # Ignore Pylint refactor rules
+    "ANN401",  # Allow Any type hint
+    "COM812",  # Trailing commas enforced by the formatter
+    "PLR0915", # Ignore the too many statements check
+    "S603",    # Subprocess calls without shell=True
+    "SIM108",  # Don't force ternary operator always
+    "T201",    # Allow print() calls
+    "TRY003",  # Allow exception classes that don't define a common message
+    "TRY400",  # Allow to log just the error message an not the full exception traceback
+    "PTH123",  # Do not force to use Path in all cases
+    "Q000",    # Allow to use the built-in open() function
+    "SLF001",  # Allow private member access.
+    "FBT003",  # Allow boolean positional values in function call
+    "FBT002",  # Allow booelan default positional arguments in function call
+    "FBT001",  # Allow boolean typed positional arguments in function def
+    "BLE001",  # Allow to catch Exception
+    "S110",    # Allow try/except/pass without logging
+    "DTZ003",  # Allow datetime.datetime.utcnow()
+    "DTZ001",  # Allow datetime.datetime() called without a tzinfo argument
+    "DTZ004",  # Allow datetime.datetime.utcfromtimestamp()
+    "DTZ011",  # Allow datetime.date.today()
+    "DTZ007",  # Allow Naive datetime constructed using `datetime.datetime.strptime()` without %z
+    "N818",    # Allow exception names without the Error suffix
+    "D417",    # Allow missing argument description in docstrings
+    "ERA001",  # Allow commented-out code
+    "RUF015",  # Allow single element list slice (without using next())
+    "TRY300",  # Don't force else blocks with try/except
+    "SIM102",  # Allow nested if blocks for readability
+]
+
+exclude = ["spicerack/tests/fixtures/cookbook/cookbooks/group3/*"]
+
+[lint.flake8-annotations]
+mypy-init-return = true
+[lint.flake8-bandit]
+check-typed-exception = true
+[lint.flake8-pytest-style]
+parametrize-names-type = "csv"
+parametrize-values-type = "tuple"
+[lint.per-file-ignores]
+"doc/source/conf.py" = [
+    "A001",   # Allow to shadow 'copyright'
+    "INP001", # Allow implicit namespace package without __init__.py
+]
+# TODO: Follow up and try to remove these
+"spicerack/icinga.py" = [
+    "RUF012",  # Allow mutable default value for class attribute
+    "TRY301",  # Allow abstract `raise` to an inner function
+    "SLOT000", # Allow str subclasses without __slot__ defined
+]
+
+"spicerack/tests/*" = [
+    "ANN",     # Ignore type hints checks in tests
+    "S101",    # Allow asserts in tests
+    "S106",    # Allow hardcoded fake passwords in tests
+    "S105",    # Allow hardcoded fake passwords in tests
+    "RUF012",  # Allow mutable default value for class attribute
+    "RUF043",  # Allow pattern match without escaping
+    "SIM117",  # Allow nested with blocks
+    "PT012",   # Allow multiple simple statements
+    "S311",    # Allow random.random()
+    "FBT003",  # Allow boolean positional values in function call
+    "FBT002",  # Allow booelan default positional arguments in function call
+    "FBT001",  # Allow boolean typed positional arguments in function def
+    "PT007",   # Allow list instead of tuple of tuple in pytest.mark.paremetrize
+    "PT027",   # Allow assertRaises instead of pytest.raises
+    "ARG002",  # Allow unused method argument
+    "PT011",   # Allow pytest.raises(ValueError) and similar broad exceptions
+    "D104",    # Allow missing docstring in public package
+    "D100",    # Allow missing docstring in public module
+    "INP001",  # Dot not force the presence of __init__.py
+    "PT019",   # Do not force @pytest.mark.usefixtures
+    "ARG001",  # Allow unused arguments
+]
+"spicerack/tests/vulture_whitelist.py" = [
+    "B018",  # Ignore useless expressions
+]
+"doc/*" = [
+    "ANN",    # Ignore type hints checks in doc
+    "ARG",    # Ignore unused variables in doc
+    "ERA001", # Allow commented out code
+]
+"setup.py" = [
+    "EXE002", # Allow no shebang
+]
+
+[lint.pydocstyle]
+convention = "google"
+[format]
+docstring-code-format = true

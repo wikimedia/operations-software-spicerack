@@ -70,13 +70,13 @@ def _base_netbox_obj(name, additional_properties):
     return obj
 
 
-@pytest.fixture()
+@pytest.fixture
 def netbox_host():
     """Return a mocked Netbox physical device."""
     return _base_netbox_obj("physical", {"rack": {"id": 1, "name": "rack1"}, "cluster": None})
 
 
-@pytest.fixture()
+@pytest.fixture
 def netbox_virtual_machine():
     """Return a mocked Netbox virtual machine."""
     return _base_netbox_obj("virtual", {"cluster": {"id": 1, "name": "testcluster"}})

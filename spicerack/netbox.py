@@ -2,7 +2,7 @@
 
 import logging
 from ipaddress import IPv4Interface, IPv6Interface, ip_interface
-from typing import Any, Optional, Union
+from typing import Any, ClassVar, Optional, Union
 
 import pynetbox
 from requests.exceptions import RequestException
@@ -174,7 +174,7 @@ class Netbox:
 class NetboxServer:
     """Represent a Netbox device of role server or a virtual machine."""
 
-    allowed_status_transitions: dict[str, tuple[str, ...]] = {
+    allowed_status_transitions: ClassVar[dict[str, tuple[str, ...]]] = {
         "spare": ("planned", "failed", "decommissioned"),
         "planned": ("active", "failed", "decommissioned"),
         "failed": ("spare", "planned", "active", "decommissioned"),
@@ -692,7 +692,7 @@ class NetboxServer:
             connected=True,
             connected_endpoints_type="dcim.interface",
         )
-        return sorted(list({conn.device.name for interface in interfaces for conn in interface.connected_endpoints}))
+        return sorted({conn.device.name for interface in interfaces for conn in interface.connected_endpoints})
 
     def as_dict(self) -> dict:
         """Return a dict containing details about the server."""

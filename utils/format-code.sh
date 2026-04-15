@@ -15,5 +15,4 @@ if [[ "${#FILES[@]}" -eq "0" ]]; then
     exit 0
 fi
 
-black "${FILES[@]}"
-isort "${FILES[@]}"
+ruff check --fix "${FILES[@]}"

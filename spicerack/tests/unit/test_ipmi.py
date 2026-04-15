@@ -70,7 +70,7 @@ class TestIpmi:
     def test_command_ok(self, mocked_run):
         """It should execute the IPMI command as expected."""
         assert self.ipmi.command(["test_command"]) == "test"
-        mocked_run.assert_called_once_with(IPMITOOL_BASE + ["test_command"], env=ENV, stdout=PIPE, check=True)
+        mocked_run.assert_called_once_with([*IPMITOOL_BASE, "test_command"], env=ENV, stdout=PIPE, check=True)
 
     @mock.patch("spicerack.ipmi.run")
     def test_command_dry_run_ok(self, mocked_run):
@@ -93,7 +93,7 @@ class TestIpmi:
         """It should check that the connection to the remote IPMI works running a simple command."""
         self.ipmi_dry_run.check_connection()
         mocked_run.assert_called_once_with(
-            IPMITOOL_BASE + ["chassis", "power", "status"],
+            [*IPMITOOL_BASE, "chassis", "power", "status"],
             env=ENV,
             stdout=PIPE,
             check=True,
@@ -108,7 +108,7 @@ class TestIpmi:
         status = self.ipmi_dry_run.power_status()
         assert status == "on"
         mocked_run.assert_called_once_with(
-            IPMITOOL_BASE + ["chassis", "power", "status"],
+            [*IPMITOOL_BASE, "chassis", "power", "status"],
             env=ENV,
             stdout=PIPE,
             check=True,
@@ -133,7 +133,7 @@ class TestIpmi:
         )
         self.ipmi.reboot()
         mocked_run.has_call(
-            IPMITOOL_BASE + ["chassis", "power", operation],
+            [*IPMITOOL_BASE, "chassis", "power", operation],
             env=ENV,
             stdout=PIPE,
             check=True,
@@ -149,7 +149,7 @@ class TestIpmi:
         )
         self.ipmi.check_bootparams()
         mocked_run.assert_called_once_with(
-            IPMITOOL_BASE + ["chassis", "bootparam", "get", "5"],
+            [*IPMITOOL_BASE, "chassis", "bootparam", "get", "5"],
             env=ENV,
             stdout=PIPE,
             check=True,
@@ -214,13 +214,13 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["chassis", "bootparam", "set", "bootflag", "force_pxe", "options=reset"],
+                    [*IPMITOOL_BASE, "chassis", "bootparam", "set", "bootflag", "force_pxe", "options=reset"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["chassis", "bootparam", "get", "5"],
+                    [*IPMITOOL_BASE, "chassis", "bootparam", "get", "5"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
@@ -279,13 +279,13 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["chassis", "bootparam", "set", "bootflag", "none", "options=reset"],
+                    [*IPMITOOL_BASE, "chassis", "bootparam", "set", "bootflag", "none", "options=reset"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["chassis", "bootparam", "get", "5"],
+                    [*IPMITOOL_BASE, "chassis", "bootparam", "get", "5"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
@@ -331,19 +331,19 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["user", "list", "1"],
+                    [*IPMITOOL_BASE, "user", "list", "1"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["user", "set", "password", "2", "a" * 16, "16"],
+                    [*IPMITOOL_BASE, "user", "set", "password", "2", "a" * 16, "16"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["chassis", "power", "status"],
+                    [*IPMITOOL_BASE, "chassis", "power", "status"],
                     env={"IPMITOOL_PASSWORD": "a" * 16},
                     stdout=PIPE,
                     check=True,
@@ -364,19 +364,19 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["user", "list", "1"],
+                    [*IPMITOOL_BASE, "user", "list", "1"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["user", "set", "password", "2", "a" * 17, "20"],
+                    [*IPMITOOL_BASE, "user", "set", "password", "2", "a" * 17, "20"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["chassis", "power", "status"],
+                    [*IPMITOOL_BASE, "chassis", "power", "status"],
                     env={"IPMITOOL_PASSWORD": "a" * 17},
                     stdout=PIPE,
                     check=True,
@@ -396,13 +396,13 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["user", "list", "1"],
+                    [*IPMITOOL_BASE, "user", "list", "1"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["user", "set", "password", "9", "a" * 16, "16"],
+                    [*IPMITOOL_BASE, "user", "set", "password", "9", "a" * 16, "16"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
@@ -415,7 +415,7 @@ class TestIpmi:
         """It should not reset the users password."""
         mocked_run.return_value = CompletedProcess((), 0, stdout=USERLIST_OUTPUT.encode())
         self.ipmi_dry_run.reset_password("root", "a" * 16)
-        mocked_run.assert_called_once_with(IPMITOOL_BASE + ["user", "list", "1"], env=ENV, stdout=PIPE, check=True)
+        mocked_run.assert_called_once_with([*IPMITOOL_BASE, "user", "list", "1"], env=ENV, stdout=PIPE, check=True)
 
     @mock.patch("spicerack.ipmi.run")
     def test_reset_password_fail_command(self, mocked_run):
@@ -429,13 +429,13 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["user", "list", "1"],
+                    [*IPMITOOL_BASE, "user", "list", "1"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["user", "set", "password", "9", "a" * 16, "16"],
+                    [*IPMITOOL_BASE, "user", "set", "password", "9", "a" * 16, "16"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
@@ -457,19 +457,19 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["user", "list", "1"],
+                    [*IPMITOOL_BASE, "user", "list", "1"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["user", "set", "password", "2", "a" * 16, "16"],
+                    [*IPMITOOL_BASE, "user", "set", "password", "2", "a" * 16, "16"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["chassis", "power", "status"],
+                    [*IPMITOOL_BASE, "chassis", "power", "status"],
                     env={"IPMITOOL_PASSWORD": "a" * 16},
                     stdout=PIPE,
                     check=True,
@@ -486,13 +486,13 @@ class TestIpmi:
         mocked_run.assert_has_calls(
             [
                 mock.call(
-                    IPMITOOL_BASE + ["user", "list", "1"],
+                    [*IPMITOOL_BASE, "user", "list", "1"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,
                 ),
                 mock.call(
-                    IPMITOOL_BASE + ["user", "list", "2"],
+                    [*IPMITOOL_BASE, "user", "list", "2"],
                     env=ENV,
                     stdout=PIPE,
                     check=True,

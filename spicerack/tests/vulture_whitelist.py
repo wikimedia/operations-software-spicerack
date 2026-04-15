@@ -6,7 +6,6 @@ class Whitelist:
 
     def __getattr__(self, _):
         """Mocking magic method __getattr__."""
-        pass
 
 
 whitelist__menu = Whitelist()

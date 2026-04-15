@@ -112,7 +112,7 @@ class PuppetHosts(RemoteHostsAdapter):
         host_to_config: dict[str, str] = {}
         for node_set, output in raw_results:
             config = list(output.lines())[-1].decode()
-            host_to_config.update({host: config for host in node_set})
+            host_to_config.update(dict.fromkeys(node_set, config))
 
         return host_to_config
 

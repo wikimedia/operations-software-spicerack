@@ -96,6 +96,7 @@ class TestCommandFile:
     def setup_method(self):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
+        icinga.CommandFile.clear_cache()
         self.mocked_icinga_host = mock.MagicMock(spec_set=RemoteHosts)
         self.mocked_icinga_host.__len__.return_value = 1
         set_mocked_icinga_host_output(self.mocked_icinga_host, "/var/lib/icinga/rw/icinga.cmd")
@@ -166,6 +167,7 @@ class TestIcingaHosts:
     def setup_method(self):
         """Setup the test environment."""
         # pylint: disable=attribute-defined-outside-init
+        icinga.CommandFile.clear_cache()
         self.reason = Reason("Downtime reason", "user1", "orchestration-host", task_id="T12345")
         self.mocked_icinga_host = mock.MagicMock(spec_set=RemoteHosts)
         self.mocked_icinga_host.__len__.return_value = 1
@@ -229,7 +231,7 @@ class TestIcingaHosts:
             with self.icinga_hosts.downtimed(self.reason):
                 assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
                 self.mocked_icinga_host.run_sync.reset_mock()
-                raise ValueError()
+                raise ValueError
         assert not self.mocked_icinga_host.run_sync.called
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
@@ -240,7 +242,7 @@ class TestIcingaHosts:
             with self.icinga_hosts.downtimed(self.reason, remove_on_error=True):
                 assert_has_downtime_calls(self.mocked_icinga_host, ["host1"], self.reason)
                 self.mocked_icinga_host.run_sync.reset_mock()
-                raise ValueError()
+                raise ValueError
         assert self.mocked_icinga_host.run_sync.called
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
@@ -360,7 +362,7 @@ class TestIcingaHosts:
                     self.mocked_icinga_host, [("host1", "service1"), ("host1", "service2")], self.reason
                 )
                 self.mocked_icinga_host.run_sync.reset_mock()
-                raise ValueError()
+                raise ValueError
         assert not self.mocked_icinga_host.run_sync.called
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)
@@ -375,7 +377,7 @@ class TestIcingaHosts:
                     self.mocked_icinga_host, [("host1", "service1"), ("host1", "service2")], self.reason
                 )
                 self.mocked_icinga_host.run_sync.reset_mock()
-                raise ValueError()
+                raise ValueError
         assert self.mocked_icinga_host.run_sync.called
 
     @mock.patch("spicerack.icinga.time.time", return_value=1514764800)

@@ -28,7 +28,7 @@ def _assert_not_called_with_single_param(param: str, mock_obj: mock.MagicMock) -
     for call in mock_obj.mock_calls:
         for arg in call[1]:
             if isinstance(arg, str) and param in arg:
-                assert False, f"Parameter {param} was passed on a call to {mock_obj}: {call}"
+                raise AssertionError("Parameter {param} was passed on a call to {mock_obj}: {call}")
 
 
 def _get_mock_run_sync(
@@ -141,7 +141,7 @@ class TestGetClusterInfo(TestCase):
         mock_run_sync = _get_mock_run_sync(
             return_value=b"""
 {"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]}]}
-                            """,  # noqa: E501
+                            """,
         )
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
@@ -176,7 +176,7 @@ class TestGetClusterInfo(TestCase):
         mock_run_sync = _get_mock_run_sync(
             return_value=b"""
 {"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":5911181175087332575,"name":"toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2379"]}]}
-                            """,  # noqa: E501
+                            """,
         )
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
@@ -207,7 +207,7 @@ class TestGetClusterInfo(TestCase):
         }
         mock_run_sync = _get_mock_run_sync(return_value=b"""
 {"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":5911181175087332575,"name":"toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380"]}]}
-                """)  # noqa: E501
+                """)
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
@@ -222,7 +222,7 @@ class TestGetClusterInfo(TestCase):
         """Test that raises when getting member without id."""
         mock_run_sync = _get_mock_run_sync(return_value=b"""
 {"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"name":"toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-6.toolsbeta.eqiad1.wikimedia.cloud:2380"]}]}
-            """)  # noqa: E501
+            """)
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )
@@ -242,7 +242,7 @@ class TestEnsureNodeExists(TestCase):
         expected_member_id = "1234556789012345"
         mock_run_sync = _get_mock_run_sync(return_value=("""
 {"header":{"cluster_id":13161044974788149663,"member_id":4706420839500714067,"raft_term":164389},"members":[{"ID":4706420839500714067,"name":"toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud","peerURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2380"],"clientURLs":["https://toolsbeta-test-k8s-etcd-9.toolsbeta.eqiad1.wikimedia.cloud:2379"]},{"ID":"%s","name":"%s","peerURLs":["%s"]}]}
-""" % (expected_member_id, existing_member_fqdn, existing_member_peer_url)).encode())  # noqa: E501
+""" % (expected_member_id, existing_member_fqdn, existing_member_peer_url)).encode())
         controller = EtcdctlController(
             remote_host=RemoteHosts(config=mock.MagicMock(specset=Config), hosts=nodeset("test0.local.host")),
         )

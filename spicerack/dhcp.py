@@ -40,7 +40,7 @@ class DHCPConfiguration(ABC):
     dhcp_filename: str = ""
     dhcp_filename_exclude_vendor: str = ""
     dhcp_filename_ipxe: str = ""
-    dhcp_options: dict[str, str] = {}
+    dhcp_options: dict[str, str] = field(default_factory=dict)
     distro: str = ""
     media_type: str = "installer"
 
@@ -61,7 +61,7 @@ class DHCPConfiguration(ABC):
         return textwrap.dedent(self._template.format(s=self))
 
     # TODO: remove the chaining of decorators
-    @property  # type: ignore
+    @property  # type: ignore[misc]
     @classmethod
     @abstractmethod
     def _template(cls) -> str:

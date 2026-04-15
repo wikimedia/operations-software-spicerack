@@ -91,7 +91,7 @@ class GanetiRAPI:
            spicerack.ganeti.GanetiError: on non-200 responses.
 
         """
-        full_url = "/".join([self._url, "2"] + list(targets))
+        full_url = "/".join([self._url, "2", *targets])
         try:
             result = self._http_session.get(full_url)
         except RequestException as ex:
@@ -426,7 +426,7 @@ class Ganeti:
 
         """
         if not cluster:
-            vm = self._netbox.api.virtualization.virtual_machines.get(name=instance.split(".")[0])
+            vm = self._netbox.api.virtualization.virtual_machines.get(name=instance.split(".", maxsplit=1)[0])
             if not vm:
                 raise GanetiError(
                     f"Ganeti Virtual Machine {instance} does not exist on Netbox and no manual cluster was provided"

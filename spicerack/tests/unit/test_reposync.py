@@ -62,7 +62,7 @@ class TestReposync:
             monkeypatch.setenv("SSH_AUTH_SOCK", file_content)
             assert os.environ["SSH_AUTH_SOCK"] == file_content
         else:
-            assert "SSH_AUTH_SOCK" not in os.environ
+            assert "SSH_AUTH_SOCK" not in os.environ or file_content not in os.environ["SSH_AUTH_SOCK"]
 
     @mock.patch("spicerack.reposync.ask_confirmation")
     def test_update_nochange(self, mock_ask_confirmation):

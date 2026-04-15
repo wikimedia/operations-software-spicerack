@@ -27,10 +27,7 @@ class FilterOutCumin(logging.Filter):
             According to Python's logging interface, see: https://docs.python.org/3/library/logging.html#filter-objects
 
         """
-        if record.name == "cumin" or record.name.startswith("cumin."):
-            return False  # Filter it out
-
-        return True
+        return not (record.name == "cumin" or record.name.startswith("cumin."))
 
 
 def setup_logging(
