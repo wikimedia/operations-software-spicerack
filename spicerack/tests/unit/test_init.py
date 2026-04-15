@@ -193,7 +193,7 @@ def test_spicerack_management_consoles(mocked_netbox, monkeypatch, manufacturer,
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
     assert spicerack.management_password() == "env_password"
-    assert isinstance(spicerack.ipmi("test-mgmt.example.com"), Ipmi)
+    assert isinstance(spicerack.ipmi("test-mgmt.example.com", username="batman"), Ipmi)
     if manufacturer == "fancy-but-not-supported-yet":
         with pytest.raises(
             SpicerackError, match=f"The manufacturer {manufacturer} set in Netbox for test-mgmt01 is not supported."

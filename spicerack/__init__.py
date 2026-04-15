@@ -575,14 +575,15 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         domain = "eqiad.wmnet"
         return PuppetServer(self.remote().query(get_ca_via_srv_record(domain)))
 
-    def ipmi(self, target: str) -> Ipmi:
+    def ipmi(self, target: str, username: str) -> Ipmi:
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
 
         Arguments:
             target: the management console FQDN or IP to target.
+            username: the username to use when issuing IPMI commands.
 
         """
-        return Ipmi(target, self.management_password(), dry_run=self._dry_run)
+        return Ipmi(target, self.management_password(), username=username, dry_run=self._dry_run)
 
     def phabricator(self, bot_config_file: str, section: str = "phabricator_bot") -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.
