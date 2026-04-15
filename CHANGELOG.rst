@@ -1,6 +1,24 @@
 Spicerack Changelog
 -------------------
 
+`v12.4.0`_ (2026-04-15)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+* Move linting to Ruff and apply code fixes (`T420475`_).
+
+Minor improvements
+""""""""""""""""""
+* ipmi: allow to run commands as another user.
+* tox: rework venvs to speed up local and CI timings (`T420475`_).
+
+Bug fixes
+"""""""""
+* elasticsearch: fix test for non-utc timezones.
+* tests: fix icinga tests when running on py3.13
+* reposync: fix unit test.
+
 `v12.3.0`_ (2026-03-30)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3667,6 +3685,7 @@ New features
 .. _`T405397`: https://phabricator.wikimedia.org/T405397
 .. _`T410577`: https://phabricator.wikimedia.org/T410577
 .. _`T412211`: https://phabricator.wikimedia.org/T412211
+.. _`T420475`: https://phabricator.wikimedia.org/T420475
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3824,3 +3843,4 @@ New features
 .. _`v12.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.1.0
 .. _`v12.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.2.0
 .. _`v12.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.3.0
+.. _`v12.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.4.0
