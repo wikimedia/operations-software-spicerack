@@ -36,27 +36,28 @@ class IpmiCheckError(SpicerackCheckError):
 class Ipmi:
     """Class to manage remote IPMI via ipmitool."""
 
-    def __init__(self, target: str, password: str, dry_run: bool = True) -> None:
+    def __init__(self, target: str, password: str, username: str = "root", dry_run: bool = True) -> None:
         """Initialize the instance.
 
         Arguments:
             target: the management console FQDN or IP to target.
             password: the password to use to connect via IPMI.
+            username: the username to use to connect via IPMI.
             dry_run: whether this is a DRY-RUN.
 
         """
         self.env: dict[str, str] = {"IPMITOOL_PASSWORD": password}
         self._target = target
         self._dry_run = dry_run
+        self._username = username
 
     def command(
-        self, command_parts: list[str], user: str = "root", is_safe: bool = False, hide_parts: tuple = ()
+        self, command_parts: list[str], is_safe: bool = False, hide_parts: tuple = ()
     ) -> str:
         """Run an ipmitool command for a remote management console and return its output.
 
         Arguments:
             command_parts: a list of :py:class:`str` with the IPMI command components to execute.
-            user: the user that runs the command on the target.
             is_safe: if this is a safe command to run also in DRY RUN mode.
             hide_parts: tuple with indexes of the command_parts list that should be redacted in logs and outputs
                 because contain sensitive data. For example setting it to (2, 4) would replace in logs and outputs the
@@ -73,7 +74,7 @@ class Ipmi:
             "-H",
             self._target,
             "-U",
-            user,
+            self._username,
             "-E",
         ]
         redacted_parts = command_parts[:]

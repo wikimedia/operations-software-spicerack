@@ -80,7 +80,7 @@ class TestHost:
         assert isinstance(host.apt_get(), AptGetHosts)
         assert isinstance(host.alertmanager(), AlertmanagerHosts)
         assert isinstance(host.redfish(), Redfish)
-        assert isinstance(host.ipmi(), Ipmi)
+        assert isinstance(host.ipmi(username="batman"), Ipmi)
 
     def test_accessors_virtual(self, monkeypatch, netbox_virtual_machine):
         """An Host instance for a virtual machine should allow to access library features for a specific host."""
@@ -124,14 +124,14 @@ class TestHost:
             hosts.Host("nonexistent", spicerack)
 
     @pytest.mark.parametrize(
-        "attribute, error",
+        "attribute, error, username",
         (
-            ("mgmt_fqdn", "Server virtual is a virtual machine, does not have a management address."),
-            ("redfish", "Host virtual is not a Physical server, Redfish is not supported."),
-            ("ipmi", "Host 'virtual' is a Virtual Machine, IPMI not supported."),
+            ("mgmt_fqdn", "Server virtual is a virtual machine, does not have a management address.", None),
+            ("redfish", "Host virtual is not a Physical server, Redfish is not supported.", None),
+            ("ipmi", "Host 'virtual' is a Virtual Machine, IPMI not supported.", "batman"),
         ),
     )
-    def test_ipmi_redfish_virtual(self, attribute, error, monkeypatch, netbox_virtual_machine):
+    def test_ipmi_redfish_virtual(self, attribute, error, username, monkeypatch, netbox_virtual_machine):
         """For virtual machines accessing ipmi or redfish should raise an exception."""
         spicerack = self._setup("virtual", monkeypatch, netbox_virtual_machine)
         host = hosts.Host("virtual", spicerack)
@@ -139,4 +139,7 @@ class TestHost:
         with pytest.raises(SpicerackError, match=re.escape(error)):
             attr = getattr(host, attribute)
             if callable(attr):
-                attr()
+                if username:
+                    attr(username=username)
+                else:
+                    attr()

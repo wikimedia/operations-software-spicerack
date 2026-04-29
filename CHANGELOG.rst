@@ -1,6 +1,17 @@
 Spicerack Changelog
 -------------------
 
+`v12.5.0`_ (2026-04-29)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+ipmi: rework how to use a different user other than root.
+
+Miscellanea
+"""""""""""
+* Remove Puppet 5 support from Spicerack.
+
 `v12.4.0`_ (2026-04-15)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3844,3 +3855,4 @@ New features
 .. _`v12.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.2.0
 .. _`v12.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.3.0
 .. _`v12.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.4.0
+.. _`v12.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.5.0

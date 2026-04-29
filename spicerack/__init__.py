@@ -46,7 +46,7 @@ from spicerack.mysql import Mysql
 from spicerack.netbox import MANAGEMENT_IFACE_NAME, Netbox, NetboxServer
 from spicerack.orchestrator import Orchestrator
 from spicerack.peeringdb import PeeringDB
-from spicerack.puppet import PuppetHosts, PuppetMaster, PuppetServer, get_ca_via_srv_record, get_puppet_ca_hostname
+from spicerack.puppet import PuppetHosts, PuppetServer, get_ca_via_srv_record
 from spicerack.redfish import Redfish, RedfishDell, RedfishSupermicro
 from spicerack.redis_cluster import RedisCluster
 from spicerack.remote import Remote, RemoteError, RemoteHosts
@@ -575,18 +575,15 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         domain = "eqiad.wmnet"
         return PuppetServer(self.remote().query(get_ca_via_srv_record(domain)))
 
-    def puppet_master(self) -> PuppetMaster:
-        """Get a PuppetMaster instance to manage hosts and certificates from a Puppet master."""
-        return PuppetMaster(self.remote().query(get_puppet_ca_hostname()))
-
-    def ipmi(self, target: str) -> Ipmi:
+    def ipmi(self, target: str, username: str) -> Ipmi:
         """Get an Ipmi instance to send remote IPMI commands to management consoles.
 
         Arguments:
             target: the management console FQDN or IP to target.
+            username: the username to use when issuing IPMI commands.
 
         """
-        return Ipmi(target, self.management_password(), dry_run=self._dry_run)
+        return Ipmi(target, self.management_password(), username=username, dry_run=self._dry_run)
 
     def phabricator(self, bot_config_file: str, section: str = "phabricator_bot") -> Phabricator:
         """Get a Phabricator instance to interact with a Phabricator website.

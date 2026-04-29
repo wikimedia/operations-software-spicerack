@@ -252,8 +252,11 @@ class Host:
         """
         return self._spicerack.redfish(self.hostname)
 
-    def ipmi(self) -> "spicerack.Ipmi":
+    def ipmi(self, username: str) -> "spicerack.Ipmi":
         """Get an instance to manage the host using IPMI on the management interface of the host.
+
+        Arguments:
+            username: the username to use for the ipmi calls.
 
         See Also:
             https://wikitech.wikimedia.org/wiki/Management_Interfaces
@@ -274,4 +277,4 @@ class Host:
         if self.netbox().virtual:
             raise HostError(f"Host '{self.hostname}' is a Virtual Machine, IPMI not supported.")
 
-        return self._spicerack.ipmi(self.mgmt_fqdn)
+        return self._spicerack.ipmi(self.mgmt_fqdn, username=username)
