@@ -549,17 +549,15 @@ class Redfish:
         """
         user_uri, etag = self.find_account(username)
         logger.info("Changing password for the account with username %s: %s", username, user_uri)
-        # On IDRAC 10+ the etag returned for a give username is a weak one,
-        # so it will not be validated if sent with a If-Match HTTP header.
-        # More info: https://phabricator.wikimedia.org/T392851#11151990
-        if "W/" in etag:
-            logger.info("The Etag provided for %s is a weak one, skipping the If-Match HTTP header.", username)
-            http_headers = {}
-        else:
-            http_headers = {"If-Match": etag}
         # Raise the request's timeout to 30s since new Dells take more time to
         # return from a HTTP patch request.
-        response = self.request("patch", user_uri, json={"Password": password}, headers=http_headers, timeout=30)
+        response = self.request(
+            "patch",
+            user_uri,
+            json={"Password": password},
+            headers=self._if_match(etag),
+            timeout=30,
+        )
         if response.status_code != 200:
             raise RedfishError(f"Got unexpected HTTP {response.status_code}, expected 200:\n{response.text}")
 
@@ -613,6 +611,66 @@ class Redfish:
             raise RedfishError(
                 f"Got unexpected response HTTP {response.status_code}, expected HTTP 200/204: {response.text}"
             )
+
+    def add_account(
+        self, username: str, password: str, role: RedfishUserRoles = RedfishUserRoles.ADMINISTRATOR
+    ) -> None:
+        """Create a new account with username and password.
+
+        Arguments:
+            username: the username to create.
+            password: the password to associate with the user.
+            role: a :py:class:`spicerack.redfish.RedfishUserRoles` value identifying the Redfish Role.
+                  Default is set to Administrator.
+
+        Raises:
+            spicerack.redfish.RedfishError: if no free slot is available or unable to create the account.
+
+        """
+        accounts_resp = self.request("get", f"{self.account_manager}/Accounts")
+        accounts = accounts_resp.json()
+        # Per the Redfish docs, check if we can POST a new user, or if we need
+        # to PATCH an existing user slot
+        if "POST" not in re.split(r', *', accounts_resp.headers['Allow']):
+            free_account_slot_uri = ""
+            free_account_slot_etag = ""
+            for account_ref in accounts["Members"]:
+                uri = account_ref["@odata.id"]
+                # Slot 1 is reserved, the remaining slots are pre-allocated and an
+                # unused one has an empty UserName. Unlike Supermicro, Dell iDRAC
+                # exposes a fixed set of account slots that must be PATCHed in-place:
+                if uri.rsplit("/", 1)[-1] == "1":
+                    continue
+                account_resp = self.request("get", uri)
+                account = account_resp.json()
+                if account['UserName'] == '' and not account['Enabled']:
+                    free_account_slot_uri = uri
+                    free_account_slot_etag = account_resp.headers['ETag']
+                    break
+
+            if free_account_slot_uri == "":
+                raise RedfishError(f"No free account slot available to create user {username}")
+            method = "patch"
+            http_headers = self._if_match(free_account_slot_etag)
+            account_uri = free_account_slot_uri
+        else:
+            method = "post"
+            http_headers = {}
+            account_uri = f"{self.account_manager}/Accounts"
+
+        new_user_data = {"UserName": username, "Password": password, "RoleId": role.value, "Enabled": True}
+        logger.info("Creating account %s at %s", username, account_uri)
+        self.request(method, account_uri, json=new_user_data, headers=http_headers, timeout=30)
+
+    # On IDRAC 10+ the etag returned for a give username is a weak one,
+    # so it will not be validated if sent with a If-Match HTTP header.
+    # More info:
+    # - https://phabricator.wikimedia.org/T392851#11151990
+    # - https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/If-Match
+    def _if_match(self, etag: str) -> dict:
+        if etag.startswith("W/"):
+            return {}
+        return {"If-Match": etag}
 
 
 class DellSCP:
@@ -870,24 +928,6 @@ class RedfishSupermicro(Redfish):
                         port = self.request("get", port_uri["@odata.id"]).json()
                         return port["Ethernet"]["AssociatedMACAddresses"][0].lower()
         raise RedfishError("No MAC found on the PXE enabled interface")
-
-    def add_account(
-        self, username: str, password: str, role: RedfishUserRoles = RedfishUserRoles.ADMINISTRATOR
-    ) -> None:
-        """Create a new account with username and password.
-
-        Arguments:
-            username: the username to create.
-            password: the password to associate with the user.
-            role: a :py:class:`spicerack.redfish.RedfishUserRoles` value identifying the Redfish Role.
-                  Default is set to Administrator.
-
-        Raises:
-            spicerack.redfish.RedfishError: if unable to create the account.
-
-        """
-        new_user_data = {"UserName": username, "Password": password, "RoleId": role.value, "Enabled": True}
-        self.request("post", f"{self.account_manager}/Accounts", json=new_user_data)
 
     def force_http_boot_once(self) -> None:
         """Force the host to boot over UEFI HTTP at the next reboot.
