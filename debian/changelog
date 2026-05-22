@@ -1,3 +1,9 @@
+spicerack (12.6.0-1) unstable; urgency=medium
+
+  * v12.6.0 upstream release.
+
+ -- Luca Toscano <ltoscano@wikimedia.org>  Fri, 22 May 2026 13:02:50 -0000
+
 spicerack (12.5.0-1) unstable; urgency=medium
 
   * v12.5.0 upstream release.
