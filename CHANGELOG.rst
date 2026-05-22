@@ -1,6 +1,13 @@
 Spicerack Changelog
 -------------------
 
+`v12.6.0`_ (2026-05-22)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+* redfish: add add_account method for RedfishDell.
+
 `v12.5.0`_ (2026-04-29)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3856,3 +3863,4 @@ New features
 .. _`v12.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.3.0
 .. _`v12.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.4.0
 .. _`v12.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.5.0
+.. _`v12.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.6.0
