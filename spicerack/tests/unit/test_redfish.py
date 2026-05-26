@@ -51,16 +51,16 @@ ACCOUNT_RESPONSE = {
         "EncryptionKeySet": False,
         "EncryptionProtocol": "CFB128_AES128",
     },
-    "UserName": "username",
+    "UserName": "{username}",
 }
 ADD_ACCOUNT_RESPONSE = {
-    "@odata.id": "/redfish/v1/AccountService/Accounts/42",
+    "@odata.id": "/redfish/v1/AccountService/Accounts/{user_id}",
     "@odata.type": "#ManagerAccount.v1_8_0.ManagerAccount",
     "AccountTypes": ["Redfish"],
     "Description": "User Account",
     "Enabled": True,
     "HostBootstrapAccount": False,
-    "Id": "42",
+    "Id": "{user_id}",
     "Links": {"Role": {"@odata.id": "/redfish/v1/AccountService/Roles/Administrator"}},
     "Locked": False,
     "Name": "User Account",
@@ -766,6 +766,200 @@ class TestRedfish:
         with pytest.raises(redfish.RedfishError, match="Got unexpected response HTTP 201, expected HTTP 200/204"):
             self.redfish.chassis_reset(redfish.ChassisResetPolicy.FORCE_OFF)
 
+    def _mock_account_slots(self, slots, *, allow_header="GET,PATCH", strong_etag=True):
+        """Mock the Accounts collection and each slot.
+
+        ``slots`` is a list of tuples that can be of various length:
+        - ``(username)``
+        - ``(username, account_types)``
+        - ``(username, account_types, oem_account_types)``
+        An empty ``username`` marks a free slot.
+        When the optional second element ``account_types`` is provided, it overrides the slot's ``AccountTypes`` value.
+        When the optional third element is provided, it overrides the slot's ``OEMAccountTypes`` value.
+        In both cases passing ``None`` removes the respective key from the response.
+
+        The ``allow_header`` parameter controls the ``Allow`` header of the HTTP response.
+        The ``strong_eta`` parameter controls if strong or weak etags are emitted.
+        """
+        accounts_response = deepcopy(ACCOUNTS_RESPONSE)
+        acct_tmpl = "/redfish/v1/AccountService/Accounts/{user_id}"
+        accounts_response["Members"] = [
+            {"@odata.id": acct_tmpl.format(user_id=i + 1)} for i, _ in enumerate(slots)
+        ]
+        self.requests_mock.get(
+            "/redfish/v1/AccountService/Accounts",
+            json=accounts_response,
+            headers={"Allow": allow_header},
+        )
+        for i, slot in enumerate(slots):
+            user_id = i + 1
+            username = slot[0]
+            response = deepcopy(ACCOUNT_RESPONSE)
+            response["Id"] = str(user_id)
+            response["@odata.id"] = f"/redfish/v1/AccountService/Accounts/{user_id}"
+            response["UserName"] = username
+            if username == "":
+                response["Enabled"] = False
+            if len(slot) >= 2:
+                if slot[1] is None:
+                    response.pop("AccountTypes", None)
+                else:
+                    response["AccountTypes"] = slot[1]
+            if len(slot) >= 3:
+                if slot[2] is None:
+                    response.pop("OEMAccountTypes", None)
+                else:
+                    response["OEMAccountTypes"] = slot[2]
+            etag_index = i + 1
+            if strong_etag:
+                etag = f"etag-{etag_index}"
+            else:
+                etag = f'W/"etag-{etag_index}"'
+            self.requests_mock.get(
+                f"/redfish/v1/AccountService/Accounts/{user_id}", json=response, headers={"ETag": etag}
+            )
+
+    @pytest.mark.parametrize("role", tuple(redfish.RedfishUserRoles))
+    def test_add_account_patch_ok(self, role):
+        """It should find the first free slot (skipping slot 1) and PATCH it with the new user data."""
+        self._mock_account_slots([("",), ("NAMAZU",), ("",), ("",)])
+        patch_mock = self.requests_mock.patch("/redfish/v1/AccountService/Accounts/3", json={})
+        self.redfish.add_account("batman", "12345", role)
+
+        assert patch_mock.called
+        assert patch_mock.last_request.json() == {
+            "UserName": "batman",
+            "Password": "12345",
+            "RoleId": role.value,
+            "Enabled": True,
+        }
+        assert patch_mock.last_request.headers["If-Match"] == "etag-3"
+
+    @pytest.mark.parametrize("role", tuple(redfish.RedfishUserRoles))
+    def test_add_account_post_ok(self, role):
+        """It should POST to the Accounts endpoint with the new user data."""
+        self._mock_account_slots(
+            [("",), ("NAMAZU",), ("",), ("",)],
+            allow_header="GET,POST"
+        )
+        response = deepcopy(ADD_ACCOUNT_RESPONSE)
+        response["Id"] = response["Id"].format(user_id=3)
+        response["@odata.id"] = response["@odata.id"].format(user_id=3)
+        response['UserName'] = response['UserName'].format(username="batman")
+        response["AccountTypes"] = ["Redfish"]
+        post_mock = self.requests_mock.post("/redfish/v1/AccountService/Accounts", json=response)
+        self.redfish.add_account("batman", "12345", role)
+
+        assert post_mock.called
+        assert post_mock.last_request.json() == {
+            "UserName": "batman",
+            "Password": "12345",
+            "RoleId": role.value,
+            "Enabled": True,
+        }
+
+    def test_add_account_raises(self):
+        """It should raise a RedfishError if the reponse is not HTTP 20X."""
+        self.requests_mock.get(
+            "/redfish/v1/AccountService/Accounts",
+            json=deepcopy(ACCOUNTS_RESPONSE),
+            headers={"Allow": "GET, POST"},
+        )
+        response = deepcopy(ADD_ACCOUNT_RESPONSE_DUPLICATED_USER)
+        response["error"]["@Message.ExtendedInfo"][0]["MessageArgs"][0] = response["error"]["@Message.ExtendedInfo"][0][
+            "MessageArgs"
+        ][0].format(username="batman")
+        response["error"]["@Message.ExtendedInfo"][0]["RelatedProperties"][0] = response["error"][
+            "@Message.ExtendedInfo"
+        ][0]["RelatedProperties"][0].format(username="batman")
+        self.requests_mock.post("/redfish/v1/AccountService/Accounts", json=response, status_code=500)
+        with pytest.raises(
+            redfish.RedfishError, match="POST https://10.0.0.1/redfish/v1/AccountService/Accounts returned HTTP 500"
+        ):
+            self.redfish.add_account("batman", "12345")
+
+    def test_add_account_weak_etag(self):
+        """It should omit the If-Match header when the free slot returns a weak ETag (iDRAC 10+)."""
+        self._mock_account_slots([("",), ("root",), ("",)], strong_etag=False)
+        patch_mock = self.requests_mock.patch("/redfish/v1/AccountService/Accounts/3", json={})
+
+        self.redfish.add_account("batman", "12345", redfish.RedfishUserRoles.OPERATOR)
+
+        assert patch_mock.called
+        assert "If-Match" not in patch_mock.last_request.headers
+
+    def test_add_account_no_free_slot(self):
+        """It should raise a RedfishError when all account slots are occupied."""
+        add_accounts_mock_responses(self.requests_mock)
+        with pytest.raises(redfish.RedfishError, match="No free account slot available to create user batman"):
+            self.redfish.add_account("batman", "12345")
+
+    @pytest.mark.parametrize("role", tuple(redfish.RedfishUserRoles))
+    def test_add_account_never_sets_account_types(self, role):
+        """It should not issue a follow-up AccountTypes PATCH.
+
+        On Dell iDRAC a new Administrator inherits the same AccountTypes (including the OEM flag and
+        OEMAccountTypes) as the pre-installed root account directly from its Role, so the new
+        account already matches the reference and the optional follow-up PATCH is never sent. The
+        create PATCH itself must not carry AccountTypes/OEMAccountTypes either, for any role.
+        """
+        account_types = ["Redfish", "SNMP", "OEM"]
+        oem_account_types = ["IPMI", "SOL", "RACADM"]
+        self._mock_account_slots(
+            [
+                ("",),
+                ("NAMAZU", account_types, oem_account_types),
+                ("", account_types, oem_account_types),
+            ]
+        )
+        patch_mock = self.requests_mock.patch("/redfish/v1/AccountService/Accounts/3", json={})
+
+        self.redfish.add_account("batman", "12345", role)
+
+        assert patch_mock.called
+        # Only the create PATCH: no second PATCH to copy the (already matching) AccountTypes.
+        assert patch_mock.call_count == 1
+        assert patch_mock.last_request.json() == {
+            "UserName": "batman",
+            "Password": "12345",
+            "RoleId": role.value,
+            "Enabled": True,
+        }
+
+    def test_add_account_admin_inherits_account_types(self):
+        """It should copy AccountTypes from the admin acccount.
+
+        If the new user's AccountTypes don't match the factory admin
+        AccountTypes
+        """
+        admin_types = ["Redfish", "IPMI", "ManagerConsole"]
+        self._mock_account_slots(
+            [("",), ("NAMAZU", admin_types), ("",)],
+            allow_header="GET, PATCH",
+        )
+        patch_mock = self.requests_mock.patch("/redfish/v1/AccountService/Accounts/3", json={})
+        self.redfish.add_account("batman", "12345", redfish.RedfishUserRoles.ADMINISTRATOR)
+
+        assert patch_mock.called
+        assert patch_mock.last_request.json() == {"AccountTypes": admin_types}
+
+    @pytest.mark.parametrize(
+        "role", (redfish.RedfishUserRoles.OPERATOR, redfish.RedfishUserRoles.READONLY)
+    )
+    def test_add_account_non_admin_skips_account_types(self, role):
+        """It should not copy AccountTypes for non-Administrator roles.
+
+        Even if the factory admin account exists.
+        """
+        self._mock_account_slots(
+            [("",), ("NAMAZU", ["Redfish", "IPMI"]), ("",)],
+            allow_header="GET, PATCH",
+        )
+        patch_mock = self.requests_mock.patch("/redfish/v1/AccountService/Accounts/3", json={})
+        self.redfish.add_account("batman", "12345", role)
+
+        assert patch_mock.call_count == 1
+
 
 class TestDellSCP:
     """Tests for the DellSCP class."""
@@ -1209,65 +1403,6 @@ class TestRedfishDell:
         with pytest.raises(redfish.RedfishError, match=error_msg):
             self.redfish.get_primary_mac()
 
-    def _mock_account_slots(self, slots):
-        """Mock the Accounts collection and each slot with the given (username, etag) tuples.
-
-        ``slots`` is a list of ``(user_id, username, etag)`` tuples. An empty ``username`` marks a free slot.
-        """
-        accounts_response = deepcopy(ACCOUNTS_RESPONSE)
-        accounts_response["Members"] = [
-            {"@odata.id": f"/redfish/v1/AccountService/Accounts/{user_id}"} for user_id, _, _ in slots
-        ]
-        self.requests_mock.get(
-            "/redfish/v1/AccountService/Accounts",
-            json=accounts_response,
-            headers={"Allow": "GET,HEAD"},
-        )
-        for user_id, username, etag in slots:
-            response = deepcopy(ACCOUNT_RESPONSE)
-            response["Id"] = str(user_id)
-            response["@odata.id"] = f"/redfish/v1/AccountService/Accounts/{user_id}"
-            response["UserName"] = username
-            if username == "":
-                response["Enabled"] = False
-            self.requests_mock.get(
-                f"/redfish/v1/AccountService/Accounts/{user_id}", json=response, headers={"ETag": etag}
-            )
-
-    @pytest.mark.parametrize("role", tuple(redfish.RedfishUserRoles))
-    def test_add_account_ok(self, role):
-        """It should find the first free slot (skipping slot 1) and PATCH it with the new user data."""
-        # Slot 1 is reserved even with empty UserName; slot 2 is taken; slot 3 is the first free.
-        self._mock_account_slots([(1, "", "etag-1"), (2, "root", "etag-2"), (3, "", "etag-3"), (4, "", "etag-4")])
-        patch_mock = self.requests_mock.patch("/redfish/v1/AccountService/Accounts/3", json={})
-
-        self.redfish.add_account("batman", "12345", role)
-
-        assert patch_mock.called
-        assert patch_mock.last_request.json() == {
-            "UserName": "batman",
-            "Password": "12345",
-            "RoleId": role.value,
-            "Enabled": True,
-        }
-        assert patch_mock.last_request.headers["If-Match"] == "etag-3"
-
-    def test_add_account_weak_etag(self):
-        """It should omit the If-Match header when the free slot returns a weak ETag (iDRAC 10+)."""
-        self._mock_account_slots([(1, "", "etag-1"), (2, "root", "etag-2"), (3, "", "W/'weak-3'")])
-        patch_mock = self.requests_mock.patch("/redfish/v1/AccountService/Accounts/3", json={})
-
-        self.redfish.add_account("batman", "12345")
-
-        assert patch_mock.called
-        assert "If-Match" not in patch_mock.last_request.headers
-
-    def test_add_account_no_free_slot(self):
-        """It should raise a RedfishError when all account slots are occupied."""
-        add_accounts_mock_responses(self.requests_mock)
-        with pytest.raises(redfish.RedfishError, match="No free account slot available to create user batman"):
-            self.redfish.add_account("batman", "12345")
-
 
 class TestRedfishSupermicro:
     """Tests for the RedfishSupermicro class."""
@@ -1304,46 +1439,6 @@ class TestRedfishSupermicro:
         """It should return the current power state of the device."""
         self.requests_mock.get("/redfish/v1/Systems/1", json={"PowerState": "On"})
         assert self.redfish.get_power_state() == "On"
-
-    @pytest.mark.parametrize(
-        "username, password, role",
-        (
-            ("batman", "12345", redfish.RedfishUserRoles.ADMINISTRATOR),
-            ("batman", "12345", redfish.RedfishUserRoles.OPERATOR),
-            ("batman", "12345", redfish.RedfishUserRoles.READONLY),
-        ),
-    )
-    def test_add_account(self, username, password, role):
-        """It should create the new user."""
-        self.requests_mock.get(
-            "/redfish/v1/AccountService/Accounts",
-            json=deepcopy(ACCOUNTS_RESPONSE),
-            headers={"Allow": "GET, POST"},
-        )
-        response = deepcopy(ADD_ACCOUNT_RESPONSE)
-        response["UserName"] = response["UserName"].format(username=username)
-        self.requests_mock.post("/redfish/v1/AccountService/Accounts", json=response, status_code=201)
-        self.redfish.add_account(username, password, role)
-
-    def test_add_account_raises(self):
-        """It should raise a RedfishError if the reponse is not HTTP 20X."""
-        self.requests_mock.get(
-            "/redfish/v1/AccountService/Accounts",
-            json=deepcopy(ACCOUNTS_RESPONSE),
-            headers={"Allow": "GET, POST"},
-        )
-        response = deepcopy(ADD_ACCOUNT_RESPONSE_DUPLICATED_USER)
-        response["error"]["@Message.ExtendedInfo"][0]["MessageArgs"][0] = response["error"]["@Message.ExtendedInfo"][0][
-            "MessageArgs"
-        ][0].format(username="batman")
-        response["error"]["@Message.ExtendedInfo"][0]["RelatedProperties"][0] = response["error"][
-            "@Message.ExtendedInfo"
-        ][0]["RelatedProperties"][0].format(username="batman")
-        self.requests_mock.post("/redfish/v1/AccountService/Accounts", json=response, status_code=500)
-        with pytest.raises(
-            redfish.RedfishError, match="POST https://10.0.0.1/redfish/v1/AccountService/Accounts returned HTTP 500"
-        ):
-            self.redfish.add_account("batman", "12345")
 
     def test_property_boot_mode_attribute(self) -> str:
         """Property to return the boot mode key in the Bios attributes."""
