@@ -61,11 +61,6 @@ ignore = [
     "FBT001",  # Allow boolean typed positional arguments in function def
     "BLE001",  # Allow to catch Exception
     "S110",    # Allow try/except/pass without logging
-    "DTZ003",  # Allow datetime.datetime.utcnow()
-    "DTZ001",  # Allow datetime.datetime() called without a tzinfo argument
-    "DTZ004",  # Allow datetime.datetime.utcfromtimestamp()
-    "DTZ011",  # Allow datetime.date.today()
-    "DTZ007",  # Allow Naive datetime constructed using `datetime.datetime.strptime()` without %z
     "N818",    # Allow exception names without the Error suffix
     "D417",    # Allow missing argument description in docstrings
     "ERA001",  # Allow commented-out code

@@ -4,7 +4,7 @@ import json
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Optional, Union
 
 from cumin import NodeSet, nodeset
@@ -292,7 +292,7 @@ class PuppetHosts(RemoteHostsAdapter):
 
     def wait(self) -> None:
         """Wait until the next successful Puppet run is completed."""
-        self.wait_since(datetime.utcnow())
+        self.wait_since(datetime.now(UTC))
 
     @retry(
         tries=60,
@@ -321,7 +321,7 @@ class PuppetHosts(RemoteHostsAdapter):
             for node_set, output in self._remote_hosts.run_sync(
                 command, is_safe=True, print_output=False, print_progress_bars=False
             ):
-                last_run = datetime.utcfromtimestamp(int(output.message().decode()))
+                last_run = datetime.fromtimestamp(int(output.message().decode()), UTC)
                 if last_run <= start:
                     raise PuppetHostsCheckError(f"Successful Puppet run too old ({last_run} <= {start}) on: {node_set}")
 

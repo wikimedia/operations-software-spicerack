@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from abc import abstractmethod
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from io import BufferedReader
 from pathlib import Path
@@ -716,7 +716,7 @@ class DellSCP:
     @property
     def timestamp(self) -> datetime:
         """Getter for the timestamp when the configuration dump was generated."""
-        return datetime.strptime(self._config["SystemConfiguration"]["TimeStamp"], "%c")
+        return datetime.strptime(self._config["SystemConfiguration"]["TimeStamp"], "%c").replace(tzinfo=UTC)
 
     @property
     def comments(self) -> list[str]:

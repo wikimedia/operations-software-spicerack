@@ -4,7 +4,7 @@ import logging
 from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
@@ -1106,7 +1106,7 @@ class Mysql:
         for _, output in mysql_hosts.run_query(query, is_safe=True):
             try:
                 heartbeat_str = output.message().decode()
-                heartbeat = datetime.strptime(heartbeat_str, "%Y-%m-%dT%H:%M:%S.%f")
+                heartbeat = datetime.strptime(heartbeat_str, "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=UTC)
                 break
             except (TypeError, ValueError) as e:
                 raise MysqlError(f"Unable to convert heartbeat '{heartbeat_str}' into datetime") from e

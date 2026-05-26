@@ -192,7 +192,7 @@ class TestGaneti:  # pylint: disable=too-many-instance-attributes
         """If no mac is present in host data, fetch_instance_mac should raise a GanetiError."""
         rapi = self.ganeti.rapi(self.cluster)
         requests_mock.get(self.instance_url, text=self.bogus_data)
-        with pytest.raises(ganeti.GanetiError, match=""):
+        with pytest.raises(ganeti.GanetiError):
             rapi.fetch_instance_mac(self.instance)
 
     def test_rapi_instance_valid(self, requests_mock):

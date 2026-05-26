@@ -2,7 +2,7 @@
 
 import json
 from collections import namedtuple
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 import pytest
@@ -292,9 +292,8 @@ class TestPuppetHosts:
 
     def test_wait_since_ok(self):
         """It should return immediately if there is already successful Puppet run since the given datetime."""
-        last_run = datetime.utcnow()
-        # timestamp() consider naive datetime objects as local time.
-        last_run_string = str(int(last_run.replace(tzinfo=timezone.utc).timestamp()))
+        last_run = datetime.now(UTC)
+        last_run_string = str(int(last_run.timestamp()))
         start = last_run - timedelta(seconds=1)
 
         nodes = nodeset("test.example.com")
@@ -319,9 +318,8 @@ class TestPuppetHosts:
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_timeout(self, mocked_sleep):
         """It should raise PuppetHostsCheckError if the successful Puppet run is too old within the timeout."""
-        last_run = datetime.utcnow()
-        # timestamp() consider naive datetime objects as local time.
-        last_run_string = str(int(last_run.replace(tzinfo=timezone.utc).timestamp()))
+        last_run = datetime.now(UTC)
+        last_run_string = str(int(last_run.timestamp()))
         start = last_run + timedelta(seconds=1)
 
         nodes = nodeset("test.example.com")
@@ -341,16 +339,15 @@ class TestPuppetHosts:
         self.mocked_remote_hosts.hosts = nodeset("test.example.com")
 
         with pytest.raises(puppet.PuppetHostsCheckError, match="Unable to find a successful Puppet run"):
-            self.puppet_hosts.wait_since(datetime.utcnow())
+            self.puppet_hosts.wait_since(datetime.now(UTC))
 
         assert mocked_sleep.called
 
     @mock.patch("wmflib.decorators.time.sleep", return_value=None)
     def test_wait_since_missing_host(self, mocked_sleep):
         """It should raise PuppetHostsCheckError unable to get the result from some host."""
-        last_run = datetime.utcnow()
-        # timestamp() consider naive datetime objects as local time.
-        last_run_string = str(int(last_run.replace(tzinfo=timezone.utc).timestamp()))
+        last_run = datetime.now(UTC)
+        last_run_string = str(int(last_run.timestamp()))
         start = last_run - timedelta(seconds=1)
 
         nodes = nodeset("test[1-2].example.com")
@@ -373,9 +370,8 @@ class TestPuppetHosts:
 
     def test_wait_ok(self):
         """It should return immediately if there is already successful Puppet run since now."""
-        last_run = datetime.utcnow() + timedelta(seconds=1)
-        # timestamp() consider naive datetime objects as local time.
-        last_run_string = str(int(last_run.replace(tzinfo=timezone.utc).timestamp()))
+        last_run = datetime.now(UTC) + timedelta(seconds=1)
+        last_run_string = str(int(last_run.timestamp()))
 
         nodes = nodeset("test.example.com")
         results = [(nodes, MsgTreeElem(last_run_string.encode(), parent=MsgTreeElem()))]

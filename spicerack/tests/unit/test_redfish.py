@@ -3,7 +3,7 @@
 import ipaddress
 import logging
 from copy import deepcopy
-from datetime import datetime
+from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
 from unittest import mock
@@ -785,7 +785,7 @@ class TestDellSCP:
             ("target", redfish.DellSCPTargetPolicy.ALL),
             ("service_tag", "12ABC34"),
             ("model", "PowerEdge R440"),
-            ("timestamp", datetime(2021, 12, 9, 9, 32, 6)),
+            ("timestamp", datetime(2021, 12, 9, 9, 32, 6, tzinfo=UTC)),
             ("comments", ["First comment"]),
             (
                 "components",

@@ -4,7 +4,7 @@ import logging
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from math import floor
 from random import shuffle
@@ -307,7 +307,7 @@ class ElasticsearchClusters:
         if operation == OperationType.REBOOT:
             all_node_names = ",".join([node.fqdn for node in nodes_group])
             uptimes = self._remote.query(all_node_names).uptime()
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             # In theory we can have multiple nodes with same uptime, thus the slight nesting
             boot_times = {str(node): now - timedelta(seconds=secs) for nodeset, secs in uptimes for node in nodeset}
             nodes_to_process = [node for node in nodes_group if boot_times[node.fqdn] < started_before]
@@ -589,7 +589,7 @@ class ElasticsearchCluster:
         """
         doc = {
             "host": reason.hostname,
-            "timestamp": datetime.utcnow().timestamp(),
+            "timestamp": datetime.now(UTC).timestamp(),
             "reason": str(reason),
         }
         logger.info("Freezing all indices in %s", self)
@@ -776,7 +776,7 @@ class NodesGroup:
         cluster_name = json_node["settings"]["cluster"]["name"]
         self._clusters_instances: list[ElasticsearchCluster] = [cluster]
         self._row: str = json_node["attributes"]["row"]
-        self._oldest_start_time = datetime.utcfromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000)
+        self._oldest_start_time = datetime.fromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000, UTC)
         self._master_capable: set[str] = {cluster_name} if "master" in json_node["roles"] else set()
 
     def accumulate(self, json_node: dict, cluster: ElasticsearchCluster) -> None:
@@ -802,7 +802,7 @@ class NodesGroup:
             raise AssertionError(
                 f"Invalid data, two instances on the same node with different rows {self._hostname}:[{row1}/{row2}]"
             )
-        start_time = datetime.utcfromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000)
+        start_time = datetime.fromtimestamp(json_node["jvm"]["start_time_in_millis"] / 1000, UTC)
         self._oldest_start_time = min(self._oldest_start_time, start_time)
         if "master" in json_node["roles"]:
             self._master_capable.add(cluster_name)
