@@ -315,7 +315,7 @@ class Discovery:
             # dns.query.udp can raise many exceptions.
             try:
                 query_response, _ = dns.query.udp_with_fallback(
-                    query, dns_resolver.nameservers[0], port=dns_resolver.port, timeout=timeout
+                    query, str(dns_resolver.nameservers[0]), port=dns_resolver.port, timeout=timeout
                 )
             except Exception as exc:
                 raise DiscoveryError(f"Unable to resolve {record_name} from {nameserver}") from exc
