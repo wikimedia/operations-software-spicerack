@@ -9,15 +9,18 @@ with open("README.rst", "r") as readme:
 INSTALL_REQUIRES = [
     "conftool>=6.0.0",
     "cumin>=3.0.2",
-    "dnspython~=2.3.0",
+    "dnspython~=2.3.0; python_version=='3.11'",  # frozen to the version available on debian bookworm
+    "dnspython~=2.7.0; python_version>'3.11'",  # frozen to the version available on debian trixie
     "gitpython>=3.1.30",
     "kafka-python~=2.0.2",
-    "kubernetes==22.6.*",  # frozen to the version available on debian bookworm
+    "kubernetes==22.6.*; python_version=='3.11'",  # frozen to the version available on debian bookworm
+    "kubernetes==30.1.*; python_version>'3.11'",  # frozen to the version available on debian trixie
     "packaging",
     "pymysql>=1.0.2",
     "pynetbox~=7.4",
     "python-etcd~=0.4.5",
-    "redis==4.3.*",
+    "redis==4.3.*; python_version=='3.11'",  # frozen to the version available on debian bookworm
+    "redis==6.1.*; python_version>'3.11'",  # frozen to the version available on debian trixie
     "requests>=2.28.1",
     "wmflib",
 ]
