@@ -1,6 +1,19 @@
 Spicerack Changelog
 -------------------
 
+`v12.7.0`_ (2026-06-04)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+* Add Debian Trixie target for wmfconfig (`T428024`_).
+* Modify setup.py to allow both Debian Bookworm and Trixie dependencies (`T428024`_).
+
+Minor improvements
+""""""""""""""""""
+* Update dnsdisc.py to please mypy when building for Debian Trixie (`T428024`_).
+
+
 `v12.6.0`_ (2026-05-22)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3704,6 +3717,7 @@ New features
 .. _`T410577`: https://phabricator.wikimedia.org/T410577
 .. _`T412211`: https://phabricator.wikimedia.org/T412211
 .. _`T420475`: https://phabricator.wikimedia.org/T420475
+.. _`T428024`: https://phabricator.wikimedia.org/T428024
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3864,3 +3878,4 @@ New features
 .. _`v12.4.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.4.0
 .. _`v12.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.5.0
 .. _`v12.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.6.0
+.. _`v12.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.7.0
