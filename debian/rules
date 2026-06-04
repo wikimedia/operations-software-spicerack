@@ -14,7 +14,16 @@ override_dh_auto_clean:
 	# Skip the default dh_auto_clean
 
 override_dh_installman:
-	SETUPTOOLS_SCM_PRETEND_VERSION="$(shell dpkg-parsechangelog -S version | cut -d '+' -f 1)" python3 setup.py build_sphinx -b man
+	# Build the man pages with sphinx-build directly: the setup.py "build_sphinx"
+	# subcommand was removed in Sphinx 7 (Trixie), while sphinx-build is available
+	# on both Bookworm and Trixie.
+	# conf.py reads the version via importlib.metadata, so generate the in-tree
+	# egg-info first (needs SETUPTOOLS_SCM_PRETEND_VERSION as running setup.py
+	# triggers use_scm_version) and put the repo root on PYTHONPATH so the
+	# metadata is discoverable. This keeps the man build self-contained, even
+	# when the test step is skipped (e.g. DEB_BUILD_OPTIONS=nocheck).
+	SETUPTOOLS_SCM_PRETEND_VERSION="$(shell dpkg-parsechangelog -S version | cut -d '+' -f 1)" python3 setup.py egg_info
+	PYTHONPATH=. sphinx-build -b man doc/source doc/build/man
 	sed -i='' -e 's/^\.B/.B /' doc/build/man/cookbook.1
 	dh_installman
 
