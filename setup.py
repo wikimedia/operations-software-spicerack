@@ -39,6 +39,7 @@ EXTRAS_REQUIRE = {
         "types-redis",
         "types-requests",
         "types-setuptools",
+        "setuptools; python_version>'3.11'",
     ],
     "format": [
         "ruff",
@@ -49,6 +50,7 @@ EXTRAS_REQUIRE = {
         "sphinx-autodoc-typehints>=1.12.0",
         "Sphinx>=3.4.3",
         "Sphinx>=5.3.0,<9.0.0",
+        "setuptools; python_version>'3.11'",
     ],
     "prospector": [
         "prospector[with_everything]==1.15.3",  # Pinned
