@@ -1,7 +1,7 @@
 """Interactive module tests."""
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 import pytest
@@ -381,16 +381,15 @@ class TestRemoteHosts:
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
     def test_wait_reboot_since_ok(self, mocked_uptime):
         """It should return immediately if the host has already a small enough uptime."""
-        since = datetime.now(timezone.utc) - timedelta(minutes=5)
+        since = datetime.now(UTC) - timedelta(minutes=5)
         mocked_uptime.return_value = [(self.hosts, 30.0)]
         self.remote_hosts.wait_reboot_since(since)
         mocked_uptime.assert_called_once_with(print_progress_bars=True)
 
-    @pytest.mark.filterwarnings("ignore:datetime.datetime.utcnow")
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
-    def test_wait_reboot_since_ok_timezone_naive(self, mocked_uptime):
+    def test_wait_reboot_since_ok_timezone_aware(self, mocked_uptime):
         """It should return immediately if the host has already a small enough uptime."""
-        since = datetime.utcnow() - timedelta(minutes=5)
+        since = datetime.now(UTC) - timedelta(minutes=5)
         mocked_uptime.return_value = [(self.hosts, 30.0)]
         self.remote_hosts.wait_reboot_since(since)
         mocked_uptime.assert_called_once_with(print_progress_bars=True)
@@ -406,7 +405,7 @@ class TestRemoteHosts:
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
     def test_wait_reboot_since_uptime_fails(self, mocked_uptime, mocked_sleep, side_effect):
         """It should raise RemoteCheckError if unable to check the uptime on any host."""
-        since = datetime.now(timezone.utc)
+        since = datetime.now(UTC)
         mocked_uptime.side_effect = side_effect
         with pytest.raises(
             remote.RemoteCheckError,
@@ -422,7 +421,7 @@ class TestRemoteHosts:
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
     def test_wait_reboot_since_uptime_too_big(self, mocked_uptime, mocked_sleep):
         """It should raise RemoteCheckError if any host doesn't have a small-enough uptime."""
-        since = datetime.now(timezone.utc)
+        since = datetime.now(UTC)
         mocked_uptime.return_value = [(nodeset("host[1-9]"), 30.0)]
         with pytest.raises(
             remote.RemoteCheckError,
@@ -443,7 +442,7 @@ class TestRemoteHosts:
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
     def test_wait_reboot_since_uptime_fails_dry_run(self, mocked_uptime, side_effect):
         """It should raise RemoteCheckError if unable to check the uptime on any host."""
-        since = datetime.now(timezone.utc)
+        since = datetime.now(UTC)
         mocked_uptime.side_effect = side_effect
         with pytest.raises(
             remote.RemoteCheckError,
@@ -457,7 +456,7 @@ class TestRemoteHosts:
     @mock.patch("spicerack.remote.RemoteHosts.uptime")
     def test_wait_reboot_since_uptime_too_big_dry_run(self, mocked_uptime):
         """It should succeed in dry-run mode, even when the uptime is too high."""
-        since = datetime.now(timezone.utc)
+        since = datetime.now(UTC)
         mocked_uptime.return_value = [(nodeset("host[1-9]"), 30.0)]
         self.remote_hosts_dry_run.wait_reboot_since(since)
         mocked_uptime.assert_called_once_with(print_progress_bars=True)

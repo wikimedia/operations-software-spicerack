@@ -8,7 +8,7 @@ import os
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterator, Optional, Union
 
@@ -506,7 +506,7 @@ class KeyLocks:
         expired_uuids = []
         min_concurrency_lock = None
         for other_lock in self.locks.values():
-            if other_lock.created + timedelta(seconds=other_lock.ttl) < datetime.utcnow():
+            if other_lock.created + timedelta(seconds=other_lock.ttl) < datetime.now(UTC):
                 expired_uuids.append(other_lock.uuid)
                 continue
 
@@ -580,7 +580,7 @@ class ConcurrentLock:
     owner: str
     ttl: int
     uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
-    created: datetime = field(default_factory=datetime.utcnow)
+    created: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self) -> None:
         """According to Python's dataclass API to validate the arguments.
@@ -598,7 +598,7 @@ class ConcurrentLock:
             raise InvalidLockError(
                 f"Unable to create concurrent lock, argument 'ttl' must be a positive integer, got {self.ttl}."
             )
-        if self.created > datetime.utcnow():
+        if self.created > datetime.now(UTC):
             raise InvalidLockError(
                 f"Unable to create concurrent lock, argument 'created' cannot be in the future, got {self.created}."
             )
@@ -614,7 +614,7 @@ class ConcurrentLock:
 
     def update_created(self) -> None:
         """Update the created time to now."""
-        self.created = datetime.utcnow()
+        self.created = datetime.now(UTC)
 
     def to_dict(self) -> dict[str, Union[str, int]]:
         """Returns the dict representation of the object suitable for JSON serialization.

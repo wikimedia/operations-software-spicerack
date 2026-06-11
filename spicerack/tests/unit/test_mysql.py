@@ -3,7 +3,7 @@
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from unittest import mock
 
@@ -871,7 +871,7 @@ class TestMysql:
         self.mocked_remote.query.return_value = RemoteHosts(self.config, nodeset("db1001"))
         mock_cumin(self.mocked_transports, 0, retvals=[])
         with pytest.raises(mysql.MysqlError, match="Unable to get heartbeat from master"):
-            self.mysql.check_core_masters_heartbeats("eqiad", "codfw", {"s1": datetime.utcnow()})
+            self.mysql.check_core_masters_heartbeats("eqiad", "codfw", {"s1": datetime.now(UTC)})
 
         assert mocked_sleep.called
 

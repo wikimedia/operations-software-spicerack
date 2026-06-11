@@ -172,7 +172,7 @@ class Alertmanager:
             return ""
 
         silence = response.json()["silenceID"]
-        logger.info("Created silence ID %s", silence)
+        logger.info("Created silence ID %s for %s", silence, duration)
         return silence
 
     def remove_downtime(self, downtime_id: str) -> None:

@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from abc import abstractmethod
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from io import BufferedReader
 from pathlib import Path
@@ -117,6 +117,8 @@ class Redfish:
     """The boot mode key in the Bios attributes."""
     http_boot_target = ""
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
+    admin = "NAMAZU"
+    """The name of the factory admin user, https://en.wikipedia.org/wiki/Namazu"""
 
     def __init__(
         self,
@@ -612,6 +614,29 @@ class Redfish:
                 f"Got unexpected response HTTP {response.status_code}, expected HTTP 200/204: {response.text}"
             )
 
+    def _get_admin_account_types(self, accounts: dict) -> dict[str, Any]:
+        """Retrieve the factory admin account's ``AccountTypes`` and ``OEMAccountTypes``.
+
+        Arguments:
+            accounts: the parsed JSON of the Accounts collection (the ``Accounts`` resource).
+
+        Returns:
+            The factory admin account types ``{"AccountTypes": [...]}``.
+
+        """
+        account_types: dict[str, Any] = {}
+        for account_ref in accounts["Members"]:
+            uri = account_ref["@odata.id"]
+            if uri.rsplit("/", 1)[-1] == "1":
+                continue
+            account = self.request("get", uri).json()
+            if account["UserName"] == self.admin and "AccountTypes" in account:
+                account_types["AccountTypes"] = account["AccountTypes"]
+                if "OEM" in account["AccountTypes"]:
+                    account_types["OEMAccountTypes"] = account["OEMAccountTypes"]
+                break
+        return account_types
+
     def add_account(
         self, username: str, password: str, role: RedfishUserRoles = RedfishUserRoles.ADMINISTRATOR
     ) -> None:
@@ -629,6 +654,7 @@ class Redfish:
         """
         accounts_resp = self.request("get", f"{self.account_manager}/Accounts")
         accounts = accounts_resp.json()
+
         # Per the Redfish docs, check if we can POST a new user, or if we need
         # to PATCH an existing user slot
         if "POST" not in re.split(r', *', accounts_resp.headers['Allow']):
@@ -658,9 +684,48 @@ class Redfish:
             http_headers = {}
             account_uri = f"{self.account_manager}/Accounts"
 
-        new_user_data = {"UserName": username, "Password": password, "RoleId": role.value, "Enabled": True}
-        logger.info("Creating account %s at %s", username, account_uri)
-        self.request(method, account_uri, json=new_user_data, headers=http_headers, timeout=30)
+        new_user_data: dict[str, Any] = {
+            "UserName": username,
+            "Password": password,
+            "RoleId": role.value,
+            "Enabled": True,
+        }
+        logger.info("Creating account %s", username)
+        res = self.request(method, account_uri, json=new_user_data, headers=http_headers, timeout=30)
+        # On the POST path the created account's URI comes back in the response; on the PATCH path
+        # it does not, as we PATCHed a specific pre-allocated slot.
+        new_user_uri = res.json()["@odata.id"] if method == "post" else account_uri
+        logger.info("Account %s created at %s", username, new_user_uri)
+
+        # Supermicro sets AccountTypes to ["Redfish"], on a new account with
+        # the Administrator role, but newer models require adding the ["IPMI",
+        # "ManagerConsole"] account types to enable the use of IPMI and the
+        # serial console, wheras previous models did not. We compare the new
+        # admin account types with the factory admin account types, if they
+        # differ, we patch up the former to match the latter.
+        if role != RedfishUserRoles.ADMINISTRATOR:
+            return
+
+        admin_account_types = self._get_admin_account_types(accounts)
+        new_user_resp = self.request("get", new_user_uri)
+        new_user = new_user_resp.json()
+        new_user_etag = new_user_resp.headers.get("ETag", "")
+        if new_user.get("AccountTypes") != admin_account_types["AccountTypes"] or (
+            "OEMAccountTypes" in admin_account_types
+            and new_user.get("OEMAccountTypes") != admin_account_types["OEMAccountTypes"]
+        ):
+            logger.info(
+                "Setting AccountTypes, %s, for %s account.",
+                admin_account_types,
+                username,
+            )
+            self.request(
+                "PATCH",
+                new_user_uri,
+                json=admin_account_types,
+                headers=self._if_match(new_user_etag),
+                timeout=30,
+            )
 
     # On IDRAC 10+ the etag returned for a give username is a weak one,
     # so it will not be validated if sent with a If-Match HTTP header.
@@ -716,7 +781,7 @@ class DellSCP:
     @property
     def timestamp(self) -> datetime:
         """Getter for the timestamp when the configuration dump was generated."""
-        return datetime.strptime(self._config["SystemConfiguration"]["TimeStamp"], "%c")
+        return datetime.strptime(self._config["SystemConfiguration"]["TimeStamp"], "%c").replace(tzinfo=UTC)
 
     @property
     def comments(self) -> list[str]:
@@ -890,6 +955,8 @@ class RedfishSupermicro(Redfish):
     """The boot mode key in the Bios attributes."""
     http_boot_target = "Pxe"
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
+    admin = "ADMIN"
+    """The name of the factory admin user"""
 
     def get_power_state(self) -> str:
         """Return the current power state of the device."""
@@ -968,6 +1035,8 @@ class RedfishDell(Redfish):
     """The boot mode key in the Bios attributes."""
     http_boot_target = "UefiHttp"
     """The value to the BootSourceOverrideTarget key for HTTP boot."""
+    admin = "root"
+    """The name of the factory admin user"""
 
     def __init__(
         self,

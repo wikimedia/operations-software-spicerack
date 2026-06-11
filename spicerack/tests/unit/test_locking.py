@@ -4,7 +4,7 @@ import json
 import logging
 import re
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 import pytest
@@ -12,13 +12,13 @@ import pytest
 from spicerack import locking
 from spicerack.tests import get_fixture_path
 
-CREATED_DATETIME = datetime(2023, 1, 1, 12, 34, 56, 123456)
+CREATED_DATETIME = datetime(2023, 1, 1, 12, 34, 56, 123456, tzinfo=UTC)
 CONCURRENT_LOCK_ARGS = {"concurrency": 2, "owner": "user@host [123]", "ttl": 60}
 SAMPLE_UUID = "4734a179-0062-436d-a9d5-4cf0c24a12d7"
 KEY_LOCKS_JSON = f"""
 {{
     "{SAMPLE_UUID}": {{
-        "concurrency": 2, "created": "2023-01-01 12:34:56.123456", "owner": "user@host [123]", "ttl": 60
+        "concurrency": 2, "created": "2023-01-01 12:34:56.123456+00:00", "owner": "user@host [123]", "ttl": 60
         }}
 }}
 """
@@ -242,13 +242,13 @@ class TestLock:
     def test_release_remaining_ok(self, mocked_lock, caplog):
         """It should acquire and then release the lock on the backend keeping the existing one."""
         locks = json.loads(KEY_LOCKS_JSON)
-        locks[SAMPLE_UUID]["created"] = str(datetime.utcnow())
+        locks[SAMPLE_UUID]["created"] = str(datetime.now(UTC))
         mocked_lock.return_value.is_acquired = True
         self.mocked_client.read.return_value.value = json.dumps(locks)
         lock_id = self.lock.acquire("key", concurrency=2, ttl=60)
         self.mocked_client.reset_mock()
         locks[lock_id] = locks[SAMPLE_UUID].copy()
-        locks[lock_id]["created"] = str(datetime.utcnow())
+        locks[lock_id]["created"] = str(datetime.now(UTC))
         self.mocked_client.read.return_value.value = json.dumps(locks)
 
         with caplog.at_level(logging.INFO):
@@ -371,7 +371,7 @@ class TestKeyLocks:
         self.lock.add(self.concurrent_lock)
         assert len(self.lock.locks) == 1
         lock = self.lock.locks[SAMPLE_UUID]
-        assert lock.created > datetime.utcnow() - timedelta(seconds=10)
+        assert lock.created > datetime.now(UTC) - timedelta(seconds=10)
         assert lock == self.concurrent_lock
 
     def test_add_concurrency_already_reached(self):
@@ -474,7 +474,7 @@ class TestConcurrentLock:
                     "concurrency": 1,
                     "owner": "user@host [123]",
                     "ttl": 60,
-                    "created": datetime.utcnow() + timedelta(seconds=60),
+                    "created": datetime.now(UTC) + timedelta(seconds=60),
                 },
                 "argument 'created' cannot be in the future",
             ),
@@ -489,13 +489,14 @@ class TestConcurrentLock:
         """Test the string representation of the object."""
         assert (
             str(self.lock)
-            == "{'concurrency': 2, 'created': '2023-01-01 12:34:56.123456', 'owner': 'user@host [123]', 'ttl': 60}"
+            == ("{'concurrency': 2, 'created': '2023-01-01 12:34:56.123456+00:00',"
+                " 'owner': 'user@host [123]', 'ttl': 60}")
         )
 
     def test_update_created(self):
         """It should update the created property to now."""
         self.lock.update_created()
-        assert self.lock.created >= datetime.utcnow() - timedelta(seconds=10)
+        assert self.lock.created >= datetime.now(UTC) - timedelta(seconds=10)
 
     def test_to_dict(self):
         """If should return the dictionary custom representation of the object suitable for the locking backend."""

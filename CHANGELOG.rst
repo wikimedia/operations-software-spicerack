@@ -1,6 +1,15 @@
 Spicerack Changelog
 -------------------
 
+`v12.8.0`_ (2026-06-11)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+* redfish: improve add_account with AccountTypes (`T426180`_).
+* alertmanager, icinga: provide downtime duration information in sre.mysql cookbooks (`T427780`_).
+* Fix datetime-related and pytest warnings.
+
 `v12.7.0`_ (2026-06-04)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3718,6 +3727,8 @@ New features
 .. _`T412211`: https://phabricator.wikimedia.org/T412211
 .. _`T420475`: https://phabricator.wikimedia.org/T420475
 .. _`T428024`: https://phabricator.wikimedia.org/T428024
+.. _`T426180`: https://phabricator.wikimedia.org/T426180
+.. _`T427780`: https://phabricator.wikimedia.org/T427780
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3879,3 +3890,4 @@ New features
 .. _`v12.5.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.5.0
 .. _`v12.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.6.0
 .. _`v12.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.7.0
+.. _`v12.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.8.0

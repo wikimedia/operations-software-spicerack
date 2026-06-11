@@ -4,7 +4,7 @@ import logging
 import math
 import time
 from collections.abc import Callable, Iterator, Sequence
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Optional, Union
 
 from ClusterShell.MsgTree import MsgTreeElem
@@ -599,7 +599,7 @@ class RemoteHosts:
         """Poll the host until is reachable and has an uptime lower than the provided datetime.
 
         Arguments:
-            since: the time after which the host should have booted.
+            since: the timezone-aware datetime after which the host should have booted.
             print_progress_bars: whether to print Cumin's progress bars to stderr.
 
         Raises:
@@ -607,8 +607,7 @@ class RemoteHosts:
                 When in DRY-RUN mode, it will raise only if unable to connect.
 
         """
-        now = datetime.now(timezone.utc) if since.tzinfo else datetime.utcnow()
-        delta = (now - since).total_seconds()
+        delta = (datetime.now(UTC) - since).total_seconds()
         try:
             uptimes = self.uptime(print_progress_bars=print_progress_bars)
         except (RemoteExecutionError, RemoteError) as e:

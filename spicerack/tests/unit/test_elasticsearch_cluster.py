@@ -2,7 +2,7 @@
 
 import itertools
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 import pytest
@@ -715,7 +715,7 @@ class TestElasticsearchClusters:
 def test_get_next_clusters_nodes():
     """Test that next nodes belong in the same row on each cluster."""
     remote = mock.Mock(spec_set=Remote)
-    since = datetime.utcfromtimestamp(20 / 1000)
+    since = datetime.fromtimestamp(20 / 1000, UTC)
     elasticsearch_clusters = ec.ElasticsearchClusters(
         mock_node_info(
             [
@@ -748,7 +748,7 @@ def test_get_next_clusters_nodes():
 
 def test_get_next_clusters_nodes_raises_error_when_size_is_less_than_one():
     """Test that next nodes belong in the same row on each cluster."""
-    since = datetime.utcfromtimestamp(20 / 1000)
+    since = datetime.fromtimestamp(20 / 1000, UTC)
     elasticsearch_clusters = ec.ElasticsearchClusters(None, None, ["eqiad", "codfw"], None)
     with pytest.raises(ec.ElasticsearchClusterError):
         elasticsearch_clusters.get_next_clusters_nodes(since, 0)
@@ -757,7 +757,7 @@ def test_get_next_clusters_nodes_raises_error_when_size_is_less_than_one():
 def test_get_next_nodes_returns_less_nodes_than_specified():
     """Test that the nodes returned is less than specified based on if they have been restarted for each clusters."""
     remote = mock.Mock(spec_set=Remote)
-    since = datetime.utcfromtimestamp(20 / 1000)
+    since = datetime.fromtimestamp(20 / 1000, UTC)
     elasticsearch_clusters = ec.ElasticsearchClusters(
         mock_node_info(
             [
@@ -787,7 +787,7 @@ def _eval_get_next_nodes(node_info, batch_size=4):
                     node["jvm"] = {"start_time_in_millis": start_time}
 
     update_start(0, lambda _: True)
-    since = datetime.utcfromtimestamp(10 / 1000)
+    since = datetime.fromtimestamp(10 / 1000, UTC)
     for i in itertools.count(start=20, step=10):
         remote = mock.Mock(spec_set=Remote)
         elasticsearch_clusters = ec.ElasticsearchClusters(mock_node_info(node_info), remote, None, ["eqiad", "codfw"])
@@ -874,7 +874,7 @@ def test_get_next_nodes_returns_masters_after_other_nodes():
 def test_get_next_nodes_least_not_restarted():
     """Test to get rows that have the least not restarted nodes first on each cluster."""
     remote = mock.Mock(spec_set=Remote)
-    since = datetime.utcfromtimestamp(20 / 1000)
+    since = datetime.fromtimestamp(20 / 1000, UTC)
     elasticsearch_clusters = ec.ElasticsearchClusters(
         mock_node_info(
             [
@@ -907,7 +907,7 @@ def test_get_next_nodes_least_not_restarted():
 
 def test_get_next_nodes_no_rows():
     """Test that all nodes have been restarted on all clusters."""
-    since = datetime.utcfromtimestamp(20 / 1000)
+    since = datetime.fromtimestamp(20 / 1000, UTC)
     elasticsearch_clusters = ec.ElasticsearchClusters(
         mock_node_info(
             [
@@ -933,7 +933,7 @@ def test_get_next_nodes_no_rows():
 
 def test_get_next_nodes_fails_when_rows_are_not_same():
     """Test that error is raised when clusters instances of the same node belong to different rows."""
-    since = datetime.utcfromtimestamp(20 / 1000)
+    since = datetime.fromtimestamp(20 / 1000, UTC)
     elasticsearch_clusters = ec.ElasticsearchClusters(
         mock_node_info(
             [
@@ -1069,7 +1069,7 @@ def test_get_next_clusters_nodes_for_reboot_skips_already_rebooted():
     remote.query.return_value = mock_remote_hosts
 
     # since is 60 seconds ago; node was rebooted 10 seconds ago (after since), so should be skipped
-    since = datetime.utcnow() - timedelta(seconds=60)
+    since = datetime.now(UTC) - timedelta(seconds=60)
     elasticsearch_clusters = ec.ElasticsearchClusters(
         mock_node_info(
             [
@@ -1099,7 +1099,7 @@ def test_get_next_clusters_nodes_for_reboot_returns_nodes_not_rebooted():
     remote.query.return_value = mock_remote_hosts
 
     # since is 60 seconds ago; node was booted 7 days ago (before since), so needs reboot
-    since = datetime.utcnow() - timedelta(seconds=60)
+    since = datetime.now(UTC) - timedelta(seconds=60)
     elasticsearch_clusters = ec.ElasticsearchClusters(
         mock_node_info(
             [
@@ -1129,12 +1129,12 @@ def test_get_next_clusters_nodes_restarted_but_not_rebooted():
     With operation=RESTART: node should be skipped  (service already restarted)
     With operation=REBOOT:  node should be returned (host    needs   reboot)
     """
-    since = datetime.utcnow() - timedelta(seconds=60)
+    since = datetime.now(UTC) - timedelta(seconds=60)
 
     # Node config: JVM started 10s ago (after since=60s ago), but host booted 7 days ago (before since)
     # This simulates: host booted long ago, service was restarted recently
-    dt = datetime.utcnow() - timedelta(seconds=10)
-    epoch = datetime.utcfromtimestamp(0)
+    dt = datetime.now(UTC) - timedelta(seconds=10)
+    epoch = datetime.fromtimestamp(0, UTC)
     jvm_start_ms = int((dt - epoch).total_seconds() * 1000)
     node_info = [{"x1": json_node("elastic1001.example.com", start_time=jvm_start_ms)}]
 

@@ -13,7 +13,7 @@
 #
 import os
 import sys
-from datetime import date
+from datetime import UTC, datetime
 from importlib.metadata import version as meta_version
 from pathlib import Path
 
@@ -58,7 +58,9 @@ master_doc = "index"
 # General information about the project.
 project = "Spicerack"
 title = f"{project} Documentation"
-copyright = f"2018-{date.today().year}, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
+copyright = (
+    f"2018-{datetime.now(tz=UTC).year}, Riccardo Coccioli <rcoccioli@wikimedia.org>, Wikimedia Foundation, Inc."
+)
 author = "Riccardo Coccioli"
 
 # The version info for the project you're documenting, acts as replacement for

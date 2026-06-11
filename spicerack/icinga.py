@@ -323,7 +323,8 @@ class IcingaHosts:
             raise IcingaError(f"{e} - no hosts have been downtimed.") from e
 
         logger.info(
-            "Scheduling downtime on Icinga server %s for hosts: %s",
+            "Scheduling downtime for %s on Icinga server %s for hosts: %s",
+            duration,
             self._icinga_host,
             self._target_hosts,
         )
@@ -447,8 +448,9 @@ class IcingaHosts:
             raise IcingaError(f'No services on {self._target_hosts} matched "{service_re}"')
 
         logger.info(
-            'Scheduling downtime on Icinga server %s for services "%s" for host%s: %s '
+            'Scheduling downtime for %s on Icinga server %s for services "%s" for host%s: %s '
             "(matched %d unique service name%s on %d host%s)",
+            duration,
             self._icinga_host,
             service_re,
             "" if len(self._target_hosts) == 1 else "s",
