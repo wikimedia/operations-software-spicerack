@@ -535,6 +535,33 @@ class Redfish:
 
         raise RedfishError(f"Unable to find account for username {username}")
 
+    def find_accounts(self) -> dict[str, dict]:
+        """Find the accounts configured on the BMC.
+
+        Returns:
+            A dict of UserName to Account info, also adds the ETag header value
+            of the GET response to the Account info.
+
+        Raises:
+            spicerack.redfish.RedfishError: if the request fails
+
+        """
+        accounts = self.request("get", f"{self.account_manager}/Accounts").json()
+        uris = [account["@odata.id"] for account in accounts["Members"]]
+        user_accounts = {}
+        for uri in uris:
+            response = self.request("get", uri)
+            username = response.json()["UserName"]
+            # Unused account slots have a UserName == ''
+            if username:
+                user_accounts[username] = response.json()
+                # TODO: could we use '@odata.etag', instead of the header etag?
+                # - Why don't we have it in our test data?
+                # - How does compression effect the etag?
+                user_accounts[username]['ETag'] = response.headers['ETag']
+
+        return user_accounts
+
     def change_user_password(self, username: str, password: str) -> None:
         """Change the password for the account with the given username.
 

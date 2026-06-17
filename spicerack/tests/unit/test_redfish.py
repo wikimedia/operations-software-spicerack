@@ -754,6 +754,19 @@ class TestRedfish:
         with pytest.raises(redfish.RedfishError, match="Unable to find account for username nonexistent"):
             self.redfish.find_account("nonexistent")
 
+    def test_find_accounts_ok(self):
+        """It should return the URI of the account with the given username."""
+        add_accounts_mock_responses(self.requests_mock)
+        accounts = self.redfish.find_accounts()
+        assert accounts["root"]['@odata.id'] == "/redfish/v1/AccountService/Accounts/2"
+        assert accounts["root"]['ETag'] == "12345-2"
+
+    def test_find_accounts_raises(self):
+        """It should raise a RedfishError if a request fails."""
+        self.requests_mock.get("/redfish/v1/AccountService/Accounts", json={}, status_code=500)
+        with pytest.raises(redfish.RedfishError):
+            self.redfish.find_accounts()
+
     @pytest.mark.parametrize("action", tuple(redfish.ChassisResetPolicy))
     def test_chassis_reset_ok(self, action):
         """It should perform a chassis reset with the given action."""
