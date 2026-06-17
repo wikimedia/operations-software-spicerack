@@ -727,9 +727,17 @@ class Redfish:
                 timeout=30,
             )
 
-    # On IDRAC 10+ the etag returned for a give username is a weak one,
-    # so it will not be validated if sent with a If-Match HTTP header.
+    # On IDRAC 10 (1.20.25.00) the etag returned for a give username is a weak
+    # one. Which does not validate using an If-Match HTTP header as mandated by
+    # the HTTP spec. However, Redfish chose to violate the spec so it could use
+    # weak etags. The Redfish spec specifies that both weak and strong etags
+    # should match when using an If-Match HTTP header. Dell fixed this bug in
+    # IDRAC 10 (1.30.10.51), so once we have that version everywhere, the weak
+    # etag logic can be removed.
+    #
     # More info:
+    # - https://redfishforum.com/thread/565/weak-etags
+    # - https://www.dmtf.org/sites/default/files/standards/documents/DSP0266_1.24.0.html#etags
     # - https://phabricator.wikimedia.org/T392851#11151990
     # - https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/If-Match
     def _if_match(self, etag: str) -> dict:
