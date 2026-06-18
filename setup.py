@@ -32,7 +32,10 @@ EXTRAS_REQUIRE = {
         "mypy>=1.0.1",
         "pytest-cov>=4.0.0",
         "pytest-xdist>=3.1.0",
-        "pytest>=7.2.1",
+        # We run tests in `debian/rules`
+        # pytest | 7.2.1-2 | bookworm
+        # pytest | 8.3.5-2 | trixie
+        "pytest>=7.2.0, <8.4.0",
         "requests-mock>=1.9.3",
         "ruff",
         "types-PyMySQL",
