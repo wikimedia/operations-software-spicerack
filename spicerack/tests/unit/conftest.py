@@ -47,7 +47,7 @@ def _base_netbox_obj(name, additional_properties):
             "manufacturer": {
                 "slug": "dell",
             },
-        },
+        }
     }
     dict_obj["primary_ip"] = dict_obj["primary_ip6"]
     dict_obj["primary_ip"]["assigned_object"] = {
@@ -66,7 +66,8 @@ def _base_netbox_obj(name, additional_properties):
 
     obj = json.loads(json.dumps(dict_obj), object_hook=custom_hook)
     obj.status.__str__ = lambda: dict_obj["status"]["label"]
-
+    # Netbox custom fields are a dict, so we need to define it after the initial dict is converted to a NetboxObject
+    obj.custom_fields = {"bgp": False}
     return obj
 
 

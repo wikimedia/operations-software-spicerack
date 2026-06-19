@@ -287,6 +287,15 @@ class TestNetboxServer:
         """It should return the access vlan of the device."""
         assert self.physical_server.access_vlan == "test_vlan"
 
+    def test_bgp_getter_ok(self):
+        """It should return the BGP custom field of the device."""
+        assert self.physical_server.bgp is False
+
+    def test_bgp_setter_ok(self):
+        """It should set the BGP custom field of the device."""
+        self.physical_server.bgp = True
+        self.netbox_host.save.assert_called_once_with()
+
     def test_access_vlan_getter_bridge_ok(self):
         """It should return the access vlan of the bridge physical port."""
         real_iface = self.netbox_host.primary_ip.assigned_object
