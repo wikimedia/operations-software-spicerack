@@ -16,7 +16,7 @@ from wmflib import requests
 from wmflib.actions import ActionsDict
 from wmflib.config import load_ini_config, load_yaml_config
 from wmflib.dns import Dns
-from wmflib.interactive import confirm_on_failure, get_username
+from wmflib.interactive import confirm_on_failure, get_secret, get_username
 from wmflib.phabricator import Phabricator, create_phabricator
 from wmflib.prometheus import Prometheus, Thanos
 
@@ -36,7 +36,6 @@ from spicerack.exceptions import RunCookbookError, SpicerackError
 from spicerack.ganeti import Ganeti
 from spicerack.hosts import Host
 from spicerack.icinga import ICINGA_DOMAIN, IcingaHosts
-from spicerack.interactive import get_management_password
 from spicerack.ipmi import Ipmi
 from spicerack.k8s import Kubernetes
 from spicerack.kafka import Kafka
@@ -261,7 +260,13 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         """
         if not self._management_password:
-            self._management_password = get_management_password()
+            configuration = load_yaml_config(self._spicerack_config_dir / "management" / "config.yaml", raises=False)
+            mgmt_password = configuration.get("mgmt_password", "")
+
+            if mgmt_password:
+                self._management_password = mgmt_password
+            else:
+                self._management_password = get_secret("Management Password")
 
         return self._management_password
 

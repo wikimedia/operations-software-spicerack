@@ -30,7 +30,6 @@ Spicerack Python API autodoc.
    spicerack.ganeti
    spicerack.hosts
    spicerack.icinga
-   spicerack.interactive
    spicerack.ipmi
    spicerack.k8s
    spicerack.kafka

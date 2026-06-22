@@ -181,9 +181,8 @@ def test_spicerack_puppet_server(mocked_remote_query, mocked_get_ca_via_srv_reco
     ),
 )
 @mock.patch("spicerack.Netbox")
-def test_spicerack_management_consoles(mocked_netbox, monkeypatch, manufacturer, manufacturer_class):
+def test_spicerack_management_consoles(mocked_netbox, manufacturer, manufacturer_class):
     """Should instantiate the instances that require the management password."""
-    monkeypatch.setenv("MGMT_PASSWORD", "env_password")
     mocked_netbox.return_value.get_server.return_value.virtual = False
     mocked_netbox.return_value.api.ipam.ip_addresses.get.return_value.address = "10.0.0.1/16"
     mocked_netbox.return_value.get_server.return_value.as_dict.return_value = {
@@ -192,7 +191,7 @@ def test_spicerack_management_consoles(mocked_netbox, monkeypatch, manufacturer,
 
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
-    assert spicerack.management_password() == "env_password"
+    assert spicerack.management_password() == "dummy_mgmt_password"
     assert isinstance(spicerack.ipmi("test-mgmt.example.com", username="batman"), Ipmi)
     if manufacturer == "fancy-but-not-supported-yet":
         with pytest.raises(
@@ -206,9 +205,8 @@ def test_spicerack_management_consoles(mocked_netbox, monkeypatch, manufacturer,
 
 
 @mock.patch("spicerack.Netbox")
-def test_spicerack_redfish_not_physical(mocked_netbox, monkeypatch):
+def test_spicerack_redfish_not_physical(mocked_netbox):
     """Should raise a SpicerackError if trying to get a management console for a non-physical device."""
-    monkeypatch.setenv("MGMT_PASSWORD", "env_password")
     mocked_netbox.return_value.get_server.return_value.virtual = True
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
 
@@ -218,13 +216,38 @@ def test_spicerack_redfish_not_physical(mocked_netbox, monkeypatch):
     assert mocked_netbox.called
 
 
-def test_spicerack_management_password_cached(monkeypatch):
-    """Should ask for the management_password only once and cache its result."""
-    monkeypatch.setenv("MGMT_PASSWORD", "first_password")
+def test_spicerack_management_password_from_config():
+    """Should return the management password set in the management.yaml configuration file."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+    with mock.patch("spicerack.get_secret") as mocked_get_secret:
+        assert spicerack.management_password() == "dummy_mgmt_password"
+
+    mocked_get_secret.assert_not_called()
+
+
+@mock.patch("spicerack.get_secret", return_value="interactive_password")
+@mock.patch("spicerack.load_yaml_config", return_value={})
+def test_spicerack_management_password_interactive(mocked_load_yaml_config, mocked_get_secret):
+    """Should ask for the management password interactively if not set in the configuration file."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    assert spicerack.management_password() == "interactive_password"
+
+    mocked_load_yaml_config.assert_called_once()
+    mocked_get_secret.assert_called_once_with("Management Password")
+
+
+@mock.patch("spicerack.get_secret")
+@mock.patch("spicerack.load_yaml_config", return_value={"mgmt_password": "first_password"})
+def test_spicerack_management_password_cached(mocked_load_yaml_config, mocked_get_secret):
+    """Should load the management_password only once and cache its result."""
     spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
     assert spicerack.management_password() == "first_password"
-    monkeypatch.setenv("MGMT_PASSWORD", "second_password")
+    mocked_load_yaml_config.return_value = {"mgmt_password": "second_password"}
     assert spicerack.management_password() == "first_password"
+
+    mocked_load_yaml_config.assert_called_once()
+    mocked_get_secret.assert_not_called()
 
 
 @pytest.mark.parametrize(
