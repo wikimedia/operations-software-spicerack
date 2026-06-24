@@ -52,6 +52,7 @@ EXTRAS_REQUIRE = {
         "sphinx-autodoc-typehints>=1.12.0",
         "Sphinx>=3.4.3",
         "Sphinx>=5.3.0,<9.0.0",
+        "setuptools",
     ],
     "prospector": [
         "prospector[with_everything]==1.15.3",  # Pinned
