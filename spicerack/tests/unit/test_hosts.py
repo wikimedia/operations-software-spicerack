@@ -26,7 +26,6 @@ class TestHost:
     def _setup(self, name, monkeypatch, netbox_host):
         """Initiliaze the fixtures."""
         monkeypatch.setenv("SUDO_USER", "user1")
-        monkeypatch.setenv("MGMT_PASSWORD", "env_password")
         proxy = "http://proxy.example.com:8080"
         self.mocked_pynetbox.return_value.dcim.devices.get.return_value = netbox_host
         mgmt_address = mock.MagicMock()

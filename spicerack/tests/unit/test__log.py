@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+from packaging.version import Version
 from wmflib import interactive
 
 from spicerack import _log as log
@@ -114,17 +115,29 @@ class TestLogModule:
             port=123,
             notify_logger_enabled=notify_logger_enabled,
         )
-        awaiting = "is awaiting input"
+        awaiting_input = "is awaiting input"
 
         interactive.ask_confirmation(self.message)
 
         out, err = capsys.readouterr()
         assert self.message in out
-        assert awaiting not in out
+        assert awaiting_input not in out
         assert self.message not in err
-        assert awaiting not in err
+        assert awaiting_input not in err
         assert self.message not in caplog.text
-        assert awaiting not in caplog.text
+        # This assertion will break in pytest 9.1
+        if Version(pytest.__version__) < Version("9.1.0"):
+            assert awaiting_input not in caplog.text
+        else:
+            # Ensure all of our awaiting_input logs are emitted from the
+            # notify_logger
+            awaiting_input_log_recs = [
+                log_rec
+                for log_rec in caplog.records
+                if awaiting_input in log_rec.getMessage()
+            ]
+            assert len(awaiting_input_log_recs) >= 1
+            assert all(record.name == log.notify_logger.name for record in awaiting_input_log_recs)
         self._assert_match_in_tmpdir(self.message, tmpdir.strpath, negate=True)
         mocked_isatty.assert_called_once_with()
         mocked_input.assert_called_once_with("> ")
@@ -133,7 +146,7 @@ class TestLogModule:
             mocked_socket.assert_called()
             sendall = mocked_socket.return_value.sendall
             sendall.assert_called_once()
-            assert awaiting.encode() in sendall.call_args.args[0]
+            assert awaiting_input.encode() in sendall.call_args.args[0]
         else:
             mocked_socket.assert_not_called()
 

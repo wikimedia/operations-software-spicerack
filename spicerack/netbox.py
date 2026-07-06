@@ -694,6 +694,44 @@ class NetboxServer:
         )
         return sorted({conn.device.name for interface in interfaces for conn in interface.connected_endpoints})
 
+    @property
+    def bgp(self) -> bool:
+        """Get and set the device BGP custom field.
+
+        Arguments:
+            value: True/False, the state of the custom field.
+
+        """
+        return self._server.custom_fields["bgp"]
+
+    @bgp.setter
+    def bgp(self, value: bool) -> None:
+        """Get and set the device BGP custom field.
+
+        Arguments:
+            value: True/False, the new state to be set.
+
+        """
+        current = self._server.custom_fields["bgp"]
+        new = value
+        if current == new:
+            logger.info(
+                "Netbox BGP custom field is already %s for device %s.",
+                current,
+                self._server.name
+            )
+            return
+        if self._dry_run:
+            logger.info(
+                "Skipping Netbox BGP custom field change from %s to %s for device %s in DRY-RUN.",
+                current,
+                new,
+                self._server.name
+            )
+            return
+        self._server.custom_fields["bgp"] = value
+        self._server.save()
+
     def as_dict(self) -> dict:
         """Return a dict containing details about the server."""
         ret = dict(self._server)
