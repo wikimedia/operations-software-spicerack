@@ -1,6 +1,29 @@
 Spicerack Changelog
 -------------------
 
+`v13.0.0`_ (2026-07-06)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Configuration breaking changes
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+* __init__: modify the management_password property (`T429699`_).
+
+API breaking changes
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+* Remove the interactive module (`T429699`_).
+
+New features
+""""""""""""
+* redfish: add find_accounts (`T426180`_)
+
+Minor improvements
+""""""""""""""""""
+* redfish: add weak etag comments.
+* netbox: add a BGP getter/setter.
+* tox: add python 3.14
+* Add setuptools to sphinx's tox environment.
+* log: fix tests for pytest 9.1
+
 `v12.8.0`_ (2026-06-11)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3729,6 +3752,8 @@ New features
 .. _`T428024`: https://phabricator.wikimedia.org/T428024
 .. _`T426180`: https://phabricator.wikimedia.org/T426180
 .. _`T427780`: https://phabricator.wikimedia.org/T427780
+.. _`T426180`: https://phabricator.wikimedia.org/T426180
+.. _`T429699`: https://phabricator.wikimedia.org/T429699
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3891,3 +3916,4 @@ New features
 .. _`v12.6.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.6.0
 .. _`v12.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.7.0
 .. _`v12.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.8.0
+.. _`v13.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.0.0
