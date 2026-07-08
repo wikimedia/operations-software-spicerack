@@ -684,7 +684,7 @@ class Redfish:
 
         # Per the Redfish docs, check if we can POST a new user, or if we need
         # to PATCH an existing user slot
-        if "POST" not in re.split(r', *', accounts_resp.headers['Allow']):
+        if "POST" not in re.split(r', *', accounts_resp.headers.get("Allow", "")):
             free_account_slot_uri = ""
             free_account_slot_etag = ""
             for account_ref in accounts["Members"]:
