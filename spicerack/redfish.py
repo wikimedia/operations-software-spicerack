@@ -734,6 +734,12 @@ class Redfish:
             return
 
         admin_account_types = self._get_admin_account_types(accounts)
+        # iDRAC9 host with earlier Redfish version did not expose
+        # AccountTypes at all
+        if not admin_account_types:
+            logger.info("No AccountTypes found for the admin user.")
+            return
+        logger.info("Setting AccountTypes equal to the admin user")
         new_user_resp = self.request("get", new_user_uri)
         new_user = new_user_resp.json()
         new_user_etag = new_user_resp.headers.get("ETag", "")
