@@ -562,6 +562,19 @@ class Redfish:
 
         return user_accounts
 
+    def delete_account(self, username:str) -> None:
+        """Delete an account configured on the BMC.
+
+        Raises:
+            spicerack.redfish.RedfishError: if the request fails
+
+        """
+        accounts = self.find_accounts()
+        if username not in accounts:
+            raise RedfishError("The account %s is not configured in the BMC.", username)
+        self.request("delete", accounts[username]['@odata.id'])
+
+
     def change_user_password(self, username: str, password: str) -> None:
         """Change the password for the account with the given username.
 
