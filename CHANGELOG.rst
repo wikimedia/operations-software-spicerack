@@ -1,6 +1,18 @@
 Spicerack Changelog
 -------------------
 
+`v13.1.0`_ (2026-07-17)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+New features
+""""""""""""
+* redfish: add delete_account method (`T426180`_).
+
+Bug fixes
+"""""""""
+* redfish: skip setting AccountTypes if the admin user doesn't expose it (`T426180`_).
+* redfish: don't assume that the Allow header is always present (`T426180`_).
+
 `v13.0.0`_ (2026-07-06)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3917,3 +3929,4 @@ New features
 .. _`v12.7.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.7.0
 .. _`v12.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.8.0
 .. _`v13.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.0.0
+.. _`v13.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.1.0
