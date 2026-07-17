@@ -562,6 +562,19 @@ class Redfish:
 
         return user_accounts
 
+    def delete_account(self, username:str) -> None:
+        """Delete an account configured on the BMC.
+
+        Raises:
+            spicerack.redfish.RedfishError: if the request fails
+
+        """
+        accounts = self.find_accounts()
+        if username not in accounts:
+            raise RedfishError("The account %s is not configured in the BMC.", username)
+        self.request("delete", accounts[username]['@odata.id'])
+
+
     def change_user_password(self, username: str, password: str) -> None:
         """Change the password for the account with the given username.
 
@@ -684,7 +697,7 @@ class Redfish:
 
         # Per the Redfish docs, check if we can POST a new user, or if we need
         # to PATCH an existing user slot
-        if "POST" not in re.split(r', *', accounts_resp.headers['Allow']):
+        if "POST" not in re.split(r', *', accounts_resp.headers.get("Allow", "")):
             free_account_slot_uri = ""
             free_account_slot_etag = ""
             for account_ref in accounts["Members"]:
@@ -734,6 +747,12 @@ class Redfish:
             return
 
         admin_account_types = self._get_admin_account_types(accounts)
+        # iDRAC9 host with earlier Redfish version did not expose
+        # AccountTypes at all
+        if not admin_account_types:
+            logger.info("No AccountTypes found for the admin user.")
+            return
+        logger.info("Setting AccountTypes equal to the admin user")
         new_user_resp = self.request("get", new_user_uri)
         new_user = new_user_resp.json()
         new_user_etag = new_user_resp.headers.get("ETag", "")

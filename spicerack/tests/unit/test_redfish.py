@@ -767,6 +767,22 @@ class TestRedfish:
         with pytest.raises(redfish.RedfishError):
             self.redfish.find_accounts()
 
+    def test_delete_account_ok(self):
+        """It should issue a DELETE request to the URI of the account with the given username."""
+        add_accounts_mock_responses(self.requests_mock)
+        delete_mock = self.requests_mock.delete("/redfish/v1/AccountService/Accounts/3")
+
+        self.redfish.delete_account("guest")
+
+        assert delete_mock.call_count == 1
+        assert delete_mock.last_request.path == "/redfish/v1/accountservice/accounts/3"
+
+    def test_delete_account_raises(self):
+        """It should raise a RedfishError if the account is not configured on the BMC."""
+        add_accounts_mock_responses(self.requests_mock)
+        with pytest.raises(redfish.RedfishError, match="is not configured in the BMC"):
+            self.redfish.delete_account("nonexistent")
+
     @pytest.mark.parametrize("action", tuple(redfish.ChassisResetPolicy))
     def test_chassis_reset_ok(self, action):
         """It should perform a chassis reset with the given action."""
