@@ -67,6 +67,7 @@ ignore = [
     "RUF015",  # Allow single element list slice (without using next())
     "TRY300",  # Don't force else blocks with try/except
     "SIM102",  # Allow nested if blocks for readability
+    "RUF036",  # Allow None not at the end of the type union.
 ]
 
 exclude = ["spicerack/tests/fixtures/cookbook/cookbooks/group3/*"]
