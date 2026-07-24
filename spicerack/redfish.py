@@ -1007,8 +1007,8 @@ class RedfishSupermicro(Redfish):
     """The message ID for a reboot event."""
     boot_mode_attribute = "BootModeSelect"
     """The boot mode key in the Bios attributes."""
-    http_boot_target = "Pxe"
-    """The value to the BootSourceOverrideTarget key for HTTP boot."""
+    http_boot_targets = ("UefiHttp", "Pxe")
+    """The values to the BootSourceOverrideTarget key for HTTP boot."""
     admin = "ADMIN"
     """The name of the factory admin user"""
 
@@ -1050,7 +1050,7 @@ class RedfishSupermicro(Redfish):
                         return port["Ethernet"]["AssociatedMACAddresses"][0].lower()
         raise RedfishError("No MAC found on the PXE enabled interface")
 
-    def force_http_boot_once(self) -> None:
+    def force_http_boot_once(self, http_boot_uri: str) -> None:
         """Force the host to boot over UEFI HTTP at the next reboot.
 
         Raises:
@@ -1060,18 +1060,51 @@ class RedfishSupermicro(Redfish):
         if not self.is_uefi:
             raise RedfishError("HTTP boot is only possible for UEFI hosts.")
         logger.info("Setting the next boot to UEFI HTTP for %s", self._hostname)
-        efi_http_boot = {
-            "Boot": {
-                "BootSourceOverrideEnabled": "Once",
-                "BootSourceOverrideTarget": self.http_boot_target,
-                "BootSourceOverrideMode": "UEFI",
-            }
-        }
-        self.request(
-            "patch",
-            self.system_manager,
-            json=efi_http_boot,
-        )
+
+        # Supermicro released a lot of firmwares allowing Redfish to use the "Pxe" value
+        # for "BootSourceOverrideTarget", instead of following the specs and using "UefiHttp".
+        # After a chat with their support there seem to be no real alternative than
+        # doing the following:
+        #
+        # 1) Use "UefiHttp" and check if Redfish returns a HTTP 400 response stating
+        #    that the value is not admissible.
+        # 2) Fallback to "Pxe" in case of a 400 and try that value.
+        #
+        # The above should keep compatibility with old and new BMC firmwares,
+        # without requiring us to have separate code flows for every server type.
+        #
+        # Note: We cannot test "Pxe" as first value since in newer servers the option
+        # is accepted, but after the reboot the BMC is not able to kick off a UEFI Http boot.
+        for http_boot_target in self.http_boot_targets:
+            try:
+                logger.info("Setting BootSourceOverrideTarget to %s", http_boot_target)
+                efi_http_boot = {
+                    "Boot": {
+                        "BootSourceOverrideEnabled": "Once",
+                        "BootSourceOverrideTarget": http_boot_target,
+                        "BootSourceOverrideMode": "UEFI",
+                    }
+                }
+                if http_boot_target == "UefiHttp":
+                    efi_http_boot["Boot"]["HttpBootUri"] = http_boot_uri
+                self.request(
+                    "patch",
+                    self.system_manager,
+                    json=efi_http_boot,
+                )
+                break
+            except RedfishError as e:
+                if (e.__cause__ is not None and isinstance(e.__cause__, APIClientResponseError)  # pylint: disable=no-member
+                        and e.__cause__.response is not None  # pylint: disable=no-member
+                        and e.__cause__.response.status_code == 400  # pylint: disable=no-member
+                        and http_boot_target in e.__cause__.response.text):  # pylint: disable=no-member
+                    logger.error("The %s target is not supported by Redfish.", http_boot_target)
+                    continue
+                raise
+        else:
+            raise RedfishError(
+                f"Unable to set HTTP boot: none of the targets {self.http_boot_targets} is supported by Redfish."
+            )
 
 
 class RedfishDell(Redfish):
