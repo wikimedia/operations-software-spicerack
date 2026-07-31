@@ -710,7 +710,7 @@ class TestIcingaHosts:
     def test_wait_for_optimal_timeout(self, mocked_sleep, skip_acked):
         """It should raise icinga.IcingaError if the host is not optimal within the required time."""
         with open(get_fixture_path("icinga", "status_with_failed_services.json")) as f:
-            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 20)
+            set_mocked_icinga_host_output(self.mocked_icinga_host, f.read(), 30)
 
         kwargs = {}
         if skip_acked is not None:
