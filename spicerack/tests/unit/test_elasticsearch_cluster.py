@@ -9,7 +9,6 @@ import pytest
 from wmflib.config import load_yaml_config
 from wmflib.prometheus import Prometheus
 
-from spicerack.administrative import Reason
 from spicerack.apiclient import APIClient, APIClientError
 from spicerack.remote import Remote, RemoteHosts
 from spicerack.tests import get_fixture_path
@@ -406,106 +405,6 @@ class TestElasticsearchClusters:
             body={"persistent": {"cluster.routing.allocation.enable": "all"}},
             timeout=30,
         )
-
-    def test_frozen_writes_write_to_index(self):
-        """Test that elasticsearch write to index is called to freeze writes."""
-        reason = Reason("test", "test_user", "test_host", task_id="T111222")
-        elasticsearch_clusters = self.default_elasticsearch_clusters()
-        with elasticsearch_clusters.frozen_writes(reason):
-            self.cluster1.make_api_call.assert_called_with(
-                route="/mw_cirrus_metastore/_doc/freeze-everything",
-                params={},
-                http_method="PUT",
-                body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
-                timeout=30,
-            )
-            self.cluster2.make_api_call.assert_called_with(
-                route="/mw_cirrus_metastore/_doc/freeze-everything",
-                params={},
-                http_method="PUT",
-                body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
-                timeout=30,
-            )
-
-        self.cluster1.make_api_call.assert_called_with(
-            route="mw_cirrus_metastore/_doc/freeze-everything", params={}, http_method="DELETE", body={}, timeout=30
-        )
-        self.cluster2.make_api_call.assert_called_with(
-            route="mw_cirrus_metastore/_doc/freeze-everything", params={}, http_method="DELETE", body={}, timeout=30
-        )
-
-    def test_when_frozen_writes_fails_exception_is_raised(self):
-        """Test that when elasticsearch write to index fails, an exception is raised.
-
-        and a call to delete/unfreeze write is placed
-        """
-        self.cluster1.make_api_call.side_effect = APIClientError("test")
-        reason = Reason("test", "test_user", "test_host", task_id="T111222")
-        elasticsearch_clusters = self.default_elasticsearch_clusters()
-        with pytest.raises(ec.ElasticsearchClusterError):
-            with elasticsearch_clusters.frozen_writes(reason):
-                self.cluster1.make_api_call.assert_called_with(
-                    route="/mw_cirrus_metastore/_doc/freeze-everything",
-                    params={},
-                    http_method="PUT",
-                    body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
-                    timeout=30,
-                )
-                self.cluster2.make_api_call.assert_not_called()
-        assert self.cluster1.make_api_call.call_count == 1
-        assert self.cluster2.make_api_call.call_count == 0
-
-    def test_when_unfreeze_writes_fails_exception_is_raised(self, caplog):
-        """Test that when elasticsearch delete doc in index fails, an exception is raised.
-
-        and a call to delete/unfreeze write is placed
-
-        """
-        caplog.set_level(logging.WARNING)
-        # the freeze works, unfreeze fails
-        self.cluster1.make_api_call = mock.Mock(side_effect=[None, APIClientError("test"), None, None])
-
-        reason = Reason("test", "test_user", "test_host", task_id="T111222")
-        elasticsearch_clusters = self.default_elasticsearch_clusters()
-        with elasticsearch_clusters.frozen_writes(reason):
-            self.cluster1.make_api_call.assert_called_with(
-                route="/mw_cirrus_metastore/_doc/freeze-everything",
-                params={},
-                http_method="PUT",
-                body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
-                timeout=30,
-            )
-            self.cluster2.make_api_call.assert_called_with(
-                route="/mw_cirrus_metastore/_doc/freeze-everything",
-                params={},
-                http_method="PUT",
-                body={"host": "test_host", "timestamp": mock.ANY, "reason": "test - test_user@test_host - T111222"},
-                timeout=30,
-            )
-
-        # the second api call (unfreeze) failed, so we tried to freeze and unfreeze again
-        assert self.cluster1.make_api_call.call_count == 4  # freeze(ok), unfreeze(fail), freeze(ok), unfreeze(ok)
-        assert self.cluster2.make_api_call.call_count == 2  # freeze(ok), unfreeze(fail)
-        assert caplog.record_tuples == [
-            (
-                "spicerack.elasticsearch_cluster",
-                logging.WARNING,
-                (
-                    "Could not unfreeze writes, trying to freeze and unfreeze again: Encountered error while deleting "
-                    "'freeze-everything' document to unfreeze cluster writes"
-                ),
-            )
-        ]
-
-    def test_no_call_to_freeze_write_in_dry_run(self):
-        """Test that when dry run is enabled, call to write to cluster index to freeze write is not placed."""
-        cluster1 = ec.ElasticsearchCluster(self.cluster1, None, dry_run=True)
-        cluster2 = ec.ElasticsearchCluster(self.cluster2, None, dry_run=True)
-        reason = Reason("test", "test_user", "test_host", task_id="T111222")
-        elasticsearch_clusters = ec.ElasticsearchClusters([cluster1, cluster2], None, None, ["eqiad", "codfw"])
-        with elasticsearch_clusters.frozen_writes(reason):
-            self.cluster1.make_api_call.assert_not_called()
-            self.cluster2.make_api_call.assert_not_called()
 
     def test_wait_for_all_write_queues_with_queues_empty(self):
         """Ensure that we return None in the "happy path", when all queues are empty, meaning we didn't raise."""
