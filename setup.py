@@ -42,6 +42,7 @@ EXTRAS_REQUIRE = {
         "types-redis",
         "types-requests",
         "types-setuptools",
+        "setuptools",
     ],
     "format": [
         "ruff",
