@@ -1,6 +1,16 @@
 Spicerack Changelog
 -------------------
 
+`v13.2.0`_ (2026-08-18)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+* elasticsearch: remove non-working freeze/unfreeze code (`T433306`_).
+* icinga: allow more retries in wait_for_optimal (`T433266`_).
+* redfish: expand force_http_boot_once for RedfishSupermicro (`T394357`_).
+* ruff: allow `None` not at the end of the type union.
+
 `v13.1.0`_ (2026-07-17)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3753,6 +3763,7 @@ New features
 .. _`T379258`: https://phabricator.wikimedia.org/T379258
 .. _`T390860`: https://phabricator.wikimedia.org/T390860
 .. _`T392851`: https://phabricator.wikimedia.org/T392851
+.. _`T394357`: https://phabricator.wikimedia.org/T394357
 .. _`T399069`: https://phabricator.wikimedia.org/T399069
 .. _`T399807`: https://phabricator.wikimedia.org/T399807
 .. _`T401581`: https://phabricator.wikimedia.org/T401581
@@ -3766,6 +3777,8 @@ New features
 .. _`T427780`: https://phabricator.wikimedia.org/T427780
 .. _`T426180`: https://phabricator.wikimedia.org/T426180
 .. _`T429699`: https://phabricator.wikimedia.org/T429699
+.. _`T433266`: https://phabricator.wikimedia.org/T433266
+.. _`T433306`: https://phabricator.wikimedia.org/T433306
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3930,3 +3943,4 @@ New features
 .. _`v12.8.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v12.8.0
 .. _`v13.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.0.0
 .. _`v13.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.1.0
+.. _`v13.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.2.0
