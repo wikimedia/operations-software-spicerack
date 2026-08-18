@@ -1524,25 +1524,75 @@ class TestRedfishSupermicro:
         assert self.redfish.get_primary_mac() == "7c:c2:55:97:5a:0e"
 
     def test_force_http_boot_once_ok(self):
-        """It should change the HTTP boot mode."""
+        """It should change the HTTP boot mode using the first target and stop at the first success."""
         self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
         self.requests_mock.patch("/redfish/v1/Systems/1", status_code=204)
-        self.redfish.force_http_boot_once()
-        assert self.requests_mock.last_request.method == "PATCH"
-        request_json = self.requests_mock.last_request.json()
-        assert request_json == {
+        self.redfish.force_http_boot_once("http://example.org/boot.ipxe")
+        # Only one PATCH should be sent as the first target succeeds.
+        patch_requests = [r for r in self.requests_mock.request_history if r.method == "PATCH"]
+        assert len(patch_requests) == 1
+        assert patch_requests[0].json() == {
             "Boot": {
                 "BootSourceOverrideEnabled": "Once",
-                "BootSourceOverrideTarget": "Pxe",
+                "BootSourceOverrideTarget": "UefiHttp",
                 "BootSourceOverrideMode": "UEFI",
+                "HttpBootUri": "http://example.org/boot.ipxe",
             }
         }
+
+    def test_force_http_boot_once_fallback_target(self):
+        """It should fall back to the next target when the first one is not supported (HTTP 400)."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
+        self.requests_mock.patch(
+            "/redfish/v1/Systems/1",
+            [
+                {"status_code": 400, "text": "The value UefiHttp is not supported by BootSourceOverrideTarget."},
+                {"status_code": 204},
+            ],
+        )
+        self.redfish.force_http_boot_once("http://example.org/boot.ipxe")
+        patch_requests = [r for r in self.requests_mock.request_history if r.method == "PATCH"]
+        assert len(patch_requests) == 2
+        assert patch_requests[0].json()["Boot"]["BootSourceOverrideTarget"] == "UefiHttp"
+        # The HttpBootUri is set only for the UefiHttp target.
+        assert patch_requests[0].json()["Boot"]["HttpBootUri"] == "http://example.org/boot.ipxe"
+        assert patch_requests[1].json()["Boot"]["BootSourceOverrideTarget"] == "Pxe"
+        assert "HttpBootUri" not in patch_requests[1].json()["Boot"]
+
+    def test_force_http_boot_once_all_targets_unsupported(self):
+        """It should raise a RedfishError when every target is unsupported (HTTP 400)."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
+        self.requests_mock.patch(
+            "/redfish/v1/Systems/1",
+            [
+                {"status_code": 400, "text": "The value UefiHttp is not supported by BootSourceOverrideTarget."},
+                {"status_code": 400, "text": "The value Pxe is not supported by BootSourceOverrideTarget."},
+            ],
+        )
+        with pytest.raises(redfish.RedfishError, match="Unable to set HTTP boot: none of the targets"):
+            self.redfish.force_http_boot_once("http://example.org/boot.ipxe")
+        # It should have attempted every configured target before giving up.
+        patch_requests = [r for r in self.requests_mock.request_history if r.method == "PATCH"]
+        assert len(patch_requests) == 2
+        assert patch_requests[0].json()["Boot"]["BootSourceOverrideTarget"] == "UefiHttp"
+        assert patch_requests[1].json()["Boot"]["BootSourceOverrideTarget"] == "Pxe"
+
+    def test_force_http_boot_once_reraise_on_unrelated_error(self):
+        """It should re-raise a RedfishError that is not a 400 about an unsupported target."""
+        self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "UEFI"}})
+        self.requests_mock.patch("/redfish/v1/Systems/1", status_code=500, text="Internal Server Error")
+        with pytest.raises(redfish.RedfishError):
+            self.redfish.force_http_boot_once("http://example.org/boot.ipxe")
+        # It should not attempt the next target after an unrelated error.
+        patch_requests = [r for r in self.requests_mock.request_history if r.method == "PATCH"]
+        assert len(patch_requests) == 1
+        assert patch_requests[0].json()["Boot"]["BootSourceOverrideTarget"] == "UefiHttp"
 
     def test_force_http_boot_once_raise(self):
         """It should raise a RedfishError as the BootModeSelect is not UEFI."""
         self.requests_mock.get("/redfish/v1/Systems/1/Bios", json={"Attributes": {"BootModeSelect": "Legacy"}})
         with pytest.raises(redfish.RedfishError, match="HTTP boot is only possible for UEFI hosts."):
-            self.redfish.force_http_boot_once()
+            self.redfish.force_http_boot_once("http://example.org/boot.ipxe")
 
     @pytest.mark.parametrize(
         "bios_attributes, error_msg",

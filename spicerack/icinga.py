@@ -617,7 +617,7 @@ class IcingaHosts:
 
         return HostsStatus({hostname: HostStatus(**host_status) for hostname, host_status in status.items()})
 
-    def wait_for_optimal(self, *, skip_acked: bool = False, skip_downtimed: bool = False) -> None:
+    def wait_for_optimal(self, *, skip_acked: bool = False, skip_downtimed: bool = False, tries: int = 25) -> None:
         """Waits for an icinga optimal status, else raises an exception.
 
         This function will first instruct icinga to recheck all failed services and then wait until all services are
@@ -626,6 +626,7 @@ class IcingaHosts:
         Arguments:
             skip_acked: ignore any acknowledge alerts when determining if a device is in optimal state.
             skip_downtimed: if a service is downtimed, skip checking its state.
+            tries: how many times to retry the check.
 
         Raises:
             IcingaError: if the status is not optimal.
@@ -633,7 +634,7 @@ class IcingaHosts:
         """
 
         @retry(
-            tries=15,
+            tries=tries,
             delay=timedelta(seconds=3),
             backoff_mode="linear",
             exceptions=(IcingaError,),

@@ -13,7 +13,6 @@ from typing import Optional
 from wmflib.prometheus import Prometheus
 from wmflib.requests import http_session
 
-from spicerack.administrative import Reason
 from spicerack.apiclient import APIClient, APIClientError, APIClientResponseError
 from spicerack.decorators import retry
 from spicerack.exceptions import SpicerackCheckError, SpicerackError
@@ -199,21 +198,6 @@ class ElasticsearchClusters:
         """Force allocation of unassigned shards on all clusters."""
         for cluster in self._clusters:
             cluster.force_allocation_of_all_unassigned_shards()
-
-    @contextmanager
-    def frozen_writes(self, reason: Reason) -> Iterator[list[None]]:
-        """Freeze all writes to the clusters and then perform operations before unfreezing writes.
-
-        Arguments:
-            reason: Reason for freezing writes.
-
-        Yields:
-            list: a side-effect list of :py:data:`None`, as a result of the stack of context managers.
-
-        """
-        logger.info("Freezing writes on %s", self)
-        with ExitStack() as stack:
-            yield [stack.enter_context(cluster.frozen_writes(reason)) for cluster in self._clusters]
 
     @contextmanager
     def stopped_replication(self) -> Iterator[list[None]]:
@@ -441,7 +425,6 @@ class ElasticsearchCluster:
         self._endpoint = endpoint
         self._remote = remote
         self._dry_run = dry_run
-        self._freeze_writes_index: str = "mw_cirrus_metastore"
 
         self._session = http_session(".".join((self.__module__, self.__class__.__name__)), timeout=10)
         self._session.headers.update({"Accept": "application/json"})
@@ -553,77 +536,6 @@ class ElasticsearchCluster:
         except (APIClientError, APIClientResponseError) as e:
             raise ElasticsearchClusterCheckError(
                 "Error while waiting for yellow with no initializing or relocating shards"
-            ) from e
-
-    @contextmanager
-    def frozen_writes(self, reason: Reason) -> Iterator[None]:
-        """Stop writes to all elasticsearch indices and enable them on exit.
-
-        Arguments:
-            reason: the reason for freezing writes.
-
-        """
-        self._freeze_writes(reason)
-        try:
-            yield
-        finally:
-            try:
-                self._unfreeze_writes()
-            except ElasticsearchClusterError as e:
-                # Unfreeze failed, we can try to freeze and unfreeze again,
-                # which might work. If it throws an exception again, we won't
-                # try a third time and let that new exception bubble up.
-                logger.warning(
-                    "Could not unfreeze writes, trying to freeze and unfreeze again: %s",
-                    e,
-                )
-                self._freeze_writes(reason)
-                self._unfreeze_writes()
-
-    def _freeze_writes(self, reason: Reason) -> None:
-        """Stop writes to all elasticsearch indices.
-
-        Arguments:
-            reason: the reason for freezing writes.
-
-        """
-        doc = {
-            "host": reason.hostname,
-            "timestamp": datetime.now(UTC).timestamp(),
-            "reason": str(reason),
-        }
-        logger.info("Freezing all indices in %s", self)
-        if self._dry_run:
-            return
-        try:
-            self.make_api_call(
-                route=f"/{self._freeze_writes_index}/_doc/freeze-everything",
-                params={},
-                http_method="PUT",
-                body=doc,
-                timeout=30,
-            )
-        except (APIClientError, APIClientResponseError) as e:
-            raise ElasticsearchClusterError(
-                ("Encountered error while creating 'freeze-everything' document to freeze cluster writes")
-            ) from e
-
-    def _unfreeze_writes(self) -> None:
-        """Enable writes on all elasticsearch indices."""
-        logger.info("Unfreezing all indices in %s", self)
-        if self._dry_run:
-            return
-        try:
-            self.make_api_call(
-                route=f"{self._freeze_writes_index}/_doc/freeze-everything",
-                params={},
-                http_method="DELETE",
-                body={},
-                timeout=30,
-            )
-        except (APIClientError, APIClientResponseError) as e:
-            raise ElasticsearchClusterError(
-                "Encountered error while deleting 'freeze-everything' document to unfreeze cluster writes"
             ) from e
 
     def flush_markers(self, timeout: timedelta = timedelta(seconds=60)) -> None:
