@@ -369,7 +369,7 @@ class Redfish:
             raise RedfishError("no new reboot detected")
         logger.debug("%s: new management console reboot detected %s", self._hostname, latest)
 
-    def request(self, method: str, uri: str, **kwargs: Any) -> Response:
+    def request(self, method: str, uri: str, log: bool = True, **kwargs: Any) -> Response:
         """Perform a request against the target Redfish instance with the provided HTTP method and data.
 
         See :py:meth:`spicerack.apiclient.APIClient.request` for the arguments documentation.
@@ -383,10 +383,11 @@ class Redfish:
         try:
             return self._api_client.request(method, uri, **kwargs)
         except APIClientResponseError as e:
-            try:
-                logger.error("%s\nResponse payload: %s", e, e.response.json())
-            except CompatJSONDecodeError:
-                logger.error("The response payload does not contain any valid JSON to log.")
+            if log:
+                try:
+                    logger.error("%s\nResponse payload: %s", e, e.response.json())
+                except CompatJSONDecodeError:
+                    logger.error("The response payload does not contain any valid JSON to log.")
             raise RedfishError(str(e)) from e
         except APIClientError as e:
             raise RedfishError(str(e)) from e
@@ -1077,7 +1078,7 @@ class RedfishSupermicro(Redfish):
         # is accepted, but after the reboot the BMC is not able to kick off a UEFI Http boot.
         for http_boot_target in self.http_boot_targets:
             try:
-                logger.info("Setting BootSourceOverrideTarget to %s", http_boot_target)
+                logger.info("Trying BootSourceOverrideTarget %s", http_boot_target)
                 efi_http_boot = {
                     "Boot": {
                         "BootSourceOverrideEnabled": "Once",
@@ -1090,6 +1091,7 @@ class RedfishSupermicro(Redfish):
                 self.request(
                     "patch",
                     self.system_manager,
+                    log=False,
                     json=efi_http_boot,
                 )
                 break
@@ -1098,7 +1100,7 @@ class RedfishSupermicro(Redfish):
                         and e.__cause__.response is not None  # pylint: disable=no-member
                         and e.__cause__.response.status_code == 400  # pylint: disable=no-member
                         and http_boot_target in e.__cause__.response.text):  # pylint: disable=no-member
-                    logger.error("The %s target is not supported by Redfish.", http_boot_target)
+                    logger.error("BootSourceOverrideTarget target %s is not supported by BMC", http_boot_target)
                     continue
                 raise
         else:
