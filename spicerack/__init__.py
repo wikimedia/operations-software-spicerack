@@ -727,7 +727,7 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
 
         return Kafka(kafka_config=configuration, dry_run=self._dry_run)
 
-    def redfish(self, hostname: str, username: str = "root", password: str = "") -> Redfish:  # nosec
+    def redfish(self, hostname: str, username: str = "wmfroot", password: str = "") -> Redfish:  # nosec
         """Get an instance to talk to the Redfish API of a physical server.
 
         Notes:

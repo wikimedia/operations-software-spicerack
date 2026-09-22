@@ -1,6 +1,16 @@
 Spicerack Changelog
 -------------------
 
+`v13.3.0`_ (2026-09-22)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Minor improvements
+""""""""""""""""""
+* Default redfish's spicerack attribute to wmfroot (`T426180`_).
+* redfish: don't log a confusing error message during HTTP boot.
+* mysql: Add the x4 section (`T437229_`).
+* setup.py: add setuptools to tests env.
+
 `v13.2.0`_ (2026-08-18)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3779,6 +3789,7 @@ New features
 .. _`T429699`: https://phabricator.wikimedia.org/T429699
 .. _`T433266`: https://phabricator.wikimedia.org/T433266
 .. _`T433306`: https://phabricator.wikimedia.org/T433306
+.. _`T437229`: https://phabricator.wikimedia.org/T437229
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3944,3 +3955,4 @@ New features
 .. _`v13.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.0.0
 .. _`v13.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.1.0
 .. _`v13.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.2.0
+.. _`v13.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.3.0

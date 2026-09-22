@@ -34,6 +34,7 @@ CORE_SECTIONS: tuple[str, ...] = (
     "s3",
     "s8",
     "s4",
+    "x4",
     "s1",
     "x1",
     "x3",
