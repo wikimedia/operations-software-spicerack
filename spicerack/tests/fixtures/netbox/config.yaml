@@ -1,3 +1,5 @@
-api_url: https://netbox.example.com
+api_urls:
+  production: https://netbox.example.com
+  next: https://netbox-next.example.com
 api_token_ro: ro_token
 api_token_rw: rw_token

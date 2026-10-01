@@ -282,6 +282,79 @@ def test_spicerack_netbox_host(mocked_pynetbox, mocked_remote_query, mocked_dns,
     assert isinstance(spicerack.host("host1", netbox_read_write=read_write), Host)
 
 
+@pytest.mark.parametrize(
+    "instance, api_urls",
+    (
+        ("production", "https://netbox.example.com"),
+        ("next", "https://netbox-next.example.com"),
+    ),
+)
+@pytest.mark.parametrize(
+    "read_write, token",
+    (
+        (False, "ro_token"),
+        (True, "rw_token"),
+    ),
+)
+@mock.patch("pynetbox.api")
+def test_spicerack_netbox_instance(mocked_pynetbox, read_write, token, instance, api_urls):
+    """It should instantiate the Netbox abstraction pointing to the API URL of the given instance."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    assert isinstance(spicerack.netbox(read_write=read_write, instance=instance), Netbox)
+    # Values from fixtures/netbox/config.yaml
+    mocked_pynetbox.assert_called_once_with(api_urls, token=token, threading=True)
+
+
+@mock.patch("pynetbox.api")
+def test_spicerack_netbox_invalid_instance(mocked_pynetbox):
+    """It should raise a SpicerackError if the given Netbox instance is not defined in the config."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    with pytest.raises(SpicerackError, match=r"Instance invalid not found \(options: production, next\)\."):
+        spicerack.netbox(instance="invalid")
+
+    assert not mocked_pynetbox.called
+
+
+@pytest.mark.parametrize(
+    "instance, api_urls",
+    (
+        ("production", "https://netbox.example.com"),
+        ("next", "https://netbox-next.example.com"),
+    ),
+)
+@pytest.mark.parametrize(
+    "read_write, token",
+    (
+        (False, "ro_token"),
+        (True, "rw_token"),
+    ),
+)
+@mock.patch("pynetbox.api")
+def test_spicerack_netbox_server_instance(mocked_pynetbox, read_write, token, instance, api_urls):
+    """It should return a NetboxServer instance fetched from the given Netbox instance."""
+    del mocked_pynetbox.return_value.dcim.devices.get.return_value.device_role
+    mocked_pynetbox.return_value.dcim.devices.get.return_value.role.slug = "server"
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    assert isinstance(spicerack.netbox_server("host1", read_write=read_write, instance=instance), NetboxServer)
+    # Values from fixtures/netbox/config.yaml
+    mocked_pynetbox.assert_called_once_with(api_urls, token=token, threading=True)
+    mocked_pynetbox.return_value.dcim.devices.get.assert_called_once_with(name="host1")
+
+
+@mock.patch("pynetbox.api")
+def test_spicerack_netbox_server_invalid_instance(mocked_pynetbox):
+    """It should raise a SpicerackError if the given Netbox instance is not defined in the config."""
+    spicerack = Spicerack(verbose=True, dry_run=False, **SPICERACK_TEST_PARAMS)
+
+    with pytest.raises(SpicerackError, match=r"Instance invalid not found \(options: production, next\)\."):
+        spicerack.netbox_server("host1", instance="invalid")
+
+    assert not mocked_pynetbox.called
+
+
 @mock.patch("spicerack.remote.Remote.query", autospec=True)
 def test_spicerack_dhcp_ok(mocked_remote_query):
     """It should return an instance of the DHCP class if created with the correct parameters."""
