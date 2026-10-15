@@ -1,3 +1,9 @@
+spicerack (14.0.0-1) unstable; urgency=medium
+
+  * v14.0.0 upstream release.
+
+ -- Arzhel Younsi <ayounsi@wikimedia.org>  Thu, 15 Oct 2026 13:57:01 -0000
+
 spicerack (13.3.0-1) unstable; urgency=medium
 
   * v13.3.0 upstream release.
