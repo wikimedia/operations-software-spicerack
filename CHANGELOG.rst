@@ -1,6 +1,18 @@
 Spicerack Changelog
 -------------------
 
+`v14.0.0`_ (2026-10-14)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Configuration breaking changes
+""""""""""""""""""""""""""""""
+* __init__: modify the structure of the netbox config to handle multiple API URLs. (`T439408`_)
+
+New features
+""""""""""""
+* netbox: add an option to connect to different instances, defined in the configuration. (`T439408`_)
+
+
 `v13.3.0`_ (2026-09-22)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3790,6 +3802,7 @@ New features
 .. _`T433266`: https://phabricator.wikimedia.org/T433266
 .. _`T433306`: https://phabricator.wikimedia.org/T433306
 .. _`T437229`: https://phabricator.wikimedia.org/T437229
+.. _`T439408`: https://phabricator.wikimedia.org/T439408
 
 .. _`v0.0.1`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.1
 .. _`v0.0.2`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v0.0.2
@@ -3956,3 +3969,4 @@ New features
 .. _`v13.1.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.1.0
 .. _`v13.2.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.2.0
 .. _`v13.3.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v13.3.0
+.. _`v14.0.0`: https://github.com/wikimedia/operations-software-spicerack/releases/tag/v14.0.0

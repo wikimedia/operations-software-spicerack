@@ -646,11 +646,15 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
             self.netbox(),
         )
 
-    def netbox(self, *, read_write: bool = False) -> Netbox:
+    def netbox(self, *, read_write: bool = False, instance: str = "production") -> Netbox:
         """Get a Netbox instance to interact with Netbox's API.
 
         Arguments:
             read_write: whether to use a read-write token.
+            instance: which Netbox instance to connect to (options defined in the config file api_urls dict).
+
+        Raises:
+            SpicerackError: If specifying an invalid instance.
 
         """
         config = load_yaml_config(self._spicerack_config_dir / "netbox" / "config.yaml")
@@ -659,20 +663,27 @@ class Spicerack:  # pylint: disable=too-many-instance-attributes
         else:
             token = config["api_token_ro"]
 
-        return Netbox(config["api_url"], token, dry_run=self._dry_run)
+        if instance in config["api_urls"]:
+            url = config["api_urls"][instance]
+        else:
+            raise SpicerackError(f"Instance {instance} not found (options: {', '.join(config['api_urls'].keys())}).")
 
-    def netbox_server(self, hostname: str, *, read_write: bool = False) -> NetboxServer:
+        return Netbox(url, token, dry_run=self._dry_run)
+
+    def netbox_server(self, hostname: str, *, read_write: bool = False, instance: str = "production") -> NetboxServer:
         """Get a NetboxServer instance to interact with a server in Netbox, both physical and virtual.
 
         Arguments:
             hostname: the hostname (not FQDN) of the server to manage.
             read_write: whether to use a read-write token.
+            instance: which Netbox instance to connect to (options defined in the config file api_urls dict).
 
         Raises:
             spicerack.netbox.NetboxError: if unable to find or load the server.
+            SpicerackError: If specifying an invalid instance.
 
         """
-        return self.netbox(read_write=read_write).get_server(hostname)
+        return self.netbox(read_write=read_write, instance=instance).get_server(hostname)
 
     def requests_session(self, name: str, **kwargs: Any) -> requests.Session:
         """Return a new requests Session with timeout and retry logic.
